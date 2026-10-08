@@ -71,6 +71,7 @@ export function ChatMessage({
   const text = messageToText(message);
   const sources = message.parts.filter((p): p is SourceUrlUIPart => p.type === "source-url");
   const files = message.parts.filter((p): p is FileUIPart => p.type === "file");
+  const searching = message.parts.some((p) => p.type.startsWith("tool-")) && !text;
 
   async function copy() {
     await navigator.clipboard.writeText(text);
@@ -170,9 +171,9 @@ export function ChatMessage({
         </div>
       )}
 
-      {statusLabel && isLast && isStreaming && !text && (
+      {(statusLabel || searching) && isLast && isStreaming && !text && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> {statusLabel}
+          <Loader2 className="size-4 animate-spin" /> {searching ? t.searching : statusLabel}
         </p>
       )}
 

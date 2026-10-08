@@ -123,3 +123,11 @@ export async function setUserPlan(userId: string, planId: "beta" | "pro" | "prom
   await createAdminClient().from("profiles").update({ plan_id: planId }).eq("id", userId);
   revalidatePath("/admin/users");
 }
+
+export async function setWebSearch(enabled: boolean) {
+  await requireAdmin();
+  await createAdminClient()
+    .from("app_settings")
+    .upsert({ key: "web_search", value: enabled, updated_at: new Date().toISOString() });
+  revalidatePath("/admin/quota");
+}

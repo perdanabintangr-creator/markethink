@@ -3,14 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EXTRA_CREDIT_COST, getTiers } from "@/lib/ai/models.config";
-import { setAccessMode, updatePlanCredits } from "../actions";
+import { setAccessMode, setWebSearch, updatePlanCredits } from "../actions";
 
 export default async function AdminQuotaPage() {
   const admin = createAdminClient();
-  const [{ data: plans }, { data: mode }] = await Promise.all([
+  const [{ data: plans }, { data: mode }, { data: ws }] = await Promise.all([
     admin.from("plans").select("*").order("sort_order"),
     admin.from("app_settings").select("value").eq("key", "access_mode").maybeSingle(),
+    admin.from("app_settings").select("value").eq("key", "web_search").maybeSingle(),
   ]);
+  const webSearchOn = ws?.value === true;
   const isPublic = mode?.value === "public";
   const tiers = getTiers();
   return (
@@ -28,6 +30,21 @@ export default async function AdminQuotaPage() {
             <Button variant={isPublic ? "outline" : "default"}>
               {isPublic ? "Tutup kembali (undangan saja)" : "Buka untuk publik"}
             </Button>
+          </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Pencarian web otomatis (Claude): {webSearchOn ? "Aktif" : "Mati"}</CardTitle>
+          <CardDescription>
+            Otak bisa mencari di internet sendiri (mis. saat ditanya tentang brand tertentu) dan menampilkan sumbernya.
+            Biaya ± $0,01 per pencarian (dipotong dari saldo Anthropic). Maks per pesan: Junior 1, Senior 3, Associate 4,
+            Director 6.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={setWebSearch.bind(null, !webSearchOn)}>
+            <Button variant={webSearchOn ? "outline" : "default"}>{webSearchOn ? "Matikan" : "Aktifkan"}</Button>
           </form>
         </CardContent>
       </Card>

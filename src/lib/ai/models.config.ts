@@ -33,6 +33,8 @@ export interface TierConfig {
   minPlan: PlanId;
   /** Kedalaman berpikir model Claude (low → max). */
   effort: "low" | "medium" | "high" | "xhigh" | "max";
+  /** Maks. pencarian web (Claude web search) per pesan; 0 = mati. */
+  webSearches: number;
   /** Kredit per pesan. */
   creditCost: number;
   maxOutputTokens: number;
@@ -98,6 +100,7 @@ export function getTiers(envSource: Record<string, string | undefined> = process
 - Jika permintaan butuh strategi mendalam (campaign plan lengkap, brand strategy, GTM), kerjakan versi ringkasnya lalu sarankan memakai Markethink Senior/Associate untuk versi lengkap.`,
       minPlan: "beta",
       effort: "low",
+      webSearches: 1,
       creditCost: 1,
       maxOutputTokens: 4096,
       temperature: 0.8,
@@ -127,6 +130,7 @@ export function getTiers(envSource: Record<string, string | undefined> = process
 - Tulis asumsi secara eksplisit bila data dari user kurang.`,
       minPlan: "pro",
       effort: "medium",
+      webSearches: 3,
       creditCost: 2,
       maxOutputTokens: 12000,
       temperature: 0.7,
@@ -157,6 +161,7 @@ export function getTiers(envSource: Record<string, string | undefined> = process
 - Output berupa dokumen utuh berkualitas presentasi klien/board, dengan ringkasan eksekutif di awal.`,
       minPlan: "pro",
       effort: "high",
+      webSearches: 4,
       creditCost: 5,
       maxOutputTokens: 20000,
       temperature: 0.6,
@@ -188,6 +193,7 @@ export function getTiers(envSource: Record<string, string | undefined> = process
 - Tetap jujur soal data: tandai perkiraan, dan sarankan Riset Web untuk fakta terkini.`,
       minPlan: "promax",
       effort: "high",
+      webSearches: 6,
       creditCost: 10,
       maxOutputTokens: 32000,
       temperature: 0.6,

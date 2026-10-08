@@ -771,3 +771,8 @@ insert into public.feature_flags (plan_id, key, enabled, value) values
   ('promax', 'uploads', true, '{"max_mb": 25}'),
   ('promax', 'workspaces', true, '{"max": 200}')
 on conflict (plan_id, key) do nothing;
+
+
+-- ===== 20261008000009_web_search_setting.sql =====
+-- Saklar pencarian web Claude (berbayar per pencarian) — diatur admin di /admin/quota.
+insert into public.app_settings (key, value) values ('web_search', 'false') on conflict (key) do nothing;

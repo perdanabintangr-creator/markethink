@@ -8,6 +8,7 @@ import {
   streamText,
 } from "ai";
 import { z } from "zod";
+import { anthropic } from "@ai-sdk/anthropic";
 import { getSession, hasAppAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
@@ -65,7 +66,11 @@ export async function POST(req: Request) {
   const lastText = messageText(last);
   if (lastText.length > 20_000) return json(413, { error: "message_too_long" });
 
-  const allowedTiers = await getAllowedTiers(supabase, profile);
+  const [allowedTiers, { data: wsSetting }] = await Promise.all([
+    getAllowedTiers(supabase, profile),
+    supabase.from("app_settings").select("value").eq("key", "web_search").maybeSingle(),
+  ]);
+  const webSearchEnabled = wsSetting?.value === true;
   if (!allowedTiers.includes(tierId)) {
     return json(403, { error: "tier_locked", allowed: allowedTiers });
   }
@@ -151,7 +156,8 @@ export async function POST(req: Request) {
       ]);
 
       let sources: Source[] = [];
-      if (research && lastText.trim()) {
+      const useTavily = research && Boolean(process.env.TAVILY_API_KEY);
+      if (useTavily && lastText.trim()) {
         writer.write({ type: "data-status", data: { state: "searching", label: "Mencari di web…" }, transient: true });
         try {
           sources = await webSearch(lastText, { signal: req.signal });
@@ -183,13 +189,18 @@ export async function POST(req: Request) {
           knowledge: wsCtx.knowledge,
           research: sources.length
             ? formatSources(sources)
-            : research
+            : useTavily
               ? "Riset web gagal/ tidak ada hasil. Beri tahu user dan jawab dari pengetahuan umum dengan label perkiraan."
-              : null,
+              : research
+                ? "User mengaktifkan Riset Web: wajib gunakan alat pencarian web (bila tersedia) sebelum menjawab, dan sertakan sumbernya."
+                : null,
         },
       );
 
-      const { messages: resolved, hasImages } = await resolveAttachments(supabase, messages.slice(-40));
+      const { messages: resolvedRaw, hasImages } = await resolveAttachments(supabase, messages.slice(-40));
+      // Bagian tool (jejak pencarian web) tidak dikirim ulang ke model — teks & sumber sudah cukup.
+      const resolved = resolvedRaw.map((m) => ({ ...m, parts: m.parts.filter((p) => !p.type.startsWith("tool-")) }));
+      const webSearchOn = webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY);
       const routed = routeTier(tierId, { needsVision: hasImages });
 
       const result = streamText({
@@ -200,6 +211,14 @@ export async function POST(req: Request) {
         temperature: tier.temperature,
         maxRetries: 0,
         providerOptions: { anthropic: { effort: tier.effort } },
+        tools: webSearchOn
+          ? {
+              web_search: anthropic.tools.webSearch_20250305({
+                maxUses: research ? tier.webSearches + 2 : tier.webSearches,
+                userLocation: { type: "approximate", country: "ID", timezone: "Asia/Jakarta" },
+              }),
+            }
+          : undefined,
         abortSignal: req.signal,
         onFinish: async ({ usage }) => {
           settled = true;
@@ -239,6 +258,7 @@ export async function POST(req: Request) {
       writer.merge(
         result.toUIMessageStream<MtMessage>({
           sendReasoning: false,
+          sendSources: true,
           messageMetadata: ({ part }) => {
             if (part.type === "start") {
               return { tier: tierId, createdAt: Date.now(), credits: cost, remainingCredits: credit.remaining };

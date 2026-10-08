@@ -46,6 +46,20 @@ describe("model router fallback", () => {
     expect(String(err)).toMatch(/Semua model gagal: groq:a → .*429/);
   });
 
+  it("tool web search Claude dibuang saat jatuh ke model non-Claude", async () => {
+    const { createFallbackModel } = await import("@/lib/ai/router");
+    const { anthropic } = await import("@ai-sdk/anthropic");
+    const routed = createFallbackModel([{ provider: "google", modelId: "b" }]);
+    const result = streamText({
+      model: routed.model,
+      prompt: "hai",
+      maxRetries: 0,
+      tools: { web_search: anthropic.tools.webSearch_20250305({ maxUses: 2 }) },
+    });
+    await result.consumeStream();
+    expect(working.doStreamCalls.at(-1)?.tools).toBeUndefined();
+  });
+
   it("tanpa kandidat → error jelas", async () => {
     const { createFallbackModel } = await import("@/lib/ai/router");
     expect(() => createFallbackModel([])).toThrow(/provider LLM/);

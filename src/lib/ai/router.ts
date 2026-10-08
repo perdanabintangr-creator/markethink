@@ -97,10 +97,17 @@ export function routeTier(tierId: string | null | undefined, opts: { needsVision
   return { tier, ...createFallbackModel(candidates) };
 }
 
-/** Model Claude generasi terbaru menolak parameter sampling (temperature/topP/topK). */
+/**
+ * Sesuaikan opsi per provider: model Claude terbaru menolak parameter sampling;
+ * provider lain tidak mengenal tool bawaan Anthropic (mis. web search) → dibuang.
+ */
 function forModel(m: LanguageModelV2, options: LanguageModelV2CallOptions): LanguageModelV2CallOptions {
-  if (!m.provider.startsWith("anthropic")) return options;
-  return { ...options, temperature: undefined, topP: undefined, topK: undefined };
+  if (m.provider.startsWith("anthropic")) {
+    return { ...options, temperature: undefined, topP: undefined, topK: undefined };
+  }
+  if (!options.tools?.length) return options;
+  const tools = options.tools.filter((t) => !(t.type === "provider-defined" && t.id.startsWith("anthropic.")));
+  return { ...options, tools: tools.length ? tools : undefined, toolChoice: tools.length ? options.toolChoice : undefined };
 }
 
 function isAbortError(err: unknown) {
