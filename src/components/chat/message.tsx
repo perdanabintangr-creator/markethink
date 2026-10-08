@@ -37,7 +37,7 @@ export function messageToText(m: MtMessage) {
 
 function linkCitations(text: string, sources: SourceUrlUIPart[]) {
   if (!sources.length) return text;
-  const byId = new Map(sources.map((s) => [s.sourceId, s.url]));
+  const byId = new Map(sources.map((s, i) => [String(i + 1), s.url]));
   return text.replace(/\[(\d{1,2})\](?!\()/g, (m, n: string) => (byId.has(n) ? `[[${n}]](${byId.get(n)})` : m));
 }
 
@@ -69,7 +69,10 @@ export function ChatMessage({
   const [comment, setComment] = useState("");
 
   const text = messageToText(message);
-  const sources = message.parts.filter((p): p is SourceUrlUIPart => p.type === "source-url");
+  // Sumber unik per URL, dinomori berurutan [1], [2], ... (riset Tavily maupun pencarian web Claude).
+  const sources = message.parts
+    .filter((p): p is SourceUrlUIPart => p.type === "source-url")
+    .filter((s, i, all) => all.findIndex((x) => x.url === s.url) === i);
   const files = message.parts.filter((p): p is FileUIPart => p.type === "file");
   const searching = message.parts.some((p) => p.type.startsWith("tool-")) && !text;
 
@@ -152,16 +155,16 @@ export function ChatMessage({
             <Globe className="size-3.5" /> {t.sources}
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {sources.map((s) => (
+            {sources.map((s, i) => (
               <a
-                key={s.sourceId}
+                key={s.url}
                 href={s.url}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
                 className="w-48 shrink-0 rounded-lg border bg-card p-2 text-xs hover:bg-accent"
               >
                 <span className="mr-1 inline-flex size-4 items-center justify-center rounded bg-primary/15 text-[10px] font-semibold text-primary">
-                  {s.sourceId}
+                  {i + 1}
                 </span>
                 <span className="line-clamp-2">{s.title ?? s.url}</span>
                 <span className="mt-1 block truncate text-muted-foreground">{safeHost(s.url)}</span>

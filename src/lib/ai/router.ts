@@ -38,6 +38,8 @@ export interface RoutedModel {
   model: LanguageModelV2;
   /** Kandidat yang akhirnya menjawab (terisi setelah request berjalan). */
   resolved: () => ModelCandidate | null;
+  /** Pesan error bila jawaban terpaksa dibuat tanpa tool (mis. web search ditolak). */
+  toolFallback: () => string | null;
   candidates: ModelCandidate[];
 }
 
@@ -50,18 +52,36 @@ export function createFallbackModel(candidates: ModelCandidate[]): RoutedModel {
     throw new Error("Tidak ada provider LLM yang dikonfigurasi. Isi minimal satu API key LLM di env.");
   }
   let used: ModelCandidate | null = null;
+  let toolFallback: string | null = null;
 
-  async function attempt<T>(fn: (m: LanguageModelV2) => PromiseLike<T>): Promise<T> {
+  async function attempt<T>(
+    options: LanguageModelV2CallOptions,
+    fn: (m: LanguageModelV2, o: LanguageModelV2CallOptions) => PromiseLike<T>,
+  ): Promise<T> {
     const failures: string[] = [];
     for (const c of candidates) {
+      const m = instantiate(c);
+      const opts = forModel(m, options);
       try {
-        const result = await fn(instantiate(c));
+        const result = await fn(m, opts);
         used = c;
         return result;
       } catch (err) {
         if (isAbortError(err)) throw err;
         failures.push(`${c.provider}:${c.modelId} → ${errorMessage(err).slice(0, 400)}`);
-        console.warn(`[model-router] ${c.provider}:${c.modelId} gagal, coba fallback`, errorMessage(err));
+        console.warn(`[model-router] ${c.provider}:${c.modelId} gagal`, errorMessage(err));
+        // Bila gagal saat membawa tool (mis. web search belum diizinkan), coba model yang sama tanpa tool.
+        if (opts.tools?.length) {
+          try {
+            const result = await fn(m, { ...opts, tools: undefined, toolChoice: undefined });
+            used = c;
+            toolFallback = errorMessage(err).slice(0, 300);
+            return result;
+          } catch (err2) {
+            if (isAbortError(err2)) throw err2;
+            failures.push(`${c.provider}:${c.modelId} (tanpa tool) → ${errorMessage(err2).slice(0, 300)}`);
+          }
+        }
       }
     }
     throw new Error(`Semua model gagal: ${failures.join(" | ")}`);
@@ -73,11 +93,11 @@ export function createFallbackModel(candidates: ModelCandidate[]): RoutedModel {
     provider: "markethink-router",
     modelId: `${first.provider}:${first.modelId}`,
     supportedUrls: {},
-    doGenerate: (options) => attempt((m) => m.doGenerate(forModel(m, options))),
-    doStream: (options) => attempt((m) => m.doStream(forModel(m, options))),
+    doGenerate: (options) => attempt(options, (m, o) => m.doGenerate(o)),
+    doStream: (options) => attempt(options, (m, o) => m.doStream(o)),
   };
 
-  return { model, resolved: () => used, candidates };
+  return { model, resolved: () => used, toolFallback: () => toolFallback, candidates };
 }
 
 export function routeTier(tierId: string | null | undefined, opts: { needsVision?: boolean } = {}) {

@@ -220,9 +220,13 @@ export async function POST(req: Request) {
             }
           : undefined,
         abortSignal: req.signal,
-        onFinish: async ({ usage }) => {
+        onFinish: async ({ usage, providerMetadata }) => {
           settled = true;
           const used = routed.resolved() ?? routed.candidates[0];
+          const rawUsage = (providerMetadata?.anthropic?.usage ?? null) as {
+            server_tool_use?: { web_search_requests?: number };
+          } | null;
+          const searches = rawUsage?.server_tool_use?.web_search_requests ?? 0;
           await admin.from("usage_logs").insert({
             user_id: user.id,
             chat_id: chatId,
@@ -231,7 +235,9 @@ export async function POST(req: Request) {
             model: used.modelId,
             input_tokens: usage.inputTokens ?? 0,
             output_tokens: usage.outputTokens ?? 0,
-            est_cost_usd: estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0),
+            est_cost_usd: estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0) + searches * 0.01,
+            web_searches: searches,
+            error: routed.toolFallback() ? `web search dilewati: ${routed.toolFallback()}` : null,
             credits: cost,
             research,
             attachments: attachCount,

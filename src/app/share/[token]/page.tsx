@@ -45,7 +45,9 @@ export default async function SharedChatPage({ params }: { params: Promise<{ tok
         {(messages ?? []).map((m) => {
           const parts = (m.parts ?? []) as Part[];
           const text = parts.filter((p) => p.type === "text").map((p) => p.text).join("\n\n");
-          const sources = parts.filter((p) => p.type === "source-url");
+          const sources = parts
+            .filter((p) => p.type === "source-url")
+            .filter((s, i, all) => all.findIndex((x) => x.url === s.url) === i);
           const files = parts.filter((p) => p.type === "file");
           if (m.role === "user") {
             return (
@@ -64,9 +66,9 @@ export default async function SharedChatPage({ params }: { params: Promise<{ tok
               {sources.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 text-xs">
                   <Globe className="size-3.5 text-muted-foreground" />
-                  {sources.map((s) => (
-                    <a key={s.sourceId} href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="rounded border px-1.5 hover:bg-accent">
-                      [{s.sourceId}] {s.title?.slice(0, 40)}
+                  {sources.map((s, i) => (
+                    <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="rounded border px-1.5 hover:bg-accent">
+                      [{i + 1}] {s.title?.slice(0, 40)}
                     </a>
                   ))}
                 </div>

@@ -776,3 +776,7 @@ on conflict (plan_id, key) do nothing;
 -- ===== 20261008000009_web_search_setting.sql =====
 -- Saklar pencarian web Claude (berbayar per pencarian) — diatur admin di /admin/quota.
 insert into public.app_settings (key, value) values ('web_search', 'false') on conflict (key) do nothing;
+
+
+-- ===== 20261008000010_usage_web_searches.sql =====
+alter table public.usage_logs add column if not exists web_searches integer not null default 0;
