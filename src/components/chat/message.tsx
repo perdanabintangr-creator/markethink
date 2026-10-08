@@ -367,8 +367,31 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
   if (part.state !== "output-available" || !part.output) return <ToolPending label={t.buildingDeck} streaming={streaming} />;
   if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat presentasi."} />;
   const titles = (part.output.slideTitles as string[] | undefined) ?? [];
+  const theme = DECK_THEMES[String(part.output.theme ?? "")] ?? DECK_THEMES.midnight;
+  const images = Number(part.output.images ?? 0);
   return (
     <div className="max-w-xl overflow-hidden rounded-xl border bg-card">
+      {/* Pratinjau cover sesuai tema deck */}
+      <div className="relative aspect-[16/6] overflow-hidden px-6 py-5" style={{ background: theme.bg }}>
+        <div
+          className="absolute -right-10 -top-16 size-48 rounded-full opacity-25"
+          style={{ background: theme.accent }}
+          aria-hidden
+        />
+        <div
+          className="absolute -bottom-20 right-16 size-40 rounded-full opacity-20"
+          style={{ background: theme.accent2 }}
+          aria-hidden
+        />
+        <div className="relative h-1.5 w-10 rounded-full" style={{ background: theme.accent }} />
+        <p className="relative mt-3 line-clamp-2 max-w-[75%] text-lg font-bold leading-snug" style={{ color: theme.text }}>
+          {String(part.output.title)}
+        </p>
+        <p className="relative mt-1 text-[11px]" style={{ color: theme.muted }}>
+          {Number(part.output.slideCount)} {t.slides}
+          {images > 0 ? ` · ${images} foto AI` : ""}
+        </p>
+      </div>
       <div className="flex items-center gap-3 border-b bg-gradient-to-r from-primary/15 to-transparent px-4 py-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Presentation className="size-5" />
@@ -396,6 +419,18 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
     </div>
   );
 }
+
+/** Warna ringkas tema PPT (sinkron dengan src/lib/pptx.ts) untuk pratinjau di chat. */
+const DECK_THEMES: Record<string, { bg: string; text: string; muted: string; accent: string; accent2: string }> = {
+  midnight: { bg: "#0B1020", text: "#F5F7FB", muted: "#9AA4BF", accent: "#7C5CFF", accent2: "#22D3EE" },
+  clean: { bg: "#FFFFFF", text: "#0F172A", muted: "#64748B", accent: "#4F46E5", accent2: "#0EA5E9" },
+  sunset: { bg: "#FFF9F3", text: "#3B1708", muted: "#8A4B2A", accent: "#EA580C", accent2: "#DB2777" },
+  forest: { bg: "#F6FAF5", text: "#13261A", muted: "#4F6B57", accent: "#15803D", accent2: "#CA8A04" },
+  ocean: { bg: "#06202E", text: "#EAF6FB", muted: "#8FB8C9", accent: "#06B6D4", accent2: "#F59E0B" },
+  luxe: { bg: "#101010", text: "#F5F1E8", muted: "#A8A29E", accent: "#C9A227", accent2: "#E7D9B0" },
+  coral: { bg: "#FFFFFF", text: "#1F1235", muted: "#6B5B7B", accent: "#F43F5E", accent2: "#8B5CF6" },
+  corporate: { bg: "#FFFFFF", text: "#0B1F3A", muted: "#5B6B82", accent: "#0B5FFF", accent2: "#00B894" },
+};
 
 function safeHost(url: string) {
   try {

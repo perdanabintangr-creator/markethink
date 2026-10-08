@@ -265,6 +265,8 @@ export async function POST(req: Request) {
             chatId,
             imageBlockedReason,
             dailyLimit: (kind) => dailyLimitReached(dailyLimits, user.id, kind),
+            // Foto AI di PPT hanya untuk paket tanpa batas harian gambar (Pro/Promax/admin).
+            deckImages: !imageBlockedReason && dailyLimits.image === undefined,
           }),
           ...(webSearchOn
             ? {

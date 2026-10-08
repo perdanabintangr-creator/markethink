@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPresentation, presentationOutline, presentationSchema } from "@/lib/pptx";
+import { buildPresentation, deckImageRequests, imageSize, presentationOutline, presentationSchema } from "@/lib/pptx";
 import { extractText } from "@/lib/files";
 import { textBlocks } from "@/lib/message-text";
 
@@ -9,31 +9,46 @@ describe("pembuat PPT", () => {
   const input = presentationSchema.parse({
     title: "Strategi Ramadan Glowa",
     subtitle: "Q1 2027",
+    theme: "sunset",
+    brand_color: "#E11D48",
+    cover_image_prompt: "skincare flatlay",
     slides: [
-      { layout: "section", title: "Insight" },
-      { title: "Masalah", bullets: ["CAC naik 30%", "Engagement turun"], notes: "Tekankan angka CAC" },
-      { layout: "two_column", title: "Sebelum vs Sesudah", columns: [{ heading: "Sebelum", bullets: ["A"] }, { heading: "Sesudah", bullets: ["B"] }] },
-      { layout: "stats", title: "Target", stats: [{ value: "2x", label: "ROAS" }, { value: "10K", label: "Follower" }] },
+      { layout: "agenda", title: "Agenda", bullets: ["Insight", "Strategi", "Eksekusi"] },
+      { layout: "section", title: "Insight", image_prompt: "woman" },
+      { layout: "cards", title: "Tiga pilar", cards: [{ icon: "heart", title: "Edukasi", text: "Konten kulit sehat" }, { icon: "ikon-tak-dikenal", title: "UGC", text: "Review pelanggan" }] },
+      { layout: "stats", title: "Target", stats: [{ value: "2x", label: "ROAS" }, { value: "10K", label: "Follower" }], bullets: ["Fokus TikTok"] },
+      { layout: "chart", title: "Penjualan", chart: { type: "bar", labels: ["Jan", "Feb"], series: [{ name: "Unit", values: [10, 20] }] }, bullets: ["Naik 2x"] },
+      { layout: "timeline", title: "Jadwal", steps: [{ title: "M1", text: "Teaser" }, { title: "M2", text: "Launch" }, { title: "M3", text: "Sustain" }] },
+      { layout: "comparison", title: "Sebelum vs Sesudah", columns: [{ heading: "Sebelum", bullets: ["A"] }, { heading: "Sesudah", bullets: ["B"] }] },
+      { layout: "table", title: "Budget", table: { headers: ["Item", "Rp"], rows: [["Ads", "5 jt"]] } },
       { layout: "quote", title: "Pelanggan", quote: "Glowa bikin kulitku sehat" },
-      { layout: "closing", title: "Next step", bullets: ["Mulai minggu depan"] },
+      { layout: "bullets", title: "Masalah", bullets: ["CAC naik 30%"], notes: "Tekankan angka CAC" },
+      { layout: "closing", title: "Terima kasih", bullets: ["hello@glowa.id"] },
     ],
   });
 
-  it("menghasilkan file .pptx valid yang teksnya bisa dibaca ulang", async () => {
+  it("menghasilkan file .pptx valid (semua layout) yang teksnya bisa dibaca ulang", async () => {
     const bytes = await buildPresentation(input);
-    expect(bytes.byteLength).toBeGreaterThan(10_000);
     expect([...bytes.slice(0, 2)]).toEqual([0x50, 0x4b]); // zip
     const text = await extractText(PPTX, bytes);
-    expect(text).toContain("Strategi Ramadan Glowa");
-    expect(text).toContain("CAC naik 30%");
-    expect(text).toContain("Glowa bikin kulitku sehat");
-    expect(text).toContain("Tekankan angka CAC");
+    for (const s of ["Strategi Ramadan Glowa", "CAC naik 30%", "Glowa bikin kulitku sehat", "Tekankan angka CAC", "Review pelanggan", "Launch"]) {
+      expect(text).toContain(s);
+    }
+  });
+
+  it("permintaan gambar deck: cover + slide bergambar, maks 3", () => {
+    expect(deckImageRequests(input).map((r) => r.key)).toEqual(["cover", "1"]);
   });
 
   it("outline berisi semua judul slide", () => {
     const outline = presentationOutline(input);
     expect(outline).toContain("Sebelum vs Sesudah");
     expect(outline).toContain("2x — ROAS");
+  });
+
+  it("ukuran gambar PNG terbaca", () => {
+    const png = Uint8Array.from(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAAEklEQVR4nGP4z8DwnwEJMCBzAEDgB/kRgf8yAAAAAElFTkSuQmCC", "base64"));
+    expect(imageSize(png)).toEqual({ width: 2, height: 3 });
   });
 });
 

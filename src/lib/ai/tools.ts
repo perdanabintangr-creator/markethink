@@ -4,11 +4,22 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { consumeCredits, refundCredits } from "@/lib/credits";
 import { generateImage } from "@/lib/ai/image";
-import { buildPresentation, presentationOutline, presentationSchema } from "@/lib/pptx";
+import {
+  buildPresentation,
+  deckImageRequests,
+  imageSize,
+  presentationOutline,
+  presentationSchema,
+  type DeckImages,
+  type PresentationInput,
+} from "@/lib/pptx";
 import { sanitizeFileName } from "@/lib/files";
 
 export const IMAGE_CREDIT_COST = 5;
 export const PPTX_CREDIT_COST = 3;
+/** Kredit tambahan per gambar AI di dalam PPT (cover/slide bergambar). */
+export const DECK_IMAGE_CREDIT_COST = 2;
+const DECK_IMAGE_MAX = 3;
 /** Perkiraan biaya per gambar (USD) bila provider tidak melaporkan biaya nyata. */
 const IMAGE_COST_USD = 0.04;
 
@@ -17,7 +28,17 @@ export type ImageToolOutput =
   | { ok: false; error: string; hint?: string };
 
 export type PresentationToolOutput =
-  | { ok: true; attachmentId: string; url: string; title: string; slideCount: number; slideTitles: string[]; fileName: string }
+  | {
+      ok: true;
+      attachmentId: string;
+      url: string;
+      title: string;
+      slideCount: number;
+      slideTitles: string[];
+      fileName: string;
+      theme?: string;
+      images?: number;
+    }
   | { ok: false; error: string };
 
 interface ToolCtx {
@@ -28,6 +49,8 @@ interface ToolCtx {
   imageBlockedReason: string | null;
   /** Cek batas harian paket (mis. Free: 2 gambar, 1 PPT per hari). null = boleh. */
   dailyLimit?: (kind: "image" | "pptx") => Promise<string | null>;
+  /** Boleh membuat gambar AI untuk cover/slide PPT (paket berbayar). */
+  deckImages?: boolean;
 }
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err)).slice(0, 1500);
@@ -110,9 +133,16 @@ export function createChatTools(ctx: ToolCtx) {
 
     create_presentation: tool({
       description:
-        "Buat file presentasi PowerPoint (.pptx) yang siap diunduh — pitch deck, laporan kampanye, strategi marketing, ringkasan dokumen/riset " +
-        "(seperti NotebookLM). Gunakan setiap kali user meminta PPT/slide/deck/presentasi. Susun alur cerita yang kuat: masalah → insight → strategi → " +
-        "eksekusi → KPI → penutup. Isi padat & spesifik (angka, contoh nyata), bukan placeholder. Variasikan layout (section, stats, two_column, quote). " +
+        "Buat file presentasi PowerPoint (.pptx) berdesain profesional yang siap dipresentasikan — pitch deck, proposal sponsor, laporan kampanye, " +
+        "strategi marketing, ringkasan dokumen/riset (seperti NotebookLM). Gunakan setiap kali user meminta PPT/slide/deck/presentasi.\n" +
+        "ATURAN DESAIN (wajib): (1) Alur cerita kuat: pembuka → masalah/peluang → insight → strategi → eksekusi → angka/KPI → penutup/CTA. " +
+        "(2) Variasikan layout — jangan dua slide berturut-turut memakai layout yang sama; pakai agenda di awal, section untuk tiap bab besar, " +
+        "cards untuk pilar/fitur (dengan ikon relevan), stats untuk angka kunci, chart bila ada data angka, timeline untuk jadwal/tahapan, " +
+        "comparison untuk perbandingan, table untuk paket/harga, quote untuk insight kuat, closing di akhir. Hindari layout bullets kecuali perlu. " +
+        "(3) Teks ringkas ala slide konsultan: judul ≤ 8 kata yang menyampaikan pesan, poin ≤ 15 kata, tanpa paragraf. " +
+        "(4) Isi spesifik (angka nyata, nama, contoh), bukan placeholder. (5) Tulis cover_image_prompt dan image_prompt untuk 1–2 slide " +
+        "(image_text/section) berupa deskripsi foto profesional berbahasa Inggris tanpa teks. (6) Pilih theme sesuai brand/industri; isi " +
+        "brand_color bila warna brand diketahui. (7) Tulis speaker notes yang membantu presenter. " +
         "Bila user melampirkan dokumen, dasarkan isi slide pada dokumen itu.",
       inputSchema: presentationSchema,
       execute: async (input): Promise<PresentationToolOutput> => {
@@ -121,7 +151,8 @@ export function createChatTools(ctx: ToolCtx) {
         const credit = await consumeCredits(ctx.userId, PPTX_CREDIT_COST, "presentation", { chatId: ctx.chatId });
         if (!credit.ok) return { ok: false, error: `Kredit tidak cukup untuk membuat PPT (butuh ${PPTX_CREDIT_COST}, sisa ${credit.remaining}).` };
         try {
-          const bytes = await buildPresentation(input);
+          const images = ctx.deckImages ? await makeDeckImages(ctx, input) : {};
+          const bytes = await buildPresentation(input, images);
           const fileName = `${sanitizeFileName(input.title).slice(0, 60) || "presentasi"}.pptx`;
           const saved = await storeFile(
             ctx,
@@ -132,6 +163,7 @@ export function createChatTools(ctx: ToolCtx) {
             presentationOutline(input),
           );
           await logUsage(ctx, { tier: "pptx", credits: PPTX_CREDIT_COST, cost: 0 });
+          const imageCount = Object.keys(images).length;
           return {
             ok: true,
             attachmentId: saved.id,
@@ -140,6 +172,8 @@ export function createChatTools(ctx: ToolCtx) {
             slideCount: input.slides.length + 1,
             slideTitles: [input.title, ...input.slides.map((s) => s.title)],
             fileName,
+            theme: input.theme,
+            images: imageCount,
           };
         } catch (err) {
           console.error("[pptx] gagal", err);
@@ -149,6 +183,41 @@ export function createChatTools(ctx: ToolCtx) {
       },
     }),
   };
+}
+
+/**
+ * Buat gambar AI untuk cover & slide bergambar (paralel, maks 3). Gambar yang gagal dilewati —
+ * slide tetap jadi dengan desain tanpa foto. Tiap gambar memotong kredit kecil & tercatat biayanya.
+ */
+async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<DeckImages> {
+  const reqs = deckImageRequests(input, DECK_IMAGE_MAX);
+  if (!reqs.length) return {};
+  const credit = await consumeCredits(ctx.userId, reqs.length * DECK_IMAGE_CREDIT_COST, "deck_images", { chatId: ctx.chatId });
+  if (!credit.ok) return {};
+  const results = await Promise.all(
+    reqs.map(async (r) => {
+      try {
+        const img = await Promise.race([
+          generateImage(
+            `Professional, high-quality presentation visual for a marketing deck. ${r.prompt}. Cinematic lighting, clean composition, no text, no words, no letters, no logos, no watermark.`,
+            r.aspect,
+          ),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout gambar deck")), 75_000)),
+        ]);
+        const size = imageSize(img.bytes);
+        if (!size) return null;
+        await logUsage(ctx, { tier: "deck_image", provider: img.provider, model: img.model, credits: DECK_IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD });
+        return [r.key, { data: Buffer.from(img.bytes).toString("base64"), mime: img.mime, ...size }] as const;
+      } catch (err) {
+        console.warn("[pptx] gambar deck gagal", errText(err));
+        return null;
+      }
+    }),
+  );
+  const ok = results.filter((x): x is NonNullable<typeof x> => x !== null);
+  const failed = reqs.length - ok.length;
+  if (failed) await refundCredits(ctx.userId, failed * DECK_IMAGE_CREDIT_COST, "deck_images_failed");
+  return Object.fromEntries(ok);
 }
 
 async function loadReferences(ctx: ToolCtx, ids: string[]) {
@@ -194,7 +263,7 @@ export function capabilitiesPrompt(imageBlockedReason: string | null) {
     imageBlockedReason
       ? `- **Membuat gambar:** saat ini TIDAK tersedia untuk user ini (${imageBlockedReason}). Bila diminta, jelaskan singkat lalu tawarkan prompt gambar siap pakai + arahan visual yang detail.`
       : "- **Membuat gambar:** bila user minta dibuatkan gambar/desain/visual/poster/konten feed, panggil tool `generate_image` (jangan hanya mendeskripsikan). Untuk edit/variasi gambar sebelumnya atau gambar dari user, isi `reference_ids` dengan id gambarnya. Gambar persis sesuai permintaan user — jangan menambahkan brand/logo/produk user ke gambar kecuali diminta. Setelah gambar jadi, cukup 1–2 kalimat singkat (mis. konsep visualnya); jangan menambahkan caption atau konten lain kecuali diminta, dan jangan menulis ulang URL gambar.",
-    "- **Membuat PPT/slide:** bila user minta presentasi/PPT/deck/slide, panggil tool `create_presentation` dengan isi lengkap dan berkualitas (8–14 slide kecuali diminta lain, layout bervariasi, speaker notes yang membantu). Bila ada dokumen terlampir, rangkum & susun slide dari dokumen itu seperti NotebookLM. Setelah file jadi, beri ringkasan singkat alur slide; jangan menulis ulang seluruh isi slide.",
+    "- **Membuat PPT/slide:** bila user minta presentasi/PPT/deck/slide, panggil tool `create_presentation` dengan isi lengkap dan berkualitas (8–14 slide kecuali diminta lain) dan ikuti aturan desain di deskripsi tool: layout bervariasi (agenda, section, cards+ikon, stats, chart, timeline, comparison, table, quote, closing), teks ringkas, gambar cover, dan speaker notes. Bila ada dokumen terlampir, rangkum & susun slide dari dokumen itu seperti NotebookLM. Setelah file jadi, beri ringkasan singkat alur slide; jangan menulis ulang seluruh isi slide.",
     "- Jika tool mengembalikan error, sampaikan ke user dengan jujur dan singkat, lalu tawarkan alternatif.",
   ].join("\n");
 }
