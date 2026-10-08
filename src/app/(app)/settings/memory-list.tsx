@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { addMemory, clearMemories, deleteMemory, updateMemory } from "./actions";
 
@@ -18,6 +19,7 @@ export function MemoryList({ memories }: { memories: Memory[] }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [pending, start] = useTransition();
+  const [confirm, confirmDialog] = useConfirm();
 
   return (
     <div className="space-y-3">
@@ -78,11 +80,20 @@ export function MemoryList({ memories }: { memories: Memory[] }) {
           size="sm"
           className="text-destructive"
           disabled={pending}
-          onClick={() => confirm("Hapus semua memory?") && start(() => clearMemories())}
+          onClick={async () => {
+            const ok = await confirm({
+              title: "Hapus semua memory?",
+              description: "Semua yang diingat AI tentang kamu (termasuk memory tiap project) akan dihapus permanen.",
+              confirmLabel: "Hapus semua",
+              destructive: true,
+            });
+            if (ok) start(() => clearMemories());
+          }}
         >
           Hapus semua memory
         </Button>
       )}
+      {confirmDialog}
     </div>
   );
 }

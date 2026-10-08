@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AlertCircle, CheckCircle2, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { deleteWorkspaceFile } from "../actions";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 
@@ -23,6 +24,7 @@ export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; fi
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [, startTransition] = useTransition();
+  const [confirm, confirmDialog] = useConfirm();
 
   async function upload(list: FileList | null) {
     if (!list?.length) return;
@@ -63,8 +65,14 @@ export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; fi
             <button
               className="rounded p-1 text-muted-foreground hover:text-destructive"
               aria-label="Hapus file"
-              onClick={() => {
-                if (!confirm(`Hapus ${f.name}?`)) return;
+              onClick={async () => {
+                const ok = await confirm({
+                  title: "Hapus file ini?",
+                  description: `"${f.name}" akan dihapus dari knowledge project.`,
+                  confirmLabel: "Hapus",
+                  destructive: true,
+                });
+                if (!ok) return;
                 startTransition(async () => {
                   await deleteWorkspaceFile(f.id);
                   router.refresh();
@@ -76,6 +84,7 @@ export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; fi
           </li>
         ))}
       </ul>
+      {confirmDialog}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   Folder,
   FolderOpen,
   Languages,
+  Loader2,
   LogOut,
   MessageSquarePlus,
   Monitor,
@@ -27,6 +28,7 @@ import {
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,38 +107,68 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     });
   }
 
-  async function newProject() {
-    const name = window.prompt(t.newProjectPrompt)?.trim();
-    if (!name) return;
-    const res = await fetch("/api/workspaces", { method: "POST", body: JSON.stringify({ name }) });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      return toast.error(
-        data.error === "limit_reached"
-          ? `Batas ${data.limit ?? ""} project untuk paket kamu sudah tercapai. Upgrade untuk menambah project.`
-          : "Gagal membuat project.",
-      );
+  // Jendela isian di dalam aplikasi (bukan pop-up browser) untuk project baru, ganti nama, dan hapus chat.
+  const [dlg, setDlg] = useState<
+    { kind: "newProject" } | { kind: "rename"; chat: ChatSummary } | { kind: "delete"; chat: ChatSummary } | null
+  >(null);
+  const [dlgValue, setDlgValue] = useState("");
+  const [dlgError, setDlgError] = useState<string | null>(null);
+  const [dlgBusy, setDlgBusy] = useState(false);
+
+  function openDialog(next: NonNullable<typeof dlg>) {
+    setDlg(next);
+    setDlgError(null);
+    setDlgBusy(false);
+    setDlgValue(next.kind === "rename" ? next.chat.title : "");
+  }
+
+  const newProject = () => openDialog({ kind: "newProject" });
+  const rename = (chat: ChatSummary) => openDialog({ kind: "rename", chat });
+  const remove = (chat: ChatSummary) => openDialog({ kind: "delete", chat });
+
+  async function submitDialog(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!dlg || dlgBusy) return;
+    setDlgBusy(true);
+    setDlgError(null);
+    try {
+      if (dlg.kind === "newProject") {
+        const name = dlgValue.trim();
+        if (!name) return setDlgError(t.newProjectPrompt);
+        const res = await fetch("/api/workspaces", { method: "POST", body: JSON.stringify({ name }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return setDlgError(
+            data.error === "limit_reached"
+              ? `Batas ${data.limit ?? ""} project untuk paket kamu sudah tercapai. Upgrade untuk menambah project.`
+              : "Gagal membuat project. Coba lagi.",
+          );
+        }
+        setDlg(null);
+        setExpanded((s) => new Set(s).add(data.id));
+        toast.success(`Project "${data.name}" dibuat`);
+        onNavigate?.();
+        router.push(`/chat?workspace=${data.id}`);
+        router.refresh();
+      } else if (dlg.kind === "rename") {
+        const title = dlgValue.trim();
+        if (!title) return;
+        if (title !== dlg.chat.title) {
+          await fetch(`/api/chats/${dlg.chat.id}`, { method: "PATCH", body: JSON.stringify({ title }) });
+          emitChatsChanged();
+        }
+        setDlg(null);
+      } else {
+        const chat = dlg.chat;
+        await fetch(`/api/chats/${chat.id}`, { method: "DELETE" });
+        setDlg(null);
+        toast.success("Chat dihapus");
+        emitChatsChanged();
+        if (pathname === `/chat/${chat.id}`) router.push("/chat");
+      }
+    } finally {
+      setDlgBusy(false);
     }
-    setExpanded((s) => new Set(s).add(data.id));
-    toast.success(`Project "${data.name}" dibuat`);
-    onNavigate?.();
-    router.push(`/chat?workspace=${data.id}`);
-    router.refresh();
-  }
-
-  async function rename(chat: ChatSummary) {
-    const title = window.prompt(t.rename, chat.title)?.trim();
-    if (!title || title === chat.title) return;
-    await fetch(`/api/chats/${chat.id}`, { method: "PATCH", body: JSON.stringify({ title }) });
-    emitChatsChanged();
-  }
-
-  async function remove(chat: ChatSummary) {
-    if (!window.confirm(`Hapus chat "${chat.title}"? Tindakan ini tidak bisa dibatalkan.`)) return;
-    await fetch(`/api/chats/${chat.id}`, { method: "DELETE" });
-    toast.success("Chat dihapus");
-    emitChatsChanged();
-    if (pathname === `/chat/${chat.id}`) router.push("/chat");
   }
 
   async function setLanguage(next: "id" | "en") {
@@ -293,6 +325,54 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </form>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={dlg !== null} onOpenChange={(open) => !open && setDlg(null)}>
+        <DialogContent>
+          {dlg?.kind === "delete" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Hapus chat?</DialogTitle>
+                <DialogDescription>
+                  Chat &quot;{dlg.chat.title}&quot; akan dihapus permanen dan tidak bisa dikembalikan.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setDlg(null)}>{t.cancel}</Button>
+                <Button variant="destructive" onClick={() => submitDialog()} disabled={dlgBusy}>
+                  {dlgBusy && <Loader2 className="animate-spin" />} {t.delete}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <form onSubmit={submitDialog} className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>{dlg?.kind === "rename" ? t.rename : t.newProject}</DialogTitle>
+                {dlg?.kind === "newProject" && (
+                  <DialogDescription>
+                    Satu project untuk satu brand/klien. Chat, Brand Kit, dokumen, dan memory di dalamnya terpisah dari
+                    project lain.
+                  </DialogDescription>
+                )}
+              </DialogHeader>
+              <Input
+                autoFocus
+                value={dlgValue}
+                onChange={(e) => setDlgValue(e.target.value)}
+                maxLength={dlg?.kind === "rename" ? 120 : 80}
+                placeholder={dlg?.kind === "rename" ? "Judul chat" : "Mis. Kopi Tuku, Photobebaz, Klien ABC"}
+              />
+              {dlgError && <p className="text-sm text-destructive">{dlgError}</p>}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={() => setDlg(null)}>{t.cancel}</Button>
+                <Button type="submit" disabled={dlgBusy || !dlgValue.trim()}>
+                  {dlgBusy && <Loader2 className="animate-spin" />}
+                  {dlg?.kind === "rename" ? "Simpan" : "Buat project"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
