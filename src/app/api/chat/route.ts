@@ -27,6 +27,7 @@ import {
 } from "@/lib/chat-server";
 import type { MtMessage } from "@/lib/types";
 import { truncate } from "@/lib/utils";
+import { env } from "@/lib/env";
 import { experienceLabel, roleLabel } from "@/lib/personas";
 
 export const maxDuration = 60;
@@ -62,6 +63,20 @@ export async function POST(req: Request) {
   const lastText = messageText(last);
   if (lastText.length > 20_000) return json(413, { error: "message_too_long" });
 
+  if (!env.supabaseServiceKey) {
+    console.error("[chat] SUPABASE_SERVICE_ROLE_KEY belum diisi");
+    return json(503, { error: "server_not_configured" });
+  }
+
+  // --- kredit ---
+  const tier = getTier(tierId);
+  const attachCount = attachmentIds(last).length;
+  const cost = messageCreditCost(tier, { research, attachments: attachCount });
+  const credit = await consumeCredits(user.id, cost, "chat", { chatId, tier: tierId, research, attachments: attachCount });
+  if (!credit.ok) {
+    return json(402, { error: "quota_exceeded", remaining: credit.remaining, cost });
+  }
+
   // --- chat: ambil atau buat ---
   const { data: existing } = await supabase
     .from("chats")
@@ -86,19 +101,13 @@ export async function POST(req: Request) {
       const retry = await supabase
         .from("chats")
         .insert({ id: chatId, user_id: user.id, agent_id: chatAgentId, tier: tierId, title: truncate(lastText || "Chat baru", 60) });
-      if (retry.error) return json(400, { error: "chat_create_failed" });
+      if (retry.error) {
+        await refundCredits(user.id, cost, "chat_create_failed");
+        return json(400, { error: "chat_create_failed" });
+      }
     }
   } else {
     await supabase.from("chats").update({ tier: tierId }).eq("id", chatId);
-  }
-
-  // --- kredit ---
-  const tier = getTier(tierId);
-  const attachCount = attachmentIds(last).length;
-  const cost = messageCreditCost(tier, { research, attachments: attachCount });
-  const credit = await consumeCredits(user.id, cost, "chat", { chatId, tier: tierId, research, attachments: attachCount });
-  if (!credit.ok) {
-    return json(402, { error: "quota_exceeded", remaining: credit.remaining, cost });
   }
 
   const startedAt = Date.now();

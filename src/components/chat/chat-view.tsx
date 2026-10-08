@@ -125,6 +125,7 @@ export function ChatView({
         setQuotaOpen(true);
         track("quota_exceeded");
       } else if (code === "rate_limited") toast.error("Terlalu banyak permintaan. Tunggu sebentar ya.");
+      else if (code === "server_not_configured") toast.error("Server AI belum selesai dikonfigurasi. Hubungi admin.");
       const res = await fetch("/api/credits");
       if (res.ok) emitCredits((await res.json()).remaining);
     },
