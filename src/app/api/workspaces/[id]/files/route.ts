@@ -3,7 +3,8 @@ import { apiSession, jsonError } from "@/lib/api";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { consumeCredits } from "@/lib/credits";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { detectMime, extractText, MAX_UPLOAD_BYTES, sanitizeFileName } from "@/lib/files";
+import { extractText, readStoredUpload, sanitizeFileName } from "@/lib/files";
+import { z } from "zod";
 import { chunkText } from "@/lib/ai/chunk";
 import { embedDocuments, embeddingsEnabled } from "@/lib/ai/embeddings";
 import { EXTRA_CREDIT_COST } from "@/lib/ai/models.config";
@@ -20,30 +21,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { data: ws } = await s.supabase.from("workspaces").select("id").eq("id", workspaceId).maybeSingle();
   if (!ws) return jsonError(404, "workspace_not_found");
 
-  const form = await req.formData().catch(() => null);
-  const file = form?.get("file");
-  if (!(file instanceof File)) return jsonError(400, "no_file");
-  if (file.size > MAX_UPLOAD_BYTES) return jsonError(413, "file_too_large");
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const name = sanitizeFileName(file.name);
-  const mime = detectMime(name, file.type, bytes);
-  if (!mime || mime.startsWith("image/")) return jsonError(415, "unsupported_type");
+  const body = z
+    .object({ path: z.string().min(1).max(400), name: z.string().min(1).max(200) })
+    .safeParse(await req.json().catch(() => null));
+  if (!body.success) return jsonError(400, "invalid_body");
+  const path = body.data.path;
+  if (!path.startsWith(`${s.user.id}/workspaces/${workspaceId}/`) || path.includes("..")) return jsonError(403, "forbidden");
+  const name = sanitizeFileName(body.data.name);
+  const bucket = createAdminClient().storage.from("uploads");
+  const file = await readStoredUpload(async () => (await bucket.download(path)).data, name);
+  if ("error" in file || file.mime.startsWith("image/")) {
+    await bucket.remove([path]);
+    return jsonError(415, "error" in file ? file.error : "unsupported_type");
+  }
+  const { bytes, mime } = file;
 
   const credit = await consumeCredits(s.user.id, EXTRA_CREDIT_COST.attachment, "knowledge_upload", { workspaceId });
   if (!credit.ok) return jsonError(402, "quota_exceeded");
 
-  const admin = createAdminClient();
   const fileId = crypto.randomUUID();
-  const path = `${s.user.id}/workspaces/${workspaceId}/${fileId}-${name}`;
-  const { error: upErr } = await admin.storage.from("uploads").upload(path, bytes, { contentType: mime });
-  if (upErr) return jsonError(500, "storage_failed");
   await s.supabase.from("workspace_files").insert({
     id: fileId,
     workspace_id: workspaceId,
     user_id: s.user.id,
     name,
     mime,
-    size: file.size,
+    size: bytes.byteLength,
     storage_path: path,
     status: "processing",
   });

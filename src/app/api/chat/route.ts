@@ -5,6 +5,7 @@ import {
   createIdGenerator,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  stepCountIs,
   streamText,
 } from "ai";
 import { z } from "zod";
@@ -25,7 +26,10 @@ import {
   messageText,
   resolveAttachments,
   saveMessages,
+  summarizeToolParts,
 } from "@/lib/chat-server";
+import { capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
+import { imageGenerationEnabled } from "@/lib/ai/image";
 import type { MtMessage } from "@/lib/types";
 import { truncate } from "@/lib/utils";
 import { env } from "@/lib/env";
@@ -66,11 +70,20 @@ export async function POST(req: Request) {
   const lastText = messageText(last);
   if (lastText.length > 20_000) return json(413, { error: "message_too_long" });
 
-  const [allowedTiers, { data: wsSetting }] = await Promise.all([
+  const [allowedTiers, { data: settings }, { data: imageFlag }] = await Promise.all([
     getAllowedTiers(supabase, profile),
-    supabase.from("app_settings").select("value").eq("key", "web_search").maybeSingle(),
+    supabase.from("app_settings").select("key, value").in("key", ["web_search", "image_gen"]),
+    supabase.from("feature_flags").select("enabled").eq("plan_id", profile.plan_id).eq("key", "image_gen").maybeSingle(),
   ]);
-  const webSearchEnabled = wsSetting?.value === true;
+  const setting = (key: string) => settings?.find((r) => r.key === key)?.value === true;
+  const webSearchEnabled = setting("web_search");
+  const imageBlockedReason = !imageGenerationEnabled()
+    ? "fitur pembuat gambar belum dikonfigurasi di server"
+    : !setting("image_gen")
+      ? "fitur pembuat gambar belum diaktifkan admin"
+      : profile.role !== "admin" && !imageFlag?.enabled
+        ? "membuat gambar hanya tersedia di paket Pro & Promax"
+        : null;
   if (!allowedTiers.includes(tierId)) {
     return json(403, { error: "tier_locked", allowed: allowedTiers });
   }
@@ -185,6 +198,7 @@ export async function POST(req: Request) {
         },
         {
           tierInstructions: tier.skillPrompt,
+          capabilities: capabilitiesPrompt(imageBlockedReason),
           agentInstructions: agent?.instructions ?? null,
           knowledge: wsCtx.knowledge,
           research: sources.length
@@ -198,8 +212,8 @@ export async function POST(req: Request) {
       );
 
       const { messages: resolvedRaw, hasImages } = await resolveAttachments(supabase, messages.slice(-40));
-      // Bagian tool (jejak pencarian web) tidak dikirim ulang ke model — teks & sumber sudah cukup.
-      const resolved = resolvedRaw.map((m) => ({ ...m, parts: m.parts.filter((p) => !p.type.startsWith("tool-")) }));
+      // Jejak tool tidak dikirim ulang apa adanya — hasil gambar/PPT diringkas jadi teks.
+      const resolved = resolvedRaw.map(summarizeToolParts);
       const webSearchOn = webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY);
       const routed = routeTier(tierId, { needsVision: hasImages });
 
@@ -211,22 +225,27 @@ export async function POST(req: Request) {
         temperature: tier.temperature,
         maxRetries: 0,
         providerOptions: { anthropic: { effort: tier.effort } },
-        tools: webSearchOn
-          ? {
-              web_search: anthropic.tools.webSearch_20250305({
-                maxUses: research ? tier.webSearches + 2 : tier.webSearches,
-                userLocation: { type: "approximate", country: "ID", timezone: "Asia/Jakarta" },
-              }),
-            }
-          : undefined,
+        tools: {
+          ...createChatTools({ admin, userId: user.id, chatId, imageBlockedReason }),
+          ...(webSearchOn
+            ? {
+                web_search: anthropic.tools.webSearch_20250305({
+                  maxUses: research ? tier.webSearches + 2 : tier.webSearches,
+                  userLocation: { type: "approximate", country: "ID", timezone: "Asia/Jakarta" },
+                }),
+              }
+            : {}),
+        },
+        // Beberapa langkah: model memanggil tool (gambar/PPT) lalu menjelaskan hasilnya.
+        stopWhen: stepCountIs(5),
         abortSignal: req.signal,
-        onFinish: async ({ usage, providerMetadata }) => {
+        onFinish: async ({ totalUsage: usage, steps }) => {
           settled = true;
           const used = routed.resolved() ?? routed.candidates[0];
-          const rawUsage = (providerMetadata?.anthropic?.usage ?? null) as {
-            server_tool_use?: { web_search_requests?: number };
-          } | null;
-          const searches = rawUsage?.server_tool_use?.web_search_requests ?? 0;
+          const searches = steps.reduce((sum, step) => {
+            const raw = step.providerMetadata?.anthropic?.usage as { server_tool_use?: { web_search_requests?: number } } | undefined;
+            return sum + (raw?.server_tool_use?.web_search_requests ?? 0);
+          }, 0);
           await admin.from("usage_logs").insert({
             user_id: user.id,
             chat_id: chatId,

@@ -5,12 +5,14 @@ import { toast } from "sonner";
 import {
   Check,
   Copy,
+  Download,
   FileText,
   Globe,
   Image as ImageIcon,
   Loader2,
   PanelRight,
   Pencil,
+  Presentation,
   RefreshCw,
   ThumbsDown,
   ThumbsUp,
@@ -23,16 +25,42 @@ import { useApp } from "@/components/app/app-context";
 import { getTiers } from "@/lib/ai/models.config";
 import type { MtMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { isTransparent, textBlocks } from "@/lib/message-text";
 import { Markdown } from "./markdown";
 
 const TIER_LABEL = Object.fromEntries(getTiers({}).map((t) => [t.id, t.label]));
 const NEGATIVE_REASONS = ["Tidak akurat", "Terlalu umum", "Tidak sesuai brand", "Format berantakan", "Bahasa kurang pas", "Lainnya"];
 
 export function messageToText(m: MtMessage) {
-  return m.parts
-    .filter((p) => p.type === "text")
-    .map((p) => (p as { text: string }).text)
-    .join("\n\n");
+  return textBlocks(m.parts).join("\n\n");
+}
+
+interface ToolPart {
+  type: string;
+  toolCallId?: string;
+  state?: "input-streaming" | "input-available" | "output-available" | "output-error";
+  output?: Record<string, unknown> & { ok?: boolean; error?: string };
+}
+
+type Block = { kind: "text"; text: string } | { kind: "tool"; part: ToolPart };
+const RENDERED_TOOLS = new Set(["tool-generate_image", "tool-create_presentation"]);
+
+/** Urutan tampilan jawaban: teks (potongan bersebelahan digabung) diselingi hasil gambar/PPT. */
+function assistantBlocks(m: MtMessage): Block[] {
+  const blocks: Block[] = [];
+  let open = false;
+  for (const p of m.parts) {
+    if (p.type === "text") {
+      const last = blocks[blocks.length - 1];
+      if (open && last?.kind === "text") last.text += p.text;
+      else blocks.push({ kind: "text", text: p.text });
+      open = true;
+    } else if (!isTransparent(p.type)) {
+      open = false;
+      if (RENDERED_TOOLS.has(p.type)) blocks.push({ kind: "tool", part: p as unknown as ToolPart });
+    }
+  }
+  return blocks.filter((b) => b.kind === "tool" || b.text.trim());
 }
 
 function linkCitations(text: string, sources: SourceUrlUIPart[]) {
@@ -74,7 +102,9 @@ export function ChatMessage({
     .filter((p): p is SourceUrlUIPart => p.type === "source-url")
     .filter((s, i, all) => all.findIndex((x) => x.url === s.url) === i);
   const files = message.parts.filter((p): p is FileUIPart => p.type === "file");
-  const searching = message.parts.some((p) => p.type.startsWith("tool-")) && !text;
+  const blocks = assistantBlocks(message);
+  const lastPart = message.parts[message.parts.length - 1];
+  const searching = lastPart?.type === "tool-web_search" || (message.parts.some((p) => p.type === "tool-web_search") && !text);
 
   async function copy() {
     await navigator.clipboard.writeText(text);
@@ -180,7 +210,15 @@ export function ChatMessage({
         </p>
       )}
 
-      {text ? <Markdown>{linkCitations(text, sources)}</Markdown> : null}
+      {blocks.map((b, i) =>
+        b.kind === "text" ? (
+          <Markdown key={i}>{linkCitations(b.text, sources)}</Markdown>
+        ) : b.part.type === "tool-generate_image" ? (
+          <ImageResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
+        ) : (
+          <DeckResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
+        ),
+      )}
 
       {showActions && (
         <div className="flex flex-wrap items-center gap-0.5 text-muted-foreground">
@@ -238,6 +276,84 @@ export function ChatMessage({
           />
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function ToolPending({ label, streaming }: { label: string; streaming: boolean }) {
+  if (!streaming) return null;
+  return (
+    <p className="flex items-center gap-2 rounded-xl border border-dashed bg-card/50 px-4 py-3 text-sm text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" /> {label}
+    </p>
+  );
+}
+
+function ToolError({ message }: { message: string }) {
+  return <p className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{message}</p>;
+}
+
+function ImageResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
+  const { t } = useApp();
+  const [broken, setBroken] = useState(false);
+  if (part.state === "output-error") return <ToolError message="Gagal membuat gambar." />;
+  if (part.state !== "output-available" || !part.output) return <ToolPending label={t.generatingImage} streaming={streaming} />;
+  if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat gambar."} />;
+  const url = String(part.output.url);
+  return (
+    <figure className="w-fit max-w-full space-y-1.5">
+      {broken ? (
+        <p className="rounded-xl border px-4 py-3 text-sm text-muted-foreground">{t.imageUnavailable}</p>
+      ) : (
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          {/* eslint-disable-next-line @next/next/no-img-element -- file privat lewat signed URL */}
+          <img
+            src={url}
+            alt={String(part.output.prompt ?? "Gambar buatan AI")}
+            className="max-h-[520px] max-w-full rounded-xl border bg-muted object-contain"
+            onError={() => setBroken(true)}
+          />
+        </a>
+      )}
+      <a href={`${url}?download=1`} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+        <Download className="size-3.5" /> {t.download}
+      </a>
+    </figure>
+  );
+}
+
+function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
+  const { t } = useApp();
+  if (part.state === "output-error") return <ToolError message="Gagal membuat presentasi." />;
+  if (part.state !== "output-available" || !part.output) return <ToolPending label={t.buildingDeck} streaming={streaming} />;
+  if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat presentasi."} />;
+  const titles = (part.output.slideTitles as string[] | undefined) ?? [];
+  return (
+    <div className="max-w-xl overflow-hidden rounded-xl border bg-card">
+      <div className="flex items-center gap-3 border-b bg-gradient-to-r from-primary/15 to-transparent px-4 py-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <Presentation className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{String(part.output.title)}</p>
+          <p className="text-xs text-muted-foreground">
+            PowerPoint · {Number(part.output.slideCount)} {t.slides}
+          </p>
+        </div>
+        <Button asChild size="sm">
+          <a href={`${String(part.output.url)}?download=1`}>
+            <Download /> {t.downloadPptx}
+          </a>
+        </Button>
+      </div>
+      <ol className="max-h-56 space-y-1 overflow-y-auto px-4 py-3 text-xs text-muted-foreground">
+        {titles.map((title, i) => (
+          <li key={i} className="flex gap-2">
+            <span className="w-5 shrink-0 text-right font-medium text-foreground/70">{i + 1}</span>
+            <span className="truncate">{title}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

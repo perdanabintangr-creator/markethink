@@ -70,10 +70,16 @@ export function createFallbackModel(candidates: ModelCandidate[]): RoutedModel {
         if (isAbortError(err)) throw err;
         failures.push(`${c.provider}:${c.modelId} → ${errorMessage(err).slice(0, 400)}`);
         console.warn(`[model-router] ${c.provider}:${c.modelId} gagal`, errorMessage(err));
-        // Bila gagal saat membawa tool (mis. web search belum diizinkan), coba model yang sama tanpa tool.
-        if (opts.tools?.length) {
+        // Bila gagal saat membawa tool bawaan provider (mis. web search belum diizinkan), coba model
+        // yang sama tanpa tool itu — tool buatan kita (gambar, PPT) tetap dipertahankan.
+        const custom = opts.tools?.filter((t) => t.type !== "provider-defined") ?? [];
+        if (opts.tools?.length && custom.length < opts.tools.length) {
           try {
-            const result = await fn(m, { ...opts, tools: undefined, toolChoice: undefined });
+            const result = await fn(m, {
+              ...opts,
+              tools: custom.length ? custom : undefined,
+              toolChoice: custom.length ? opts.toolChoice : undefined,
+            });
             used = c;
             toolFallback = errorMessage(err).slice(0, 300);
             return result;

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileText, Globe } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { textBlocks } from "@/lib/message-text";
 import { Markdown } from "@/components/chat/markdown";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ export default async function SharedChatPage({ params }: { params: Promise<{ tok
         </div>
         {(messages ?? []).map((m) => {
           const parts = (m.parts ?? []) as Part[];
-          const text = parts.filter((p) => p.type === "text").map((p) => p.text).join("\n\n");
+          const text = textBlocks(parts).join("\n\n");
           const sources = parts
             .filter((p) => p.type === "source-url")
             .filter((s, i, all) => all.findIndex((x) => x.url === s.url) === i);

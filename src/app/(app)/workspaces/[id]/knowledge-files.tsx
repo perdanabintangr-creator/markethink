@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AlertCircle, CheckCircle2, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { deleteWorkspaceFile } from "../actions";
+import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 
 interface FileRow {
   id: string;
@@ -16,12 +17,6 @@ interface FileRow {
   chunk_count: number;
 }
 
-const ERRORS: Record<string, string> = {
-  file_too_large: "File terlalu besar (maks 10 MB).",
-  unsupported_type: "Format tidak didukung (PDF, DOCX, TXT, CSV).",
-  quota_exceeded: "Kredit hari ini habis.",
-  rate_limited: "Terlalu banyak upload, tunggu sebentar.",
-};
 
 export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; files: FileRow[] }) {
   const router = useRouter();
@@ -33,11 +28,8 @@ export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; fi
     if (!list?.length) return;
     setUploading(true);
     for (const file of Array.from(list)) {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch(`/api/workspaces/${workspaceId}/files`, { method: "POST", body: form });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) toast.error(`${file.name}: ${ERRORS[data.error] ?? data.message ?? "gagal diproses"}`);
+      const data = await uploadFile<{ chunks: number }>(file, { scope: "workspace", workspaceId });
+      if ("error" in data) toast.error(`${file.name}: ${UPLOAD_ERRORS[data.error] ?? data.message ?? "gagal diproses"}`);
       else toast.success(`${file.name} siap dipakai (${data.chunks} bagian)`);
     }
     setUploading(false);
@@ -47,7 +39,7 @@ export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; fi
 
   return (
     <div className="space-y-2">
-      <input ref={inputRef} type="file" accept=".pdf,.docx,.txt,.md,.csv" multiple hidden onChange={(e) => upload(e.target.files)} />
+      <input ref={inputRef} type="file" accept=".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv,.json" multiple hidden onChange={(e) => upload(e.target.files)} />
       <Button variant="outline" className="w-full" onClick={() => inputRef.current?.click()} disabled={uploading}>
         {uploading ? <Loader2 className="animate-spin" /> : <Upload />} Upload file
       </Button>

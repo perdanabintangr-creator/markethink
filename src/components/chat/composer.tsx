@@ -6,6 +6,7 @@ import { ArrowUp, FileText, Globe, Image as ImageIcon, Loader2, Paperclip, Squar
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app/app-context";
 import { cn } from "@/lib/utils";
+import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 
 export interface PendingAttachment {
   id: string;
@@ -15,13 +16,7 @@ export interface PendingAttachment {
   previewUrl?: string;
 }
 
-const ACCEPT = ".pdf,.docx,.txt,.md,.csv,.png,.jpg,.jpeg,.webp,.gif";
-const UPLOAD_ERRORS: Record<string, string> = {
-  file_too_large: "File terlalu besar (maks 10 MB).",
-  unsupported_type: "Format file tidak didukung. Gunakan PDF, DOCX, TXT, CSV, atau gambar.",
-  extract_failed: "Isi file tidak bisa dibaca.",
-  rate_limited: "Terlalu banyak upload, tunggu sebentar.",
-};
+const ACCEPT = ".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv,.json,.png,.jpg,.jpeg,.webp,.gif";
 
 export function Composer({
   onSend,
@@ -51,12 +46,9 @@ export function Composer({
     for (const file of Array.from(files).slice(0, 5)) {
       setUploading((n) => n + 1);
       try {
-        const form = new FormData();
-        form.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: form });
-        const data = await res.json();
-        if (!res.ok) {
-          toast.error(UPLOAD_ERRORS[data.error] ?? "Upload gagal.");
+        const data = await uploadFile<PendingAttachment>(file, { scope: "chat" });
+        if ("error" in data) {
+          toast.error(`${file.name}: ${UPLOAD_ERRORS[data.error] ?? "Upload gagal."}`);
           continue;
         }
         setAttachments((a) => [

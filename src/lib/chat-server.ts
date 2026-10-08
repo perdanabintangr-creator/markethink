@@ -7,6 +7,7 @@ import { untrusted, type BrandKit } from "@/lib/ai/prompt";
 import { embedQuery, embeddingsEnabled } from "@/lib/ai/embeddings";
 import { ATTACHMENT_URL_PREFIX, type MtMessage } from "@/lib/types";
 import { truncate } from "@/lib/utils";
+import { isScannedPdf } from "@/lib/files";
 
 export function messageText(m: MtMessage) {
   return m.parts
@@ -37,7 +38,11 @@ export async function resolveAttachments(supabase: SupabaseClient, messages: MtM
     .in("id", ids);
   const byId = new Map((rows ?? []).map((r) => [r.id as string, r]));
 
-  const imageIds = ids.filter((id) => byId.get(id)?.mime.startsWith("image/")).slice(-4);
+  const isBinary = (id: string) => {
+    const r = byId.get(id);
+    return !!r && (r.mime.startsWith("image/") || isScannedPdf(r.mime, r.extracted_text));
+  };
+  const imageIds = ids.filter(isBinary).slice(-4);
   const imageData = new Map<string, string>();
   await Promise.all(
     imageIds.map(async (id) => {
@@ -61,20 +66,54 @@ export async function resolveAttachments(supabase: SupabaseClient, messages: MtM
       const id = p.url.slice(ATTACHMENT_URL_PREFIX.length);
       const row = byId.get(id);
       if (!row) continue;
-      if (row.mime.startsWith("image/")) {
+      if (row.mime.startsWith("image/") || isScannedPdf(row.mime, row.extracted_text)) {
         const url = imageData.get(id);
+        // ID dicantumkan agar model bisa memakai gambar ini sebagai acuan saat membuat/mengedit gambar.
+        if (row.mime.startsWith("image/")) parts.push({ type: "text", text: `[Gambar dari user: ${row.name} — id: ${id}]` });
         if (url) parts.push({ type: "file", mediaType: row.mime, filename: row.name, url });
-        else parts.push({ type: "text", text: `[Gambar terlampir: ${row.name}]` });
+        else parts.push({ type: "text", text: `[File terlampir: ${row.name}]` });
       } else {
         parts.push({
           type: "text",
-          text: untrusted(`file:${row.name}`, row.extracted_text || "(file kosong / tidak terbaca)"),
+          text: untrusted(`file ${fileKindLabel(row.mime)}: ${row.name}`, row.extracted_text || "(file kosong / tidak terbaca)"),
         });
       }
     }
     return { ...m, parts };
   });
   return { messages: resolved, hasImages: imageData.size > 0 };
+}
+
+/**
+ * Jejak tool di riwayat (pencarian web, gambar, PPT) tidak dikirim ulang apa adanya ke model;
+ * hasil gambar/PPT diringkas jadi teks supaya model tetap tahu apa yang sudah dibuat.
+ */
+export function summarizeToolParts(m: MtMessage): MtMessage {
+  const parts: MtMessage["parts"] = [];
+  for (const p of m.parts) {
+    if (!p.type.startsWith("tool-")) {
+      parts.push(p);
+      continue;
+    }
+    const tp = p as { type: string; state?: string; input?: Record<string, unknown>; output?: Record<string, unknown> };
+    if (tp.state !== "output-available" || !tp.output?.ok) continue;
+    if (tp.type === "tool-generate_image") {
+      parts.push({ type: "text", text: `[Kamu sudah membuat gambar — id: ${String(tp.output.attachmentId)}; prompt: ${truncate(String(tp.input?.prompt ?? ""), 300)}]` });
+    } else if (tp.type === "tool-create_presentation") {
+      const titles = (tp.output.slideTitles as string[] | undefined) ?? [];
+      parts.push({ type: "text", text: `[Kamu sudah membuat file PPT "${String(tp.output.title)}" (${titles.length} slide): ${truncate(titles.join(" | "), 600)}]` });
+    }
+  }
+  return { ...m, parts };
+}
+
+/** Label jenis file untuk pembungkus teks — membantu model memahami strukturnya. */
+export function fileKindLabel(mime: string) {
+  if (mime.includes("spreadsheet")) return "Excel";
+  if (mime.includes("presentation")) return "PowerPoint";
+  if (mime.includes("wordprocessing")) return "Word";
+  if (mime === "application/pdf") return "PDF";
+  return "Teks";
 }
 
 export async function loadWorkspaceContext(supabase: SupabaseClient, workspaceId: string | null, query: string) {

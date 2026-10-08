@@ -131,3 +131,11 @@ export async function setWebSearch(enabled: boolean) {
     .upsert({ key: "web_search", value: enabled, updated_at: new Date().toISOString() });
   revalidatePath("/admin/quota");
 }
+
+export async function setImageGen(enabled: boolean) {
+  await requireAdmin();
+  await createAdminClient()
+    .from("app_settings")
+    .upsert({ key: "image_gen", value: enabled, updated_at: new Date().toISOString() });
+  revalidatePath("/admin/quota");
+}

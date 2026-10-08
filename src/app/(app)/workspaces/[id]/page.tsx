@@ -47,7 +47,7 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
             <section>
               <h2 className="mb-1 font-semibold">Knowledge</h2>
               <p className="mb-3 text-xs text-muted-foreground">
-                PDF, DOCX, TXT, CSV (maks 10 MB). Dipakai otomatis saat relevan (RAG). 1 kredit per file.
+                PDF, Word, Excel, PowerPoint, CSV, TXT (maks 25 MB). Dipakai otomatis saat relevan (RAG). 1 kredit per file.
               </p>
               <KnowledgeFiles workspaceId={ws.id} files={files ?? []} />
             </section>

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { simulateReadableStream, streamText } from "ai";
+import { simulateReadableStream, streamText, tool } from "ai";
+import { z } from "zod";
 import { MockLanguageModelV2 } from "ai/test";
 
 const failing = new MockLanguageModelV2({
@@ -58,6 +59,23 @@ describe("model router fallback", () => {
     });
     await result.consumeStream();
     expect(working.doStreamCalls.at(-1)?.tools).toBeUndefined();
+  });
+
+  it("tool buatan sendiri (gambar/PPT) tetap dikirim ke model non-Claude", async () => {
+    const { createFallbackModel } = await import("@/lib/ai/router");
+    const { anthropic } = await import("@ai-sdk/anthropic");
+    const routed = createFallbackModel([{ provider: "google", modelId: "b" }]);
+    const result = streamText({
+      model: routed.model,
+      prompt: "hai",
+      maxRetries: 0,
+      tools: {
+        web_search: anthropic.tools.webSearch_20250305({ maxUses: 2 }),
+        generate_image: tool({ description: "x", inputSchema: z.object({ prompt: z.string() }), execute: async () => "ok" }),
+      },
+    });
+    await result.consumeStream();
+    expect(working.doStreamCalls.at(-1)?.tools?.map((t) => t.name)).toEqual(["generate_image"]);
   });
 
   it("tanpa kandidat → error jelas", async () => {

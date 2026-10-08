@@ -72,9 +72,16 @@ export function untrusted(label: string, content: string) {
 
 export async function buildSystemPrompt(
   ctx: PromptContext,
-  extras: { tierInstructions?: string | null; agentInstructions?: string | null; knowledge?: string | null; research?: string | null } = {},
+  extras: {
+    tierInstructions?: string | null;
+    agentInstructions?: string | null;
+    knowledge?: string | null;
+    research?: string | null;
+    capabilities?: string | null;
+  } = {},
 ) {
   const parts = [fillTemplate(await loadSystemTemplate(), ctx)];
+  if (extras.capabilities) parts.push(`## Kemampuan file, gambar & presentasi\n${extras.capabilities}`);
   if (extras.tierInstructions) parts.push(`## Level otak\n${extras.tierInstructions}`);
   if (extras.agentInstructions) parts.push(`## Mode agent\n${extras.agentInstructions}`);
   if (extras.knowledge) {

@@ -3,16 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EXTRA_CREDIT_COST, getTiers } from "@/lib/ai/models.config";
-import { setAccessMode, setWebSearch, updatePlanCredits } from "../actions";
+import { setAccessMode, setImageGen, setWebSearch, updatePlanCredits } from "../actions";
 
 export default async function AdminQuotaPage() {
   const admin = createAdminClient();
-  const [{ data: plans }, { data: mode }, { data: ws }] = await Promise.all([
+  const [{ data: plans }, { data: mode }, { data: ws }, { data: img }] = await Promise.all([
     admin.from("plans").select("*").order("sort_order"),
     admin.from("app_settings").select("value").eq("key", "access_mode").maybeSingle(),
     admin.from("app_settings").select("value").eq("key", "web_search").maybeSingle(),
+    admin.from("app_settings").select("value").eq("key", "image_gen").maybeSingle(),
   ]);
   const webSearchOn = ws?.value === true;
+  const imageGenOn = img?.value === true;
   const isPublic = mode?.value === "public";
   const tiers = getTiers();
   return (
@@ -45,6 +47,20 @@ export default async function AdminQuotaPage() {
         <CardContent>
           <form action={setWebSearch.bind(null, !webSearchOn)}>
             <Button variant={webSearchOn ? "outline" : "default"}>{webSearchOn ? "Matikan" : "Aktifkan"}</Button>
+          </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Pembuat gambar AI (Gemini): {imageGenOn ? "Aktif" : "Mati"}</CardTitle>
+          <CardDescription>
+            Otak bisa membuat & mengedit gambar langsung di chat (paket Pro & Promax, 5 kredit per gambar). Biaya ± $0,04
+            (± Rp650) per gambar, dipotong dari akun Google AI Studio (perlu billing aktif di API key Google).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={setImageGen.bind(null, !imageGenOn)}>
+            <Button variant={imageGenOn ? "outline" : "default"}>{imageGenOn ? "Matikan" : "Aktifkan"}</Button>
           </form>
         </CardContent>
       </Card>

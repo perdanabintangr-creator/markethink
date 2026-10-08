@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/chat": ["./prompts/**/*"],
   },
-  serverExternalPackages: ["unpdf", "mammoth"],
+  serverExternalPackages: ["unpdf", "mammoth", "exceljs", "pptxgenjs", "jszip"],
   experimental: {
     serverActions: { bodySizeLimit: "12mb" },
   },

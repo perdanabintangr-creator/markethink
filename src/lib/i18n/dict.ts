@@ -38,6 +38,12 @@ const id = {
   language: "Bahasa",
   thinking: "Markethink sedang berpikir…",
   searching: "Mencari di web…",
+  generatingImage: "Sedang membuat gambar… (±10–30 detik)",
+  buildingDeck: "Sedang menyusun presentasi…",
+  download: "Unduh",
+  downloadPptx: "Unduh .pptx",
+  slides: "slide",
+  imageUnavailable: "Gambar tidak bisa ditampilkan.",
 };
 
 const en: typeof id = {
@@ -78,6 +84,12 @@ const en: typeof id = {
   language: "Language",
   thinking: "Markethink is thinking…",
   searching: "Searching the web…",
+  generatingImage: "Generating image… (~10–30 seconds)",
+  buildingDeck: "Building your presentation…",
+  download: "Download",
+  downloadPptx: "Download .pptx",
+  slides: "slides",
+  imageUnavailable: "Image can't be displayed.",
 };
 
 export const dictionaries = { id, en };
