@@ -44,11 +44,12 @@ export interface TierConfig {
 }
 
 /** Estimasi harga USD per 1 juta token (input, output). Free tier = 0. */
-export const MODEL_PRICING_USD: Record<string, { input: number; output: number }> = {
-  "anthropic:claude-fable-5-1": { input: 10, output: 50 },
+/** Harga per 1 juta token (USD). `cacheRead` = harga token yang dibaca dari prompt cache (default 10% input). */
+export const MODEL_PRICING_USD: Record<string, { input: number; output: number; cacheRead?: number }> = {
+  "anthropic:claude-fable-5-1": { input: 10, output: 50, cacheRead: 0.25 },
   "anthropic:claude-haiku-5-5": { input: 0.1, output: 0.5 },
-  "anthropic:claude-sonnet-5-5": { input: 2, output: 10 },
-  "anthropic:claude-opus-5-5": { input: 4, output: 20 },
+  "anthropic:claude-sonnet-5-5": { input: 2, output: 10, cacheRead: 0.2 },
+  "anthropic:claude-opus-5-5": { input: 4, output: 20, cacheRead: 0.2 },
   "google:gemini-flash-lite-latest": { input: 0.1, output: 0.4 },
   "google:gemini-flash-latest": { input: 0.3, output: 2.5 },
   "google:gemini-pro-latest": { input: 1.25, output: 10 },
@@ -219,10 +220,26 @@ export function supportsVision(c: ModelCandidate) {
   return c.provider === "google" || c.provider === "anthropic";
 }
 
-export function estimateCostUsd(c: ModelCandidate, inputTokens: number, outputTokens: number) {
+/**
+ * Perkiraan biaya. `inputTokens` = token input yang TIDAK dari cache (seperti dilaporkan Anthropic);
+ * cache tulis ditagih 1,25× input, cache baca ± 0,1× input.
+ */
+export function estimateCostUsd(
+  c: ModelCandidate,
+  inputTokens: number,
+  outputTokens: number,
+  cache: { read?: number; write?: number } = {},
+) {
   const price = MODEL_PRICING_USD[`${c.provider}:${c.modelId}`];
   if (!price || c.modelId.endsWith(":free")) return 0;
-  return (inputTokens * price.input + outputTokens * price.output) / 1_000_000;
+  const cacheRead = price.cacheRead ?? price.input * 0.1;
+  return (
+    (inputTokens * price.input +
+      outputTokens * price.output +
+      (cache.write ?? 0) * price.input * 1.25 +
+      (cache.read ?? 0) * cacheRead) /
+    1_000_000
+  );
 }
 
 export function messageCreditCost(tier: TierConfig, opts: { research: boolean; attachments: number }) {

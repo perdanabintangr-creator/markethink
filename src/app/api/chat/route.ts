@@ -15,13 +15,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { consumeCredits, refundCredits } from "@/lib/credits";
 import { routeTier } from "@/lib/ai/router";
-import { buildSystemPrompt } from "@/lib/ai/prompt";
+import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
 import { formatSources, webSearch, type Source } from "@/lib/ai/research";
 import { estimateCostUsd, getTier, messageCreditCost } from "@/lib/ai/models.config";
 import {
   attachmentIds,
   extractMemories,
   generateTitle,
+  historyStart,
   loadWorkspaceContext,
   messageText,
   resolveAttachments,
@@ -200,31 +201,41 @@ export async function POST(req: Request) {
           tierInstructions: tier.skillPrompt,
           capabilities: capabilitiesPrompt(imageBlockedReason),
           agentInstructions: agent?.instructions ?? null,
-          knowledge: wsCtx.knowledge,
-          research: sources.length
+        },
+      );
+      // Konteks yang berubah tiap pesan ditaruh di pesan user terakhir agar system prompt tetap bisa di-cache.
+      const turnContext = buildTurnContext({
+        knowledge: wsCtx.knowledge,
+        research: sources.length
             ? formatSources(sources)
             : useTavily
               ? "Riset web gagal/ tidak ada hasil. Beri tahu user dan jawab dari pengetahuan umum dengan label perkiraan."
               : research
                 ? "User mengaktifkan Riset Web: wajib gunakan alat pencarian web (bila tersedia) sebelum menjawab, dan sertakan sumbernya."
                 : null,
-        },
-      );
+      });
 
-      const { messages: resolvedRaw, hasImages } = await resolveAttachments(supabase, messages.slice(-40));
+      const { messages: resolvedRaw, hasImages } = await resolveAttachments(supabase, messages.slice(historyStart(messages.length)));
       // Jejak tool tidak dikirim ulang apa adanya — hasil gambar/PPT diringkas jadi teks.
       const resolved = resolvedRaw.map(summarizeToolParts);
+      if (turnContext) {
+        const lastMsg = resolved[resolved.length - 1];
+        resolved[resolved.length - 1] = { ...lastMsg, parts: [{ type: "text", text: turnContext }, ...lastMsg.parts] };
+      }
       const webSearchOn = webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY);
       const routed = routeTier(tierId, { needsVision: hasImages });
 
       const result = streamText({
         model: routed.model,
-        system,
-        messages: convertToModelMessages(resolved),
+        // Prompt caching Claude: system prompt (stabil) + riwayat chat dibaca dari cache dengan ± 10% harga input.
+        messages: [
+          { role: "system", content: system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
+          ...convertToModelMessages(resolved),
+        ],
         maxOutputTokens: tier.maxOutputTokens,
         temperature: tier.temperature,
         maxRetries: 0,
-        providerOptions: { anthropic: { effort: tier.effort } },
+        providerOptions: { anthropic: { effort: tier.effort, cacheControl: { type: "ephemeral" } } },
         tools: {
           ...createChatTools({ admin, userId: user.id, chatId, imageBlockedReason }),
           ...(webSearchOn
@@ -246,6 +257,11 @@ export async function POST(req: Request) {
             const raw = step.providerMetadata?.anthropic?.usage as { server_tool_use?: { web_search_requests?: number } } | undefined;
             return sum + (raw?.server_tool_use?.web_search_requests ?? 0);
           }, 0);
+          const cacheWrite = steps.reduce(
+            (sum, step) => sum + Number(step.providerMetadata?.anthropic?.cacheCreationInputTokens ?? 0),
+            0,
+          );
+          const cacheRead = usage.cachedInputTokens ?? 0;
           await admin.from("usage_logs").insert({
             user_id: user.id,
             chat_id: chatId,
@@ -254,7 +270,11 @@ export async function POST(req: Request) {
             model: used.modelId,
             input_tokens: usage.inputTokens ?? 0,
             output_tokens: usage.outputTokens ?? 0,
-            est_cost_usd: estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0) + searches * 0.01,
+            est_cost_usd:
+              estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0, { read: cacheRead, write: cacheWrite }) +
+              searches * 0.01,
+            cache_read_tokens: cacheRead,
+            cache_write_tokens: cacheWrite,
             web_searches: searches,
             error: routed.toolFallback() ? `web search dilewati: ${routed.toolFallback()}` : null,
             credits: cost,

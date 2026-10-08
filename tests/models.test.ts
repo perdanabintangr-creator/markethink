@@ -75,3 +75,25 @@ describe("pembersih API key", () => {
     expect(cleanKey("  ")).toBeUndefined();
   });
 });
+
+describe("biaya dengan prompt cache", () => {
+  it("token dari cache jauh lebih murah", () => {
+    const sonnet = { provider: "anthropic" as const, modelId: "claude-sonnet-5-5" };
+    const tanpaCache = estimateCostUsd(sonnet, 20_000, 1_000);
+    const denganCache = estimateCostUsd(sonnet, 2_000, 1_000, { read: 18_000 });
+    expect(tanpaCache).toBeCloseTo(0.05);
+    expect(denganCache).toBeCloseTo(0.0176);
+  });
+});
+
+describe("jendela riwayat chat", () => {
+  it("awal riwayat bergeser per 10 pesan agar cache tetap kena", async () => {
+    const { historyStart } = await import("@/lib/chat-server");
+    expect(historyStart(30)).toBe(0);
+    expect(historyStart(45)).toBe(0);
+    expect(historyStart(49)).toBe(0);
+    expect(historyStart(50)).toBe(10);
+    expect(historyStart(59)).toBe(10);
+    expect(historyStart(60)).toBe(20);
+  });
+});

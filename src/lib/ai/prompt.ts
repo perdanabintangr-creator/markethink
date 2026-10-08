@@ -70,29 +70,33 @@ export function untrusted(label: string, content: string) {
   return `<untrusted_data source="${label.replace(/"/g, "'")}">\n${safe}\n</untrusted_data>`;
 }
 
+/**
+ * System prompt yang STABIL (sama dari pesan ke pesan) supaya bisa di-cache oleh Claude.
+ * Konteks yang berubah tiap pesan (knowledge, riset) diletakkan di pesan user lewat `buildTurnContext`.
+ */
 export async function buildSystemPrompt(
   ctx: PromptContext,
-  extras: {
-    tierInstructions?: string | null;
-    agentInstructions?: string | null;
-    knowledge?: string | null;
-    research?: string | null;
-    capabilities?: string | null;
-  } = {},
+  extras: { tierInstructions?: string | null; agentInstructions?: string | null; capabilities?: string | null } = {},
 ) {
   const parts = [fillTemplate(await loadSystemTemplate(), ctx)];
   if (extras.capabilities) parts.push(`## Kemampuan file, gambar & presentasi\n${extras.capabilities}`);
   if (extras.tierInstructions) parts.push(`## Level otak\n${extras.tierInstructions}`);
   if (extras.agentInstructions) parts.push(`## Mode agent\n${extras.agentInstructions}`);
+  return parts.join("\n\n");
+}
+
+/** Konteks khusus pesan ini (hasil pencarian dokumen workspace & riset web) — disisipkan di pesan user terakhir. */
+export function buildTurnContext(extras: { knowledge?: string | null; research?: string | null }) {
+  const parts: string[] = [];
   if (extras.knowledge) {
     parts.push(
-      `## Knowledge workspace (hasil pencarian dokumen user)\nGunakan bila relevan; sebut nama dokumennya.\n${extras.knowledge}`,
+      `[Konteks sistem] Knowledge workspace (hasil pencarian dokumen user). Gunakan bila relevan; sebut nama dokumennya.\n${extras.knowledge}`,
     );
   }
   if (extras.research) {
     parts.push(
-      `## Hasil Riset Web\nJawab berdasarkan sumber berikut. Kutip dengan nomor [n] sesuai urutan sumber. Jangan mengutip sumber yang tidak ada di daftar.\n${extras.research}`,
+      `[Konteks sistem] Hasil Riset Web. Jawab berdasarkan sumber berikut. Kutip dengan nomor [n] sesuai urutan sumber. Jangan mengutip sumber yang tidak ada di daftar.\n${extras.research}`,
     );
   }
-  return parts.join("\n\n");
+  return parts.length ? parts.join("\n\n") : null;
 }

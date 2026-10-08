@@ -795,3 +795,9 @@ insert into public.feature_flags (plan_id, key, enabled, value) values
   ('pro', 'pptx', true, null),
   ('promax', 'pptx', true, null)
 on conflict (plan_id, key) do nothing;
+
+
+-- ===== 20261008000012_usage_cache_tokens.sql =====
+-- Token prompt cache Claude (untuk memantau penghematan biaya).
+alter table public.usage_logs add column if not exists cache_read_tokens integer not null default 0;
+alter table public.usage_logs add column if not exists cache_write_tokens integer not null default 0;

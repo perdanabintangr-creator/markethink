@@ -16,6 +16,14 @@ export function messageText(m: MtMessage) {
     .join("\n");
 }
 
+/**
+ * Awal riwayat yang dikirim ke model: ± 40 pesan terakhir, tapi titik awalnya bergeser per 10 pesan
+ * (bukan tiap pesan) supaya awalan percakapan tetap sama dan prompt cache Claude tetap kena.
+ */
+export function historyStart(total: number) {
+  return total <= 40 ? 0 : Math.floor((total - 40) / 10) * 10;
+}
+
 export function attachmentIds(m: MtMessage | undefined) {
   if (!m) return [];
   return m.parts

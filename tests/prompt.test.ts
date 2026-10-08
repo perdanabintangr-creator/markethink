@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSystemPrompt, fillTemplate, formatBrandKit, untrusted } from "@/lib/ai/prompt";
+import { buildSystemPrompt, buildTurnContext, fillTemplate, formatBrandKit, untrusted } from "@/lib/ai/prompt";
 
 describe("system prompt", () => {
   it("mengisi semua variabel", () => {
@@ -27,10 +27,18 @@ describe("system prompt", () => {
   });
 
   it("memuat prompts/system.md beserta instruksi keamanan", async () => {
-    const out = await buildSystemPrompt({ role: "Mahasiswa" }, { research: "[1] sumber" });
+    const out = await buildSystemPrompt({ role: "Mahasiswa" });
     expect(out).toContain("Markethink");
     expect(out).toContain("untrusted_data");
-    expect(out).toContain("Hasil Riset Web");
     expect(out).not.toMatch(/\{(role|industry|experience|brand_kit|memory)\}/);
+  });
+
+  it("system prompt stabil (bisa di-cache); riset & knowledge masuk konteks per pesan", async () => {
+    const a = await buildSystemPrompt({ role: "Owner" }, { tierInstructions: "x" });
+    const b = await buildSystemPrompt({ role: "Owner" }, { tierInstructions: "x" });
+    expect(a).toBe(b);
+    expect(a).not.toContain("Hasil Riset Web");
+    expect(buildTurnContext({ research: "[1] sumber" })).toContain("Hasil Riset Web");
+    expect(buildTurnContext({})).toBeNull();
   });
 });
