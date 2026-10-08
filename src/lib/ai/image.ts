@@ -18,7 +18,7 @@ type Reference = { mime: string; data: string };
 
 /** Bersihkan key hasil copy-paste (spasi, baris baru, tanda kutip, "NAMA=" ikut tertempel). */
 export function cleanKey(raw: string | undefined) {
-  const v = (raw ?? "").trim().replace(/^[A-Z_]+=/, "").replace(/^["']|["']$/g, "").trim();
+  const v = (raw ?? "").trim().replace(/^[A-Z_]+=/, "").replace(/^Bearer\s+/i, "").replace(/^["']|["']$/g, "").trim();
   return v || undefined;
 }
 
