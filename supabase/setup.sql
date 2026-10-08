@@ -722,3 +722,7 @@ grant execute on function public.admin_daily_activity(integer) to service_role;
 -- Temuan Supabase security advisor.
 alter function public.credit_day_start() set search_path = public;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
+
+
+-- ===== 20261008000005_usage_error.sql =====
+alter table public.usage_logs add column if not exists error text;

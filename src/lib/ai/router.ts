@@ -48,19 +48,19 @@ export function createFallbackModel(candidates: ModelCandidate[]): RoutedModel {
   let used: ModelCandidate | null = null;
 
   async function attempt<T>(fn: (m: LanguageModelV2) => PromiseLike<T>): Promise<T> {
-    let lastError: unknown;
+    const failures: string[] = [];
     for (const c of candidates) {
       try {
         const result = await fn(instantiate(c));
         used = c;
         return result;
       } catch (err) {
-        lastError = err;
         if (isAbortError(err)) throw err;
+        failures.push(`${c.provider}:${c.modelId} → ${errorMessage(err).slice(0, 200)}`);
         console.warn(`[model-router] ${c.provider}:${c.modelId} gagal, coba fallback`, errorMessage(err));
       }
     }
-    throw lastError;
+    throw new Error(`Semua model gagal: ${failures.join(" | ")}`);
   }
 
   const first = candidates[0];

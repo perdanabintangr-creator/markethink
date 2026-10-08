@@ -43,7 +43,7 @@ describe("model router fallback", () => {
     let err: unknown;
     const result = streamText({ model: routed.model, prompt: "hai", maxRetries: 0, onError: ({ error }) => void (err = error) });
     await result.consumeStream();
-    expect(String(err)).toMatch(/429/);
+    expect(String(err)).toMatch(/Semua model gagal: groq:a → .*429/);
   });
 
   it("tanpa kandidat → error jelas", async () => {

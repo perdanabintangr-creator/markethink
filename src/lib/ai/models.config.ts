@@ -30,6 +30,9 @@ export interface TierConfig {
 
 /** Estimasi harga USD per 1 juta token (input, output). Free tier = 0. */
 export const MODEL_PRICING_USD: Record<string, { input: number; output: number }> = {
+  "google:gemini-flash-lite-latest": { input: 0.1, output: 0.4 },
+  "google:gemini-flash-latest": { input: 0.3, output: 2.5 },
+  "google:gemini-pro-latest": { input: 1.25, output: 10 },
   "google:gemini-2.5-flash-lite": { input: 0.1, output: 0.4 },
   "google:gemini-2.5-flash": { input: 0.3, output: 2.5 },
   "google:gemini-2.5-pro": { input: 1.25, output: 10 },
@@ -74,6 +77,7 @@ export function getTiers(envSource: Record<string, string | undefined> = process
       temperature: 0.8,
       candidates: parseCandidates(envSource.MODEL_JUNIOR, [
         { provider: "groq", modelId: "llama-3.1-8b-instant" },
+        { provider: "google", modelId: "gemini-flash-lite-latest" },
         { provider: "google", modelId: "gemini-2.5-flash-lite" },
         { provider: "openrouter", modelId: "meta-llama/llama-3.3-70b-instruct:free" },
       ]),
@@ -90,6 +94,7 @@ export function getTiers(envSource: Record<string, string | undefined> = process
       maxOutputTokens: 4096,
       temperature: 0.7,
       candidates: parseCandidates(envSource.MODEL_SENIOR, [
+        { provider: "google", modelId: "gemini-flash-latest" },
         { provider: "google", modelId: "gemini-2.5-flash" },
         { provider: "groq", modelId: "llama-3.3-70b-versatile" },
         { provider: "openrouter", modelId: "deepseek/deepseek-chat-v3.1:free" },
@@ -107,7 +112,9 @@ export function getTiers(envSource: Record<string, string | undefined> = process
       maxOutputTokens: 8192,
       temperature: 0.6,
       candidates: parseCandidates(envSource.MODEL_ASSOCIATE, [
+        { provider: "google", modelId: "gemini-pro-latest" },
         { provider: "google", modelId: "gemini-2.5-pro" },
+        { provider: "google", modelId: "gemini-flash-latest" },
         { provider: "openrouter", modelId: "deepseek/deepseek-r1-0528:free" },
         { provider: "groq", modelId: "openai/gpt-oss-120b" },
       ]),

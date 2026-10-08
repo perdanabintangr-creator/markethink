@@ -213,6 +213,7 @@ export async function POST(req: Request) {
             credits: 0,
             research,
             status: "error",
+            error: (error instanceof Error ? error.message : String(error)).slice(0, 1000),
             latency_ms: Date.now() - startedAt,
           });
         },
