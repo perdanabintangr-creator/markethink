@@ -208,6 +208,7 @@ export async function extractMemories(userId: string, recentUserMessages: string
       prompt: `Kamu mengekstrak MEMORY jangka panjang tentang user untuk asisten marketing.
 Ambil hanya fakta/preferensi yang stabil dan berguna di percakapan berikutnya: gaya bahasa yang disukai, industri, nama brand/bisnis, target pasar, channel utama, peran/pekerjaan, preferensi format.
 JANGAN ambil data sensitif (nomor telepon, alamat, data keuangan pribadi, kesehatan) atau isi tugas sesaat.
+JANGAN jadikan permintaan sekali pakai sebagai preferensi (mis. "buatkan 3 caption" BUKAN preferensi "suka 3 caption"); preferensi format hanya dicatat bila user menyatakannya untuk seterusnya (mis. "selalu", "ke depannya", "saya suka").
 Memory yang sudah ada (jangan duplikat):
 ${known.map((k) => `- ${k}`).join("\n") || "- (kosong)"}
 
