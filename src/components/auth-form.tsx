@@ -17,6 +17,15 @@ function GoogleIcon() {
   );
 }
 
+const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
+const CONFIG_ERROR = "Server login belum terkonfigurasi (env Supabase belum terbaca). Hubungi admin.";
+
+/** Supabase client, atau null bila env publik tidak ikut ter-build. */
+function getClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
+  return createClient();
+}
+
 function safeNext(raw: string | null) {
   return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/chat";
 }
@@ -33,8 +42,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   async function onGoogle() {
     if (mode === "register" && !consent) return toast.error("Setujui Syarat & Kebijakan Privasi dulu ya.");
+    const supabase = getClient();
+    if (!supabase) return toast.error(CONFIG_ERROR);
     setLoading(true);
-    const supabase = createClient();
     if (mode === "register") localStorage.setItem("mt_consent_at", new Date().toISOString());
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: callbackUrl() } });
     if (error) {
@@ -48,8 +58,25 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
-    const supabase = createClient();
+    const supabase = getClient();
+    if (!supabase) return toast.error(CONFIG_ERROR);
     setLoading(true);
+    try {
+      await submitWith(supabase, email, password, form);
+    } catch (err) {
+      console.error(err);
+      toast.error("Tidak bisa terhubung ke server. Coba lagi sebentar.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitWith(
+    supabase: NonNullable<ReturnType<typeof getClient>>,
+    email: string,
+    password: string,
+    form: FormData,
+  ) {
     if (mode === "register") {
       if (!consent) {
         setLoading(false);
@@ -110,13 +137,16 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </label>
       )}
 
-      <Button type="button" variant="outline" className="w-full" onClick={onGoogle} disabled={loading}>
-        <GoogleIcon /> Lanjut dengan Google
-      </Button>
-
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <div className="h-px flex-1 bg-border" /> atau <div className="h-px flex-1 bg-border" />
-      </div>
+      {GOOGLE_ENABLED && (
+        <>
+          <Button type="button" variant="outline" className="w-full" onClick={onGoogle} disabled={loading}>
+            <GoogleIcon /> Lanjut dengan Google
+          </Button>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="h-px flex-1 bg-border" /> atau <div className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      )}
 
       <form onSubmit={onSubmit} className="space-y-3">
         {mode === "register" && (
