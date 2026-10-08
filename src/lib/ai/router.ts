@@ -6,7 +6,7 @@ import { createGroq } from "@ai-sdk/groq";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { resolveAppUrl } from "@/lib/env";
 import { cleanKey } from "./image";
-import { getTier, supportsVision, type ModelCandidate, type TierConfig } from "./models.config";
+import { getTier, parseCandidates, supportsVision, type ModelCandidate, type TierConfig } from "./models.config";
 
 const providerKeys: Record<ModelCandidate["provider"], string | undefined> = {
   anthropic: cleanKey(process.env.ANTHROPIC_API_KEY),
@@ -107,9 +107,26 @@ export function createFallbackModel(candidates: ModelCandidate[]): RoutedModel {
   return { model, resolved: () => used, toolFallback: () => toolFallback, candidates };
 }
 
-export function routeTier(tierId: string | null | undefined, opts: { needsVision?: boolean } = {}) {
+/**
+ * Model gratis untuk paket Free (Gemini free tier). Kuota gratis dibagi untuk semua user; bila habis/sibuk,
+ * router otomatis jatuh ke model berbayar tier tersebut (Claude Haiku). Override: env MODEL_FREE.
+ */
+export const FREE_CANDIDATES: ModelCandidate[] = parseCandidates(process.env.MODEL_FREE, [
+  { provider: "google", modelId: "gemini-flash-latest" },
+  { provider: "google", modelId: "gemini-3.8-flash" },
+]);
+
+export function routeTier(
+  tierId: string | null | undefined,
+  opts: { needsVision?: boolean; preferFree?: boolean } = {},
+) {
   const tier: TierConfig = getTier(tierId);
   let candidates = tier.candidates.filter((c) => isProviderConfigured(c.provider));
+  if (opts.preferFree) {
+    const free = FREE_CANDIDATES.filter((c) => isProviderConfigured(c.provider));
+    const same = (a: ModelCandidate, b: ModelCandidate) => a.provider === b.provider && a.modelId === b.modelId;
+    candidates = [...free, ...candidates.filter((c) => !free.some((f) => same(f, c)))];
+  }
   if (opts.needsVision) {
     const vision = candidates.filter(supportsVision);
     if (vision.length) candidates = vision;
@@ -125,16 +142,17 @@ export function routeTier(tierId: string | null | undefined, opts: { needsVision
 }
 
 /**
- * Sesuaikan opsi per provider: model Claude terbaru menolak parameter sampling;
- * provider lain tidak mengenal tool bawaan Anthropic (mis. web search) → dibuang.
+ * Sesuaikan opsi per provider: model Claude terbaru menolak parameter sampling; tool bawaan sebuah provider
+ * (web search Claude `anthropic.*`, Google Search `google.*`) hanya dikirim ke provider itu sendiri.
  */
 function forModel(m: LanguageModelV2, options: LanguageModelV2CallOptions): LanguageModelV2CallOptions {
-  if (m.provider.startsWith("anthropic")) {
-    return { ...options, temperature: undefined, topP: undefined, topK: undefined };
-  }
-  if (!options.tools?.length) return options;
-  const tools = options.tools.filter((t) => !(t.type === "provider-defined" && t.id.startsWith("anthropic.")));
-  return { ...options, tools: tools.length ? tools : undefined, toolChoice: tools.length ? options.toolChoice : undefined };
+  const base = m.provider.startsWith("anthropic")
+    ? { ...options, temperature: undefined, topP: undefined, topK: undefined }
+    : options;
+  if (!base.tools?.length) return base;
+  const prefix = `${m.provider.split(".")[0]}.`;
+  const tools = base.tools.filter((t) => t.type !== "provider-defined" || t.id.startsWith(prefix));
+  return { ...base, tools: tools.length ? tools : undefined, toolChoice: tools.length ? base.toolChoice : undefined };
 }
 
 function isAbortError(err: unknown) {

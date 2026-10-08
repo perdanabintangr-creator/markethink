@@ -6,11 +6,12 @@ import { AppShell } from "@/components/app/app-shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, profile } = await requireUser();
-  const [{ data: workspaces }, credits, allowedTiers, { data: plan }] = await Promise.all([
+  const [{ data: workspaces }, credits, allowedTiers, { data: plan }, { data: freeFlag }] = await Promise.all([
     supabase.from("workspaces").select("id, name").order("updated_at", { ascending: false }),
     getCreditStatus(user.id),
     getAllowedTiers(supabase, profile),
     supabase.from("plans").select("name").eq("id", profile.plan_id).maybeSingle(),
+    supabase.from("feature_flags").select("enabled").eq("plan_id", profile.plan_id).eq("key", "free_models").maybeSingle(),
   ]);
   return (
     <AppShell
@@ -28,6 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         credits: { dailyLimit: credits.dailyLimit, remaining: credits.remaining },
         allowedTiers,
         planName: plan?.name ?? profile.plan_id,
+        freeModels: profile.role !== "admin" && Boolean(freeFlag?.enabled),
       }}
     >
       {children}

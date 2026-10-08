@@ -8,15 +8,22 @@ import type { Profile } from "@/lib/auth";
  * Diatur lewat feature_flags: key `chat` / `image_gen` / `pptx` dengan value `{"per_day": N}`.
  * Tanpa `per_day` = tidak dibatasi (hanya dibatasi kredit). Admin tidak dibatasi.
  */
-export type DailyLimitKind = "chat" | "image" | "pptx";
+export type DailyLimitKind = "chat" | "image" | "pptx" | "search";
 
-const FLAG_KEY: Record<DailyLimitKind, string> = { chat: "chat", image: "image_gen", pptx: "pptx" };
+const CHAT_TIERS = ["junior", "senior", "associate", "director"];
+const FLAG_KEY: Record<DailyLimitKind, string> = { chat: "chat", image: "image_gen", pptx: "pptx", search: "web_search" };
 const LOG_TIERS: Record<DailyLimitKind, string[]> = {
-  chat: ["junior", "senior", "associate", "director"],
+  chat: CHAT_TIERS,
   image: ["image"],
   pptx: ["pptx"],
+  search: CHAT_TIERS,
 };
-export const LIMIT_LABEL: Record<DailyLimitKind, string> = { chat: "chat", image: "gambar", pptx: "PPT" };
+export const LIMIT_LABEL: Record<DailyLimitKind, string> = {
+  chat: "chat",
+  image: "gambar",
+  pptx: "PPT",
+  search: "pencarian web berbayar",
+};
 
 /** Awal hari ini dalam WIB (UTC+7), sama dengan reset kredit harian. */
 export function wibDayStart(now = Date.now()) {
@@ -41,6 +48,16 @@ export async function getDailyLimits(supabase: SupabaseClient, profile: Profile)
 }
 
 export async function countToday(userId: string, kind: DailyLimitKind) {
+  if (kind === "search") {
+    // Jumlah pencarian web Claude (berbayar) hari ini; pencarian Google gratis tidak dihitung.
+    const { data } = await createAdminClient()
+      .from("usage_logs")
+      .select("web_searches")
+      .eq("user_id", userId)
+      .gt("web_searches", 0)
+      .gte("created_at", wibDayStart().toISOString());
+    return (data ?? []).reduce((sum, r) => sum + Number(r.web_searches ?? 0), 0);
+  }
   const { count } = await createAdminClient()
     .from("usage_logs")
     .select("id", { count: "exact", head: true })

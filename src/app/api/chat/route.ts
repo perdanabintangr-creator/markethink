@@ -10,6 +10,7 @@ import {
 } from "ai";
 import { z } from "zod";
 import { anthropic } from "@ai-sdk/anthropic";
+import { google } from "@ai-sdk/google";
 import { getSession, hasAppAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
@@ -54,6 +55,9 @@ const json = (status: number, body: Record<string, unknown>) =>
 
 const genId = createIdGenerator({ prefix: "msg", size: 16 });
 
+/** Gemini memakai free tier (tanpa billing) kecuali env GOOGLE_BILLING_ENABLED diisi → biaya Rp0. */
+const freeTierModel = (c: { provider: string }) => c.provider === "google" && !process.env.GOOGLE_BILLING_ENABLED;
+
 export async function POST(req: Request) {
   const { supabase, user, profile } = await getSession();
   if (!user || !profile) return json(401, { error: "unauthorized" });
@@ -72,12 +76,16 @@ export async function POST(req: Request) {
   const lastText = messageText(last);
   if (lastText.length > 20_000) return json(413, { error: "message_too_long" });
 
-  const [allowedTiers, { data: settings }, { data: imageFlag }, dailyLimits] = await Promise.all([
+  const [allowedTiers, { data: settings }, { data: planFlags }, dailyLimits] = await Promise.all([
     getAllowedTiers(supabase, profile),
     supabase.from("app_settings").select("key, value").in("key", ["web_search", "image_gen"]),
-    supabase.from("feature_flags").select("enabled").eq("plan_id", profile.plan_id).eq("key", "image_gen").maybeSingle(),
+    supabase.from("feature_flags").select("key, enabled").eq("plan_id", profile.plan_id).in("key", ["image_gen", "free_models"]),
     getDailyLimits(supabase, profile),
   ]);
+  const planFlag = (key: string) => planFlags?.some((f) => f.key === key && f.enabled) ?? false;
+  const imageFlag = { enabled: planFlag("image_gen") };
+  // Paket Free: model gratis (Gemini) dulu, Claude sebagai cadangan. Admin selalu Claude.
+  const preferFree = profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
   const setting = (key: string) => settings?.find((r) => r.key === key)?.value === true;
   const webSearchEnabled = setting("web_search");
   const imageBlockedReason = !imageGenerationEnabled()
@@ -228,8 +236,12 @@ export async function POST(req: Request) {
         const lastMsg = resolved[resolved.length - 1];
         resolved[resolved.length - 1] = { ...lastMsg, parts: [{ type: "text", text: turnContext }, ...lastMsg.parts] };
       }
-      const webSearchOn = webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY);
-      const routed = routeTier(tierId, { needsVision: hasImages });
+      // Pencarian web Claude (berbayar) — paket Free dibatasi per hari; Google Search (gratis) untuk Gemini.
+      const paidSearchCapped = Boolean(await dailyLimitReached(dailyLimits, user.id, "search"));
+      const webSearchOn =
+        webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY) && !paidSearchCapped;
+      const googleSearchOn = webSearchEnabled && preferFree;
+      const routed = routeTier(tierId, { needsVision: hasImages, preferFree });
 
       const result = streamText({
         model: routed.model,
@@ -258,6 +270,7 @@ export async function POST(req: Request) {
                 }),
               }
             : {}),
+          ...(googleSearchOn ? { google_search: google.tools.googleSearch({}) } : {}),
         },
         // Beberapa langkah: model memanggil tool (gambar/PPT) lalu menjelaskan hasilnya.
         stopWhen: stepCountIs(5),
@@ -283,7 +296,9 @@ export async function POST(req: Request) {
             input_tokens: usage.inputTokens ?? 0,
             output_tokens: usage.outputTokens ?? 0,
             est_cost_usd:
-              estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0, { read: cacheRead, write: cacheWrite }) +
+              (freeTierModel(used)
+                ? 0
+                : estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0, { read: cacheRead, write: cacheWrite })) +
               searches * 0.01,
             cache_read_tokens: cacheRead,
             cache_write_tokens: cacheWrite,

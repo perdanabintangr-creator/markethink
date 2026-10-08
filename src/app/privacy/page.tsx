@@ -5,7 +5,7 @@ export const metadata = { title: "Kebijakan Privasi" };
 export default function PrivacyPage() {
   return (
     <LegalPage title="Kebijakan Privasi">
-      <p>Terakhir diperbarui: 8 Oktober 2026</p>
+      <p>Terakhir diperbarui: 8 Oktober 2026 (pembaruan: pemrosesan paket Free)</p>
       <p>
         Markethink menghormati privasi kamu dan memproses data pribadi sesuai Undang-Undang Nomor 27 Tahun 2022 tentang
         Pelindungan Data Pribadi (UU PDP).
@@ -25,10 +25,22 @@ export default function PrivacyPage() {
       </ul>
       <h2>3. Penyedia AI & layanan pihak ketiga</h2>
       <p>
-        <strong>Selama masa beta, Markethink menggunakan penyedia AI pihak ketiga</strong> (antara lain Google Gemini, Groq,
-        OpenRouter, dan Tavily untuk pencarian web). Isi pesan dan file yang relevan dikirim ke penyedia tersebut untuk
-        menghasilkan jawaban dan dapat diproses di luar Indonesia. Kami juga memakai Supabase (database & penyimpanan),
-        Vercel (hosting), Upstash (pembatasan akses), Resend (email), PostHog (analitik), dan Sentry (pelacakan error).
+        Markethink menggunakan penyedia AI pihak ketiga, antara lain <strong>Anthropic (Claude)</strong>, <strong>Google
+        Gemini</strong>, OpenRouter (pembuat gambar), Groq, dan Tavily (pencarian web). Isi pesan dan file yang relevan
+        dikirim ke penyedia tersebut untuk menghasilkan jawaban dan dapat diproses di luar Indonesia. Kami juga memakai
+        Supabase (database & penyimpanan), Vercel (hosting), Upstash (pembatasan akses), Resend (email), PostHog (analitik),
+        dan Sentry (pelacakan error).
+      </p>
+      <p>
+        <strong>Paket Free:</strong> jawaban diutamakan diproses oleh layanan <strong>gratis Google Gemini</strong>. Sesuai
+        ketentuan Google untuk layanan gratisnya, isi pesan, file, dan jawaban pada paket Free{" "}
+        <strong>dapat digunakan Google untuk meningkatkan produknya dan dapat ditinjau oleh peninjau manusia</strong>. Bila
+        layanan gratis sedang penuh, pesan diproses oleh Claude (Anthropic). Dengan memakai paket Free, kamu menyetujui
+        pemrosesan ini.
+      </p>
+      <p>
+        <strong>Paket Pro & Promax:</strong> diproses oleh layanan AI berbayar (Claude). Sesuai ketentuan penyedia, isi chat
+        pada layanan berbayar tidak dipakai untuk melatih model AI mereka.
       </p>
       <p>
         <strong>Jangan memasukkan data rahasia</strong> (data pribadi pelanggan, kata sandi, informasi keuangan sensitif, atau

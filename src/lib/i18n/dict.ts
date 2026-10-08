@@ -34,6 +34,8 @@ const id = {
   emptySubtitle: "Riset, strategi, konten, sampai KPI — tanya aja.",
   feedbackThanks: "Terima kasih atas feedback-nya!",
   disclaimer: "Markethink bisa keliru. Cek ulang info penting & jangan masukkan data rahasia.",
+  disclaimerFree:
+    "Paket Free diproses oleh Google Gemini (layanan gratis) — isi chat dapat dipakai Google untuk meningkatkan layanannya. Jangan masukkan data rahasia. Upgrade ke Pro untuk otak Claude & privasi penuh.",
   theme: "Tema",
   language: "Bahasa",
   thinking: "Markethink sedang berpikir…",
@@ -80,6 +82,8 @@ const en: typeof id = {
   emptySubtitle: "Research, strategy, content, all the way to KPIs — just ask.",
   feedbackThanks: "Thanks for the feedback!",
   disclaimer: "Markethink can make mistakes. Verify key info & don't share confidential data.",
+  disclaimerFree:
+    "The Free plan is processed by Google Gemini (free service) — chats may be used by Google to improve its services. Don't share confidential data. Upgrade to Pro for Claude & full privacy.",
   theme: "Theme",
   language: "Language",
   thinking: "Markethink is thinking…",

@@ -14,6 +14,8 @@ export interface AppContextValue {
   /** Tier otak yang boleh dipakai sesuai paket user. */
   allowedTiers: TierId[];
   planName: string;
+  /** Paket memakai model gratis (Gemini free tier) → tampilkan pemberitahuan privasi. */
+  freeModels: boolean;
 }
 
 /** Tier awal: preferensi bila diizinkan, selain itu Senior bila boleh, selain itu tier pertama yang diizinkan. */

@@ -65,7 +65,7 @@ export const EXTRA_CREDIT_COST = {
   attachment: 1,
 } as const;
 
-function parseCandidates(raw: string | undefined, fallback: ModelCandidate[]): ModelCandidate[] {
+export function parseCandidates(raw: string | undefined, fallback: ModelCandidate[]): ModelCandidate[] {
   if (!raw?.trim()) return fallback;
   const parsed = raw
     .split(",")

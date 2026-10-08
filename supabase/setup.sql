@@ -814,3 +814,16 @@ on conflict (plan_id, key) do update set enabled = excluded.enabled, value = exc
 
 update public.feature_flags set enabled = true, value = '{"per_day": 2}' where plan_id = 'beta' and key = 'image_gen';
 update public.feature_flags set enabled = true, value = '{"per_day": 1}' where plan_id = 'beta' and key = 'pptx';
+
+
+-- ===== 20261008000014_free_models.sql =====
+-- Paket Free: model gratis (Gemini free tier) dulu, Claude sebagai cadangan.
+-- Pencarian web Claude (berbayar) untuk Free dibatasi 5 per hari; Google Search gratis tidak dihitung.
+insert into public.feature_flags (plan_id, key, enabled, value) values
+  ('beta', 'free_models', true, null),
+  ('pro', 'free_models', false, null),
+  ('promax', 'free_models', false, null),
+  ('beta', 'web_search', true, '{"per_day": 5}'),
+  ('pro', 'web_search', true, null),
+  ('promax', 'web_search', true, null)
+on conflict (plan_id, key) do update set enabled = excluded.enabled, value = excluded.value;

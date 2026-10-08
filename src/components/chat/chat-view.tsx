@@ -57,7 +57,7 @@ export function ChatView({
   initialCanvasIds: string[];
   initialShareToken: string | null;
 }) {
-  const { t, workspaces, allowedTiers } = useApp();
+  const { t, workspaces, allowedTiers, freeModels } = useApp();
   const [tier, setTier] = useState<TierId>(() => pickTier(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
@@ -374,7 +374,7 @@ export function ChatView({
             onResearchChange={setResearch}
             brainSlot={<ModelSelector compact tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />}
           />
-          <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{t.disclaimer}</p>
+          <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{freeModels ? t.disclaimerFree : t.disclaimer}</p>
         </div>
       </div>
 

@@ -9,6 +9,7 @@ const failing = new MockLanguageModelV2({
   },
 });
 const working = new MockLanguageModelV2({
+  provider: "google.generative-ai",
   doStream: async () => ({
     stream: simulateReadableStream({
       chunks: [
@@ -76,6 +77,23 @@ describe("model router fallback", () => {
     });
     await result.consumeStream();
     expect(working.doStreamCalls.at(-1)?.tools?.map((t) => t.name)).toEqual(["generate_image"]);
+  });
+
+  it("Google Search hanya dikirim ke Gemini, web search Claude dibuang", async () => {
+    const { createFallbackModel } = await import("@/lib/ai/router");
+    const { anthropic } = await import("@ai-sdk/anthropic");
+    const routed = createFallbackModel([{ provider: "google", modelId: "b" }]);
+    const result = streamText({
+      model: routed.model,
+      prompt: "hai",
+      maxRetries: 0,
+      tools: {
+        web_search: anthropic.tools.webSearch_20250305({ maxUses: 2 }),
+        google_search: { type: "provider-defined", id: "google.google_search", name: "google_search", args: {}, inputSchema: z.object({}) },
+      },
+    });
+    await result.consumeStream();
+    expect(working.doStreamCalls.at(-1)?.tools?.map((t) => t.name)).toEqual(["google_search"]);
   });
 
   it("tanpa kandidat → error jelas", async () => {
