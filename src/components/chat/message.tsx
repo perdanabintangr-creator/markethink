@@ -26,7 +26,9 @@ import { getTiers } from "@/lib/ai/models.config";
 import type { MtMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { isTransparent, textBlocks } from "@/lib/message-text";
+import { parseQuotedMessage } from "@/lib/quote";
 import { Markdown } from "./markdown";
+import { SelectionAsk } from "./selection-ask";
 
 const TIER_LABEL = Object.fromEntries(getTiers({}).map((t) => [t.id, t.label]));
 const NEGATIVE_REASONS = ["Tidak akurat", "Terlalu umum", "Tidak sesuai brand", "Format berantakan", "Bahasa kurang pas", "Lainnya"];
@@ -77,6 +79,8 @@ export function ChatMessage({
   onRegenerate,
   onEdit,
   onOpenCanvas,
+  onQuote,
+  onExplain,
   statusLabel,
 }: {
   message: MtMessage;
@@ -86,6 +90,10 @@ export function ChatMessage({
   onRegenerate?: () => void;
   onEdit?: (text: string) => void;
   onOpenCanvas?: (content: string) => void;
+  /** Blok teks di jawaban → kutip ke kotak chat untuk ditanyakan. */
+  onQuote?: (text: string) => void;
+  /** Blok teks di jawaban → langsung minta penjelasan. */
+  onExplain?: (text: string) => void;
   statusLabel?: string | null;
 }) {
   const { t } = useApp();
@@ -152,11 +160,7 @@ export function ChatMessage({
             </div>
           </div>
         ) : (
-          text && (
-            <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary/10 px-4 py-2.5 text-sm">
-              {text}
-            </div>
-          )
+          text && <UserBubble text={text} />
         )}
         {!editing && !isStreaming && onEdit && (
           <div className="flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100">
@@ -210,15 +214,17 @@ export function ChatMessage({
         </p>
       )}
 
-      {blocks.map((b, i) =>
-        b.kind === "text" ? (
-          <Markdown key={i}>{linkCitations(b.text, sources)}</Markdown>
-        ) : b.part.type === "tool-generate_image" ? (
-          <ImageResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
-        ) : (
-          <DeckResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
-        ),
-      )}
+      <MaybeSelectionAsk enabled={!(isLast && isStreaming)} onQuote={onQuote} onExplain={onExplain}>
+        {blocks.map((b, i) =>
+          b.kind === "text" ? (
+            <Markdown key={i}>{linkCitations(b.text, sources)}</Markdown>
+          ) : b.part.type === "tool-generate_image" ? (
+            <ImageResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
+          ) : (
+            <DeckResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
+          ),
+        )}
+      </MaybeSelectionAsk>
 
       {showActions && (
         <div className="flex flex-wrap items-center gap-0.5 text-muted-foreground">
@@ -276,6 +282,39 @@ export function ChatMessage({
           />
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function MaybeSelectionAsk({
+  enabled,
+  onQuote,
+  onExplain,
+  children,
+}: {
+  enabled: boolean;
+  onQuote?: (text: string) => void;
+  onExplain?: (text: string) => void;
+  children: React.ReactNode;
+}) {
+  if (!enabled || !onQuote || !onExplain) return <div className="space-y-2">{children}</div>;
+  return (
+    <SelectionAsk onAsk={onQuote} onExplain={onExplain}>
+      <div className="space-y-2">{children}</div>
+    </SelectionAsk>
+  );
+}
+
+function UserBubble({ text }: { text: string }) {
+  const { quote, body } = parseQuotedMessage(text);
+  return (
+    <div className="max-w-[85%] space-y-2 rounded-2xl rounded-br-md bg-primary/10 px-4 py-2.5 text-sm">
+      {quote && (
+        <p className="line-clamp-4 whitespace-pre-wrap border-l-2 border-primary/50 pl-2.5 text-xs text-muted-foreground">
+          {quote}
+        </p>
+      )}
+      {body && <p className="whitespace-pre-wrap">{body}</p>}
     </div>
   );
 }

@@ -23,6 +23,7 @@ import type { TierId } from "@/lib/ai/models.config";
 import { ATTACHMENT_URL_PREFIX, PENDING_KEY, type MtMessage, type PendingAgentRun } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ChatMessage, messageToText } from "./message";
+import { buildQuotedMessage } from "@/lib/quote";
 import { Composer, type PendingAttachment } from "./composer";
 import { ModelSelector, type TierOption } from "./model-selector";
 import { BrainPicker } from "./brain-picker";
@@ -61,6 +62,7 @@ export function ChatView({
   const [tier, setTier] = useState<TierId>(() => pickTier(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
+  const [quote, setQuote] = useState<string | null>(null);
   const [research, setResearch] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string | null>(initialWorkspaceId);
   const [activeAgent, setActiveAgent] = useState(agent);
@@ -339,6 +341,10 @@ export function ChatView({
                   onRegenerate={i === lastAssistantIndex && !busy ? () => regenerate() : undefined}
                   onEdit={m.role === "user" ? (text) => editMessage(i, text) : undefined}
                   onOpenCanvas={m.role === "assistant" ? createCanvas : undefined}
+                  onQuote={m.role === "assistant" ? setQuote : undefined}
+                  onExplain={
+                    m.role === "assistant" && !busy ? (text) => send(buildQuotedMessage(text, t.explainPrompt)) : undefined
+                  }
                 />
               ))}
               {status === "submitted" && messages[messages.length - 1]?.role === "user" && (
@@ -373,6 +379,8 @@ export function ChatView({
             research={research}
             onResearchChange={setResearch}
             brainSlot={<ModelSelector compact tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />}
+            quote={quote}
+            onClearQuote={() => setQuote(null)}
           />
           <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{freeModels ? t.disclaimerFree : t.disclaimer}</p>
         </div>

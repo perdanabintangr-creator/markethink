@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowUp, FileText, Globe, Image as ImageIcon, Loader2, Paperclip, Square, X } from "lucide-react";
+import { ArrowUp, CornerDownRight, FileText, Globe, Image as ImageIcon, Loader2, Paperclip, Square, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app/app-context";
 import { cn } from "@/lib/utils";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
+import { buildQuotedMessage } from "@/lib/quote";
 
 export interface PendingAttachment {
   id: string;
@@ -25,6 +26,8 @@ export function Composer({
   research,
   onResearchChange,
   brainSlot,
+  quote,
+  onClearQuote,
 }: {
   onSend: (text: string, attachments: PendingAttachment[]) => void;
   onStop: () => void;
@@ -33,6 +36,9 @@ export function Composer({
   onResearchChange: (v: boolean) => void;
   /** Tombol pilih otak di toolbar. */
   brainSlot?: React.ReactNode;
+  /** Potongan jawaban AI yang sedang ditanyakan (dari blok teks). */
+  quote?: string | null;
+  onClearQuote?: () => void;
 }) {
   const { t } = useApp();
   const [text, setText] = useState("");
@@ -40,6 +46,11 @@ export function Composer({
   const [uploading, setUploading] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Saat user memilih "Tanyakan", langsung fokus ke kotak ketik.
+  useEffect(() => {
+    if (quote) taRef.current?.focus();
+  }, [quote]);
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
@@ -65,8 +76,10 @@ export function Composer({
   function submit() {
     if (busy || uploading) return;
     const value = text.trim();
-    if (!value && !attachments.length) return;
-    onSend(value || "Tolong analisis file terlampir.", attachments);
+    if (!value && !attachments.length && !quote) return;
+    const message = value || (attachments.length ? "Tolong analisis file terlampir." : t.explainPrompt);
+    onSend(quote ? buildQuotedMessage(quote, message) : message, attachments);
+    onClearQuote?.();
     setText("");
     setAttachments([]);
     if (taRef.current) taRef.current.style.height = "auto";
@@ -104,6 +117,18 @@ export function Composer({
               <Loader2 className="size-3.5 animate-spin" /> Mengunggah…
             </span>
           )}
+        </div>
+      )}
+      {quote && (
+        <div className="mx-3 mt-3 flex items-start gap-2 rounded-lg border-l-2 border-primary bg-primary/5 px-3 py-2 text-xs">
+          <CornerDownRight className="mt-0.5 size-3.5 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-primary">{t.replyingTo}</p>
+            <p className="line-clamp-2 text-muted-foreground">{quote}</p>
+          </div>
+          <button onClick={onClearQuote} aria-label="Batal" className="text-muted-foreground hover:text-foreground">
+            <X className="size-3.5" />
+          </button>
         </div>
       )}
       <textarea
@@ -156,7 +181,7 @@ export function Composer({
           <Button
             size="icon"
             onClick={submit}
-            disabled={(!text.trim() && !attachments.length) || uploading > 0}
+            disabled={(!text.trim() && !attachments.length && !quote) || uploading > 0}
             aria-label={t.send}
             className="rounded-full"
           >
