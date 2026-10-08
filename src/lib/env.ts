@@ -1,6 +1,13 @@
 /** Server-side env helpers. Fitur yang key-nya belum diisi otomatis dinonaktifkan. */
+/** URL publik app: env eksplisit → domain production Vercel (otomatis) → localhost. */
+export function resolveAppUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  return vercel ? `https://${vercel}` : "http://localhost:3000";
+}
+
 export const env = {
-  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+  appUrl: resolveAppUrl(),
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
   supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",

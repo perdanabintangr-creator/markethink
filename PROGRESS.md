@@ -20,6 +20,11 @@
 ## Belum diverifikasi (butuh key & akses jaringan)
 - Chat end-to-end dengan LLM sungguhan, Tavily, embedding Gemini, login Google, email Resend, deploy Vercel.
 
+## Infrastruktur
+- ✅ Supabase project `markethink` (ref `cqrstytnbfspbwgyvpzi`, free, Singapore) dibuat via connector; 4 migrasi terpasang; security advisor bersih (sisa: payment_events tanpa policy = disengaja, hanya service role).
+- ⏳ Vercel: menunggu founder import repo + tempel env.
+- ⏳ Supabase Auth URL Configuration: diisi setelah URL Vercel ada.
+
 ## Berikutnya
 1. Founder menyiapkan akun & key (SETUP.md), membuka akses jaringan environment, lalu bilang "lanjut".
 2. Terapkan migrasi ke Supabase (`npm run db:push` atau `supabase/setup.sql`).

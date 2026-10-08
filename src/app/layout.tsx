@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers";
+import { resolveAppUrl } from "@/lib/env";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Markethink — Otak Marketing Berbasis AI", template: "%s · Markethink" },
   description:
     "Partner AI untuk marketing: riset ber-sitasi, strategi, konten, kalender, sampai KPI. Dibuat untuk marketer, UMKM, mahasiswa, dan freelancer Indonesia.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(resolveAppUrl()),
 };
 
 export const viewport: Viewport = {

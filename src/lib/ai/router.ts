@@ -3,6 +3,7 @@ import type { LanguageModelV2 } from "@ai-sdk/provider";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { resolveAppUrl } from "@/lib/env";
 import { getTier, supportsVision, type ModelCandidate, type TierConfig } from "./models.config";
 
 const providerKeys: Record<ModelCandidate["provider"], string | undefined> = {
@@ -24,7 +25,7 @@ function instantiate(c: ModelCandidate): LanguageModelV2 {
     case "openrouter":
       return createOpenRouter({
         apiKey: providerKeys.openrouter,
-        headers: { "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "", "X-Title": "Markethink" },
+        headers: { "HTTP-Referer": resolveAppUrl(), "X-Title": "Markethink" },
       }).chat(c.modelId) as unknown as LanguageModelV2;
   }
 }

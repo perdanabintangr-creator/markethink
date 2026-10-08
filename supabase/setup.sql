@@ -716,3 +716,9 @@ grant execute on function public.admin_overview() to service_role;
 grant execute on function public.admin_usage_by_tier(integer) to service_role;
 grant execute on function public.admin_usage_by_model(integer) to service_role;
 grant execute on function public.admin_daily_activity(integer) to service_role;
+
+
+-- ===== 20261008000004_harden_functions.sql =====
+-- Temuan Supabase security advisor.
+alter function public.credit_day_start() set search_path = public;
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
