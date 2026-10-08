@@ -15,7 +15,7 @@
 ## Fitur file, gambar & PPT (2026-10-08)
 - ✅ Baca lampiran PDF/Word/Excel/PowerPoint/CSV/JSON/gambar/PDF scan (maks 25 MB).
 - ✅ Buat file PowerPoint (.pptx) dari chat — kartu unduh di chat.
-- ⏸️ Buat gambar (Gemini) — kode siap, saklar `image_gen` MATI menunggu ACC biaya founder.
+- ✅ Buat gambar (Gemini) — saklar `image_gen` AKTIF (ACC founder).
 
 ## Sudah diverifikasi
 - `npm run lint`, `npm run typecheck`, `npm run test` (27 test), `npm run build` — lulus.
