@@ -5,13 +5,14 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { resolveAppUrl } from "@/lib/env";
+import { cleanKey } from "./image";
 import { getTier, supportsVision, type ModelCandidate, type TierConfig } from "./models.config";
 
 const providerKeys: Record<ModelCandidate["provider"], string | undefined> = {
-  anthropic: process.env.ANTHROPIC_API_KEY,
-  google: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-  groq: process.env.GROQ_API_KEY,
-  openrouter: process.env.OPENROUTER_API_KEY,
+  anthropic: cleanKey(process.env.ANTHROPIC_API_KEY),
+  google: cleanKey(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+  groq: cleanKey(process.env.GROQ_API_KEY),
+  openrouter: cleanKey(process.env.OPENROUTER_API_KEY),
 };
 
 export function isProviderConfigured(provider: ModelCandidate["provider"]) {

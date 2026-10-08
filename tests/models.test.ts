@@ -64,3 +64,13 @@ describe("urutan model gambar", () => {
     ]);
   });
 });
+
+describe("pembersih API key", () => {
+  it("membuang spasi, kutip, dan nama variabel yang ikut tertempel", async () => {
+    const { cleanKey } = await import("@/lib/ai/image");
+    expect(cleanKey("  sk-or-v1-abc\n")).toBe("sk-or-v1-abc");
+    expect(cleanKey('"sk-or-v1-abc"')).toBe("sk-or-v1-abc");
+    expect(cleanKey("OPENROUTER_API_KEY=sk-or-v1-abc")).toBe("sk-or-v1-abc");
+    expect(cleanKey("  ")).toBeUndefined();
+  });
+});

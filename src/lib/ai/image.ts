@@ -16,9 +16,15 @@ export interface GeneratedImage {
 
 type Reference = { mime: string; data: string };
 
+/** Bersihkan key hasil copy-paste (spasi, baris baru, tanda kutip, "NAMA=" ikut tertempel). */
+export function cleanKey(raw: string | undefined) {
+  const v = (raw ?? "").trim().replace(/^[A-Z_]+=/, "").replace(/^["']|["']$/g, "").trim();
+  return v || undefined;
+}
+
 const keys = () => ({
-  openrouter: process.env.OPENROUTER_API_KEY,
-  google: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  openrouter: cleanKey(process.env.OPENROUTER_API_KEY),
+  google: cleanKey(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
 });
 
 export const imageGenerationEnabled = () => Boolean(keys().openrouter || keys().google);
@@ -116,6 +122,10 @@ async function viaOpenRouter(key: string, prompt: string, aspectRatio: string, r
     if (!res.ok) {
       // 402 = saldo OpenRouter habis → tidak ada gunanya mencoba model lain.
       if (res.status === 402) throw new Error(`[credits_required] 402 ${body.slice(0, 200)}`);
+      // 401/403 = key salah (mis. yang tertempel Management Key / key terpotong). Info diagnosa tanpa membocorkan key.
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(`[auth_invalid] ${res.status} ${body.slice(0, 150)} (key: ${key.length} karakter, awalan sk-or-v1-: ${key.startsWith("sk-or-v1-") ? "ya" : "tidak"})`);
+      }
       errors.push(`${model} → ${res.status} ${body.slice(0, 250)}`);
       continue;
     }

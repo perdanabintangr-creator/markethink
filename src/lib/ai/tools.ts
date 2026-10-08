@@ -14,7 +14,7 @@ const IMAGE_COST_USD = 0.04;
 
 export type ImageToolOutput =
   | { ok: true; attachmentId: string; url: string; prompt: string; aspectRatio: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; hint?: string };
 
 export type PresentationToolOutput =
   | { ok: true; attachmentId: string; url: string; title: string; slideCount: number; slideTitles: string[]; fileName: string }
@@ -28,7 +28,7 @@ interface ToolCtx {
   imageBlockedReason: string | null;
 }
 
-const errText = (err: unknown) => (err instanceof Error ? err.message : String(err)).slice(0, 500);
+const errText = (err: unknown) => (err instanceof Error ? err.message : String(err)).slice(0, 1500);
 
 async function storeFile(ctx: ToolCtx, kind: "images" | "presentations", name: string, mime: string, bytes: Uint8Array, text: string | null) {
   const id = crypto.randomUUID();
@@ -99,7 +99,7 @@ export function createChatTools(ctx: ToolCtx) {
           console.error("[image] gagal", err);
           await refundCredits(ctx.userId, IMAGE_CREDIT_COST, "image_failed");
           await logUsage(ctx, { tier: "image", credits: 0, cost: 0, error: errText(err) });
-          return { ok: false, error: friendlyImageError(errText(err)) };
+          return { ok: false, ...friendlyImageError(errText(err)) };
         }
       },
     }),
@@ -159,20 +159,25 @@ async function loadReferences(ctx: ToolCtx, ids: string[]) {
   return refs;
 }
 
-function friendlyImageError(msg: string) {
+/** Pesan untuk user (tampil di chat) + petunjuk untuk model (tidak ditampilkan). */
+function friendlyImageError(msg: string): { error: string; hint?: string } {
+  const adminOnly = "Jangan sarankan user mencoba lagi; jelaskan bahwa admin perlu membereskannya, lalu tawarkan prompt gambar siap pakai.";
   if (/\[credits_required\]/.test(msg)) {
-    return "Pembuat gambar belum bisa dipakai: saldo OpenRouter milik admin habis/belum di-top-up. Kredit sudah dikembalikan. Jangan sarankan coba lagi — beri tahu user bahwa admin perlu top-up saldo OpenRouter.";
+    return { error: "Pembuat gambar belum bisa dipakai: saldo OpenRouter admin habis. Kredit sudah dikembalikan.", hint: adminOnly };
+  }
+  if (/\[auth_invalid\]/.test(msg)) {
+    return { error: "Pembuat gambar belum bisa dipakai: API key OpenRouter di server tidak valid. Kredit sudah dikembalikan.", hint: adminOnly };
   }
   if (/\[billing_required\]/.test(msg)) {
-    return "Pembuat gambar belum aktif: akun Google AI milik admin belum mengaktifkan billing (model gambar tidak termasuk paket gratis Google). Kredit sudah dikembalikan. Jangan sarankan coba lagi — beri tahu user bahwa admin perlu mengaktifkan billing.";
+    return { error: "Pembuat gambar belum aktif: billing akun Google AI admin belum aktif. Kredit sudah dikembalikan.", hint: adminOnly };
   }
   if (/429|RESOURCE_EXHAUSTED|quota/i.test(msg)) {
-    return "Layanan pembuat gambar sedang penuh (batas permintaan). Kredit sudah dikembalikan — coba lagi beberapa menit lagi.";
+    return { error: "Layanan pembuat gambar sedang penuh. Kredit sudah dikembalikan — coba lagi beberapa menit lagi." };
   }
-  if (/SAFETY|blocked|PROHIBITED/i.test(msg)) {
-    return "Permintaan gambar ditolak oleh filter keamanan. Coba ubah deskripsinya.";
+  if (/SAFETY|blocked|PROHIBITED|moderation/i.test(msg)) {
+    return { error: "Permintaan gambar ditolak oleh filter keamanan. Coba ubah deskripsinya." };
   }
-  return "Pembuat gambar sedang bermasalah. Kredit sudah dikembalikan — coba lagi sebentar lagi.";
+  return { error: "Pembuat gambar sedang bermasalah. Kredit sudah dikembalikan — coba lagi sebentar lagi." };
 }
 
 /** Instruksi kemampuan untuk system prompt — supaya model tidak pernah bilang "tidak bisa". */
