@@ -27,13 +27,13 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl px-4 py-8">
         <Link href="/workspaces" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Semua workspace
+          <ArrowLeft className="size-4" /> Semua project
         </Link>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">{ws.name}</h1>
           <Button asChild>
             <Link href={`/chat?workspace=${ws.id}`}>
-              <MessageSquarePlus /> Chat di workspace ini
+              <MessageSquarePlus /> Chat di project ini
             </Link>
           </Button>
         </div>

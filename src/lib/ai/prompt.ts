@@ -22,7 +22,7 @@ export const BRAND_KIT_FIELDS: { key: keyof BrandKit; label: string }[] = [
   { key: "competitors", label: "Kompetitor" },
   { key: "channels", label: "Channel aktif" },
   { key: "budget_range", label: "Budget range" },
-  { key: "notes", label: "Catatan lain" },
+  { key: "notes", label: "Catatan lain / instruksi khusus project" },
 ];
 
 export interface PromptContext {
@@ -76,9 +76,19 @@ export function untrusted(label: string, content: string) {
  */
 export async function buildSystemPrompt(
   ctx: PromptContext,
-  extras: { tierInstructions?: string | null; agentInstructions?: string | null; capabilities?: string | null } = {},
+  extras: {
+    tierInstructions?: string | null;
+    agentInstructions?: string | null;
+    capabilities?: string | null;
+    project?: string | null;
+  } = {},
 ) {
   const parts = [fillTemplate(await loadSystemTemplate(), ctx)];
+  if (extras.project) {
+    parts.push(
+      `## Project aktif: ${extras.project.replace(/[\r\n]/g, " ")}\nChat ini berada di dalam project "${extras.project.replace(/[\r\n]/g, " ")}". Fokus hanya pada brand/klien project ini dan gunakan Brand Kit, dokumen, serta memory project ini. Jangan mengaitkan atau menyebut brand/klien/project lain milik user. Patuhi "Catatan lain" di Brand Kit sebagai instruksi khusus project.`,
+    );
+  }
   if (extras.capabilities) parts.push(`## Kemampuan file, gambar & presentasi\n${extras.capabilities}`);
   if (extras.tierInstructions) parts.push(`## Level otak\n${extras.tierInstructions}`);
   if (extras.agentInstructions) parts.push(`## Mode agent\n${extras.agentInstructions}`);

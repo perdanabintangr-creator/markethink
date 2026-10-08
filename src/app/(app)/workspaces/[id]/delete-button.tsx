@@ -13,11 +13,11 @@ export function DeleteWorkspaceButton({ workspaceId }: { workspaceId: string }) 
       className="w-full text-destructive hover:text-destructive"
       disabled={pending}
       onClick={() => {
-        if (!confirm("Hapus workspace beserta Brand Kit & semua file knowledge-nya? Chat tetap tersimpan.")) return;
+        if (!confirm("Hapus project beserta Brand Kit, file knowledge, dan memory project ini? Chat-nya tetap tersimpan (pindah ke riwayat umum).")) return;
         start(() => deleteWorkspace(workspaceId));
       }}
     >
-      <Trash2 /> Hapus workspace
+      <Trash2 /> Hapus project
     </Button>
   );
 }

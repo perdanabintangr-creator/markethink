@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createWorkspace } from "./actions";
 
-export const metadata = { title: "Brand Workspace" };
+export const metadata = { title: "Projects" };
 
 export default async function WorkspacesPage() {
   const { supabase } = await requireUser();
@@ -17,13 +17,13 @@ export default async function WorkspacesPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl px-4 py-8">
-        <h1 className="text-2xl font-bold">Brand Workspace</h1>
+        <h1 className="text-2xl font-bold">Projects</h1>
         <p className="mt-1 text-muted-foreground">
-          Satu workspace per brand/klien. Isi Brand Kit & upload dokumen — semua chat di workspace otomatis memakai konteks ini.
+          Satu project per brand/klien. Isi Brand Kit & upload dokumen — semua chat di project otomatis memakai konteks project itu saja, terpisah dari project lain (termasuk memory-nya).
         </p>
 
         <form action={createWorkspace} className="mt-6 flex gap-2">
-          <Input name="name" placeholder="Nama brand / klien baru" required maxLength={80} />
+          <Input name="name" placeholder="Nama project (brand / klien) baru" required maxLength={80} />
           <Button>
             <Plus /> Buat
           </Button>
@@ -48,7 +48,7 @@ export default async function WorkspacesPage() {
         </div>
         {!workspaces?.length && (
           <p className="mt-6 rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Belum ada workspace. Buat satu untuk brand utamamu.
+            Belum ada project. Buat satu untuk tiap brand/klien yang kamu tangani.
           </p>
         )}
       </div>

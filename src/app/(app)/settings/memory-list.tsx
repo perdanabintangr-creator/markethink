@@ -10,6 +10,8 @@ interface Memory {
   id: string;
   content: string;
   source: string;
+  /** Nama project bila memory ini milik project tertentu. */
+  project?: string | null;
 }
 
 export function MemoryList({ memories }: { memories: Memory[] }) {
@@ -42,7 +44,12 @@ export function MemoryList({ memories }: { memories: Memory[] }) {
               </>
             ) : (
               <>
-                <span className="flex-1">{m.content}</span>
+                <span className="flex-1">
+                  {m.content}
+                  {m.project && (
+                    <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{m.project}</span>
+                  )}
+                </span>
                 <span className="text-[11px] text-muted-foreground">{m.source === "auto" ? "otomatis" : "manual"}</span>
                 <button
                   aria-label="Edit"

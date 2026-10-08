@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
-import { ArrowDown, Bot, Briefcase, Check, ChevronDown, FileText, Link2, Share2, X } from "lucide-react";
+import { ArrowDown, Bot, Briefcase, Check, ChevronDown, FileText, FolderOpen, Link2, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -242,10 +242,20 @@ export function ChatView({
       <div className={cn("flex h-full min-w-0 flex-1 flex-col", canvasId && "hidden lg:flex")}>
         <header className="flex items-center gap-1 border-b px-2 py-1.5 sm:px-3">
           <ModelSelector tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />
+          {persisted || messages.length > 0 ? (
+            // Chat yang sudah berjalan terkunci di project-nya agar isinya tidak bercampur dengan project lain.
+            <span
+              title={t.projectLocked}
+              className="flex max-w-40 items-center gap-1 truncate rounded-lg px-2 py-1.5 text-xs text-muted-foreground sm:max-w-56"
+            >
+              {workspaceId ? <FolderOpen className="size-3.5 shrink-0 text-primary" /> : <Briefcase className="size-3.5 shrink-0" />}
+              <span className="truncate">{workspaceName ?? t.noWorkspace}</span>
+            </span>
+          ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex max-w-40 items-center gap-1 truncate rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent sm:max-w-56">
-                <Briefcase className="size-3.5 shrink-0" />
+                <FolderOpen className="size-3.5 shrink-0" />
                 <span className="truncate">{workspaceName ?? t.noWorkspace}</span>
                 <ChevronDown className="size-3.5 shrink-0" />
               </button>
@@ -262,10 +272,11 @@ export function ChatView({
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/workspaces">+ Kelola workspace</Link>
+                <Link href="/workspaces">+ Kelola project</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
           <div className="flex-1" />
           {canvasIds.length > 0 && !canvasId && (
             <Button variant="ghost" size="sm" onClick={() => setCanvasId(canvasIds[0])}>

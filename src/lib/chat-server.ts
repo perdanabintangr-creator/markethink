@@ -201,11 +201,23 @@ export async function generateTitle(chatId: string, firstMessage: string) {
   }
 }
 
-/** Ekstrak preferensi/fakta tahan lama dari pesan user → tabel memories. */
-export async function extractMemories(userId: string, recentUserMessages: string[]) {
+/**
+ * Memory milik "ruang" chat: chat di dalam project hanya melihat memory project itu; chat di luar project
+ * hanya melihat memory umum. Mencegah informasi brand/klien bocor antar project.
+ */
+export function scopeMemories<Q>(query: Q, workspaceId: string | null): Q {
+  const q = query as unknown as { eq: (c: string, v: string) => Q; is: (c: string, v: null) => Q };
+  return workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
+}
+
+/** Ekstrak preferensi/fakta tahan lama dari pesan user → tabel memories (dalam lingkup project-nya). */
+export async function extractMemories(userId: string, recentUserMessages: string[], workspaceId: string | null = null) {
   try {
     const admin = createAdminClient();
-    const { data: existing } = await admin.from("memories").select("content").eq("user_id", userId).limit(50);
+    const { data: existing } = await scopeMemories(
+      admin.from("memories").select("content").eq("user_id", userId),
+      workspaceId,
+    ).limit(50);
     const known = (existing ?? []).map((m) => m.content as string);
     if (known.length >= 50) return;
     const { model } = routeTier("junior");
@@ -235,7 +247,9 @@ Balas HANYA JSON array berisi 0-3 string singkat (maks 120 karakter), contoh: ["
       .filter((s) => s.length > 3 && !known.some((k) => k.toLowerCase() === s.toLowerCase()))
       .slice(0, 3);
     if (items.length) {
-      await admin.from("memories").insert(items.map((content) => ({ user_id: userId, content, source: "auto" })));
+      await admin
+        .from("memories")
+        .insert(items.map((content) => ({ user_id: userId, content, source: "auto", workspace_id: workspaceId })));
     }
   } catch (err) {
     console.warn("[memory] gagal", err);

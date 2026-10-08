@@ -2,26 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BRAND_KIT_FIELDS } from "@/lib/ai/prompt";
-
-const MAX_WORKSPACES = 20;
+import { createProject } from "@/lib/projects";
 
 export async function createWorkspace(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const name = z.string().trim().min(1).max(80).safeParse(formData.get("name"));
-  if (!name.success) return;
-  const { count } = await supabase.from("workspaces").select("id", { count: "exact", head: true });
-  if ((count ?? 0) >= MAX_WORKSPACES) return;
-  const { data } = await supabase
-    .from("workspaces")
-    .insert({ user_id: user.id, name: name.data, brand_kit: {} })
-    .select("id")
-    .single();
+  const { supabase, profile } = await requireUser();
+  const result = await createProject(supabase, profile, formData.get("name"));
+  if ("error" in result) return;
   revalidatePath("/", "layout");
-  if (data) redirect(`/workspaces/${data.id}`);
+  redirect(`/workspaces/${result.id}`);
 }
 
 export async function saveBrandKit(workspaceId: string, _prev: { ok?: boolean; error?: string } | undefined, formData: FormData) {

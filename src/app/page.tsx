@@ -23,7 +23,7 @@ const features = [
   { icon: Brain, title: "Chat otak marketing", desc: "Ngobrol seperti dengan CMO: strategi, analisis, dan copy — dijawab dengan konteks brand kamu." },
   { icon: Search, title: "Riset Web ber-sitasi", desc: "Tren, data pasar, dan kompetitor dengan sumber bernomor yang bisa diklik." },
   { icon: Sparkles, title: "16+ Marketing Agents", desc: "Campaign plan, buyer persona, SWOT, ads copy, script TikTok, copy marketplace, dan lainnya." },
-  { icon: BookOpen, title: "Brand Workspace", desc: "Simpan Brand Kit & dokumen. Semua jawaban otomatis pakai konteks brand/klien kamu." },
+  { icon: BookOpen, title: "Projects per brand", desc: "Satu project per brand/klien: Brand Kit, dokumen & memory terpisah — jawaban fokus ke project itu saja." },
   { icon: FileText, title: "Canvas", desc: "Output panjang terbuka di panel editor dengan versioning & export DOCX, PDF, Markdown, CSV." },
   { icon: CalendarDays, title: "Content Calendar", desc: "Kalender konten rapi dalam tabel, siap export ke spreadsheet." },
 ];

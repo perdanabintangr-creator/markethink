@@ -105,7 +105,7 @@ export function AgentForm({ agent }: { agent: Omit<Agent, "instructions" | "is_a
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ws">Brand Workspace</Label>
+              <Label htmlFor="ws">Project</Label>
               <NativeSelect id="ws" value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)}>
                 <option value="">Tanpa workspace</option>
                 {workspaces.map((w) => (

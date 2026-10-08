@@ -10,7 +10,10 @@ export const metadata = { title: "Pengaturan" };
 export default async function SettingsPage() {
   const { supabase, user, profile } = await requireUser();
   const [{ data: memories }, credits, { data: usage }, { data: plan }] = await Promise.all([
-    supabase.from("memories").select("id, content, source, created_at").order("created_at", { ascending: false }),
+    supabase
+      .from("memories")
+      .select("id, content, source, created_at, workspace:workspaces(name)")
+      .order("created_at", { ascending: false }),
     getCreditStatus(user.id),
     supabase.from("usage_logs").select("credits").gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
     supabase.from("plans").select("name").eq("id", profile.plan_id).maybeSingle(),
@@ -69,7 +72,14 @@ export default async function SettingsPage() {
               Hal yang diingat Markethink tentang kamu (gaya bahasa, industri, brand). Dipakai untuk personalisasi semua chat.
             </p>
           </div>
-          <MemoryList memories={memories ?? []} />
+          <MemoryList
+            memories={(memories ?? []).map((m) => ({
+              id: m.id as string,
+              content: m.content as string,
+              source: m.source as string,
+              project: (m.workspace as unknown as { name?: string } | null)?.name ?? null,
+            }))}
+          />
         </section>
 
         <DangerZone />

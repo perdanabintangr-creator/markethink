@@ -28,6 +28,7 @@ import {
   messageText,
   resolveAttachments,
   saveMessages,
+  scopeMemories,
   summarizeToolParts,
 } from "@/lib/chat-server";
 import { capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
@@ -179,7 +180,9 @@ export async function POST(req: Request) {
         chatAgentId
           ? supabase.from("agents").select("name, instructions").eq("id", chatAgentId).maybeSingle()
           : Promise.resolve({ data: null }),
-        supabase.from("memories").select("content").order("created_at", { ascending: false }).limit(30),
+        scopeMemories(supabase.from("memories").select("content"), workspaceId)
+          .order("created_at", { ascending: false })
+          .limit(30),
         loadWorkspaceContext(supabase, workspaceId, lastText),
       ]);
 
@@ -215,6 +218,7 @@ export async function POST(req: Request) {
           tierInstructions: tier.skillPrompt,
           capabilities: capabilitiesPrompt(imageBlockedReason),
           agentInstructions: agent?.instructions ?? null,
+          project: wsCtx.name,
         },
       );
       // Konteks yang berubah tiap pesan ditaruh di pesan user terakhir agar system prompt tetap bisa di-cache.
@@ -378,7 +382,7 @@ export async function POST(req: Request) {
     const userTurns = messages.filter((m) => m.role === "user");
     if (isNewChat && lastText) await generateTitle(chatId, lastText);
     if (userTurns.length % 3 === 1) {
-      await extractMemories(user.id, userTurns.slice(-3).map(messageText).filter(Boolean));
+      await extractMemories(user.id, userTurns.slice(-3).map(messageText).filter(Boolean), workspaceId);
     }
     await admin.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", user.id);
   });

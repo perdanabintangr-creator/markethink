@@ -21,7 +21,7 @@ export const emails = {
   welcome: (name: string) =>
     wrap(`<h2>Selamat datang di Markethink, ${name || "kamu"}! 👋</h2>
 <p>Akun beta kamu sudah aktif. Kamu dapat kredit gratis setiap hari untuk ngobrol dengan otak marketing kamu.</p>
-<p>Mulai dari: buat Brand Workspace, lalu coba agent <b>Campaign Plan</b> atau <b>Content Calendar</b>.</p>
+<p>Mulai dari: buat Project untuk brand kamu, lalu coba agent <b>Campaign Plan</b> atau <b>Content Calendar</b>.</p>
 <p><a href="${env.appUrl}/chat">Buka Markethink →</a></p>`),
   waitlist: () =>
     wrap(`<h2>Kamu masuk waitlist Markethink Pro ✨</h2>
