@@ -17,7 +17,7 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/env";
-import { getTiers } from "@/lib/ai/models.config";
+import { getTiers, PLAN_LABEL } from "@/lib/ai/models.config";
 
 const features = [
   { icon: Brain, title: "Chat otak marketing", desc: "Ngobrol seperti dengan CMO: strategi, analisis, dan copy — dijawab dengan konteks brand kamu." },
@@ -106,7 +106,7 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 py-16">
           <h2 className="text-center text-2xl font-bold sm:text-3xl">Pilih level otak marketing</h2>
           <p className="mt-2 text-center text-muted-foreground">Ganti kapan saja dari model selector.</p>
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {tiers.map((t, i) => (
               <div key={t.id} className={`rounded-2xl border bg-card p-6 ${i === 1 ? "ring-2 ring-primary" : ""}`}>
                 <div className="flex items-center gap-2 text-sm font-medium text-primary">
@@ -115,7 +115,7 @@ export default async function LandingPage() {
                 <div className="mt-3 flex items-center gap-2">
                   <h3 className="text-lg font-semibold">{t.label}</h3>
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                    {t.id === "junior" ? "Gratis" : "Pro"}
+                    {PLAN_LABEL[t.minPlan]}
                   </span>
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">{t.tagline.id}</p>

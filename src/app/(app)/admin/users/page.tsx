@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requireAdmin } from "@/lib/auth";
+import { PLAN_LABEL, type PlanId } from "@/lib/ai/models.config";
 import { grantCredits, setBetaAccess, setUserPlan, setCreditOverride, setUserBan, setUserRole } from "../actions";
 
 export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
@@ -43,7 +44,8 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
                 <td className="p-2">
                   <div className="font-medium">{u.email}</div>
                   <div className="text-xs text-muted-foreground">
-                    {u.full_name ?? "-"} · {u.role === "admin" ? "admin" : u.plan_id}
+                    {u.full_name ?? "-"} · paket {PLAN_LABEL[u.plan_id as PlanId] ?? u.plan_id}
+                    {u.role === "admin" && " · admin"}
                     {u.banned && " · DIBAN"}
                     {u.role !== "admin" && (u.beta_access ? " · akses beta ✓" : " · belum ada akses")}
                   </div>
@@ -65,9 +67,13 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
                 <td className="p-2">
                   {u.id !== me.id && (
                     <div className="flex gap-1">
-                      <form action={setUserPlan.bind(null, u.id, u.plan_id === "pro" ? "beta" : "pro")}>
-                        <Button size="sm" variant="outline">{u.plan_id === "pro" ? "Jadikan Gratis" : "Jadikan Pro"}</Button>
-                      </form>
+                      {(["beta", "pro", "promax"] as const)
+                        .filter((p) => p !== u.plan_id)
+                        .map((p) => (
+                          <form key={p} action={setUserPlan.bind(null, u.id, p)}>
+                            <Button size="sm" variant="outline">→ {PLAN_LABEL[p]}</Button>
+                          </form>
+                        ))}
                       <form action={setBetaAccess.bind(null, u.id, !u.beta_access)}>
                         <Button size="sm" variant={u.beta_access ? "outline" : "default"}>
                           {u.beta_access ? "Cabut akses" : "Beri akses"}

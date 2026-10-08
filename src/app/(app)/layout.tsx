@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         workspaces: workspaces ?? [],
         credits: { dailyLimit: credits.dailyLimit, remaining: credits.remaining },
         allowedTiers,
-        planName: profile.role === "admin" ? "Admin (semua akses)" : (plan?.name ?? profile.plan_id),
+        planName: plan?.name ?? profile.plan_id,
       }}
     >
       {children}

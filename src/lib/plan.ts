@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TierId } from "@/lib/ai/models.config";
 import type { Profile } from "@/lib/auth";
 
-const ALL_TIERS: TierId[] = ["junior", "senior", "associate"];
+const ALL_TIERS: TierId[] = ["junior", "senior", "associate", "director"];
 
 /**
  * Tier otak yang boleh dipakai user, dari feature_flags paketnya (`tier.junior`, dst).

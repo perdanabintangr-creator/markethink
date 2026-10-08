@@ -27,7 +27,7 @@ export default async function SettingsPage() {
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="rounded-xl border p-3">
               <p className="text-xs text-muted-foreground">Paket</p>
-              <p className="font-semibold">{profile.role === "admin" ? "Admin" : (plan?.name ?? profile.plan_id)}</p>
+              <p className="font-semibold">{plan?.name ?? profile.plan_id}</p>
             </div>
             <div className="rounded-xl border p-3">
               <p className="text-xs text-muted-foreground">Sisa hari ini</p>

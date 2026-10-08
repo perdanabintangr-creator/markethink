@@ -29,12 +29,15 @@ export function Composer({
   busy,
   research,
   onResearchChange,
+  brainSlot,
 }: {
   onSend: (text: string, attachments: PendingAttachment[]) => void;
   onStop: () => void;
   busy: boolean;
   research: boolean;
   onResearchChange: (v: boolean) => void;
+  /** Tombol pilih otak di toolbar. */
+  brainSlot?: React.ReactNode;
 }) {
   const { t } = useApp();
   const [text, setText] = useState("");
@@ -141,6 +144,7 @@ export function Composer({
         <Button variant="ghost" size="icon" onClick={() => fileRef.current?.click()} title={t.attach} aria-label={t.attach}>
           <Paperclip />
         </Button>
+        {brainSlot}
         <button
           onClick={() => onResearchChange(!research)}
           className={cn(

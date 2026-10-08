@@ -118,7 +118,7 @@ export async function setAccessMode(mode: "invite_only" | "public") {
   revalidatePath("/admin/quota");
 }
 
-export async function setUserPlan(userId: string, planId: "beta" | "pro") {
+export async function setUserPlan(userId: string, planId: "beta" | "pro" | "promax") {
   await requireAdmin();
   await createAdminClient().from("profiles").update({ plan_id: planId }).eq("id", userId);
   revalidatePath("/admin/users");

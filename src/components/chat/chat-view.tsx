@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { ChatMessage, messageToText } from "./message";
 import { Composer, type PendingAttachment } from "./composer";
 import { ModelSelector, type TierOption } from "./model-selector";
+import { BrainPicker } from "./brain-picker";
 import { QuotaDialog } from "./quota-dialog";
 
 
@@ -129,7 +130,7 @@ export function ChatView({
       else if (code === "tier_locked") {
         setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
         setTier(pickTier(null, allowedTiers));
-        setLockedTier("Otak ini");
+        setLockedTier("Otak ini|pro");
         setQuotaOpen(true);
       } else if (code === "server_not_configured") toast.error("Server AI belum selesai dikonfigurasi. Hubungi admin.");
       const res = await fetch("/api/credits");
@@ -138,6 +139,12 @@ export function ChatView({
   });
 
   const busy = status === "submitted" || status === "streaming";
+
+  const onLockedTier = (lt: TierOption) => {
+    setLockedTier(`${lt.label}|${lt.minPlan}`);
+    setQuotaOpen(true);
+    track("tier_locked_clicked", { tier: lt.id });
+  };
 
   const send = useCallback(
     (text: string, attachments: PendingAttachment[] = []) => {
@@ -219,16 +226,7 @@ export function ChatView({
     <div className="flex h-full">
       <div className={cn("flex h-full min-w-0 flex-1 flex-col", canvasId && "hidden lg:flex")}>
         <header className="flex items-center gap-1 border-b px-2 py-1.5 sm:px-3">
-          <ModelSelector
-            tiers={tiers}
-            value={tier}
-            onChange={setTier}
-            onLocked={(t) => {
-              setLockedTier(t.label);
-              setQuotaOpen(true);
-              track("tier_locked_clicked", { tier: t.id });
-            }}
-          />
+          <ModelSelector tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex max-w-40 items-center gap-1 truncate rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent sm:max-w-56">
@@ -287,10 +285,13 @@ export function ChatView({
           className="relative min-h-0 flex-1 overflow-y-auto"
         >
           {messages.length === 0 ? (
-            <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center px-4 text-center">
+            <div className="mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center px-4 py-8 text-center">
               <h1 className="text-2xl font-semibold sm:text-3xl">{activeAgent ? activeAgent.name : t.emptyTitle}</h1>
               <p className="mt-2 text-muted-foreground">{t.emptySubtitle}</p>
-              <div className="mt-8 grid w-full gap-2 sm:grid-cols-2">
+              <div className="mt-6 w-full">
+                <BrainPicker tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />
+              </div>
+              <div className="mt-4 grid w-full gap-2 sm:grid-cols-2">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
@@ -358,6 +359,7 @@ export function ChatView({
             busy={busy}
             research={research}
             onResearchChange={setResearch}
+            brainSlot={<ModelSelector compact tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />}
           />
           <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{t.disclaimer}</p>
         </div>

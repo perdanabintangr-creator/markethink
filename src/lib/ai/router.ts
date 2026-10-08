@@ -88,7 +88,7 @@ export function routeTier(tierId: string | null | undefined, opts: { needsVision
     if (vision.length) candidates = vision;
     else {
       // Tier ini tidak punya model vision — pinjam model vision dari tier lain.
-      const anyVision = ["senior", "junior", "associate"]
+      const anyVision = ["senior", "junior", "associate", "director"]
         .flatMap((t) => getTier(t).candidates)
         .filter((c) => supportsVision(c) && isProviderConfigured(c.provider));
       if (anyVision.length) candidates = [anyVision[0]];

@@ -19,6 +19,7 @@ export function QuotaDialog({
   lockedTier?: string | null;
 }) {
   const { user } = useApp();
+  const planLabel = lockedTier?.split("|")[1] === "promax" ? "Promax" : "Pro";
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +29,7 @@ export function QuotaDialog({
     setLoading(true);
     const res = await fetch("/api/waitlist", {
       method: "POST",
-      body: JSON.stringify({ email: form.get("email"), note: form.get("note") || undefined, planInterest: "pro" }),
+      body: JSON.stringify({ email: form.get("email"), note: form.get("note") || undefined, planInterest: planLabel.toLowerCase() }),
     });
     setLoading(false);
     if (!res.ok) return toast.error("Gagal mendaftar waitlist.");
@@ -41,11 +42,11 @@ export function QuotaDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />{" "}
-            {lockedTier ? `${lockedTier} khusus paket Pro` : "Kredit hari ini sudah habis"}
+            {lockedTier ? `${lockedTier.split("|")[0]} khusus paket ${planLabel}` : "Kredit hari ini sudah habis"}
           </DialogTitle>
           <DialogDescription>
             {lockedTier
-              ? "Paket gratis memakai Markethink Junior. Otak yang lebih pintar — Senior untuk strategi & campaign, Associate untuk brand strategy & GTM sekelas konsultan — tersedia di Markethink Pro. Gabung waitlist, kami kabari saat Pro dibuka."
+              ? `Paket Free memakai Markethink Junior. Pro membuka Senior (strategi & campaign) dan Associate (brand strategy & GTM sekelas konsultan). Promax membuka Director — otak paling pintar yang bisa mengerjakan apa pun — plus kredit jauh lebih banyak. Gabung waitlist ${planLabel}, kami kabari saat dibuka.`
               : "Kredit akan reset otomatis pukul 00.00 WIB. Mau kuota lebih besar? Gabung waitlist Markethink Pro — kami kabari saat sudah tersedia."}
           </DialogDescription>
         </DialogHeader>
@@ -61,7 +62,7 @@ export function QuotaDialog({
               <Label htmlFor="wl-note">Fitur yang paling kamu butuhkan (opsional)</Label>
               <Textarea id="wl-note" name="note" rows={3} maxLength={1000} />
             </div>
-            <Button className="w-full" disabled={loading}>Gabung waitlist Pro</Button>
+            <Button className="w-full" disabled={loading}>Gabung waitlist {lockedTier ? planLabel : "Pro"}</Button>
           </form>
         )}
       </DialogContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Gauge, Lock } from "lucide-react";
+import { Brain, Check, ChevronDown, Gauge, Lock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { TierId } from "@/lib/ai/models.config";
+import { PLAN_LABEL, type PlanId, type TierId } from "@/lib/ai/models.config";
 import { useApp } from "@/components/app/app-context";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ export interface TierOption {
   description: { id: string; en: string };
   skills: { id: string[]; en: string[] };
   creditCost: number;
+  minPlan: PlanId;
 }
 
 export function ModelSelector({
@@ -26,21 +27,34 @@ export function ModelSelector({
   value,
   onChange,
   onLocked,
+  compact,
 }: {
   tiers: TierOption[];
   value: TierId;
   onChange: (t: TierId) => void;
   onLocked: (t: TierOption) => void;
+  /** Versi kecil untuk toolbar composer. */
+  compact?: boolean;
 }) {
   const { lang, allowedTiers } = useApp();
   const current = tiers.find((t) => t.id === value) ?? tiers[0];
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold hover:bg-accent">
-          {current.label}
-          <ChevronDown className="size-4 text-muted-foreground" />
-        </button>
+        {compact ? (
+          <button
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 text-xs font-medium text-primary hover:bg-primary/15"
+            aria-label="Pilih otak"
+          >
+            <Brain className="size-3.5" /> {current.label.replace("Markethink ", "")}
+            <ChevronDown className="size-3.5" />
+          </button>
+        ) : (
+          <button className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold hover:bg-accent">
+            {current.label}
+            <ChevronDown className="size-4 text-muted-foreground" />
+          </button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[22rem] max-w-[calc(100vw-1.5rem)]">
         <DropdownMenuLabel>{lang === "en" ? "Choose your marketing brain" : "Pilih otak marketing"}</DropdownMenuLabel>
@@ -53,7 +67,7 @@ export function ModelSelector({
               className={cn("items-start py-2.5", locked && "opacity-80")}
             >
               <span className="mt-0.5 flex gap-0.5 text-primary">
-                {Array.from({ length: 3 }).map((_, k) => (
+                {Array.from({ length: 4 }).map((_, k) => (
                   <Gauge key={k} className={k <= i ? "opacity-100" : "opacity-20"} />
                 ))}
               </span>
@@ -62,7 +76,7 @@ export function ModelSelector({
                   {t.label}
                   {locked && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                      <Lock className="!size-2.5" /> PRO
+                      <Lock className="!size-2.5" /> {PLAN_LABEL[t.minPlan].toUpperCase()}
                     </span>
                   )}
                 </span>

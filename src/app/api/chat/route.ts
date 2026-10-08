@@ -36,7 +36,7 @@ export const maxDuration = 300;
 const bodySchema = z.object({
   id: z.string().uuid(),
   messages: z.array(z.any()).min(1).max(200),
-  tier: z.enum(["junior", "senior", "associate"]).default("senior"),
+  tier: z.enum(["junior", "senior", "associate", "director"]).default("senior"),
   research: z.boolean().default(false),
   workspaceId: z.string().uuid().nullish(),
   agentId: z.string().uuid().nullish(),
@@ -199,6 +199,7 @@ export async function POST(req: Request) {
         maxOutputTokens: tier.maxOutputTokens,
         temperature: tier.temperature,
         maxRetries: 0,
+        providerOptions: { anthropic: { effort: tier.effort } },
         abortSignal: req.signal,
         onFinish: async ({ usage }) => {
           settled = true;

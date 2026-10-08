@@ -3,7 +3,7 @@ import { getTier, getTiers, messageCreditCost, estimateCostUsd } from "@/lib/ai/
 
 describe("models.config", () => {
   it("urutan tier Junior → Senior → Associate", () => {
-    expect(getTiers({}).map((t) => t.id)).toEqual(["junior", "senior", "associate"]);
+    expect(getTiers({}).map((t) => t.id)).toEqual(["junior", "senior", "associate", "director"]);
   });
 
   it("tier lebih tinggi lebih mahal", () => {
@@ -47,7 +47,7 @@ describe("models.config", () => {
 describe("Claude sebagai otak utama", () => {
   it("tiap tier diawali Claude dengan Gemini sebagai cadangan", () => {
     const ids = getTiers({}).map((t) => t.candidates[0].modelId);
-    expect(ids).toEqual(["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"]);
+    expect(ids).toEqual(["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5", "claude-fable-5-1"]);
     for (const t of getTiers({})) expect(t.candidates.some((c) => c.provider === "google")).toBe(true);
   });
 });

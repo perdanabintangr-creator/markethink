@@ -15,7 +15,7 @@ describe("akses otak per paket", () => {
   });
   it("tiap otak punya keahlian & instruksi berbeda yang masuk ke system prompt", async () => {
     const tiers = getTiers({});
-    expect(new Set(tiers.map((t) => t.skillPrompt)).size).toBe(3);
+    expect(new Set(tiers.map((t) => t.skillPrompt)).size).toBe(4);
     const out = await buildSystemPrompt({}, { tierInstructions: tiers[2].skillPrompt });
     expect(out).toContain("Markethink Associate");
   });

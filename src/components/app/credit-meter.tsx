@@ -6,7 +6,7 @@ import { CREDITS_CHANGED } from "@/lib/events";
 import { useApp } from "./app-context";
 
 export function CreditMeter() {
-  const { credits, t } = useApp();
+  const { credits, t, planName } = useApp();
   const [remaining, setRemaining] = useState(credits.remaining);
 
   useEffect(() => {
@@ -29,7 +29,10 @@ export function CreditMeter() {
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">Reset setiap 00.00 WIB</p>
+      <p className="mt-1.5 flex justify-between text-[11px] text-muted-foreground">
+        <span>Reset setiap 00.00 WIB</span>
+        <span className="font-semibold text-primary">Paket {planName}</span>
+      </p>
     </div>
   );
 }

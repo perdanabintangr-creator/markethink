@@ -8,7 +8,11 @@
  * Kandidat yang API key-nya belum diisi otomatis dilewati.
  */
 
-export type TierId = "junior" | "senior" | "associate";
+export type TierId = "junior" | "senior" | "associate" | "director";
+export type PlanId = "beta" | "pro" | "promax";
+
+/** Nama paket untuk tampilan (id `beta` = paket Free). */
+export const PLAN_LABEL: Record<PlanId, string> = { beta: "Free", pro: "Pro", promax: "Promax" };
 export type ProviderId = "anthropic" | "google" | "groq" | "openrouter";
 
 export interface ModelCandidate {
@@ -25,6 +29,10 @@ export interface TierConfig {
   skills: { id: string[]; en: string[] };
   /** Instruksi gaya kerja otak ini — disisipkan ke system prompt. */
   skillPrompt: string;
+  /** Paket minimum yang membuka otak ini (label di UI; aksesnya diatur feature_flags). */
+  minPlan: PlanId;
+  /** Kedalaman berpikir model Claude (low → max). */
+  effort: "low" | "medium" | "high" | "xhigh" | "max";
   /** Kredit per pesan. */
   creditCost: number;
   maxOutputTokens: number;
@@ -35,6 +43,7 @@ export interface TierConfig {
 
 /** Estimasi harga USD per 1 juta token (input, output). Free tier = 0. */
 export const MODEL_PRICING_USD: Record<string, { input: number; output: number }> = {
+  "anthropic:claude-fable-5-1": { input: 10, output: 50 },
   "anthropic:claude-haiku-5-5": { input: 0.1, output: 0.5 },
   "anthropic:claude-sonnet-5-5": { input: 2, output: 10 },
   "anthropic:claude-opus-5-5": { input: 4, output: 20 },
@@ -87,6 +96,8 @@ export function getTiers(envSource: Record<string, string | undefined> = process
 - Jawab ringkas dan langsung siap pakai (umumnya di bawah 300 kata kecuali user minta lebih).
 - Prioritaskan output konkret: copy, caption, ide, daftar, template. Minim teori.
 - Jika permintaan butuh strategi mendalam (campaign plan lengkap, brand strategy, GTM), kerjakan versi ringkasnya lalu sarankan memakai Markethink Senior/Associate untuk versi lengkap.`,
+      minPlan: "beta",
+      effort: "low",
       creditCost: 1,
       maxOutputTokens: 4096,
       temperature: 0.8,
@@ -114,6 +125,8 @@ export function getTiers(envSource: Record<string, string | undefined> = process
 - Mulai dari tujuan bisnis, lalu susun strategi terstruktur memakai framework yang relevan (STP, AIDA, funnel, SWOT/TOWS).
 - Lengkapi dengan langkah eksekusi, contoh copy nyata, timeline, estimasi budget, dan KPI terukur. Gunakan tabel untuk perbandingan, jadwal, dan anggaran.
 - Tulis asumsi secara eksplisit bila data dari user kurang.`,
+      minPlan: "pro",
+      effort: "medium",
       creditCost: 2,
       maxOutputTokens: 12000,
       temperature: 0.7,
@@ -142,6 +155,8 @@ export function getTiers(envSource: Record<string, string | undefined> = process
 - Buat asumsi eksplisit, bandingkan 2–3 opsi strategi beserta trade-off-nya, lalu beri satu rekomendasi yang dipertanggungjawabkan.
 - Sertakan skenario (konservatif/moderat/agresif) bila relevan, risiko & mitigasi, prioritas, roadmap 30-60-90 hari, dan metrik keberhasilan.
 - Output berupa dokumen utuh berkualitas presentasi klien/board, dengan ringkasan eksekutif di awal.`,
+      minPlan: "pro",
+      effort: "high",
       creditCost: 5,
       maxOutputTokens: 20000,
       temperature: 0.6,
@@ -152,6 +167,35 @@ export function getTiers(envSource: Record<string, string | undefined> = process
         { provider: "google", modelId: "gemini-flash-latest" },
         { provider: "openrouter", modelId: "deepseek/deepseek-r1-0528:free" },
         { provider: "groq", modelId: "openai/gpt-oss-120b" },
+      ]),
+    },
+    {
+      id: "director",
+      label: "Markethink Director",
+      tagline: { id: "Otak paling pintar · Promax", en: "Smartest brain · Promax" },
+      description: {
+        id: "Kerjakan apa pun: strategi bisnis menyeluruh, riset mendalam, sampai eksekusi lengkap.",
+        en: "Anything: full business strategy, deep research, end-to-end execution.",
+      },
+      skills: {
+        id: ["Strategi bisnis & marketing menyeluruh", "Riset & analisis data mendalam", "Dokumen setara konsultan top", "Eksekusi end-to-end", "Tugas apa pun"],
+        en: ["End-to-end business & marketing strategy", "Deep research & data analysis", "Top-consultancy documents", "End-to-end execution", "Any task"],
+      },
+      skillPrompt: `Kamu bekerja sebagai Markethink Director — otak paling canggih Markethink, setara Chief Marketing Officer sekaligus partner konsultan strategi kelas dunia.
+- Kamu boleh mengerjakan tugas apa pun yang membantu bisnis user (marketing, bisnis, penjualan, produk, analisis data, keuangan bisnis sederhana, penulisan), bukan hanya marketing sempit.
+- Pikirkan masalah sampai ke akar: tantang asumsi user bila perlu, temukan peluang yang tidak terlihat, dan susun jawaban dengan standar kualitas tertinggi.
+- Untuk tugas besar, kerjakan sampai tuntas dalam satu jawaban: analisis → opsi → rekomendasi → rencana eksekusi rinci → aset siap pakai (copy, kalender, brief, template) → KPI & cara mengukurnya.
+- Tetap jujur soal data: tandai perkiraan, dan sarankan Riset Web untuk fakta terkini.`,
+      minPlan: "promax",
+      effort: "high",
+      creditCost: 10,
+      maxOutputTokens: 32000,
+      temperature: 0.6,
+      candidates: parseCandidates(envSource.MODEL_DIRECTOR, [
+        { provider: "anthropic", modelId: "claude-fable-5-1" },
+        { provider: "anthropic", modelId: "claude-opus-5-5" },
+        { provider: "google", modelId: "gemini-pro-latest" },
+        { provider: "google", modelId: "gemini-3.8-flash" },
       ]),
     },
   ];
