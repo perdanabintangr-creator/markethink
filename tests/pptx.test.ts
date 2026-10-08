@@ -36,8 +36,25 @@ describe("pembuat PPT", () => {
     }
   });
 
-  it("permintaan gambar deck: cover + slide bergambar, maks 3", () => {
+  it("permintaan gambar deck: cover + slide bergambar", () => {
     expect(deckImageRequests(input).map((r) => r.key)).toEqual(["cover", "1"]);
+  });
+
+  it("foto milik user selalu dipakai; gambar AI dibatasi & diprioritaskan (produk dulu)", () => {
+    const deck = presentationSchema.parse({
+      title: "Deck",
+      cover_image_id: "11111111-1111-1111-1111-111111111111",
+      slides: [
+        { layout: "cards", title: "A", image_prompt: "a", cards: [{ icon: "star", title: "x", text: "y" }, { icon: "star", title: "x", text: "y" }] },
+        { layout: "product", title: "Produk", image_prompt: "bottle" },
+        { layout: "gallery", title: "G", gallery: [{ caption: "1", image_prompt: "p" }, { caption: "2", image_id: "22222222-2222-2222-2222-222222222222" }] },
+      ],
+    });
+    const reqs = deckImageRequests(deck, 2);
+    expect(reqs.filter((r) => r.imageId).map((r) => r.key)).toEqual(["cover", "2-g1"]);
+    expect(reqs.filter((r) => r.prompt).map((r) => r.key)).toEqual(["1", "2-g0"]);
+    expect(reqs.find((r) => r.key === "1")?.product).toBe(true);
+    expect(deckImageRequests(deck, 0).every((r) => r.imageId)).toBe(true);
   });
 
   it("outline berisi semua judul slide", () => {

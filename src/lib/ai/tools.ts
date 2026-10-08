@@ -19,7 +19,7 @@ export const IMAGE_CREDIT_COST = 5;
 export const PPTX_CREDIT_COST = 3;
 /** Kredit tambahan per gambar AI di dalam PPT (cover/slide bergambar). */
 export const DECK_IMAGE_CREDIT_COST = 2;
-const DECK_IMAGE_MAX = 3;
+const DECK_IMAGE_MAX = 6;
 /** Perkiraan biaya per gambar (USD) bila provider tidak melaporkan biaya nyata. */
 const IMAGE_COST_USD = 0.04;
 
@@ -140,8 +140,11 @@ export function createChatTools(ctx: ToolCtx) {
         "cards untuk pilar/fitur (dengan ikon relevan), stats untuk angka kunci, chart bila ada data angka, timeline untuk jadwal/tahapan, " +
         "comparison untuk perbandingan, table untuk paket/harga, quote untuk insight kuat, closing di akhir. Hindari layout bullets kecuali perlu. " +
         "(3) Teks ringkas ala slide konsultan: judul ≤ 8 kata yang menyampaikan pesan, poin ≤ 15 kata, tanpa paragraf. " +
-        "(4) Isi spesifik (angka nyata, nama, contoh), bukan placeholder. (5) Tulis cover_image_prompt dan image_prompt untuk 1–2 slide " +
-        "(image_text/section) berupa deskripsi foto profesional berbahasa Inggris tanpa teks. (6) Pilih theme sesuai brand/industri; isi " +
+        "(4) Isi spesifik (angka nyata, nama, contoh), bukan placeholder. (5) VISUAL: deck harus kaya visual, bukan hanya tulisan — selalu isi " +
+        "cover_image_prompt (hero visual, cover_style hero); bila ada produk/jasa, buat slide layout product (foto produk besar + keunggulan); " +
+        "beri image_prompt pada ± 1 dari 3 slide yang paling terbantu visual (section, image_text, cards, stats, closing, gallery untuk moodboard/" +
+        "contoh konten/lokasi). Bila user melampirkan foto (produk/brand/lokasi), PAKAI fotonya lewat image_id / cover_image_id / gallery.image_id. " +
+        "Prompt gambar dalam bahasa Inggris, spesifik ke brand/produk/suasana Indonesia bila relevan, tanpa teks. (6) Pilih theme sesuai brand/industri; isi " +
         "brand_color bila warna brand diketahui. (7) Tulis speaker notes yang membantu presenter. " +
         "Bila user melampirkan dokumen, dasarkan isi slide pada dokumen itu.",
       inputSchema: presentationSchema,
@@ -151,7 +154,7 @@ export function createChatTools(ctx: ToolCtx) {
         const credit = await consumeCredits(ctx.userId, PPTX_CREDIT_COST, "presentation", { chatId: ctx.chatId });
         if (!credit.ok) return { ok: false, error: `Kredit tidak cukup untuk membuat PPT (butuh ${PPTX_CREDIT_COST}, sisa ${credit.remaining}).` };
         try {
-          const images = ctx.deckImages ? await makeDeckImages(ctx, input) : {};
+          const images = await makeDeckImages(ctx, input);
           const bytes = await buildPresentation(input, images);
           const fileName = `${sanitizeFileName(input.title).slice(0, 60) || "presentasi"}.pptx`;
           const saved = await storeFile(
@@ -186,38 +189,65 @@ export function createChatTools(ctx: ToolCtx) {
 }
 
 /**
- * Buat gambar AI untuk cover & slide bergambar (paralel, maks 3). Gambar yang gagal dilewati —
- * slide tetap jadi dengan desain tanpa foto. Tiap gambar memotong kredit kecil & tercatat biayanya.
+ * Siapkan visual deck: foto milik user (attachment, gratis) + gambar AI untuk cover/produk/slide bergambar
+ * (paralel, maks DECK_IMAGE_MAX, hanya paket berbayar). Gambar yang gagal dilewati — slide tetap jadi.
  */
 async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<DeckImages> {
-  const reqs = deckImageRequests(input, DECK_IMAGE_MAX);
+  const reqs = deckImageRequests(input, ctx.deckImages ? DECK_IMAGE_MAX : 0);
   if (!reqs.length) return {};
-  const credit = await consumeCredits(ctx.userId, reqs.length * DECK_IMAGE_CREDIT_COST, "deck_images", { chatId: ctx.chatId });
-  if (!credit.ok) return {};
+  const images: DeckImages = {};
+
+  // 1) Foto milik user (mis. foto produk asli yang dilampirkan di chat).
+  const owned = reqs.filter((r) => r.imageId && /^[0-9a-f-]{36}$/i.test(r.imageId));
+  if (owned.length) {
+    const { data: rows } = await ctx.admin
+      .from("attachments")
+      .select("id, mime, storage_path")
+      .eq("user_id", ctx.userId)
+      .in("id", [...new Set(owned.map((r) => r.imageId!))]);
+    const byId = new Map((rows ?? []).filter((r) => String(r.mime).startsWith("image/")).map((r) => [r.id as string, r]));
+    await Promise.all(
+      owned.map(async (r) => {
+        const row = byId.get(r.imageId!);
+        if (!row) return;
+        const { data } = await ctx.admin.storage.from("uploads").download(row.storage_path as string);
+        if (!data) return;
+        const bytes = new Uint8Array(await data.arrayBuffer());
+        const size = imageSize(bytes);
+        if (size) images[r.key] = { data: Buffer.from(bytes).toString("base64"), mime: row.mime as string, ...size };
+      }),
+    );
+  }
+
+  // 2) Gambar AI.
+  const toGenerate = reqs.filter((r) => !r.imageId && r.prompt);
+  if (!toGenerate.length || !ctx.deckImages) return images;
+  const credit = await consumeCredits(ctx.userId, toGenerate.length * DECK_IMAGE_CREDIT_COST, "deck_images", { chatId: ctx.chatId });
+  if (!credit.ok) return images;
   const results = await Promise.all(
-    reqs.map(async (r) => {
+    toGenerate.map(async (r) => {
+      const style = r.product
+        ? "Premium studio product photography, product centered and fully visible, soft shadow, clean seamless background, commercial advertising quality."
+        : "Professional, high-quality editorial photo for a marketing presentation, cinematic lighting, clean composition.";
       try {
         const img = await Promise.race([
-          generateImage(
-            `Professional, high-quality presentation visual for a marketing deck. ${r.prompt}. Cinematic lighting, clean composition, no text, no words, no letters, no logos, no watermark.`,
-            r.aspect,
-          ),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout gambar deck")), 75_000)),
+          generateImage(`${style} ${r.prompt}. No text, no words, no letters, no logos, no watermark.`, r.aspect),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout gambar deck")), 80_000)),
         ]);
         const size = imageSize(img.bytes);
-        if (!size) return null;
+        if (!size) return false;
+        images[r.key] = { data: Buffer.from(img.bytes).toString("base64"), mime: img.mime, ...size };
         await logUsage(ctx, { tier: "deck_image", provider: img.provider, model: img.model, credits: DECK_IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD });
-        return [r.key, { data: Buffer.from(img.bytes).toString("base64"), mime: img.mime, ...size }] as const;
+        return true;
       } catch (err) {
         console.warn("[pptx] gambar deck gagal", errText(err));
-        return null;
+        return false;
       }
     }),
   );
-  const ok = results.filter((x): x is NonNullable<typeof x> => x !== null);
-  const failed = reqs.length - ok.length;
+  const failed = results.filter((ok) => !ok).length;
   if (failed) await refundCredits(ctx.userId, failed * DECK_IMAGE_CREDIT_COST, "deck_images_failed");
-  return Object.fromEntries(ok);
+  return images;
 }
 
 async function loadReferences(ctx: ToolCtx, ids: string[]) {

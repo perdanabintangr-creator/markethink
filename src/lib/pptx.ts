@@ -2,6 +2,7 @@ import "server-only";
 import PptxGenJS from "pptxgenjs";
 import { z } from "zod";
 import { PPTX_ICONS, PPTX_ICON_NAMES, type PptxIcon } from "./pptx-icons";
+import { HERO_OVERLAY_PNG } from "./pptx-overlay";
 
 // ---------------------------------------------------------------------------
 // Skema isi presentasi (diisi oleh AI lewat tool create_presentation)
@@ -25,10 +26,12 @@ export const slideSchema = z.object({
       "table",
       "quote",
       "image_text",
+      "product",
+      "gallery",
       "closing",
     ])
     .describe(
-      "agenda = daftar isi bernomor; section = pembuka bab; bullets = poin dengan ikon; cards = 2-6 kartu ikon+judul+teks (fitur, pilar, strategi); stats = 2-4 angka besar; chart = grafik data (bar/line/pie/doughnut) + insight; timeline = 3-6 langkah/fase/jadwal; comparison = 2 kolom perbandingan (sebelum/sesudah, kita vs kompetitor); table = tabel data; quote = kutipan/insight kunci; image_text = gambar besar + teks (butuh image_prompt); closing = penutup/CTA/kontak",
+      "agenda = daftar isi bernomor; section = pembuka bab; bullets = poin dengan ikon; cards = 2-6 kartu ikon+judul+teks (fitur, pilar, strategi); stats = 2-4 angka besar; chart = grafik data (bar/line/pie/doughnut) + insight; timeline = 3-6 langkah/fase/jadwal; comparison = 2 kolom perbandingan (sebelum/sesudah, kita vs kompetitor); table = tabel data; quote = kutipan/insight kunci; image_text = gambar besar + teks; product = showcase produk/jasa: foto produk besar + 2-4 keunggulan (isi cards); gallery = 2-3 gambar berkaption (moodboard, contoh konten, lokasi, aktivasi); closing = penutup/CTA/kontak",
     ),
   kicker: short(40).optional().describe("Label kecil di atas judul, mis. 'STRATEGI' atau 'BAB 2'"),
   title: z.string().min(1).max(90).describe("Judul slide: singkat & tajam (maks ± 8 kata), bukan kalimat panjang"),
@@ -82,7 +85,20 @@ export const slideSchema = z.object({
   attribution: short(60).optional(),
   image_prompt: short(400)
     .optional()
-    .describe("Untuk image_text/section/quote: deskripsi foto/ilustrasi dalam bahasa Inggris (tanpa teks di gambar)"),
+    .describe(
+      "Visual slide (wajib untuk image_text & product; dianjurkan untuk section, closing, cards, stats, quote, bullets bila mempercantik): deskripsi foto/ilustrasi dalam bahasa Inggris, spesifik ke brand/produk/suasana, tanpa teks di gambar",
+    ),
+  image_id: short(40)
+    .optional()
+    .describe(
+      "ID gambar milik user (dari '[Gambar dari user: … — id: …]' atau gambar yang sudah kamu buat) untuk dipakai sebagai visual slide — utamakan foto produk/brand asli user dibanding image_prompt",
+    ),
+  gallery: z
+    .array(z.object({ caption: short(80), image_prompt: short(300).optional(), image_id: short(40).optional() }))
+    .min(2)
+    .max(3)
+    .optional()
+    .describe("Untuk layout gallery: 2-3 gambar (image_id foto user atau image_prompt) + caption"),
   notes: short(1500).optional().describe("Catatan pembicara (speaker notes) yang membantu presenter"),
 });
 
@@ -104,7 +120,12 @@ export const presentationSchema = z.object({
     .describe("Warna utama brand (hex, mis. #E11D48) bila diketahui"),
   cover_image_prompt: short(400)
     .optional()
-    .describe("Deskripsi gambar cover dalam bahasa Inggris (foto/ilustrasi relevan, tanpa teks)"),
+    .describe("Hero visual cover (selalu isi): deskripsi foto/ilustrasi sinematik dalam bahasa Inggris yang menggambarkan brand/topik, tanpa teks"),
+  cover_image_id: short(40).optional().describe("ID gambar user untuk cover (mis. foto produk/brand asli), diutamakan dibanding prompt"),
+  cover_style: z
+    .enum(["hero", "split"])
+    .default("hero")
+    .describe("hero = foto penuh satu slide dengan judul di atasnya (paling memukau); split = foto di separuh kanan"),
   slides: z.array(slideSchema).min(3).max(20).describe("Isi slide setelah cover (cover dibuat otomatis)"),
 });
 
@@ -212,9 +233,10 @@ function header(c: Ctx, slide: Slide, s: { kicker?: string; title: string; subti
   return y + 0.3;
 }
 
-function footer(c: Ctx, slide: Slide, page: number, x0 = M) {
+function footer(c: Ctx, slide: Slide, page: number, x0 = M, showPage = true) {
   slide.addShape(c.pptx.ShapeType.rect, { x: x0, y: H - 0.42, w: 0.35, h: 0.04, fill: { color: c.t.accent }, line: { color: c.t.accent } });
   slide.addText(c.deckTitle, { x: x0 + 0.45, y: H - 0.55, w: 6, h: 0.3, fontFace: BODY, fontSize: 9, color: c.t.muted, margin: 0 });
+  if (!showPage) return;
   slide.addText(`${String(page).padStart(2, "0")} / ${String(c.total).padStart(2, "0")}`, {
     x: W - M - 1.5, y: H - 0.55, w: 1.5, h: 0.3, align: "right", fontFace: BODY, fontSize: 9, color: c.t.muted, margin: 0,
   });
@@ -239,6 +261,27 @@ function coverImage(c: Ctx, slide: Slide, key: string, x: number, y: number, w: 
   return true;
 }
 
+const hasImage = (c: Ctx, key: string) => Boolean(c.images[key]);
+
+/** Gambar utuh (tidak dipotong) di tengah kotak — untuk foto produk. */
+function containImage(c: Ctx, slide: Slide, key: string, x: number, y: number, w: number, h: number) {
+  const img = c.images[key];
+  if (!img) return false;
+  const scale = Math.min(w / img.width, h / img.height);
+  const iw = img.width * scale;
+  const ih = img.height * scale;
+  slide.addImage({ data: `${img.mime};base64,${img.data}`, x: x + (w - iw) / 2, y: y + (h - ih) / 2, w: iw, h: ih });
+  return true;
+}
+
+/** Foto penuh satu slide + lapisan gelap agar teks putih terbaca. */
+function heroBackground(c: Ctx, slide: Slide, key: string) {
+  if (!coverImage(c, slide, key, 0, 0, W, H)) return false;
+  // Lapisan gradasi gelap (PNG transparan) agar judul putih terbaca, foto tetap terlihat di kanan.
+  slide.addImage({ data: `image/png;base64,${HERO_OVERLAY_PNG}`, x: 0, y: 0, w: W, h: H });
+  return true;
+}
+
 function decorCircles(c: Ctx, slide: Slide, side: "right" | "left" = "right") {
   const x = side === "right" ? W - 4.2 : -2.2;
   slide.addShape(c.pptx.ShapeType.ellipse, { x, y: -1.6, w: 6.4, h: 6.4, fill: { color: c.t.accent, transparency: 82 }, line: { color: c.t.accent, transparency: 100 } });
@@ -251,7 +294,18 @@ function decorCircles(c: Ctx, slide: Slide, side: "right" | "left" = "right") {
 
 function cover(c: Ctx, input: PresentationInput) {
   const slide = c.pptx.addSlide();
-  bg(slide, c.t.dark ? c.t.bg : c.t.bg);
+  bg(slide, c.t.bg);
+  if (input.cover_style !== "split" && hasImage(c, "cover")) {
+    heroBackground(c, slide, "cover");
+    const tw = W * 0.6;
+    slide.addShape(c.pptx.ShapeType.roundRect, { x: M, y: 2.0, w: 0.9, h: 0.09, rectRadius: 0.04, fill: { color: c.t.accent }, line: { color: c.t.accent } });
+    slide.addText(input.title, { x: M, y: 2.3, w: tw, h: 2.5, fontFace: HEAD, fontSize: fit(input.title, 50, tw, 2.5, 30), bold: true, color: "FFFFFF", valign: "top", margin: 0 });
+    if (input.subtitle) {
+      slide.addText(input.subtitle, { x: M, y: 4.9, w: tw, h: 1.0, fontFace: BODY, fontSize: fit(input.subtitle, 19, tw, 1.0, 12), color: "E5E7EB", valign: "top", margin: 0 });
+    }
+    slide.addText("Dibuat dengan Markethink", { x: M, y: H - 0.8, w: 5, h: 0.3, fontFace: BODY, fontSize: 10, color: "D1D5DB", margin: 0 });
+    return;
+  }
   const hasImg = coverImage(c, slide, "cover", W * 0.5, 0, W * 0.5, H);
   if (hasImg) {
     slide.addShape(c.pptx.ShapeType.rect, { x: W * 0.5 - 0.08, y: 0, w: 0.08, h: H, fill: { color: c.t.accent }, line: { color: c.t.accent } });
@@ -328,16 +382,20 @@ function bullets(c: Ctx, slide: Slide, s: SlideInput, top: number, idx: number) 
   });
 }
 
-function cards(c: Ctx, slide: Slide, s: SlideInput, top: number) {
+function cards(c: Ctx, slide: Slide, s: SlideInput, top: number, idx = -1) {
   const list = (s.cards ?? []).slice(0, 6);
   const n = list.length;
-  const cols = n <= 3 ? n : n === 4 ? 4 : 3;
+  // Dengan visual: foto di kiri, kartu 2 kolom di kanan.
+  const withImg = coverImage(c, slide, String(idx), M, top, 4.0, H - top - 0.8);
+  const left = withImg ? M + 4.3 : M;
+  const areaW = W - M - left;
+  const cols = withImg ? (n <= 2 ? 1 : 2) : n <= 3 ? n : n === 4 ? 4 : 3;
   const rows = Math.ceil(n / cols);
   const gap = 0.3;
-  const cw = (W - 2 * M - (cols - 1) * gap) / cols;
+  const cw = (areaW - (cols - 1) * gap) / cols;
   const ch = Math.min(rows === 1 ? 3.8 : 9, (H - top - 0.8 - (rows - 1) * gap) / rows);
   list.forEach((card, i) => {
-    const x = M + (i % cols) * (cw + gap);
+    const x = left + (i % cols) * (cw + gap);
     const y = top + Math.floor(i / cols) * (ch + gap);
     slide.addShape(c.pptx.ShapeType.roundRect, {
       x, y, w: cw, h: ch, rectRadius: 0.14, fill: { color: c.t.surface }, line: { color: c.t.surface2, width: 0.75 },
@@ -360,8 +418,26 @@ function cards(c: Ctx, slide: Slide, s: SlideInput, top: number) {
   });
 }
 
-function stats(c: Ctx, slide: Slide, s: SlideInput, top: number) {
+function stats(c: Ctx, slide: Slide, s: SlideInput, top: number, idx = -1) {
   const list = (s.stats ?? []).slice(0, 4);
+  if (coverImage(c, slide, String(idx), W * 0.62, 0, W * 0.38, H)) {
+    // Dengan visual: angka dalam grid 2 kolom di kiri, foto penuh tinggi di kanan.
+    const areaW = W * 0.62 - M - 0.4;
+    const cols = list.length > 2 ? 2 : 1;
+    const gap = 0.3;
+    const cw = (areaW - (cols - 1) * gap) / cols;
+    const rows = Math.ceil(list.length / cols);
+    const ch = Math.min(2.4, (H - top - 0.8 - (rows - 1) * gap) / rows);
+    list.forEach((st, i) => {
+      const x = M + (i % cols) * (cw + gap);
+      const y = top + Math.floor(i / cols) * (ch + gap);
+      const color = i % 2 ? c.t.accent2 : c.t.accent;
+      slide.addShape(c.pptx.ShapeType.roundRect, { x, y, w: cw, h: ch, rectRadius: 0.14, fill: { color: c.t.surface }, line: { color: c.t.surface2, width: 0.75 } });
+      slide.addText(st.value, { x: x + 0.3, y: y + 0.2, w: cw - 0.6, h: ch * 0.5, fontFace: HEAD, fontSize: fit(st.value, 48, cw - 0.6, ch * 0.5, 26), bold: true, color, valign: "middle", margin: 0 });
+      slide.addText(st.label, { x: x + 0.3, y: y + 0.2 + ch * 0.5, w: cw - 0.6, h: ch * 0.4 - 0.2, fontFace: BODY, fontSize: fit(st.label, 17, cw - 0.6, ch * 0.4 - 0.2, 11), bold: true, color: c.t.text, valign: "top", margin: 0 });
+    });
+    return;
+  }
   const takeaway = s.bullets?.length ? s.bullets.slice(0, 2) : [];
   const gap = 0.3;
   const cw = (W - 2 * M - (list.length - 1) * gap) / list.length;
@@ -558,9 +634,61 @@ function imageText(c: Ctx, s: SlideInput, idx: number) {
   return slide;
 }
 
-function closing(c: Ctx, s: SlideInput) {
+function product(c: Ctx, slide: Slide, s: SlideInput, top: number, idx: number) {
+  // Panel visual produk di kiri (foto utuh), keunggulan di kanan.
+  const panelW = W * 0.47 - M;
+  const h = H - top - 0.8;
+  slide.addShape(c.pptx.ShapeType.roundRect, { x: M, y: top, w: panelW, h, rectRadius: 0.16, fill: { color: c.t.surface }, line: { color: c.t.surface2, width: 0.75 } });
+  slide.addShape(c.pptx.ShapeType.ellipse, { x: M + panelW * 0.15, y: top + h * 0.12, w: panelW * 0.7, h: panelW * 0.7, fill: { color: c.t.accent, transparency: c.t.dark ? 80 : 88 }, line: { color: c.t.accent, transparency: 100 } });
+  if (!containImage(c, slide, String(idx), M + 0.25, top + 0.25, panelW - 0.5, h - 0.5)) {
+    iconTile(c, slide, "package", M + panelW / 2 - 0.9, top + h / 2 - 0.9, 1.8);
+  }
+  const x = W * 0.47 + 0.4;
+  const w = W - x - M;
+  const feats = (s.cards ?? []).slice(0, 4);
+  const items = feats.length ? feats : (s.bullets ?? []).slice(0, 4).map((b) => ({ icon: "circle-check", title: b, text: "" }));
+  const rowH = Math.min(1.35, h / Math.max(items.length, 1));
+  items.forEach((f, i) => {
+    const y = top + i * rowH;
+    iconTile(c, slide, f.icon, x, y + 0.05, 0.6, i % 2 ? c.t.accent2 : c.t.accent);
+    slide.addText(f.title, { x: x + 0.8, y, w: w - 0.8, h: 0.45, fontFace: HEAD, fontSize: fit(f.title, 19, w - 0.8, 0.45, 12), bold: true, color: c.t.text, valign: "top", margin: 0 });
+    if (f.text) {
+      slide.addText(f.text, { x: x + 0.8, y: y + 0.45, w: w - 0.8, h: rowH - 0.6, fontFace: BODY, fontSize: fit(f.text, 15, w - 0.8, rowH - 0.6, 10), color: c.t.muted, valign: "top", margin: 0 });
+    }
+  });
+}
+
+function gallery(c: Ctx, slide: Slide, s: SlideInput, top: number, idx: number) {
+  const items = (s.gallery ?? []).slice(0, 3);
+  const n = Math.max(items.length, 1);
+  const gap = 0.3;
+  const cw = (W - 2 * M - (n - 1) * gap) / n;
+  const ih = H - top - 1.55;
+  items.forEach((g, k) => {
+    const x = M + k * (cw + gap);
+    if (!coverImage(c, slide, `${idx}-g${k}`, x, top, cw, ih)) {
+      slide.addShape(c.pptx.ShapeType.roundRect, { x, y: top, w: cw, h: ih, rectRadius: 0.14, fill: { color: c.t.surface }, line: { color: c.t.surface2, width: 0.75 } });
+      iconTile(c, slide, "camera", x + cw / 2 - 0.45, top + ih / 2 - 0.45, 0.9, k % 2 ? c.t.accent2 : c.t.accent);
+    }
+    slide.addShape(c.pptx.ShapeType.rect, { x, y: top + ih + 0.18, w: 0.4, h: 0.05, fill: { color: k % 2 ? c.t.accent2 : c.t.accent }, line: { color: k % 2 ? c.t.accent2 : c.t.accent } });
+    slide.addText(g.caption, { x, y: top + ih + 0.3, w: cw, h: 0.55, fontFace: BODY, fontSize: fit(g.caption, 16, cw, 0.55, 11), bold: true, color: c.t.text, valign: "top", margin: 0 });
+  });
+}
+
+function closing(c: Ctx, s: SlideInput, idx = -1) {
   const slide = c.pptx.addSlide();
-  bg(slide, c.t.dark ? c.t.bg : c.t.bg);
+  bg(slide, c.t.bg);
+  if (heroBackground(c, slide, String(idx))) {
+    slide.addShape(c.pptx.ShapeType.roundRect, { x: M, y: 1.6, w: 0.9, h: 0.09, rectRadius: 0.04, fill: { color: c.t.accent }, line: { color: c.t.accent } });
+    slide.addText(s.title, { x: M, y: 1.9, w: W * 0.6, h: 1.6, fontFace: HEAD, fontSize: fit(s.title, 46, W * 0.6, 1.6, 26), bold: true, color: "FFFFFF", valign: "top", margin: 0 });
+    if (s.subtitle) slide.addText(s.subtitle, { x: M, y: 3.55, w: W * 0.55, h: 0.8, fontFace: BODY, fontSize: 18, color: "E5E7EB", valign: "top", margin: 0 });
+    (s.bullets ?? []).slice(0, 4).forEach((b, i) => {
+      const y = 4.5 + i * 0.55;
+      slide.addShape(c.pptx.ShapeType.ellipse, { x: M, y: y + 0.12, w: 0.16, h: 0.16, fill: { color: c.t.accent }, line: { color: c.t.accent } });
+      slide.addText(b, { x: M + 0.35, y, w: W * 0.55, h: 0.45, fontFace: BODY, fontSize: 18, color: "FFFFFF", valign: "middle", margin: 0 });
+    });
+    return slide;
+  }
   decorCircles(c, slide, "right");
   slide.addShape(c.pptx.ShapeType.roundRect, { x: M, y: 1.6, w: 0.9, h: 0.09, rectRadius: 0.04, fill: { color: c.t.accent }, line: { color: c.t.accent } });
   slide.addText(s.title, { x: M, y: 1.9, w: W * 0.62, h: 1.6, fontFace: HEAD, fontSize: fit(s.title, 44, W * 0.62, 1.6, 26), bold: true, color: c.t.text, valign: "top", margin: 0 });
@@ -595,21 +723,27 @@ export async function buildPresentation(input: PresentationInput, images: DeckIm
     if (s.layout === "section") slide = section(c, s, i, ++sectionNo);
     else if (s.layout === "quote") slide = quote(c, s, i);
     else if (s.layout === "image_text") slide = imageText(c, s, i);
-    else if (s.layout === "closing") slide = closing(c, s);
+    else if (s.layout === "closing") slide = closing(c, s, i);
     else {
       slide = pptx.addSlide();
       bg(slide, c.t.bg);
       const top = header(c, slide, s);
       if (s.layout === "agenda") agenda(c, slide, s, top);
-      else if (s.layout === "cards" && s.cards?.length) cards(c, slide, s, top);
-      else if (s.layout === "stats" && s.stats?.length) stats(c, slide, s, top);
+      else if (s.layout === "cards" && s.cards?.length) cards(c, slide, s, top, i);
+      else if (s.layout === "stats" && s.stats?.length) stats(c, slide, s, top, i);
+      else if (s.layout === "product") product(c, slide, s, top, i);
+      else if (s.layout === "gallery" && s.gallery?.length) gallery(c, slide, s, top, i);
       else if (s.layout === "chart") chart(c, slide, s, top);
       else if (s.layout === "timeline" && s.steps?.length) timeline(c, slide, s, top);
       else if (s.layout === "comparison" && s.columns?.length) comparison(c, slide, s, top);
       else if (s.layout === "table" && s.table) table(c, slide, s, top);
       else bullets(c, slide, s, top, i);
     }
-    if (s.layout !== "section" && s.layout !== "closing") footer(c, slide, page, s.layout === "image_text" ? W * 0.46 + 0.6 : M);
+    // Foto penuh tinggi di sisi kanan (stats/quote bergambar) → nomor halaman disembunyikan agar tidak menimpa foto.
+    const rightPhoto = (s.layout === "stats" || s.layout === "quote") && hasImage(c, String(i));
+    if (s.layout !== "section" && s.layout !== "closing") {
+      footer(c, slide, page, s.layout === "image_text" ? W * 0.46 + 0.6 : M, !rightPhoto);
+    }
     if (s.notes) slide.addNotes(s.notes);
   });
 
@@ -617,16 +751,59 @@ export async function buildPresentation(input: PresentationInput, images: DeckIm
   return out instanceof Uint8Array ? out : new Uint8Array(out as ArrayBuffer);
 }
 
-/** Daftar gambar yang perlu dibuat AI untuk deck ini (cover + slide bergambar), maks `max`. */
-export function deckImageRequests(input: PresentationInput, max = 3) {
-  const reqs: { key: string; prompt: string; aspect: string }[] = [];
-  if (input.cover_image_prompt) reqs.push({ key: "cover", prompt: input.cover_image_prompt, aspect: "4:5" });
+export interface DeckImageRequest {
+  key: string;
+  aspect: string;
+  /** Foto milik user (attachment) — gratis, diutamakan. */
+  imageId?: string;
+  /** Deskripsi untuk dibuat AI. */
+  prompt?: string;
+  product?: boolean;
+}
+
+const IMAGE_ASPECT: Partial<Record<SlideInput["layout"], string>> = {
+  image_text: "3:4",
+  product: "1:1",
+  section: "3:4",
+  quote: "3:4",
+  cards: "3:4",
+  stats: "3:4",
+  bullets: "1:1",
+  closing: "16:9",
+};
+// Urutan prioritas bila jumlah gambar AI dibatasi.
+const IMAGE_PRIORITY: SlideInput["layout"][] = ["product", "image_text", "section", "gallery", "closing", "cards", "stats", "quote", "bullets"];
+
+/**
+ * Semua visual yang dibutuhkan deck: cover + slide bergambar + galeri. Foto milik user (imageId) selalu dipakai;
+ * gambar AI (prompt) dibatasi `maxGenerated` dan diprioritaskan cover → produk → image_text → section → …
+ */
+export function deckImageRequests(input: PresentationInput, maxGenerated = 6): DeckImageRequest[] {
+  const all: (DeckImageRequest & { rank: number })[] = [];
+  const coverAspect = input.cover_style === "split" ? "4:5" : "16:9";
+  if (input.cover_image_id) all.push({ key: "cover", aspect: coverAspect, imageId: input.cover_image_id, rank: -1 });
+  else if (input.cover_image_prompt) all.push({ key: "cover", aspect: coverAspect, prompt: input.cover_image_prompt, rank: -1 });
   input.slides.forEach((s, i) => {
-    if (!s.image_prompt) return;
-    if (!["image_text", "section", "quote", "bullets"].includes(s.layout)) return;
-    reqs.push({ key: String(i), prompt: s.image_prompt, aspect: s.layout === "bullets" ? "1:1" : "3:4" });
+    const rank = IMAGE_PRIORITY.indexOf(s.layout) + i / 100;
+    if (s.layout === "gallery") {
+      (s.gallery ?? []).slice(0, 3).forEach((g, k) => {
+        const key = `${i}-g${k}`;
+        if (g.image_id) all.push({ key, aspect: "4:3", imageId: g.image_id, rank });
+        else if (g.image_prompt) all.push({ key, aspect: "4:3", prompt: g.image_prompt, rank });
+      });
+      return;
+    }
+    const aspect = IMAGE_ASPECT[s.layout];
+    if (!aspect) return;
+    if (s.image_id) all.push({ key: String(i), aspect, imageId: s.image_id, rank, product: s.layout === "product" });
+    else if (s.image_prompt) all.push({ key: String(i), aspect, prompt: s.image_prompt, rank, product: s.layout === "product" });
   });
-  return reqs.slice(0, max);
+  const owned = all.filter((r) => r.imageId);
+  const generated = all
+    .filter((r) => !r.imageId)
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, maxGenerated);
+  return [...owned, ...generated].map((r) => ({ key: r.key, aspect: r.aspect, imageId: r.imageId, prompt: r.prompt, product: r.product }));
 }
 
 /** Ukuran asli gambar PNG/JPEG/WebP dari byte-nya (untuk crop yang pas). */
