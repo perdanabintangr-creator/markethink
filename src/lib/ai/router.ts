@@ -1,5 +1,6 @@
 import "server-only";
-import type { LanguageModelV2 } from "@ai-sdk/provider";
+import type { LanguageModelV2, LanguageModelV2CallOptions } from "@ai-sdk/provider";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
@@ -7,6 +8,7 @@ import { resolveAppUrl } from "@/lib/env";
 import { getTier, supportsVision, type ModelCandidate, type TierConfig } from "./models.config";
 
 const providerKeys: Record<ModelCandidate["provider"], string | undefined> = {
+  anthropic: process.env.ANTHROPIC_API_KEY,
   google: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   groq: process.env.GROQ_API_KEY,
   openrouter: process.env.OPENROUTER_API_KEY,
@@ -18,6 +20,8 @@ export function isProviderConfigured(provider: ModelCandidate["provider"]) {
 
 function instantiate(c: ModelCandidate): LanguageModelV2 {
   switch (c.provider) {
+    case "anthropic":
+      return createAnthropic({ apiKey: providerKeys.anthropic })(c.modelId);
     case "google":
       return createGoogleGenerativeAI({ apiKey: providerKeys.google })(c.modelId);
     case "groq":
@@ -69,8 +73,8 @@ export function createFallbackModel(candidates: ModelCandidate[]): RoutedModel {
     provider: "markethink-router",
     modelId: `${first.provider}:${first.modelId}`,
     supportedUrls: {},
-    doGenerate: (options) => attempt((m) => m.doGenerate(options)),
-    doStream: (options) => attempt((m) => m.doStream(options)),
+    doGenerate: (options) => attempt((m) => m.doGenerate(forModel(m, options))),
+    doStream: (options) => attempt((m) => m.doStream(forModel(m, options))),
   };
 
   return { model, resolved: () => used, candidates };
@@ -91,6 +95,12 @@ export function routeTier(tierId: string | null | undefined, opts: { needsVision
     }
   }
   return { tier, ...createFallbackModel(candidates) };
+}
+
+/** Model Claude generasi terbaru menolak parameter sampling (temperature/topP/topK). */
+function forModel(m: LanguageModelV2, options: LanguageModelV2CallOptions): LanguageModelV2CallOptions {
+  if (!m.provider.startsWith("anthropic")) return options;
+  return { ...options, temperature: undefined, topP: undefined, topK: undefined };
 }
 
 function isAbortError(err: unknown) {

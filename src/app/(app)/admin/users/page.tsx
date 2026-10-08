@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requireAdmin } from "@/lib/auth";
-import { grantCredits, setCreditOverride, setUserBan, setUserRole } from "../actions";
+import { grantCredits, setBetaAccess, setCreditOverride, setUserBan, setUserRole } from "../actions";
 
 export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const { user: me } = await requireAdmin();
@@ -12,7 +12,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
   const admin = createAdminClient();
   let query = admin
     .from("profiles")
-    .select("id, email, full_name, role, plan_id, banned, daily_credit_override, persona_role, created_at, last_active_at", { count: "exact" })
+    .select("id, email, full_name, role, plan_id, banned, beta_access, daily_credit_override, persona_role, created_at, last_active_at", { count: "exact" })
     .order("created_at", { ascending: false })
     .range((page - 1) * size, page * size - 1);
   if (q) query = query.ilike("email", `%${q.replace(/[%_,()]/g, "")}%`);
@@ -45,6 +45,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
                   <div className="text-xs text-muted-foreground">
                     {u.full_name ?? "-"} · {u.role === "admin" ? "admin" : u.plan_id}
                     {u.banned && " · DIBAN"}
+                    {u.role !== "admin" && (u.beta_access ? " · akses beta ✓" : " · belum ada akses")}
                   </div>
                 </td>
                 <td className="p-2 text-xs">{u.persona_role ?? "-"}</td>
@@ -64,6 +65,11 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
                 <td className="p-2">
                   {u.id !== me.id && (
                     <div className="flex gap-1">
+                      <form action={setBetaAccess.bind(null, u.id, !u.beta_access)}>
+                        <Button size="sm" variant={u.beta_access ? "outline" : "default"}>
+                          {u.beta_access ? "Cabut akses" : "Beri akses"}
+                        </Button>
+                      </form>
                       <form action={setUserBan.bind(null, u.id, !u.banned)}>
                         <Button size="sm" variant={u.banned ? "outline" : "destructive"}>{u.banned ? "Unban" : "Ban"}</Button>
                       </form>

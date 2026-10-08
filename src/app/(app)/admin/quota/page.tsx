@@ -3,13 +3,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EXTRA_CREDIT_COST, getTiers } from "@/lib/ai/models.config";
-import { updatePlanCredits } from "../actions";
+import { setAccessMode, updatePlanCredits } from "../actions";
 
 export default async function AdminQuotaPage() {
-  const { data: plans } = await createAdminClient().from("plans").select("*").order("sort_order");
+  const admin = createAdminClient();
+  const [{ data: plans }, { data: mode }] = await Promise.all([
+    admin.from("plans").select("*").order("sort_order"),
+    admin.from("app_settings").select("value").eq("key", "access_mode").maybeSingle(),
+  ]);
+  const isPublic = mode?.value === "public";
   const tiers = getTiers();
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Akses aplikasi: {isPublic ? "Publik (semua user terdaftar)" : "Tertutup (undangan saja)"}</CardTitle>
+          <CardDescription>
+            Mode tertutup: hanya admin & user yang diberi akses di halaman &quot;User &amp; kuota&quot; yang bisa memakai
+            Markethink. User lain melihat halaman &quot;uji coba tertutup&quot;.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={setAccessMode.bind(null, isPublic ? "invite_only" : "public")}>
+            <Button variant={isPublic ? "outline" : "default"}>
+              {isPublic ? "Tutup kembali (undangan saja)" : "Buka untuk publik"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
       <div className="grid gap-4 md:grid-cols-2">
         {(plans ?? []).map((p) => (
           <Card key={p.id}>

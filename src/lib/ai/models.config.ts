@@ -4,11 +4,12 @@
  * Tier adalah nama brand; model LLM di belakangnya bisa diganti TANPA ubah kode
  * lewat env MODEL_JUNIOR / MODEL_SENIOR / MODEL_ASSOCIATE dengan format:
  *   "provider:model_id,provider:model_id"   (urutan = primary lalu fallback)
- * Provider yang didukung: google | groq | openrouter
+ * Provider yang didukung: anthropic | google | groq | openrouter
+ * Kandidat yang API key-nya belum diisi otomatis dilewati.
  */
 
 export type TierId = "junior" | "senior" | "associate";
-export type ProviderId = "google" | "groq" | "openrouter";
+export type ProviderId = "anthropic" | "google" | "groq" | "openrouter";
 
 export interface ModelCandidate {
   provider: ProviderId;
@@ -30,6 +31,9 @@ export interface TierConfig {
 
 /** Estimasi harga USD per 1 juta token (input, output). Free tier = 0. */
 export const MODEL_PRICING_USD: Record<string, { input: number; output: number }> = {
+  "anthropic:claude-haiku-5-5": { input: 0.1, output: 0.5 },
+  "anthropic:claude-sonnet-5-5": { input: 2, output: 10 },
+  "anthropic:claude-opus-5-5": { input: 4, output: 20 },
   "google:gemini-flash-lite-latest": { input: 0.1, output: 0.4 },
   "google:gemini-flash-latest": { input: 0.3, output: 2.5 },
   "google:gemini-pro-latest": { input: 1.25, output: 10 },
@@ -58,7 +62,7 @@ function parseCandidates(raw: string | undefined, fallback: ModelCandidate[]): M
       const modelId = entry.slice(idx + 1);
       return { provider, modelId };
     })
-    .filter((c) => ["google", "groq", "openrouter"].includes(c.provider) && c.modelId);
+    .filter((c) => ["anthropic", "google", "groq", "openrouter"].includes(c.provider) && c.modelId);
   return parsed.length ? parsed : fallback;
 }
 
@@ -73,9 +77,10 @@ export function getTiers(envSource: Record<string, string | undefined> = process
         en: "Captions, quick ideas, rewrites, and daily tasks.",
       },
       creditCost: 1,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 4096,
       temperature: 0.8,
       candidates: parseCandidates(envSource.MODEL_JUNIOR, [
+        { provider: "anthropic", modelId: "claude-haiku-5-5" },
         { provider: "groq", modelId: "llama-3.1-8b-instant" },
         { provider: "google", modelId: "gemini-flash-lite-latest" },
         { provider: "google", modelId: "gemini-2.5-flash-lite" },
@@ -91,9 +96,10 @@ export function getTiers(envSource: Record<string, string | undefined> = process
         en: "Strategy, campaign plans, and analysis.",
       },
       creditCost: 2,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 12000,
       temperature: 0.7,
       candidates: parseCandidates(envSource.MODEL_SENIOR, [
+        { provider: "anthropic", modelId: "claude-sonnet-5-5" },
         { provider: "google", modelId: "gemini-flash-latest" },
         { provider: "google", modelId: "gemini-2.5-flash" },
         { provider: "groq", modelId: "llama-3.3-70b-versatile" },
@@ -109,9 +115,10 @@ export function getTiers(envSource: Record<string, string | undefined> = process
         en: "Comprehensive brand strategy, GTM plans, deep research.",
       },
       creditCost: 5,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 20000,
       temperature: 0.6,
       candidates: parseCandidates(envSource.MODEL_ASSOCIATE, [
+        { provider: "anthropic", modelId: "claude-opus-5-5" },
         { provider: "google", modelId: "gemini-pro-latest" },
         { provider: "google", modelId: "gemini-2.5-pro" },
         { provider: "google", modelId: "gemini-flash-latest" },
@@ -131,7 +138,7 @@ export function getTier(id: string | undefined | null): TierConfig {
 
 /** Model yang bisa membaca gambar. */
 export function supportsVision(c: ModelCandidate) {
-  return c.provider === "google";
+  return c.provider === "google" || c.provider === "anthropic";
 }
 
 export function estimateCostUsd(c: ModelCandidate, inputTokens: number, outputTokens: number) {

@@ -8,7 +8,7 @@ import {
   streamText,
 } from "ai";
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
+import { getSession, hasAppAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { consumeCredits, refundCredits } from "@/lib/credits";
@@ -30,7 +30,7 @@ import { truncate } from "@/lib/utils";
 import { env } from "@/lib/env";
 import { experienceLabel, roleLabel } from "@/lib/personas";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const bodySchema = z.object({
   id: z.string().uuid(),
@@ -50,6 +50,7 @@ export async function POST(req: Request) {
   const { supabase, user, profile } = await getSession();
   if (!user || !profile) return json(401, { error: "unauthorized" });
   if (profile.banned) return json(403, { error: "banned" });
+  if (!(await hasAppAccess(profile))) return json(403, { error: "no_access" });
   if (!(await guardRequest(user.id, req.headers))) {
     return json(429, { error: "rate_limited", message: "Terlalu banyak permintaan. Tunggu sebentar ya." });
   }

@@ -103,3 +103,17 @@ export async function toggleAgent(agentId: string, active: boolean) {
   revalidatePath("/admin/agents");
   revalidatePath("/agents");
 }
+
+export async function setBetaAccess(userId: string, access: boolean) {
+  await requireAdmin();
+  await createAdminClient().from("profiles").update({ beta_access: access }).eq("id", userId);
+  revalidatePath("/admin/users");
+}
+
+export async function setAccessMode(mode: "invite_only" | "public") {
+  await requireAdmin();
+  await createAdminClient()
+    .from("app_settings")
+    .upsert({ key: "access_mode", value: mode, updated_at: new Date().toISOString() });
+  revalidatePath("/admin/quota");
+}

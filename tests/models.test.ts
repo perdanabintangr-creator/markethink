@@ -25,7 +25,7 @@ describe("models.config", () => {
   });
 
   it("env tidak valid → pakai default", () => {
-    expect(getTiers({ MODEL_SENIOR: "unknown:model" })[1].candidates[0].provider).toBe("google");
+    expect(getTiers({ MODEL_SENIOR: "unknown:model" })[1].candidates[0]).toEqual({ provider: "anthropic", modelId: "claude-sonnet-5-5" });
   });
 
   it("tier tidak dikenal → senior", () => {
@@ -41,5 +41,13 @@ describe("models.config", () => {
   it("model :free biayanya nol", () => {
     expect(estimateCostUsd({ provider: "openrouter", modelId: "x:free" }, 1000, 1000)).toBe(0);
     expect(estimateCostUsd({ provider: "google", modelId: "gemini-2.5-flash" }, 1_000_000, 0)).toBeCloseTo(0.3);
+  });
+});
+
+describe("Claude sebagai otak utama", () => {
+  it("tiap tier diawali Claude dengan Gemini sebagai cadangan", () => {
+    const ids = getTiers({}).map((t) => t.candidates[0].modelId);
+    expect(ids).toEqual(["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"]);
+    for (const t of getTiers({})) expect(t.candidates.some((c) => c.provider === "google")).toBe(true);
   });
 });

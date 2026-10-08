@@ -726,3 +726,20 @@ revoke execute on function public.handle_new_user() from public, anon, authentic
 
 -- ===== 20261008000005_usage_error.sql =====
 alter table public.usage_logs add column if not exists error text;
+
+
+-- ===== 20261008000006_beta_access.sql =====
+-- Akses beta tertutup: hanya user dengan beta_access (atau admin) yang bisa memakai app
+-- selama access_mode = 'invite_only'. Admin bisa mengubahnya dari /admin/quota.
+alter table public.profiles add column if not exists beta_access boolean not null default false;
+
+create table if not exists public.app_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.app_settings enable row level security;
+create policy "settings readable" on public.app_settings for select to authenticated using (true);
+
+insert into public.app_settings (key, value) values ('access_mode', '"invite_only"')
+on conflict (key) do nothing;

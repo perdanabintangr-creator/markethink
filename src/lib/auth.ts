@@ -21,6 +21,7 @@ export interface Profile {
   consent_at: string | null;
   banned: boolean;
   daily_credit_override: number | null;
+  beta_access: boolean;
   created_at: string;
 }
 
@@ -34,12 +35,25 @@ export const getSession = cache(async () => {
   return { supabase, user, profile };
 });
 
-/** Untuk halaman app: wajib login, tidak di-ban, sudah onboarding. */
+/** Mode akses app: "invite_only" (hanya admin & user ber-beta_access) atau "public". */
+export const getAccessMode = cache(async (): Promise<"invite_only" | "public"> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("app_settings").select("value").eq("key", "access_mode").maybeSingle();
+  return data?.value === "public" ? "public" : "invite_only";
+});
+
+export async function hasAppAccess(profile: Profile) {
+  if (profile.role === "admin" || profile.beta_access) return true;
+  return (await getAccessMode()) === "public";
+}
+
+/** Untuk halaman app: wajib login, tidak di-ban, punya akses beta, sudah onboarding. */
 export async function requireUser(opts: { allowNotOnboarded?: boolean } = {}) {
   const session = await getSession();
   if (!session.user) redirect("/login");
   if (!session.profile) redirect("/login?error=profile");
   if (session.profile.banned) redirect("/banned");
+  if (!(await hasAppAccess(session.profile))) redirect("/closed");
   if (!opts.allowNotOnboarded && !session.profile.onboarded) redirect("/onboarding");
   return session as typeof session & { user: NonNullable<typeof session.user>; profile: Profile };
 }
