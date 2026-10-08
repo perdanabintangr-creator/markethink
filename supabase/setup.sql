@@ -801,3 +801,16 @@ on conflict (plan_id, key) do nothing;
 -- Token prompt cache Claude (untuk memantau penghematan biaya).
 alter table public.usage_logs add column if not exists cache_read_tokens integer not null default 0;
 alter table public.usage_logs add column if not exists cache_write_tokens integer not null default 0;
+
+
+-- ===== 20261008000013_free_daily_limits.sql =====
+-- Batas harian paket Free (di luar kredit): 20 chat, 2 gambar, 1 PPT per hari (WIB).
+-- Paket lain tanpa per_day = hanya dibatasi kredit.
+insert into public.feature_flags (plan_id, key, enabled, value) values
+  ('beta', 'chat', true, '{"per_day": 20}'),
+  ('pro', 'chat', true, null),
+  ('promax', 'chat', true, null)
+on conflict (plan_id, key) do update set enabled = excluded.enabled, value = excluded.value;
+
+update public.feature_flags set enabled = true, value = '{"per_day": 2}' where plan_id = 'beta' and key = 'image_gen';
+update public.feature_flags set enabled = true, value = '{"per_day": 1}' where plan_id = 'beta' and key = 'pptx';

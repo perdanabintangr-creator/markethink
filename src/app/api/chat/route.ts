@@ -36,6 +36,7 @@ import { truncate } from "@/lib/utils";
 import { env } from "@/lib/env";
 import { experienceLabel, roleLabel } from "@/lib/personas";
 import { getAllowedTiers } from "@/lib/plan";
+import { dailyLimitReached, getDailyLimits } from "@/lib/limits";
 
 export const maxDuration = 300;
 
@@ -71,10 +72,11 @@ export async function POST(req: Request) {
   const lastText = messageText(last);
   if (lastText.length > 20_000) return json(413, { error: "message_too_long" });
 
-  const [allowedTiers, { data: settings }, { data: imageFlag }] = await Promise.all([
+  const [allowedTiers, { data: settings }, { data: imageFlag }, dailyLimits] = await Promise.all([
     getAllowedTiers(supabase, profile),
     supabase.from("app_settings").select("key, value").in("key", ["web_search", "image_gen"]),
     supabase.from("feature_flags").select("enabled").eq("plan_id", profile.plan_id).eq("key", "image_gen").maybeSingle(),
+    getDailyLimits(supabase, profile),
   ]);
   const setting = (key: string) => settings?.find((r) => r.key === key)?.value === true;
   const webSearchEnabled = setting("web_search");
@@ -93,6 +95,10 @@ export async function POST(req: Request) {
     console.error("[chat] SUPABASE_SERVICE_ROLE_KEY belum diisi");
     return json(503, { error: "server_not_configured" });
   }
+
+  // --- batas harian paket (mis. Free 20 chat/hari) ---
+  const chatLimit = await dailyLimitReached(dailyLimits, user.id, "chat");
+  if (chatLimit) return json(429, { error: "daily_limit", kind: "chat", message: chatLimit });
 
   // --- kredit ---
   const tier = getTier(tierId);
@@ -237,7 +243,13 @@ export async function POST(req: Request) {
         maxRetries: 0,
         providerOptions: { anthropic: { effort: tier.effort, cacheControl: { type: "ephemeral" } } },
         tools: {
-          ...createChatTools({ admin, userId: user.id, chatId, imageBlockedReason }),
+          ...createChatTools({
+            admin,
+            userId: user.id,
+            chatId,
+            imageBlockedReason,
+            dailyLimit: (kind) => dailyLimitReached(dailyLimits, user.id, kind),
+          }),
           ...(webSearchOn
             ? {
                 web_search: anthropic.tools.webSearch_20250305({

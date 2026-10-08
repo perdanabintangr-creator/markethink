@@ -12,11 +12,14 @@ export function QuotaDialog({
   open,
   onOpenChange,
   lockedTier,
+  notice,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   /** Bila diisi: dialog upgrade untuk otak yang terkunci, bukan kuota habis. */
   lockedTier?: string | null;
+  /** Bila diisi: batas harian paket (mis. 20 chat/hari) tercapai. */
+  notice?: string | null;
 }) {
   const { user } = useApp();
   const planLabel = lockedTier?.split("|")[1] === "promax" ? "Promax" : "Pro";
@@ -42,10 +45,16 @@ export function QuotaDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />{" "}
-            {lockedTier ? `${lockedTier.split("|")[0]} khusus paket ${planLabel}` : "Kredit hari ini sudah habis"}
+            {lockedTier
+              ? `${lockedTier.split("|")[0]} khusus paket ${planLabel}`
+              : notice
+                ? "Batas harian tercapai"
+                : "Kredit hari ini sudah habis"}
           </DialogTitle>
           <DialogDescription>
-            {lockedTier
+            {notice
+              ? `${notice} Paket Pro memberi kuota jauh lebih besar — gabung waitlist, kami kabari saat dibuka.`
+              : lockedTier
               ? `Paket Free memakai Markethink Junior. Pro membuka Senior (strategi & campaign) dan Associate (brand strategy & GTM sekelas konsultan). Promax membuka Director — otak paling pintar yang bisa mengerjakan apa pun — plus kredit jauh lebih banyak. Gabung waitlist ${planLabel}, kami kabari saat dibuka.`
               : "Kredit akan reset otomatis pukul 00.00 WIB. Mau kuota lebih besar? Gabung waitlist Markethink Pro — kami kabari saat sudah tersedia."}
           </DialogDescription>

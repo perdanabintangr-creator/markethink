@@ -26,6 +26,8 @@ interface ToolCtx {
   chatId: string;
   /** null = gambar boleh; string = alasan gambar tidak tersedia (disampaikan model ke user). */
   imageBlockedReason: string | null;
+  /** Cek batas harian paket (mis. Free: 2 gambar, 1 PPT per hari). null = boleh. */
+  dailyLimit?: (kind: "image" | "pptx") => Promise<string | null>;
 }
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err)).slice(0, 1500);
@@ -86,6 +88,8 @@ export function createChatTools(ctx: ToolCtx) {
       }),
       execute: async ({ prompt, aspect_ratio, reference_ids }): Promise<ImageToolOutput> => {
         if (ctx.imageBlockedReason) return { ok: false, error: ctx.imageBlockedReason };
+        const imageLimit = await ctx.dailyLimit?.("image");
+        if (imageLimit) return { ok: false, error: imageLimit, hint: "Jangan coba lagi hari ini; tawarkan prompt gambar siap pakai." };
         const credit = await consumeCredits(ctx.userId, IMAGE_CREDIT_COST, "image", { chatId: ctx.chatId });
         if (!credit.ok) return { ok: false, error: `Kredit tidak cukup untuk membuat gambar (butuh ${IMAGE_CREDIT_COST}, sisa ${credit.remaining}).` };
         try {
@@ -112,6 +116,8 @@ export function createChatTools(ctx: ToolCtx) {
         "Bila user melampirkan dokumen, dasarkan isi slide pada dokumen itu.",
       inputSchema: presentationSchema,
       execute: async (input): Promise<PresentationToolOutput> => {
+        const pptxLimit = await ctx.dailyLimit?.("pptx");
+        if (pptxLimit) return { ok: false, error: pptxLimit };
         const credit = await consumeCredits(ctx.userId, PPTX_CREDIT_COST, "presentation", { chatId: ctx.chatId });
         if (!credit.ok) return { ok: false, error: `Kredit tidak cukup untuk membuat PPT (butuh ${PPTX_CREDIT_COST}, sisa ${credit.remaining}).` };
         try {
@@ -125,6 +131,7 @@ export function createChatTools(ctx: ToolCtx) {
             bytes,
             presentationOutline(input),
           );
+          await logUsage(ctx, { tier: "pptx", credits: PPTX_CREDIT_COST, cost: 0 });
           return {
             ok: true,
             attachmentId: saved.id,

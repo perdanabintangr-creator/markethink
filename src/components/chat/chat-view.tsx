@@ -60,6 +60,7 @@ export function ChatView({
   const { t, workspaces, allowedTiers } = useApp();
   const [tier, setTier] = useState<TierId>(() => pickTier(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
+  const [limitNotice, setLimitNotice] = useState<string | null>(null);
   const [research, setResearch] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string | null>(initialWorkspaceId);
   const [activeAgent, setActiveAgent] = useState(agent);
@@ -119,10 +120,20 @@ export function ChatView({
     onError: async (err) => {
       setStatusLabel(null);
       let code = "";
+      let serverMessage = "";
       try {
-        code = JSON.parse(err.message).error;
+        const body = JSON.parse(err.message);
+        code = body.error;
+        serverMessage = body.message ?? "";
       } catch {}
-      if (code === "quota_exceeded") {
+      if (code === "daily_limit") {
+        setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
+        setLockedTier(null);
+        setLimitNotice(serverMessage || "Batas harian paket kamu sudah tercapai.");
+        setQuotaOpen(true);
+        track("daily_limit");
+      } else if (code === "quota_exceeded") {
+        setLimitNotice(null);
         setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
         setQuotaOpen(true);
         track("quota_exceeded");
@@ -130,6 +141,7 @@ export function ChatView({
       else if (code === "tier_locked") {
         setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
         setTier(pickTier(null, allowedTiers));
+        setLimitNotice(null);
         setLockedTier("Otak ini|pro");
         setQuotaOpen(true);
       } else if (code === "server_not_configured") toast.error("Server AI belum selesai dikonfigurasi. Hubungi admin.");
@@ -141,6 +153,7 @@ export function ChatView({
   const busy = status === "submitted" || status === "streaming";
 
   const onLockedTier = (lt: TierOption) => {
+    setLimitNotice(null);
     setLockedTier(`${lt.label}|${lt.minPlan}`);
     setQuotaOpen(true);
     track("tier_locked_clicked", { tier: lt.id });
@@ -375,9 +388,13 @@ export function ChatView({
         open={quotaOpen}
         onOpenChange={(v) => {
           setQuotaOpen(v);
-          if (!v) setLockedTier(null);
+          if (!v) {
+            setLockedTier(null);
+            setLimitNotice(null);
+          }
         }}
         lockedTier={lockedTier}
+        notice={limitNotice}
       />
     </div>
   );
