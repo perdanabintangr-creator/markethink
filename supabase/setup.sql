@@ -743,3 +743,10 @@ create policy "settings readable" on public.app_settings for select to authentic
 
 insert into public.app_settings (key, value) values ('access_mode', '"invite_only"')
 on conflict (key) do nothing;
+
+
+-- ===== 20261008000007_tier_by_plan.sql =====
+-- Paket gratis hanya Markethink Junior; Senior & Associate untuk paket Pro.
+update public.feature_flags set enabled = false where plan_id = 'beta' and key in ('tier.senior','tier.associate');
+update public.plans set name = 'Gratis', description = 'Akses gratis dengan Markethink Junior dan kuota harian' where id = 'beta';
+update public.plans set description = 'Semua otak marketing: Junior, Senior, Associate' where id = 'pro';

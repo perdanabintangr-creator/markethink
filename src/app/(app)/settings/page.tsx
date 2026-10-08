@@ -9,10 +9,11 @@ export const metadata = { title: "Pengaturan" };
 
 export default async function SettingsPage() {
   const { supabase, user, profile } = await requireUser();
-  const [{ data: memories }, credits, { data: usage }] = await Promise.all([
+  const [{ data: memories }, credits, { data: usage }, { data: plan }] = await Promise.all([
     supabase.from("memories").select("id, content, source, created_at").order("created_at", { ascending: false }),
     getCreditStatus(user.id),
     supabase.from("usage_logs").select("credits").gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
+    supabase.from("plans").select("name").eq("id", profile.plan_id).maybeSingle(),
   ]);
   const used30 = (usage ?? []).reduce((a, r) => a + ((r.credits as number) ?? 0), 0);
 
@@ -26,7 +27,7 @@ export default async function SettingsPage() {
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="rounded-xl border p-3">
               <p className="text-xs text-muted-foreground">Paket</p>
-              <p className="font-semibold">Beta Gratis</p>
+              <p className="font-semibold">{profile.role === "admin" ? "Admin" : (plan?.name ?? profile.plan_id)}</p>
             </div>
             <div className="rounded-xl border p-3">
               <p className="text-xs text-muted-foreground">Sisa hari ini</p>

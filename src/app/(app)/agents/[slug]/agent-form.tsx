@@ -7,14 +7,15 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, NativeSelect, Textarea } from "@/components/ui/input";
 import { AgentIcon } from "@/components/agent-icon";
-import { useApp } from "@/components/app/app-context";
+import { pickTier, useApp } from "@/components/app/app-context";
 import type { TierId } from "@/lib/ai/models.config";
 import { PENDING_KEY, type Agent, type PendingAgentRun } from "@/lib/types";
 
 export function AgentForm({ agent }: { agent: Omit<Agent, "instructions" | "is_active" | "sort_order"> }) {
   const router = useRouter();
-  const { workspaces } = useApp();
-  const [tier, setTier] = useState<TierId>(agent.default_tier);
+  const { workspaces, allowedTiers } = useApp();
+  const [tier, setTier] = useState<TierId>(() => pickTier(agent.default_tier, allowedTiers));
+  const recommendedLocked = !allowedTiers.includes(agent.default_tier);
   const [workspaceId, setWorkspaceId] = useState<string>("");
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -84,10 +85,24 @@ export function AgentForm({ agent }: { agent: Omit<Agent, "instructions" | "is_a
             <div className="space-y-1.5">
               <Label htmlFor="tier">Otak marketing</Label>
               <NativeSelect id="tier" value={tier} onChange={(e) => setTier(e.target.value as TierId)}>
-                <option value="junior">Markethink Junior — cepat</option>
-                <option value="senior">Markethink Senior — seimbang</option>
-                <option value="associate">Markethink Associate — paling mendalam</option>
+                {(
+                  [
+                    ["junior", "Markethink Junior — cepat"],
+                    ["senior", "Markethink Senior — seimbang"],
+                    ["associate", "Markethink Associate — paling mendalam"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <option key={id} value={id} disabled={!allowedTiers.includes(id)}>
+                    {label}
+                    {allowedTiers.includes(id) ? "" : " (Pro 🔒)"}
+                  </option>
+                ))}
               </NativeSelect>
+              {recommendedLocked && (
+                <p className="text-xs text-muted-foreground">
+                  Agent ini paling optimal dengan otak Pro. Di paket gratis hasilnya versi ringkas.
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ws">Brand Workspace</Label>

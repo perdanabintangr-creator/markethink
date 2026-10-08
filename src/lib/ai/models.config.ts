@@ -21,6 +21,10 @@ export interface TierConfig {
   label: string;
   tagline: { id: string; en: string };
   description: { id: string; en: string };
+  /** Keahlian yang ditampilkan di model selector. */
+  skills: { id: string[]; en: string[] };
+  /** Instruksi gaya kerja otak ini — disisipkan ke system prompt. */
+  skillPrompt: string;
   /** Kredit per pesan. */
   creditCost: number;
   maxOutputTokens: number;
@@ -75,6 +79,14 @@ export function getTiers(envSource: Record<string, string | undefined> = process
         id: "Caption, ide cepat, rewrite, dan tugas harian.",
         en: "Captions, quick ideas, rewrites, and daily tasks.",
       },
+      skills: {
+        id: ["Caption & hook", "Ide konten cepat", "Rewrite & terjemah", "Balas chat pelanggan"],
+        en: ["Captions & hooks", "Quick content ideas", "Rewrite & translate", "Customer replies"],
+      },
+      skillPrompt: `Kamu bekerja sebagai Markethink Junior — eksekutor cepat.
+- Jawab ringkas dan langsung siap pakai (umumnya di bawah 300 kata kecuali user minta lebih).
+- Prioritaskan output konkret: copy, caption, ide, daftar, template. Minim teori.
+- Jika permintaan butuh strategi mendalam (campaign plan lengkap, brand strategy, GTM), kerjakan versi ringkasnya lalu sarankan memakai Markethink Senior/Associate untuk versi lengkap.`,
       creditCost: 1,
       maxOutputTokens: 4096,
       temperature: 0.8,
@@ -94,6 +106,14 @@ export function getTiers(envSource: Record<string, string | undefined> = process
         id: "Strategi, campaign plan, dan analisis.",
         en: "Strategy, campaign plans, and analysis.",
       },
+      skills: {
+        id: ["Campaign plan", "Content calendar", "Ads copy A/B", "Persona & SWOT", "Riset ber-sitasi"],
+        en: ["Campaign plans", "Content calendars", "A/B ads copy", "Personas & SWOT", "Cited research"],
+      },
+      skillPrompt: `Kamu bekerja sebagai Markethink Senior — strategist yang juga eksekutor.
+- Mulai dari tujuan bisnis, lalu susun strategi terstruktur memakai framework yang relevan (STP, AIDA, funnel, SWOT/TOWS).
+- Lengkapi dengan langkah eksekusi, contoh copy nyata, timeline, estimasi budget, dan KPI terukur. Gunakan tabel untuk perbandingan, jadwal, dan anggaran.
+- Tulis asumsi secara eksplisit bila data dari user kurang.`,
       creditCost: 2,
       maxOutputTokens: 12000,
       temperature: 0.7,
@@ -113,6 +133,15 @@ export function getTiers(envSource: Record<string, string | undefined> = process
         id: "Brand strategy komprehensif, GTM plan, riset mendalam.",
         en: "Comprehensive brand strategy, GTM plans, deep research.",
       },
+      skills: {
+        id: ["Brand strategy", "Go-to-market plan", "Analisis pasar mendalam", "Pitch & proposal klien", "Skenario & proyeksi"],
+        en: ["Brand strategy", "Go-to-market plans", "Deep market analysis", "Client pitches & proposals", "Scenarios & projections"],
+      },
+      skillPrompt: `Kamu bekerja sebagai Markethink Associate — berpikir setara CMO / partner konsultan strategi.
+- Analisis dari banyak sudut: pasar, kompetitor, konsumen, ekonomi unit, kanal, dan kapabilitas tim.
+- Buat asumsi eksplisit, bandingkan 2–3 opsi strategi beserta trade-off-nya, lalu beri satu rekomendasi yang dipertanggungjawabkan.
+- Sertakan skenario (konservatif/moderat/agresif) bila relevan, risiko & mitigasi, prioritas, roadmap 30-60-90 hari, dan metrik keberhasilan.
+- Output berupa dokumen utuh berkualitas presentasi klien/board, dengan ringkasan eksekutif di awal.`,
       creditCost: 5,
       maxOutputTokens: 20000,
       temperature: 0.6,

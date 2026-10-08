@@ -29,6 +29,7 @@ import type { MtMessage } from "@/lib/types";
 import { truncate } from "@/lib/utils";
 import { env } from "@/lib/env";
 import { experienceLabel, roleLabel } from "@/lib/personas";
+import { getAllowedTiers } from "@/lib/plan";
 
 export const maxDuration = 300;
 
@@ -63,6 +64,11 @@ export async function POST(req: Request) {
   if (last?.role !== "user") return json(400, { error: "last_message_must_be_user" });
   const lastText = messageText(last);
   if (lastText.length > 20_000) return json(413, { error: "message_too_long" });
+
+  const allowedTiers = await getAllowedTiers(supabase, profile);
+  if (!allowedTiers.includes(tierId)) {
+    return json(403, { error: "tier_locked", allowed: allowedTiers });
+  }
 
   if (!env.supabaseServiceKey) {
     console.error("[chat] SUPABASE_SERVICE_ROLE_KEY belum diisi");
@@ -172,6 +178,7 @@ export async function POST(req: Request) {
           memories: (memories ?? []).map((m) => m.content as string),
         },
         {
+          tierInstructions: tier.skillPrompt,
           agentInstructions: agent?.instructions ?? null,
           knowledge: wsCtx.knowledge,
           research: sources.length

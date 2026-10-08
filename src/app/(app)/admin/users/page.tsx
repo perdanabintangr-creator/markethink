@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requireAdmin } from "@/lib/auth";
-import { grantCredits, setBetaAccess, setCreditOverride, setUserBan, setUserRole } from "../actions";
+import { grantCredits, setBetaAccess, setUserPlan, setCreditOverride, setUserBan, setUserRole } from "../actions";
 
 export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const { user: me } = await requireAdmin();
@@ -65,6 +65,9 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
                 <td className="p-2">
                   {u.id !== me.id && (
                     <div className="flex gap-1">
+                      <form action={setUserPlan.bind(null, u.id, u.plan_id === "pro" ? "beta" : "pro")}>
+                        <Button size="sm" variant="outline">{u.plan_id === "pro" ? "Jadikan Gratis" : "Jadikan Pro"}</Button>
+                      </form>
                       <form action={setBetaAccess.bind(null, u.id, !u.beta_access)}>
                         <Button size="sm" variant={u.beta_access ? "outline" : "default"}>
                           {u.beta_access ? "Cabut akses" : "Beri akses"}

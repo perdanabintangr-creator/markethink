@@ -112,9 +112,19 @@ export default async function LandingPage() {
                 <div className="flex items-center gap-2 text-sm font-medium text-primary">
                   {Array.from({ length: i + 1 }).map((_, k) => <BarChart3 key={k} className="size-4" />)}
                 </div>
-                <h3 className="mt-3 text-lg font-semibold">{t.label}</h3>
+                <div className="mt-3 flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{t.label}</h3>
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                    {t.id === "junior" ? "Gratis" : "Pro"}
+                  </span>
+                </div>
                 <p className="text-sm font-medium text-muted-foreground">{t.tagline.id}</p>
                 <p className="mt-3 text-sm">{t.description.id}</p>
+                <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+                  {t.skills.id.map((s) => (
+                    <li key={s}>✓ {s}</li>
+                  ))}
+                </ul>
                 <p className="mt-4 text-xs text-muted-foreground">{t.creditCost} kredit / pesan</p>
               </div>
             ))}

@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useApp } from "@/components/app/app-context";
+import { pickTier, useApp } from "@/components/app/app-context";
 import { CanvasPanel } from "@/components/canvas/canvas-panel";
 import { emitChatsChanged, emitCredits } from "@/lib/events";
 import { track } from "@/lib/analytics";
@@ -56,8 +56,9 @@ export function ChatView({
   initialCanvasIds: string[];
   initialShareToken: string | null;
 }) {
-  const { t, workspaces } = useApp();
-  const [tier, setTier] = useState<TierId>(initialTier);
+  const { t, workspaces, allowedTiers } = useApp();
+  const [tier, setTier] = useState<TierId>(() => pickTier(initialTier, allowedTiers));
+  const [lockedTier, setLockedTier] = useState<string | null>(null);
   const [research, setResearch] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string | null>(initialWorkspaceId);
   const [activeAgent, setActiveAgent] = useState(agent);
@@ -125,7 +126,12 @@ export function ChatView({
         setQuotaOpen(true);
         track("quota_exceeded");
       } else if (code === "rate_limited") toast.error("Terlalu banyak permintaan. Tunggu sebentar ya.");
-      else if (code === "server_not_configured") toast.error("Server AI belum selesai dikonfigurasi. Hubungi admin.");
+      else if (code === "tier_locked") {
+        setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
+        setTier(pickTier(null, allowedTiers));
+        setLockedTier("Otak ini");
+        setQuotaOpen(true);
+      } else if (code === "server_not_configured") toast.error("Server AI belum selesai dikonfigurasi. Hubungi admin.");
       const res = await fetch("/api/credits");
       if (res.ok) emitCredits((await res.json()).remaining);
     },
@@ -161,6 +167,7 @@ export function ChatView({
     try {
       const run = JSON.parse(raw) as PendingAgentRun;
       setActiveAgent({ id: run.agentId, name: run.agentName, output_canvas: run.outputCanvas });
+      run.tier = pickTier(run.tier, allowedTiers);
       setTier(run.tier);
       if (run.workspaceId) setWorkspaceId(run.workspaceId);
       opts.current = { ...opts.current, tier: run.tier, agentId: run.agentId, workspaceId: run.workspaceId ?? opts.current.workspaceId };
@@ -212,7 +219,16 @@ export function ChatView({
     <div className="flex h-full">
       <div className={cn("flex h-full min-w-0 flex-1 flex-col", canvasId && "hidden lg:flex")}>
         <header className="flex items-center gap-1 border-b px-2 py-1.5 sm:px-3">
-          <ModelSelector tiers={tiers} value={tier} onChange={setTier} />
+          <ModelSelector
+            tiers={tiers}
+            value={tier}
+            onChange={setTier}
+            onLocked={(t) => {
+              setLockedTier(t.label);
+              setQuotaOpen(true);
+              track("tier_locked_clicked", { tier: t.id });
+            }}
+          />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex max-w-40 items-center gap-1 truncate rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent sm:max-w-56">
@@ -353,7 +369,14 @@ export function ChatView({
         </div>
       )}
 
-      <QuotaDialog open={quotaOpen} onOpenChange={setQuotaOpen} />
+      <QuotaDialog
+        open={quotaOpen}
+        onOpenChange={(v) => {
+          setQuotaOpen(v);
+          if (!v) setLockedTier(null);
+        }}
+        lockedTier={lockedTier}
+      />
     </div>
   );
 }

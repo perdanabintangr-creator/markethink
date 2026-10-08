@@ -8,7 +8,16 @@ import { Input, Label, Textarea } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useApp } from "@/components/app/app-context";
 
-export function QuotaDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function QuotaDialog({
+  open,
+  onOpenChange,
+  lockedTier,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  /** Bila diisi: dialog upgrade untuk otak yang terkunci, bukan kuota habis. */
+  lockedTier?: string | null;
+}) {
   const { user } = useApp();
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,11 +40,13 @@ export function QuotaDialog({ open, onOpenChange }: { open: boolean; onOpenChang
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="size-5 text-primary" /> Kredit hari ini sudah habis
+            <Sparkles className="size-5 text-primary" />{" "}
+            {lockedTier ? `${lockedTier} khusus paket Pro` : "Kredit hari ini sudah habis"}
           </DialogTitle>
           <DialogDescription>
-            Kredit beta akan reset otomatis pukul 00.00 WIB. Mau kuota lebih besar? Gabung waitlist Markethink Pro — kami
-            kabari saat sudah tersedia.
+            {lockedTier
+              ? "Paket gratis memakai Markethink Junior. Otak yang lebih pintar — Senior untuk strategi & campaign, Associate untuk brand strategy & GTM sekelas konsultan — tersedia di Markethink Pro. Gabung waitlist, kami kabari saat Pro dibuka."
+              : "Kredit akan reset otomatis pukul 00.00 WIB. Mau kuota lebih besar? Gabung waitlist Markethink Pro — kami kabari saat sudah tersedia."}
           </DialogDescription>
         </DialogHeader>
         {done ? (

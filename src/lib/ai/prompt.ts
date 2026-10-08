@@ -72,9 +72,10 @@ export function untrusted(label: string, content: string) {
 
 export async function buildSystemPrompt(
   ctx: PromptContext,
-  extras: { agentInstructions?: string | null; knowledge?: string | null; research?: string | null } = {},
+  extras: { tierInstructions?: string | null; agentInstructions?: string | null; knowledge?: string | null; research?: string | null } = {},
 ) {
   const parts = [fillTemplate(await loadSystemTemplate(), ctx)];
+  if (extras.tierInstructions) parts.push(`## Level otak\n${extras.tierInstructions}`);
   if (extras.agentInstructions) parts.push(`## Mode agent\n${extras.agentInstructions}`);
   if (extras.knowledge) {
     parts.push(
