@@ -18,12 +18,14 @@ function GoogleIcon() {
 }
 
 const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
-const CONFIG_ERROR = "Server login belum terkonfigurasi (env Supabase belum terbaca). Hubungi admin.";
+const CONFIG_ERROR = "Server login belum terkonfigurasi. Hubungi admin.";
 
-/** Supabase client, atau null bila env publik tidak ikut ter-build. */
 function getClient() {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
-  return createClient();
+  try {
+    return createClient();
+  } catch {
+    return null;
+  }
 }
 
 function safeNext(raw: string | null) {

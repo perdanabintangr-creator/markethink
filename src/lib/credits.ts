@@ -8,12 +8,18 @@ export interface CreditStatus {
 }
 
 export async function getCreditStatus(userId: string): Promise<CreditStatus> {
-  const admin = createAdminClient();
-  const { data, error } = await admin.rpc("get_credit_status", { p_user: userId }).single<{
-    daily_limit: number;
-    used: number;
-    remaining: number;
-  }>();
+  let result;
+  try {
+    result = await createAdminClient().rpc("get_credit_status", { p_user: userId }).single<{
+      daily_limit: number;
+      used: number;
+      remaining: number;
+    }>();
+  } catch (err) {
+    console.error("[credits] status gagal", err);
+    return { dailyLimit: 0, used: 0, remaining: 0 };
+  }
+  const { data, error } = result;
   if (error || !data) return { dailyLimit: 0, used: 0, remaining: 0 };
   return { dailyLimit: data.daily_limit, used: data.used, remaining: data.remaining };
 }

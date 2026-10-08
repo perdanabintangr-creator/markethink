@@ -9,6 +9,14 @@ function safeNext(raw: string | null) {
 }
 
 async function afterLogin(userId: string, email: string | undefined) {
+  try {
+    await afterLoginTasks(userId, email);
+  } catch (err) {
+    console.error("[auth] tugas setelah login gagal", err);
+  }
+}
+
+async function afterLoginTasks(userId: string, email: string | undefined) {
   await syncAdminRole(userId, email);
   const admin = createAdminClient();
   const { data: profile } = await admin
