@@ -74,7 +74,8 @@ export async function extractText(mime: string, bytes: Uint8Array): Promise<stri
   let text = "";
   if (kind === "pdf") {
     const { extractText: pdfExtract, getDocumentProxy } = await import("unpdf");
-    const pdf = await getDocumentProxy(bytes);
+    // Salinan: pdf.js memindahkan (detach) buffer yang diberikan, jadi jangan pakai buffer asli.
+    const pdf = await getDocumentProxy(bytes.slice());
     const res = await pdfExtract(pdf, { mergePages: true });
     text = Array.isArray(res.text) ? res.text.join("\n") : res.text;
   } else if (kind === "docx") {

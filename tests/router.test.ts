@@ -101,3 +101,34 @@ describe("model router fallback", () => {
     expect(() => createFallbackModel([])).toThrow(/provider LLM/);
   });
 });
+
+describe("lampiran file ke model", () => {
+  it("PDF/gambar dalam data URL dikirim langsung ke model, tidak 'diunduh'", async () => {
+    const { createFallbackModel } = await import("@/lib/ai/router");
+    const routed = createFallbackModel([{ provider: "google", modelId: "b" }]);
+    const pdf = `data:application/pdf;base64,${Buffer.from("%PDF-1.4 tes").toString("base64")}`;
+    let err: unknown;
+    const result = streamText({
+      model: routed.model,
+      maxRetries: 0,
+      onError: ({ error }) => void (err = error),
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", data: pdf, mediaType: "application/pdf", filename: "a.pdf" },
+            { type: "text", text: "baca" },
+          ],
+        },
+      ],
+    });
+    await result.consumeStream();
+    expect(err).toBeUndefined();
+    const sent = working.doStreamCalls.at(-1)?.prompt.at(-1)?.content as { type: string }[];
+    expect(sent.some((p) => p.type === "file")).toBe(true);
+    // Router harus menyatakan data URL didukung; kalau tidak, AI SDK mencoba mengunduhnya lewat undici
+    // (tidak ada di bundle production) dan gagal "Failed to download data:application/pdf…".
+    const supported = routed.model.supportedUrls as Record<string, RegExp[]>;
+    expect(supported["*/*"].some((r) => r.test(pdf))).toBe(true);
+  });
+});

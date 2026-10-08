@@ -99,7 +99,9 @@ export function createFallbackModel(candidates: ModelCandidate[]): RoutedModel {
     specificationVersion: "v2",
     provider: "markethink-router",
     modelId: `${first.provider}:${first.modelId}`,
-    supportedUrls: {},
+    // File lampiran (gambar, PDF scan) dikirim sebagai data URL base64. Tanpa ini AI SDK mencoba "mengunduh"
+    // data URL tersebut dan gagal ("Failed to download data:application/pdf…").
+    supportedUrls: { "*/*": [/^data:/] },
     doGenerate: (options) => attempt(options, (m, o) => m.doGenerate(o)),
     doStream: (options) => attempt(options, (m, o) => m.doStream(o)),
   };
