@@ -119,13 +119,19 @@ export async function POST(req: Request) {
     refunded = true;
     await refundCredits(user.id, cost, "llm_error");
   };
+  // `settled` = hasil LLM sudah tercatat (sukses / error). Kalau stream berakhir tanpa itu
+  // (error sebelum LLM jalan, timeout, crash), tugas `after()` di bawah me-refund & mencatat error.
+  let settled = false;
+  const errors: string[] = [];
+  let markDone: () => void = () => {};
+  const done = new Promise<void>((resolve) => (markDone = resolve));
 
   const stream = createUIMessageStream<MtMessage>({
     originalMessages: messages,
     generateId: genId,
     onError: (err) => {
       console.error("[chat] error", err);
-      void refundOnce();
+      errors.push(err instanceof Error ? err.message : String(err));
       return "Maaf, otak marketing sedang sibuk. Kreditmu sudah dikembalikan — coba lagi sebentar lagi.";
     },
     execute: async ({ writer }) => {
@@ -188,6 +194,7 @@ export async function POST(req: Request) {
         maxRetries: 0,
         abortSignal: req.signal,
         onFinish: async ({ usage }) => {
+          settled = true;
           const used = routed.resolved() ?? routed.candidates[0];
           await admin.from("usage_logs").insert({
             user_id: user.id,
@@ -205,6 +212,7 @@ export async function POST(req: Request) {
           });
         },
         onError: async ({ error }) => {
+          settled = true;
           console.error("[chat] stream error", error);
           await refundOnce();
           await admin.from("usage_logs").insert({
@@ -240,6 +248,7 @@ export async function POST(req: Request) {
       );
     },
     onFinish: async ({ messages: finalMessages, outcome }) => {
+      markDone();
       if (outcome.status === "failed") return;
       try {
         await saveMessages(chatId, user.id, finalMessages);
@@ -251,6 +260,21 @@ export async function POST(req: Request) {
 
   // Tugas latar: judul & memory (tidak memblokir respons).
   after(async () => {
+    await Promise.race([done, new Promise((r) => setTimeout(r, 280_000))]);
+    if (!settled) {
+      await refundOnce();
+      await admin.from("usage_logs").insert({
+        user_id: user.id,
+        chat_id: chatId,
+        tier: tierId,
+        credits: 0,
+        research,
+        status: "error",
+        error: (errors.join(" | ") || "stream berakhir tanpa jawaban (timeout/terputus)").slice(0, 1000),
+        latency_ms: Date.now() - startedAt,
+      });
+      return;
+    }
     const userTurns = messages.filter((m) => m.role === "user");
     if (isNewChat && lastText) await generateTitle(chatId, lastText);
     if (userTurns.length % 3 === 1) {

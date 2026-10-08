@@ -60,7 +60,7 @@ export function createFallbackModel(candidates: ModelCandidate[]): RoutedModel {
         return result;
       } catch (err) {
         if (isAbortError(err)) throw err;
-        failures.push(`${c.provider}:${c.modelId} → ${errorMessage(err).slice(0, 200)}`);
+        failures.push(`${c.provider}:${c.modelId} → ${errorMessage(err).slice(0, 400)}`);
         console.warn(`[model-router] ${c.provider}:${c.modelId} gagal, coba fallback`, errorMessage(err));
       }
     }
