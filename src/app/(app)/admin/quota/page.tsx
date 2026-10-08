@@ -1,0 +1,63 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EXTRA_CREDIT_COST, getTiers } from "@/lib/ai/models.config";
+import { updatePlanCredits } from "../actions";
+
+export default async function AdminQuotaPage() {
+  const { data: plans } = await createAdminClient().from("plans").select("*").order("sort_order");
+  const tiers = getTiers();
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        {(plans ?? []).map((p) => (
+          <Card key={p.id}>
+            <CardHeader>
+              <CardTitle>{p.name}</CardTitle>
+              <CardDescription>{p.description} {p.is_public ? "" : "(belum publik)"}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={updatePlanCredits.bind(null, p.id)} className="flex items-end gap-2">
+                <div className="flex-1 space-y-1">
+                  <label className="text-xs text-muted-foreground">Kredit per hari</label>
+                  <Input name="daily_credits" defaultValue={p.daily_credits} inputMode="numeric" />
+                </div>
+                <Button>Simpan</Button>
+              </form>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Biaya kredit & routing model</CardTitle>
+          <CardDescription>
+            Diatur di <code>src/lib/ai/models.config.ts</code>; model bisa diganti tanpa ubah kode lewat env
+            MODEL_JUNIOR / MODEL_SENIOR / MODEL_ASSOCIATE.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs text-muted-foreground">
+              <tr><th className="py-2">Tier</th><th>Kredit</th><th>Max token</th><th>Model (primary → fallback)</th></tr>
+            </thead>
+            <tbody className="divide-y">
+              {tiers.map((t) => (
+                <tr key={t.id}>
+                  <td className="py-2">{t.label}</td>
+                  <td>{t.creditCost}</td>
+                  <td>{t.maxOutputTokens}</td>
+                  <td className="font-mono text-xs">{t.candidates.map((c) => `${c.provider}:${c.modelId}`).join(" → ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Tambahan: Riset Web +{EXTRA_CREDIT_COST.research} kredit, tiap file/gambar +{EXTRA_CREDIT_COST.attachment} kredit.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

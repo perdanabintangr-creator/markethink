@@ -1,0 +1,173 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { ArrowUp, FileText, Globe, Image as ImageIcon, Loader2, Paperclip, Square, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useApp } from "@/components/app/app-context";
+import { cn } from "@/lib/utils";
+
+export interface PendingAttachment {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+  previewUrl?: string;
+}
+
+const ACCEPT = ".pdf,.docx,.txt,.md,.csv,.png,.jpg,.jpeg,.webp,.gif";
+const UPLOAD_ERRORS: Record<string, string> = {
+  file_too_large: "File terlalu besar (maks 10 MB).",
+  unsupported_type: "Format file tidak didukung. Gunakan PDF, DOCX, TXT, CSV, atau gambar.",
+  extract_failed: "Isi file tidak bisa dibaca.",
+  rate_limited: "Terlalu banyak upload, tunggu sebentar.",
+};
+
+export function Composer({
+  onSend,
+  onStop,
+  busy,
+  research,
+  onResearchChange,
+}: {
+  onSend: (text: string, attachments: PendingAttachment[]) => void;
+  onStop: () => void;
+  busy: boolean;
+  research: boolean;
+  onResearchChange: (v: boolean) => void;
+}) {
+  const { t } = useApp();
+  const [text, setText] = useState("");
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const [uploading, setUploading] = useState(0);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  async function upload(files: FileList | null) {
+    if (!files?.length) return;
+    for (const file of Array.from(files).slice(0, 5)) {
+      setUploading((n) => n + 1);
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(UPLOAD_ERRORS[data.error] ?? "Upload gagal.");
+          continue;
+        }
+        setAttachments((a) => [
+          ...a,
+          { ...data, previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined },
+        ]);
+      } finally {
+        setUploading((n) => n - 1);
+      }
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function submit() {
+    if (busy || uploading) return;
+    const value = text.trim();
+    if (!value && !attachments.length) return;
+    onSend(value || "Tolong analisis file terlampir.", attachments);
+    setText("");
+    setAttachments([]);
+    if (taRef.current) taRef.current.style.height = "auto";
+  }
+
+  return (
+    <div
+      className="rounded-2xl border bg-card shadow-sm focus-within:ring-2 focus-within:ring-ring"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        void upload(e.dataTransfer.files);
+      }}
+    >
+      {(attachments.length > 0 || uploading > 0) && (
+        <div className="flex flex-wrap gap-2 px-3 pt-3">
+          {attachments.map((a) => (
+            <span key={a.id} className="inline-flex items-center gap-1.5 rounded-lg border bg-background py-1 pl-1 pr-2 text-xs">
+              {a.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={a.previewUrl} alt="" className="size-6 rounded object-cover" />
+              ) : a.mime.startsWith("image/") ? (
+                <ImageIcon className="size-4" />
+              ) : (
+                <FileText className="size-4" />
+              )}
+              <span className="max-w-32 truncate">{a.name}</span>
+              <button onClick={() => setAttachments((x) => x.filter((y) => y.id !== a.id))} aria-label="Hapus lampiran">
+                <X className="size-3.5" />
+              </button>
+            </span>
+          ))}
+          {uploading > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" /> Mengunggah…
+            </span>
+          )}
+        </div>
+      )}
+      <textarea
+        ref={taRef}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          e.target.style.height = "auto";
+          e.target.style.height = `${Math.min(e.target.scrollHeight, 240)}px`;
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            submit();
+          }
+        }}
+        onPaste={(e) => {
+          if (e.clipboardData.files.length) {
+            e.preventDefault();
+            void upload(e.clipboardData.files);
+          }
+        }}
+        rows={1}
+        maxLength={20000}
+        placeholder={t.placeholder}
+        className="block max-h-60 w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
+      />
+      <div className="flex items-center gap-1 p-2">
+        <input ref={fileRef} type="file" accept={ACCEPT} multiple hidden onChange={(e) => upload(e.target.files)} />
+        <Button variant="ghost" size="icon" onClick={() => fileRef.current?.click()} title={t.attach} aria-label={t.attach}>
+          <Paperclip />
+        </Button>
+        <button
+          onClick={() => onResearchChange(!research)}
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+            research ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent",
+          )}
+          aria-pressed={research}
+        >
+          <Globe className="size-3.5" /> {t.research}
+        </button>
+        <div className="flex-1" />
+        {busy ? (
+          <Button size="icon" variant="secondary" onClick={onStop} aria-label={t.stop} className="rounded-full">
+            <Square className="fill-current" />
+          </Button>
+        ) : (
+          <Button
+            size="icon"
+            onClick={submit}
+            disabled={(!text.trim() && !attachments.length) || uploading > 0}
+            aria-label={t.send}
+            className="rounded-full"
+          >
+            <ArrowUp />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -22,7 +22,8 @@ Nama variabel mengikuti `.env.example`.
 3. **Project Settings → General**: `Reference ID` → `SUPABASE_PROJECT_REF`.
 4. Password database → `SUPABASE_DB_PASSWORD`.
 5. https://supabase.com/dashboard/account/tokens → **Generate new token** → `SUPABASE_ACCESS_TOKEN` (dipakai CTO untuk menjalankan migrasi).
-6. **Authentication → URL Configuration**: Site URL = URL Vercel production (isi setelah langkah Vercel), tambahkan Redirect URL `https://<domain-vercel>/auth/callback` dan `http://localhost:3000/auth/callback`.
+6. **Pasang database** (sekali saja): buka **SQL Editor → New query**, salin seluruh isi file `supabase/setup.sql` dari repo GitHub, tempel, klik **Run**. (Atau biarkan CTO menjalankan `npm run db:push` kalau `SUPABASE_ACCESS_TOKEN` sudah diisi.)
+7. **Authentication → URL Configuration**: Site URL = URL Vercel production (isi setelah langkah Vercel), tambahkan Redirect URL `https://<domain-vercel>/auth/callback` dan `http://localhost:3000/auth/callback`.
 
 ## 3. Google Cloud — OAuth (login Google)
 1. https://console.cloud.google.com → buat project "Markethink".
@@ -75,7 +76,7 @@ Nama variabel mengikuti `.env.example`.
 
 ## 13. App
 - `ADMIN_EMAILS` = email kamu (mis. `perdanabintangr@gmail.com`) → otomatis jadi admin.
-- `BETA_DAILY_CREDITS` = kredit harian per user beta (default 50; keputusan bisnis, bisa diubah kapan saja).
+- Kuota kredit harian (default 50/user) diatur dari dashboard admin → Paket & kredit, tidak perlu env.
 
 ## 14. Akses jaringan environment Claude Code
 Environment cloud sesi ini saat ini **memblokir** host API eksternal (hanya npm yang lolos).
