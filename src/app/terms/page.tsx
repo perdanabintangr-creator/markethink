@@ -12,6 +12,10 @@ export default function TermsPage() {
         ketersediaan dapat berubah sewaktu-waktu tanpa pemberitahuan.
       </p>
       <h2>2. Akun</h2>
+      <p>
+        Markethink hanya untuk pengguna berusia <strong>18 tahun ke atas</strong>. Dengan mendaftar, kamu menyatakan sudah
+        berusia minimal 18 tahun.
+      </p>
       <p>Kamu bertanggung jawab menjaga kerahasiaan akun. Satu orang satu akun; pembuatan banyak akun untuk menghindari kuota dilarang.</p>
       <h2>3. Penggunaan yang dilarang</h2>
       <ul>

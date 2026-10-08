@@ -132,7 +132,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <label className="flex items-start gap-2 text-xs text-muted-foreground">
           <input type="checkbox" className="mt-0.5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
           <span>
-            Saya setuju dengan <Link href="/terms" className="underline" target="_blank">Syarat Layanan</Link> dan{" "}
+            Saya berusia minimal 18 tahun dan setuju dengan <Link href="/terms" className="underline" target="_blank">Syarat Layanan</Link> dan{" "}
             <Link href="/privacy" className="underline" target="_blank">Kebijakan Privasi</Link>, termasuk pemrosesan data
             oleh penyedia AI pihak ketiga sesuai UU PDP. Saya tidak akan memasukkan data rahasia.
           </span>

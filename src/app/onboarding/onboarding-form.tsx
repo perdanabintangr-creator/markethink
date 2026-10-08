@@ -114,7 +114,7 @@ export function OnboardingForm({ needsConsent }: { needsConsent: boolean }) {
         <label className="flex items-start gap-2 text-sm text-muted-foreground">
           <input type="checkbox" name="consent" className="mt-1" required />
           <span>
-            Saya setuju dengan <Link href="/terms" target="_blank" className="underline">Syarat Layanan</Link> &{" "}
+            Saya berusia minimal 18 tahun dan setuju dengan <Link href="/terms" target="_blank" className="underline">Syarat Layanan</Link> &{" "}
             <Link href="/privacy" target="_blank" className="underline">Kebijakan Privasi</Link>, termasuk pemrosesan oleh
             penyedia AI pihak ketiga (UU PDP), dan tidak akan memasukkan data rahasia.
           </span>
