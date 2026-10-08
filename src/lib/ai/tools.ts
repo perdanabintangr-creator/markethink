@@ -157,8 +157,11 @@ async function loadReferences(ctx: ToolCtx, ids: string[]) {
 }
 
 function friendlyImageError(msg: string) {
+  if (/\[billing_required\]/.test(msg)) {
+    return "Pembuat gambar belum aktif: akun Google AI milik admin belum mengaktifkan billing (model gambar tidak termasuk paket gratis Google). Kredit sudah dikembalikan. Jangan sarankan coba lagi — beri tahu user bahwa admin perlu mengaktifkan billing.";
+  }
   if (/429|RESOURCE_EXHAUSTED|quota/i.test(msg)) {
-    return "Layanan pembuat gambar sedang penuh atau kuota API gambar habis/belum aktif. Coba lagi nanti.";
+    return "Layanan pembuat gambar sedang penuh (batas permintaan). Kredit sudah dikembalikan — coba lagi beberapa menit lagi.";
   }
   if (/SAFETY|blocked|PROHIBITED/i.test(msg)) {
     return "Permintaan gambar ditolak oleh filter keamanan. Coba ubah deskripsinya.";

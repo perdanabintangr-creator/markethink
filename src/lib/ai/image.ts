@@ -70,8 +70,10 @@ export async function generateImage(
         }),
       });
       if (!res.ok) {
-        const msg = (await res.text()).slice(0, 300);
-        errors.push(`${model}${withRatio ? "" : " (tanpa rasio)"} → ${res.status} ${msg}`);
+        const body = await res.text();
+        // "limit: 0" = model ini tidak termasuk paket gratis Google → perlu billing.
+        const tag = res.status === 429 && (/limit:\s*0\b/.test(body) || /free_tier/.test(body)) ? "[billing_required] " : "";
+        errors.push(`${model}${withRatio ? "" : " (tanpa rasio)"} → ${res.status} ${tag}${body.slice(0, 300)}`);
         // Error karena parameter rasio → coba lagi tanpa rasio; error lain → model berikutnya.
         if (withRatio && res.status === 400) continue;
         break;
