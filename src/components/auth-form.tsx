@@ -39,6 +39,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [loading, setLoading] = useState(false);
   const [consent, setConsent] = useState(false);
   const [sent, setSent] = useState(false);
+  // Tetap tampilkan "memuat" sampai halaman tujuan terbuka, supaya tidak terasa macet.
+  const [redirecting, setRedirecting] = useState(false);
 
   const callbackUrl = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
@@ -101,11 +103,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       return;
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return toast.error(error.message === "Invalid login credentials" ? "Email atau password salah." : error.message);
-    await fetch("/auth/callback?sync=1", { method: "POST" });
-    router.push(next);
-    router.refresh();
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message === "Invalid login credentials" ? "Email atau password salah." : error.message);
+    }
+    // Sinkron role admin berjalan di latar — tidak menahan perpindahan halaman.
+    void fetch("/auth/callback?sync=1", { method: "POST", keepalive: true }).catch(() => {});
+    setRedirecting(true);
+    router.replace(next);
   }
 
   if (sent) {
@@ -179,9 +184,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             autoComplete={mode === "login" ? "current-password" : "new-password"}
           />
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading && <Loader2 className="animate-spin" />}
-          {mode === "login" ? "Masuk" : "Daftar"}
+        <Button type="submit" className="w-full" disabled={loading || redirecting}>
+          {(loading || redirecting) && <Loader2 className="animate-spin" />}
+          {redirecting ? "Membuka Markethink…" : mode === "login" ? "Masuk" : "Daftar"}
         </Button>
       </form>
 
