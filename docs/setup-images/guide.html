@@ -1,0 +1,69 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f4f3ef;color:#1f1e1c}
+.page{width:900px;padding:28px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:#6b6862;font-size:13px;margin-bottom:18px}
+.step{background:#fff;border:1px solid #e3e0d8;border-radius:14px;padding:18px;margin-bottom:18px}
+.num{display:inline-flex;width:26px;height:26px;border-radius:50%;background:#c96442;color:#fff;align-items:center;justify-content:center;font-weight:700;margin-right:8px}
+.title{font-weight:700;font-size:16px;display:flex;align-items:center;margin-bottom:12px}
+.mock{border:1px solid #d9d5cc;border-radius:12px;background:#faf9f6;padding:14px;position:relative}
+.box{border:1px solid #d9d5cc;background:#fff;border-radius:10px;padding:10px 12px;color:#8a867e;font-size:14px}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.chip{border:1px solid #d9d5cc;border-radius:8px;padding:5px 10px;font-size:13px;background:#fff}
+.hl{outline:3px solid #e8590c;outline-offset:2px;border-radius:8px;position:relative}
+.arrow{color:#e8590c;font-weight:700;font-size:13px}
+.menu{position:absolute;left:14px;bottom:96px;width:300px;background:#fff;border:1px solid #d9d5cc;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);font-size:13px}
+.menu div{padding:8px 12px}.menu .sec{color:#8a867e;font-size:11px;text-transform:uppercase;padding-bottom:2px}
+.sel{background:#f1efe9;display:flex;justify-content:space-between}
+label{font-size:13px;font-weight:600;display:block;margin:12px 0 4px}
+pre{margin:0;font:12.5px ui-monospace,Menlo,monospace;background:#fff;border:1px solid #d9d5cc;border-radius:8px;padding:10px;color:#1f1e1c;white-space:pre-wrap}
+.note{font-size:12px;color:#6b6862;margin-top:4px}
+.btns{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.btn{border-radius:8px;padding:6px 12px;font-size:13px;border:1px solid #d9d5cc}.pri{background:#1f1e1c;color:#fff;border-color:#1f1e1c}
+.tag{position:absolute;right:-6px;top:-12px;background:#e8590c;color:#fff;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px}
+</style></head><body><div class="page">
+<h1>Cara mengisi key & membuka akses jaringan</h1>
+<div class="sub">Ilustrasi sederhana (bukan screenshot asli). Buka <b>claude.ai/code</b> di browser (laptop atau HP) atau di aplikasi Claude Desktop.</div>
+
+<div class="step"><div class="title"><span class="num">1</span>Klik ikon awan ☁️ di atas kotak pesan, lalu ikon gear ⚙️ di environment</div>
+<div class="mock" style="height:250px">
+ <div class="menu">
+  <div class="sec">Cloud</div>
+  <div class="sel"><span>✓ Default</span><span class="hl" style="padding:0 4px">⚙️<span class="tag" style="top:-22px;right:-40px">2. klik</span></span></div>
+  <div>+ Add cloud environment</div>
+ </div>
+ <div style="position:absolute;left:14px;right:14px;bottom:14px">
+  <div class="row"><span class="chip hl">☁️ Default ▾<span class="tag">1. klik</span></span></div>
+  <div class="box">Tanya Claude…</div>
+ </div>
+</div>
+<div class="note">Tombol ☁️ menampilkan nama environment yang sedang dipakai (mis. "Default"). Arahkan kursor ke environment itu, lalu klik ⚙️ di kanannya. Di HP: ketuk nama environment, lalu ⚙️.</div>
+</div>
+
+<div class="step"><div class="title"><span class="num">2</span>Di jendela "Edit environment", isi dua bagian ini lalu Simpan</div>
+<div class="mock">
+ <label>Name</label><div class="box">Default</div>
+ <div class="hl" style="padding:2px 6px 8px;margin-top:10px"><span class="tag">A</span>
+  <label>Network access</label><div class="box" style="color:#1f1e1c">Custom ▾</div>
+  <label>Allowed domains <span style="font-weight:400;color:#8a867e">(satu per baris)</span></label>
+<pre>api.supabase.com
+*.supabase.co
+api.vercel.com
+*.vercel.app
+generativelanguage.googleapis.com</pre>
+  <div class="note">☑ Also include default list of common package managers — <b>centang</b></div>
+ </div>
+ <div class="hl" style="padding:2px 6px 8px;margin-top:16px"><span class="tag">B</span>
+  <label>Environment variables <span style="font-weight:400;color:#8a867e">(format KEY=value, satu per baris)</span></label>
+<pre>SUPABASE_ACCESS_TOKEN=tempel_token_supabase
+VERCEL_TOKEN=tempel_token_vercel
+GOOGLE_GENERATIVE_AI_API_KEY=tempel_key_gemini
+ADMIN_EMAILS=perdanabintangr@gmail.com</pre>
+ </div>
+ <label style="color:#8a867e">Setup script</label><div class="box">(biarkan kosong)</div>
+ <div class="btns"><span class="btn">Cancel</span><span class="btn pri">Save</span></div>
+</div>
+</div>
+
+<div class="step"><div class="title"><span class="num">3</span>Mulai sesi baru, lalu ketik: lanjut</div>
+<div class="note" style="font-size:13px">Pengaturan baru hanya terbaca oleh sesi yang dimulai setelah disimpan. Pastikan sesi baru memakai environment yang sama dan repo <b>markethink</b>.</div>
+</div>
+</div></body></html>
