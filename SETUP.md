@@ -1,14 +1,31 @@
-# Markethink — Checklist Akun & API Key
+# Markethink — Setup
 
-Semua layanan di bawah punya **free tier**. Jangan upgrade ke plan berbayar.
-Nama variabel mengikuti `.env.example`.
+## ⚡ Jalur cepat (disarankan): cukup 3 key, sisanya dikerjakan CTO otomatis
 
-> ⚠️ Jangan pernah paste API key ke chat atau ke file yang di-commit.
-> Isi key di **dua tempat**: (A) Vercel → Project → Settings → Environment Variables,
-> dan (B) environment Claude Code cloud (menu environment di title bar sesi → Edit → Environment variables),
-> supaya CTO bisa menjalankan migrasi & test.
+Hal yang **harus** dilakukan pemilik akun sendiri (butuh identitas, verifikasi email, dan persetujuan ToS):
+
+| # | Buat akun gratis | Ambil key ini | Nama variabel |
+|---|---|---|---|
+| 1 | https://supabase.com/dashboard (login pakai GitHub) | https://supabase.com/dashboard/account/tokens → **Generate new token** | `SUPABASE_ACCESS_TOKEN` |
+| 2 | https://vercel.com/signup (login pakai GitHub, plan **Hobby**) | https://vercel.com/account/tokens → **Create** (scope: akun kamu, expiration bebas) | `VERCEL_TOKEN` |
+| 3 | https://aistudio.google.com/apikey | **Create API key** | `GOOGLE_GENERATIVE_AI_API_KEY` |
+
+Lalu di sesi Claude Code: menu environment di title bar → **Edit**:
+- **Environment variables / Network secrets**: isi 3 variabel di atas (+ `ADMIN_EMAILS=perdanabintangr@gmail.com`).
+- **Network access**: izinkan domain `api.supabase.com`, `*.supabase.co`, `api.vercel.com`, `*.vercel.app`, `generativelanguage.googleapis.com`.
+- Mulai **sesi baru**, ketik **"lanjut"**.
+
+Setelah itu CTO otomatis: membuat project Supabase (free, region Singapore) → memasang database → mengatur URL login →
+membuat project Vercel → mengisi semua environment variable → deploy → test end-to-end → kirim link.
+
+Layanan lain (Tavily, Groq, OpenRouter, Upstash, Resend, PostHog, Sentry, Google login) **opsional** —
+aplikasi tetap jalan tanpa mereka (fitur terkait nonaktif otomatis) dan bisa ditambahkan kapan saja lewat panduan di bawah.
+Token Supabase & Vercel memberi akses penuh ke akun — boleh dicabut setelah launch.
 
 ---
+
+# Panduan lengkap per layanan (opsional / manual)
+
 
 ## 1. GitHub — repo
 - [x] Repo `perdanabintangr-creator/markethink` sudah ada.
