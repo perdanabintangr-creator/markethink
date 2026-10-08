@@ -52,10 +52,11 @@ export default async function AdminQuotaPage() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Pembuat gambar AI (Gemini): {imageGenOn ? "Aktif" : "Mati"}</CardTitle>
+          <CardTitle>Pembuat gambar AI: {imageGenOn ? "Aktif" : "Mati"}</CardTitle>
           <CardDescription>
             Otak bisa membuat & mengedit gambar langsung di chat (paket Pro & Promax, 5 kredit per gambar). Biaya ± $0,04
-            (± Rp650) per gambar, dipotong dari akun Google AI Studio (perlu billing aktif di API key Google).
+            (± Rp650) per gambar, dipotong dari saldo OpenRouter (utama) atau akun Google AI Studio (cadangan, perlu
+            billing). Biaya nyata tiap gambar tercatat di log pemakaian.
           </CardDescription>
         </CardHeader>
         <CardContent>

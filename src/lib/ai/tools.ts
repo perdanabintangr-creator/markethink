@@ -9,7 +9,7 @@ import { sanitizeFileName } from "@/lib/files";
 
 export const IMAGE_CREDIT_COST = 5;
 export const PPTX_CREDIT_COST = 3;
-/** Perkiraan biaya Gemini per gambar (USD) — untuk usage_logs/admin. */
+/** Perkiraan biaya per gambar (USD) bila provider tidak melaporkan biaya nyata. */
 const IMAGE_COST_USD = 0.04;
 
 export type ImageToolOutput =
@@ -48,12 +48,15 @@ async function storeFile(ctx: ToolCtx, kind: "images" | "presentations", name: s
   return { id, url: `/api/attachments/${id}` };
 }
 
-async function logUsage(ctx: ToolCtx, row: { tier: string; model?: string; credits: number; cost: number; error?: string }) {
+async function logUsage(
+  ctx: ToolCtx,
+  row: { tier: string; provider?: string; model?: string; credits: number; cost: number; error?: string },
+) {
   await ctx.admin.from("usage_logs").insert({
     user_id: ctx.userId,
     chat_id: ctx.chatId,
     tier: row.tier,
-    provider: "google",
+    provider: row.provider ?? null,
     model: row.model ?? null,
     est_cost_usd: row.cost,
     credits: row.credits,
@@ -90,7 +93,7 @@ export function createChatTools(ctx: ToolCtx) {
           const img = await generateImage(prompt, aspect_ratio, refs);
           const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
           const saved = await storeFile(ctx, "images", `markethink-${Date.now()}.${ext}`, img.mime, img.bytes, `Gambar AI: ${prompt}`);
-          await logUsage(ctx, { tier: "image", model: img.model, credits: IMAGE_CREDIT_COST, cost: IMAGE_COST_USD });
+          await logUsage(ctx, { tier: "image", provider: img.provider, model: img.model, credits: IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD });
           return { ok: true, attachmentId: saved.id, url: saved.url, prompt, aspectRatio: aspect_ratio };
         } catch (err) {
           console.error("[image] gagal", err);
@@ -157,6 +160,9 @@ async function loadReferences(ctx: ToolCtx, ids: string[]) {
 }
 
 function friendlyImageError(msg: string) {
+  if (/\[credits_required\]/.test(msg)) {
+    return "Pembuat gambar belum bisa dipakai: saldo OpenRouter milik admin habis/belum di-top-up. Kredit sudah dikembalikan. Jangan sarankan coba lagi — beri tahu user bahwa admin perlu top-up saldo OpenRouter.";
+  }
   if (/\[billing_required\]/.test(msg)) {
     return "Pembuat gambar belum aktif: akun Google AI milik admin belum mengaktifkan billing (model gambar tidak termasuk paket gratis Google). Kredit sudah dikembalikan. Jangan sarankan coba lagi — beri tahu user bahwa admin perlu mengaktifkan billing.";
   }

@@ -51,3 +51,16 @@ describe("Claude sebagai otak utama", () => {
     for (const t of getTiers({})) expect(t.candidates.some((c) => c.provider === "google")).toBe(true);
   });
 });
+
+describe("urutan model gambar", () => {
+  it("Gemini Flash Image diutamakan, versi Pro (mahal) belakangan", async () => {
+    const { imageModelScore } = await import("@/lib/ai/image");
+    const ids = ["openai/gpt-5-image", "google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image", "google/gemini-3.1-flash-image"];
+    expect([...ids].sort((a, b) => imageModelScore(b) - imageModelScore(a))).toEqual([
+      "google/gemini-3.1-flash-image",
+      "google/gemini-2.5-flash-image",
+      "google/gemini-3-pro-image-preview",
+      "openai/gpt-5-image",
+    ]);
+  });
+});
