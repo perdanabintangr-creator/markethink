@@ -21,7 +21,6 @@ import {
   Plus,
   Search,
   Settings,
-  Shield,
   Sun,
   Trash2,
 } from "lucide-react";
@@ -294,13 +293,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               <Settings /> {t.settings}
             </Link>
           </DropdownMenuItem>
-          {user.role === "admin" && (
-            <DropdownMenuItem asChild>
-              <Link href="/admin" onClick={onNavigate}>
-                <Shield /> {t.admin}
-              </Link>
-            </DropdownMenuItem>
-          )}
           <DropdownMenuSeparator />
           <DropdownMenuLabel>{t.theme}</DropdownMenuLabel>
           <div className="flex gap-1 px-2 pb-1">

@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   BadgeCheck,
   BarChart3,
+  Bot,
   ChevronDown,
   ChevronLeft,
   Clock,
@@ -19,6 +20,7 @@ import {
   PlusCircle,
   Receipt,
   Search,
+  Settings2,
   Tag,
   User,
   Users,
@@ -85,6 +87,13 @@ function menu(c: ShellCounts): Group[] {
     {
       title: "Keuangan",
       items: [{ href: "/costs", label: "Biaya AI & margin", icon: Wallet }],
+    },
+    {
+      title: "Aplikasi AI",
+      items: [
+        { href: "/agents", label: "Marketing Agents", icon: Bot, ownerOnly: true },
+        { href: "/settings", label: "Pengaturan aplikasi", icon: Settings2, ownerOnly: true },
+      ],
     },
     {
       title: "Pengaturan",

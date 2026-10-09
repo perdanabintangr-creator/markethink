@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, NativeSelect, Textarea } from "@/components/ui/input";
 import { AGENT_ICON_NAMES } from "@/components/agent-icon";
 import type { Agent } from "@/lib/types";
-import { saveAgent } from "../../actions";
+import { saveAgent, type ActionState } from "../../../actions";
 
 const EXAMPLE_SCHEMA = `[
   {"name":"brand","label":"Brand / produk","type":"text","required":true,"placeholder":"mis. Kopi Senja"},
@@ -15,10 +15,10 @@ const EXAMPLE_SCHEMA = `[
 ]`;
 
 export function AgentEditor({ agent }: { agent: Agent | null }) {
-  const [state, action, pending] = useActionState(saveAgent.bind(null, agent?.id ?? null), undefined);
+  const [state, action, pending] = useActionState<ActionState, FormData>(saveAgent.bind(null, agent?.id ?? null), undefined);
   return (
     <form action={action} className="grid max-w-3xl gap-4">
-      <h2 className="text-lg font-semibold">{agent ? `Edit: ${agent.name}` : "Agent baru"}</h2>
+      <h1 className="text-2xl font-bold">{agent ? `Edit: ${agent.name}` : "Agent baru"}</h1>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="name">Nama</Label>

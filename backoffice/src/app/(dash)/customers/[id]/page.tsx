@@ -10,19 +10,21 @@ import { ConfirmAction } from "@/components/backoffice/confirm-submit";
 import { PLAN_NAME, USD_IDR, num } from "@/lib/admin-format";
 import { SALE_KIND, dateID, daysUntil, durationSince, rupiah } from "@/lib/backoffice-format";
 import { experienceLabel, roleLabel } from "@/lib/personas";
-import { changePlan, refundSale } from "../../../actions";
+import { changePlan, grantCredits, refundSale, setBetaAccess, setCreditOverride, setUserBan } from "../../../actions";
+import { requireBackoffice } from "@/lib/backoffice";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Detail pelanggan" };
 
 export default async function CustomerDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { isOwner } = await requireBackoffice();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const admin = createAdminClient();
   const [{ data: u }, { data: subs }, { data: changes }, { data: usage }, { data: plans }] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, email, full_name, role, plan_id, plan_started_at, banned, persona_role, industry, experience, goal, onboarded, created_at, last_active_at")
+      .select("id, email, full_name, role, plan_id, plan_started_at, banned, beta_access, daily_credit_override, persona_role, industry, experience, goal, onboarded, created_at, last_active_at")
       .eq("id", id)
       .maybeSingle(),
     admin
@@ -147,6 +149,60 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           </Card>
         </div>
       </div>
+
+      {isOwner && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Kontrol akun (owner)</CardTitle>
+            <p className="text-xs text-muted-foreground">Atur kuota & akses akun ini di aplikasi AI.</p>
+          </CardHeader>
+          <CardContent className="grid gap-4 text-sm md:grid-cols-2 xl:grid-cols-4">
+            <form action={setCreditOverride.bind(null, u.id)} className="space-y-1.5">
+              <p className="font-medium">Kuota kredit harian khusus</p>
+              <div className="flex gap-2">
+                <Input name="override" defaultValue={u.daily_credit_override ?? ""} placeholder="ikut paket" inputMode="numeric" className="w-28" />
+                <Button size="sm" variant="outline">Simpan</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Kosongkan = ikut kuota paketnya.</p>
+            </form>
+            <form action={grantCredits.bind(null, u.id)} className="space-y-1.5">
+              <p className="font-medium">Tambah kredit hari ini</p>
+              <div className="flex gap-2">
+                <Input name="amount" placeholder="+10" inputMode="numeric" className="w-24" />
+                <Button size="sm" variant="outline">Beri</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Untuk kompensasi / bonus.</p>
+            </form>
+            <div className="space-y-1.5">
+              <p className="font-medium">Akses saat aplikasi tertutup</p>
+              <form action={setBetaAccess.bind(null, u.id, !u.beta_access)}>
+                <Button size="sm" variant="outline">{u.beta_access ? "Cabut akses khusus" : "Beri akses khusus"}</Button>
+              </form>
+              <p className="text-xs text-muted-foreground">Hanya berpengaruh bila aplikasi diatur &quot;undangan saja&quot;.</p>
+            </div>
+            <div className="space-y-1.5">
+              <p className="font-medium">Blokir akun</p>
+              {u.banned ? (
+                <form action={setUserBan.bind(null, u.id, false)}>
+                  <Button size="sm" variant="outline">Buka blokir</Button>
+                </form>
+              ) : (
+                <ConfirmAction
+                  action={setUserBan.bind(null, u.id, true)}
+                  title="Blokir akun ini?"
+                  description="User tidak bisa memakai aplikasi AI sampai blokir dibuka. Data akunnya tetap aman."
+                  confirmLabel="Blokir"
+                  size="sm"
+                  variant="destructive"
+                >
+                  Blokir
+                </ConfirmAction>
+              )}
+              <p className="text-xs text-muted-foreground">Untuk penyalahgunaan.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-2">

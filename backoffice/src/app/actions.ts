@@ -230,3 +230,114 @@ export async function changeOwnPassword(_prev: ActionState, formData: FormData):
   await revokeSessions(me.id, true);
   return { ok: "Password berhasil diganti. Perangkat lain yang login dengan akun ini sudah dikeluarkan." };
 }
+
+// ---------------------------------------------------------------- Pengaturan aplikasi AI (owner)
+
+async function requireOwner() {
+  const session = await requireBackoffice();
+  if (!session.isOwner) throw new Error("Hanya owner.");
+  return session;
+}
+
+export async function setAppSetting(key: "access_mode" | "web_search" | "image_gen", value: string | boolean) {
+  await requireOwner();
+  if (key === "access_mode" && value !== "public" && value !== "invite_only") return;
+  if (key !== "access_mode" && typeof value !== "boolean") return;
+  await createAdminClient().from("app_settings").upsert({ key, value, updated_at: new Date().toISOString() });
+  revalidatePath("/settings");
+}
+
+export async function updatePlanCredits(planId: string, formData: FormData) {
+  await requireOwner();
+  const credits = z.coerce.number().int().min(0).max(100000).safeParse(formData.get("daily_credits"));
+  if (!credits.success) return;
+  await createAdminClient().from("plans").update({ daily_credits: credits.data }).eq("id", planId);
+  revalidatePath("/settings");
+}
+
+// ---------------------------------------------------------------- Kontrol akun pelanggan (owner)
+
+export async function setUserBan(userId: string, banned: boolean) {
+  await requireOwner();
+  await createAdminClient().from("profiles").update({ banned }).eq("id", userId);
+  refresh(userId);
+}
+
+export async function setBetaAccess(userId: string, access: boolean) {
+  await requireOwner();
+  await createAdminClient().from("profiles").update({ beta_access: access }).eq("id", userId);
+  refresh(userId);
+}
+
+export async function setCreditOverride(userId: string, formData: FormData) {
+  await requireOwner();
+  const raw = String(formData.get("override") ?? "").trim();
+  const value = raw === "" ? null : z.coerce.number().int().min(0).max(100000).safeParse(raw);
+  if (value && !value.success) return;
+  await createAdminClient()
+    .from("profiles")
+    .update({ daily_credit_override: value ? value.data : null })
+    .eq("id", userId);
+  refresh(userId);
+}
+
+export async function grantCredits(userId: string, formData: FormData) {
+  await requireOwner();
+  const amount = z.coerce.number().int().min(1).max(10000).safeParse(formData.get("amount"));
+  if (!amount.success) return;
+  await createAdminClient()
+    .from("credit_ledger")
+    .insert({ user_id: userId, delta: amount.data, kind: "refund", reason: "admin_grant_today" });
+  refresh(userId);
+}
+
+// ---------------------------------------------------------------- Marketing Agents (owner)
+
+const fieldSchema = z.object({
+  name: z.string().regex(/^[a-z0-9_]+$/),
+  label: z.string().min(1),
+  type: z.enum(["text", "textarea", "select"]),
+  required: z.boolean().optional(),
+  placeholder: z.string().optional(),
+  options: z.array(z.string()).optional(),
+});
+
+const agentSchema = z.object({
+  slug: z.string().trim().regex(/^[a-z0-9-]{2,60}$/, "Slug hanya huruf kecil, angka, dan tanda -"),
+  name: z.string().trim().min(2).max(80),
+  description: z.string().trim().max(300),
+  icon: z.string().trim().max(40),
+  category: z.string().trim().min(1).max(40),
+  instructions: z.string().trim().min(20).max(10000),
+  input_schema: z.string().transform((s, ctx) => {
+    try {
+      return z.array(fieldSchema).max(20).parse(JSON.parse(s));
+    } catch {
+      ctx.addIssue({ code: "custom", message: "Form input harus JSON array field yang valid" });
+      return z.NEVER;
+    }
+  }),
+  default_tier: z.enum(["junior", "senior", "associate"]),
+  sort_order: z.coerce.number().int().min(0).max(1000),
+  output_canvas: z.literal("on").optional(),
+  is_active: z.literal("on").optional(),
+});
+
+export async function saveAgent(agentId: string | null, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireOwner();
+  const parsed = agentSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+  const d = parsed.data;
+  const row = { ...d, output_canvas: d.output_canvas === "on", is_active: d.is_active === "on", updated_at: new Date().toISOString() };
+  const admin = createAdminClient();
+  const { error } = agentId ? await admin.from("agents").update(row).eq("id", agentId) : await admin.from("agents").insert(row);
+  if (error) return { error: error.message.includes("duplicate") ? "Slug sudah dipakai." : "Gagal menyimpan." };
+  revalidatePath("/agents");
+  redirect("/agents");
+}
+
+export async function toggleAgent(agentId: string, active: boolean) {
+  await requireOwner();
+  await createAdminClient().from("agents").update({ is_active: active }).eq("id", agentId);
+  revalidatePath("/agents");
+}

@@ -58,12 +58,6 @@ export async function requireUser(opts: { allowNotOnboarded?: boolean } = {}) {
   return session as typeof session & { user: NonNullable<typeof session.user>; profile: Profile };
 }
 
-export async function requireAdmin() {
-  const session = await requireUser();
-  if (session.profile.role !== "admin") redirect("/chat");
-  return session;
-}
-
 /** Promosikan email di ADMIN_EMAILS menjadi admin (dipanggil setelah login). */
 export async function syncAdminRole(userId: string, email: string | undefined | null) {
   if (!email || !env.adminEmails.includes(email.toLowerCase())) return;
