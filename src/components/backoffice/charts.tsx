@@ -1,5 +1,5 @@
 /**
- * Komponen grafik ringan untuk dashboard internal (tanpa library chart).
+ * Komponen grafik ringan untuk back office (tanpa library chart).
  * Satu seri per grafik (warna primer), batang tipis berujung bulat, tooltip saat hover, label teks memakai warna teks.
  */
 
@@ -9,16 +9,19 @@ export interface SeriesPoint {
 }
 
 const shortDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+export const monthLabel = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("id-ID", { month: "short", year: "2-digit" });
 
-/** Batang harian (mis. pendaftar, user aktif, pesan, biaya). */
+/** Batang per periode (harian/bulanan): pendaftar, pendapatan, biaya, dll. */
 export function DailyBars({
   data,
   label,
   format = (v) => new Intl.NumberFormat("id-ID").format(v),
+  dateLabel = shortDate,
 }: {
   data: SeriesPoint[];
   label: string;
   format?: (v: number) => string;
+  dateLabel?: (d: string) => string;
 }) {
   if (!data.length) return <p className="text-sm text-muted-foreground">Belum ada data.</p>;
   const max = Math.max(...data.map((d) => d.value));
@@ -33,16 +36,16 @@ export function DailyBars({
               style={{ height: max > 0 ? `${Math.max(d.value > 0 ? 3 : 0, (d.value / max) * 100)}%` : "0%" }}
             />
             <div className="pointer-events-none absolute -top-11 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground shadow group-hover:block">
-              <div className="font-medium">{shortDate(d.day)}</div>
+              <div className="font-medium">{dateLabel(d.day)}</div>
               <div className="tabular-nums">{format(d.value)}</div>
             </div>
           </div>
         ))}
       </div>
       <figcaption className="mt-1 flex justify-between text-[11px] text-muted-foreground">
-        <span>{shortDate(data[0].day)}</span>
+        <span>{dateLabel(data[0].day)}</span>
         <span>maks {format(max)}</span>
-        <span>{shortDate(data[data.length - 1].day)}</span>
+        <span>{dateLabel(data[data.length - 1].day)}</span>
       </figcaption>
     </figure>
   );

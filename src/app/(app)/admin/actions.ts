@@ -119,8 +119,9 @@ export async function setAccessMode(mode: "invite_only" | "public") {
 }
 
 export async function setUserPlan(userId: string, planId: "beta" | "pro" | "promax") {
-  await requireAdmin();
-  await createAdminClient().from("profiles").update({ plan_id: planId }).eq("id", userId);
+  const { user } = await requireAdmin();
+  // Lewat RPC agar riwayat paket (back office) mencatat siapa yang mengubah.
+  await createAdminClient().rpc("bo_change_plan", { p_user: userId, p_plan: planId, p_actor: user.id, p_note: "Diubah dari admin aplikasi" });
   revalidatePath("/admin/users");
 }
 

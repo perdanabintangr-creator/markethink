@@ -2,24 +2,26 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { COST_CATEGORY, PLAN_NAME, USD_IDR, idr, num, usd } from "@/lib/admin-format";
-import { DailyBars, HBarList } from "../_components/charts";
-import { SectionTitle, Stat } from "../_components/stat";
+import { DailyBars, HBarList } from "@/components/backoffice/charts";
+import { SectionTitle, Stat } from "@/components/backoffice/stat";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Biaya AI" };
+export const metadata = { title: "Biaya AI & margin" };
 
 const RANGES = [7, 30, 90] as const;
 
-export default async function AdminCostsPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+export default async function BackofficeCostsPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const { days: raw } = await searchParams;
   const days = RANGES.includes(Number(raw) as (typeof RANGES)[number]) ? Number(raw) : 30;
   const admin = createAdminClient();
-  const [breakdown, daily, models, top, plans] = await Promise.all([
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const [breakdown, daily, models, top, plans, revenue] = await Promise.all([
     admin.rpc("admin_cost_breakdown", { p_days: days }),
     admin.rpc("admin_daily_series", { p_days: days }),
     admin.rpc("admin_usage_by_model", { p_days: days }),
     admin.rpc("admin_top_users", { p_days: days, p_limit: 15 }),
     admin.rpc("admin_plan_breakdown", { p_days: days }),
+    admin.from("subscriptions").select("amount_idr").is("refunded_at", null).gte("paid_at", since),
   ]);
   const cats = (breakdown.data ?? []) as { category: string; events: number; cost_usd: number }[];
   const series = (daily.data ?? []) as { day: string; cost_usd: number; messages: number }[];
@@ -30,6 +32,9 @@ export default async function AdminCostsPage({ searchParams }: { searchParams: P
   const total = cats.reduce((a, c) => a + Number(c.cost_usd), 0);
   const messages = series.reduce((a, d) => a + Number(d.messages), 0);
   const perDay = total / days;
+  const revenueIdr = (revenue.data ?? []).reduce((a, r) => a + Number(r.amount_idr), 0);
+  const costIdr = total * USD_IDR;
+  const margin = revenueIdr - costIdr;
 
   return (
     <div className="space-y-8">
@@ -44,6 +49,17 @@ export default async function AdminCostsPage({ searchParams }: { searchParams: P
             {r} hari
           </Link>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Stat label={`Pendapatan (${days} hari)`} value={`Rp${num(revenueIdr)}`} sub="dari penjualan tercatat" />
+        <Stat label={`Biaya AI (${days} hari)`} value={idr(total)} sub="estimasi tagihan penyedia AI" />
+        <Stat
+          label="Margin kasar"
+          value={`${margin < 0 ? "-" : ""}Rp${num(Math.abs(Math.round(margin)))}`}
+          sub={revenueIdr > 0 ? `${Math.round((margin / revenueIdr) * 100)}% dari pendapatan` : "belum ada pendapatan tercatat"}
+          tone={margin < 0 ? "warn" : undefined}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -113,7 +129,7 @@ export default async function AdminCostsPage({ searchParams }: { searchParams: P
               {topUsers.map((u) => (
                 <tr key={u.user_id}>
                   <td className="p-2">
-                    <Link href={`/admin/users/${u.user_id}`} className="font-medium hover:underline">{u.email}</Link>
+                    <Link href={`/backoffice/customers/${u.user_id}`} className="font-medium hover:underline">{u.email}</Link>
                   </td>
                   <td className="p-2">{PLAN_NAME[u.plan_id] ?? u.plan_id}</td>
                   <td className="p-2 text-right">{num(u.messages)}</td>

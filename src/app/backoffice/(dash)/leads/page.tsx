@@ -1,28 +1,29 @@
+import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { PLAN_NAME } from "@/lib/admin-format";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Waitlist" };
+export const metadata = { title: "Calon pelanggan" };
 
 /** Calon pelanggan yang menekan "Gabung waitlist" (minat upgrade) — bahan follow-up penjualan. */
-export default async function AdminWaitlistPage() {
+export default async function LeadsPage() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("waitlist")
-    .select("id, email, plan_interest, note, created_at, profiles(plan_id, full_name)")
+    .select("id, user_id, email, plan_interest, note, created_at, profiles(plan_id, full_name)")
     .order("created_at", { ascending: false })
     .limit(500);
   const rows = data ?? [];
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">{rows.length} calon pelanggan ingin upgrade.</p>
+        <p className="text-sm text-muted-foreground">{rows.length} calon pelanggan menekan &quot;Gabung waitlist&quot; (minat upgrade) — hubungi untuk ditawari paket.</p>
         <Button asChild variant="outline" size="sm">
-          <a href="/api/admin/export?type=waitlist">Unduh CSV</a>
+          <a href="/api/backoffice/export?type=waitlist">Unduh CSV</a>
         </Button>
       </div>
-      <div className="overflow-x-auto rounded-xl border">
+      <div className="overflow-x-auto rounded-xl border bg-background">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-muted/60 text-left text-xs text-muted-foreground">
             <tr>
@@ -39,7 +40,11 @@ export default async function AdminWaitlistPage() {
               return (
                 <tr key={w.id}>
                   <td className="p-2">
-                    <div className="font-medium">{w.email}</div>
+                    {w.user_id ? (
+                      <Link href={`/backoffice/customers/${w.user_id}`} className="font-medium hover:underline">{w.email}</Link>
+                    ) : (
+                      <div className="font-medium">{w.email}</div>
+                    )}
                     {p?.full_name && <div className="text-xs text-muted-foreground">{p.full_name}</div>}
                   </td>
                   <td className="p-2">{p ? (PLAN_NAME[p.plan_id] ?? p.plan_id) : "-"}</td>

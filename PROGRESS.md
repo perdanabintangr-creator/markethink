@@ -17,6 +17,8 @@
 - ✅ Buat file PowerPoint (.pptx) dari chat — kartu unduh di chat.
 - ✅ Buat gambar (Gemini) — saklar `image_gen` AKTIF (ACC founder).
 
+- ✅ Back Office terpisah di /backoffice (pelanggan, langganan, penjualan, MRR, tim) — migrasi 0017 terpasang di production.
+
 ## Sudah diverifikasi
 - `npm run lint`, `npm run typecheck`, `npm run test` (27 test), `npm run build` — lulus.
 - Migrasi diuji di Postgres 16 + pgvector lokal: trigger profil, kredit atomik, RLS antar user, user tidak bisa ubah role/kuota sendiri, fungsi kredit tidak bisa dipanggil user, match_chunks, statistik admin.
