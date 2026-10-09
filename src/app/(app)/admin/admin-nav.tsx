@@ -6,9 +6,12 @@ import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/admin", label: "Ringkasan" },
-  { href: "/admin/users", label: "User & kuota" },
+  { href: "/admin/users", label: "User" },
+  { href: "/admin/costs", label: "Biaya AI" },
+  { href: "/admin/waitlist", label: "Waitlist" },
+  { href: "/admin/errors", label: "Error log" },
+  { href: "/admin/quota", label: "Paket & pengaturan" },
   { href: "/admin/agents", label: "Agents" },
-  { href: "/admin/quota", label: "Paket & kredit" },
 ];
 
 export function AdminNav() {
