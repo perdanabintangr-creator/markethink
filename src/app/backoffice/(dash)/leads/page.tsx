@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { PLAN_NAME } from "@/lib/admin-format";
+import { PageTitle } from "@/components/backoffice/stat";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Calon pelanggan" };
@@ -17,12 +18,15 @@ export default async function LeadsPage() {
   const rows = data ?? [];
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">{rows.length} calon pelanggan menekan &quot;Gabung waitlist&quot; (minat upgrade) — hubungi untuk ditawari paket.</p>
-        <Button asChild variant="outline" size="sm">
-          <a href="/api/backoffice/export?type=waitlist">Unduh CSV</a>
-        </Button>
-      </div>
+      <PageTitle
+        title="Calon pelanggan"
+        description={`${rows.length} orang menekan "Gabung waitlist" (minat upgrade) — hubungi untuk ditawari paket.`}
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <a href="/api/backoffice/export?type=waitlist">Unduh Excel (CSV)</a>
+          </Button>
+        }
+      />
       <div className="overflow-x-auto rounded-xl border bg-background">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-muted/60 text-left text-xs text-muted-foreground">

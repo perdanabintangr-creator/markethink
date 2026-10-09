@@ -1,8 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireBackoffice } from "@/lib/backoffice";
+import { getSession } from "@/lib/auth";
+import {
+  PASSWORD_MIN,
+  USERNAME_RE,
+  createSession,
+  getBackofficeUser,
+  hasActiveOwner,
+  hashPassword,
+  loginBackoffice,
+  logoutBackoffice,
+  normalizeUsername,
+  requireBackoffice,
+  revokeSessions,
+  verifyPassword,
+} from "@/lib/backoffice";
 import { PAYMENT_METHODS } from "@/lib/backoffice-format";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -13,6 +28,45 @@ function refresh(userId?: string) {
   if (userId) revalidatePath(`/backoffice/customers/${userId}`);
 }
 
+const usernameSchema = z.string().transform(normalizeUsername).pipe(z.string().regex(USERNAME_RE, "Username 3–32 karakter: huruf kecil, angka, titik, - atau _"));
+const passwordSchema = z.string().min(PASSWORD_MIN, `Password minimal ${PASSWORD_MIN} karakter`).max(128);
+const firstIssue = (e: z.ZodError) => e.issues[0]?.message ?? "Data tidak valid.";
+
+// ---------------------------------------------------------------- Login
+
+export async function loginAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const res = await loginBackoffice(String(formData.get("username") ?? ""), String(formData.get("password") ?? ""));
+  if (!res.ok) return { error: res.error };
+  redirect("/backoffice");
+}
+
+export async function logoutAction() {
+  await logoutBackoffice();
+  redirect("/backoffice/login");
+}
+
+/** Pembuatan akun owner pertama — hanya bila belum ada owner aktif, dan wajib login sebagai admin aplikasi. */
+export async function setupOwner(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  if (await hasActiveOwner()) return { error: "Akun owner sudah ada. Silakan login." };
+  const { profile } = await getSession();
+  if (profile?.role !== "admin") return { error: "Hanya admin aplikasi Markethink yang bisa membuat akun pertama." };
+  const parsed = z
+    .object({ full_name: z.string().trim().min(1, "Nama wajib diisi").max(80), username: usernameSchema, password: passwordSchema, password2: z.string() })
+    .refine((d) => d.password === d.password2, { message: "Ulangi password tidak sama." })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const { data, error } = await createAdminClient()
+    .from("backoffice_users")
+    .insert({ full_name: parsed.data.full_name, username: parsed.data.username, role: "owner", password_hash: await hashPassword(parsed.data.password) })
+    .select("id")
+    .single();
+  if (error || !data) return { error: "Gagal membuat akun. Coba lagi." };
+  await createSession(data.id);
+  redirect("/backoffice");
+}
+
+// ---------------------------------------------------------------- Penjualan & paket
+
 const saleSchema = z.object({
   user_id: z.string().uuid().optional(),
   email: z.string().trim().toLowerCase().email().optional(),
@@ -20,7 +74,7 @@ const saleSchema = z.object({
   months: z.coerce.number().int().min(1).max(36),
   amount: z.coerce.number().int().min(0).max(1_000_000_000),
   method: z.enum(PAYMENT_METHODS),
-  paid_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
+  paid_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   note: z.string().trim().max(500).optional(),
 });
 
@@ -38,7 +92,7 @@ export async function recordSale(_prev: ActionState, formData: FormData): Promis
     if (!data) return { error: `Akun ${d.email} belum terdaftar di Markethink. Minta pelanggan daftar dulu.` };
     userId = data.id;
   }
-  if (!userId) return { error: "Pilih pelanggan dulu." };
+  if (!userId) return { error: "Isi email pelanggan dulu." };
 
   // Tanggal bayar diisi = jam 12 siang WIB di hari itu (aman dari geser zona waktu).
   const paidAt = d.paid_at ? new Date(`${d.paid_at}T12:00:00+07:00`).toISOString() : null;
@@ -63,7 +117,7 @@ export async function changePlan(userId: string, formData: FormData) {
   const plan = z.enum(["beta", "pro", "promax"]).safeParse(formData.get("plan_id"));
   if (!plan.success) return;
   const note = String(formData.get("note") ?? "").trim().slice(0, 300) || (plan.data === "beta" ? "Berhenti berlangganan" : "Diubah tim back office");
-  await createAdminClient().rpc("bo_change_plan", { p_user: userId, p_plan: plan.data, p_actor: user.id, p_note: note });
+  await createAdminClient().rpc("bo_set_plan", { p_user: userId, p_plan: plan.data, p_bo_actor: user.id, p_note: note });
   refresh(userId);
 }
 
@@ -87,35 +141,85 @@ export async function refundSale(saleId: string, userId: string) {
   refresh(userId);
 }
 
-/** Admin: atur harga paket per bulan (dipakai untuk isi otomatis nominal & estimasi). */
+/** Owner: atur harga paket per bulan (dipakai untuk isi otomatis nominal & estimasi). */
 export async function updatePlanPrice(planId: string, formData: FormData) {
-  const { isAdmin } = await requireBackoffice();
-  if (!isAdmin) return;
-  const price = z.coerce.number().int().min(0).max(100_000_000).safeParse(formData.get("price"));
+  const { isOwner } = await requireBackoffice();
+  if (!isOwner) return;
+  const price = z.coerce.number().int().min(0).max(100_000_000).safeParse(String(formData.get("price") ?? "").replace(/\D/g, ""));
   if (!price.success) return;
   await createAdminClient().from("plans").update({ monthly_price_idr: price.data }).eq("id", planId);
   refresh();
 }
 
-/** Admin: beri akses back office ke akun yang sudah terdaftar. */
-export async function addMember(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { user, isAdmin } = await requireBackoffice();
-  if (!isAdmin) return { error: "Hanya admin yang bisa menambah anggota tim." };
-  const email = z.string().trim().toLowerCase().email().safeParse(formData.get("email"));
-  if (!email.success) return { error: "Email tidak valid." };
-  const admin = createAdminClient();
-  const { data: p } = await admin.from("profiles").select("id, role").ilike("email", email.data).maybeSingle();
-  if (!p) return { error: "Email ini belum punya akun Markethink. Minta orangnya daftar dulu di halaman daftar, lalu tambahkan lagi." };
-  if (p.role === "admin") return { ok: "Akun ini admin — sudah otomatis punya akses." };
-  const { error } = await admin.from("backoffice_members").upsert({ user_id: p.id, added_by: user.id });
-  if (error) return { error: "Gagal menambahkan. Coba lagi." };
+// ---------------------------------------------------------------- Akun tim
+
+export async function createMember(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, isOwner } = await requireBackoffice();
+  if (!isOwner) return { error: "Hanya owner yang bisa menambah akun tim." };
+  const parsed = z
+    .object({
+      full_name: z.string().trim().min(1, "Nama wajib diisi").max(80),
+      username: usernameSchema,
+      password: passwordSchema,
+      role: z.enum(["owner", "staff"]),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const { password, ...member } = parsed.data;
+  const { error } = await createAdminClient()
+    .from("backoffice_users")
+    .insert({ ...member, password_hash: await hashPassword(password), created_by: user.id });
+  if (error) return { error: error.code === "23505" ? "Username sudah dipakai." : "Gagal membuat akun. Coba lagi." };
   refresh();
-  return { ok: `${email.data} sekarang bisa membuka back office.` };
+  return { ok: `Akun "${parsed.data.username}" dibuat. Berikan username & password-nya ke anggota tim secara langsung (jangan di grup).` };
 }
 
-export async function removeMember(userId: string) {
-  const { isAdmin } = await requireBackoffice();
-  if (!isAdmin) return;
-  await createAdminClient().from("backoffice_members").delete().eq("user_id", userId);
+export async function resetMemberPassword(memberId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { isOwner } = await requireBackoffice();
+  if (!isOwner) return { error: "Hanya owner yang bisa reset password." };
+  const pw = passwordSchema.safeParse(formData.get("password"));
+  if (!pw.success) return { error: firstIssue(pw.error) };
+  await createAdminClient()
+    .from("backoffice_users")
+    .update({ password_hash: await hashPassword(pw.data), failed_attempts: 0, locked_until: null, updated_at: new Date().toISOString() })
+    .eq("id", memberId);
+  await revokeSessions(memberId);
   refresh();
+  return { ok: "Password baru tersimpan. Sesi lama akun itu sudah dikeluarkan." };
+}
+
+export async function setMemberActive(memberId: string, active: boolean) {
+  const { user, isOwner } = await requireBackoffice();
+  if (!isOwner || memberId === user.id) return;
+  const admin = createAdminClient();
+  if (!active) {
+    // Jangan sampai tidak ada owner aktif sama sekali.
+    const { data: target } = await admin.from("backoffice_users").select("role").eq("id", memberId).maybeSingle();
+    if (target?.role === "owner") {
+      const { count } = await admin.from("backoffice_users").select("id", { count: "exact", head: true }).eq("role", "owner").eq("active", true);
+      if ((count ?? 0) <= 1) return;
+    }
+  }
+  await admin.from("backoffice_users").update({ active, updated_at: new Date().toISOString() }).eq("id", memberId);
+  if (!active) await revokeSessions(memberId);
+  refresh();
+}
+
+export async function changeOwnPassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const me = await getBackofficeUser();
+  if (!me) redirect("/backoffice/login");
+  const parsed = z
+    .object({ current: z.string().min(1, "Isi password lama."), password: passwordSchema, password2: z.string() })
+    .refine((d) => d.password === d.password2, { message: "Ulangi password baru tidak sama." })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const admin = createAdminClient();
+  const { data } = await admin.from("backoffice_users").select("password_hash").eq("id", me.id).single();
+  if (!data || !(await verifyPassword(parsed.data.current, data.password_hash))) return { error: "Password lama salah." };
+  await admin
+    .from("backoffice_users")
+    .update({ password_hash: await hashPassword(parsed.data.password), updated_at: new Date().toISOString() })
+    .eq("id", me.id);
+  await revokeSessions(me.id, true);
+  return { ok: "Password berhasil diganti. Perangkat lain yang login dengan akun ini sudah dikeluarkan." };
 }

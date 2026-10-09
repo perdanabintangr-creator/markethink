@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { COST_CATEGORY, PLAN_NAME, USD_IDR, idr, num, usd } from "@/lib/admin-format";
 import { DailyBars, HBarList } from "@/components/backoffice/charts";
-import { SectionTitle, Stat } from "@/components/backoffice/stat";
+import { PageTitle, SectionTitle, Stat } from "@/components/backoffice/stat";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Biaya AI & margin" };
@@ -38,6 +38,8 @@ export default async function BackofficeCostsPage({ searchParams }: { searchPara
 
   return (
     <div className="space-y-8">
+      <div>
+      <PageTitle title="Biaya AI & margin" description="Pendapatan dari penjualan dibanding perkiraan tagihan penyedia AI." />
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">Periode:</span>
         {RANGES.map((r) => (
@@ -49,6 +51,7 @@ export default async function BackofficeCostsPage({ searchParams }: { searchPara
             {r} hari
           </Link>
         ))}
+      </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

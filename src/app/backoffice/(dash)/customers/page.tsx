@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
+import { PageTitle } from "@/components/backoffice/stat";
 import { PLAN_NAME, num } from "@/lib/admin-format";
 import { dateID, daysUntil, durationSince, rupiah } from "@/lib/backoffice-format";
 
@@ -18,7 +19,7 @@ const STATUS: Record<string, string> = {
   overdue: "Lewat masa aktif",
   no_record: "Berbayar tanpa catatan bayar",
   churned: "Pernah bayar, kini Free",
-  internal: "Tim internal",
+  internal: "Akun admin aplikasi",
 };
 const SORT: Record<string, string> = {
   newest: "Terbaru daftar",
@@ -76,6 +77,15 @@ export default async function CustomersPage({
 
   return (
     <div className="space-y-4">
+      <PageTitle
+        title={status === "all" ? "Pelanggan" : `Pelanggan · ${STATUS[status]}`}
+        description={`${num(total)} akun ditemukan${q ? ` untuk "${q}"` : ""}.`}
+        actions={
+          <Button asChild size="sm">
+            <Link href="/backoffice/sales/new">+ Catat penjualan</Link>
+          </Button>
+        }
+      />
       <form className="flex flex-wrap items-end gap-2 rounded-xl border bg-background p-3">
         <Input name="q" defaultValue={q} placeholder="Cari email atau nama…" className="w-full sm:w-64" />
         <NativeSelect name="plan" defaultValue={plan} className="w-auto">
@@ -99,8 +109,6 @@ export default async function CustomersPage({
           <a href={`/api/backoffice/export?${exportQs}`}>Unduh Excel (CSV)</a>
         </Button>
       </form>
-
-      <p className="text-sm text-muted-foreground">{num(total)} akun ditemukan.</p>
 
       <div className="overflow-x-auto rounded-xl border bg-background">
         <table className="w-full min-w-[960px] text-sm">
@@ -126,7 +134,7 @@ export default async function CustomersPage({
                     <Link href={`/backoffice/customers/${u.id}`} className="font-medium hover:underline">{u.email}</Link>
                     <div className="text-xs text-muted-foreground">
                       {u.full_name ?? "-"}
-                      {u.internal && " · tim internal"}
+                      {u.internal && " · admin aplikasi"}
                       {u.banned && " · diblokir"}
                     </div>
                   </td>

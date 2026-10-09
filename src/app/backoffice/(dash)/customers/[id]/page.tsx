@@ -19,7 +19,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const admin = createAdminClient();
-  const [{ data: u }, { data: subs }, { data: changes }, { data: usage }, { data: plans }, { data: member }] = await Promise.all([
+  const [{ data: u }, { data: subs }, { data: changes }, { data: usage }, { data: plans }] = await Promise.all([
     admin
       .from("profiles")
       .select("id, email, full_name, role, plan_id, plan_started_at, banned, persona_role, industry, experience, goal, onboarded, created_at, last_active_at")
@@ -27,19 +27,18 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       .maybeSingle(),
     admin
       .from("subscriptions")
-      .select("id, plan_id, status, kind, amount_idr, months, payment_method, note, paid_at, refunded_at, current_period_start, current_period_end, creator:profiles!subscriptions_created_by_fkey(email)")
+      .select("id, plan_id, status, kind, amount_idr, months, payment_method, note, paid_at, refunded_at, current_period_start, current_period_end, recorder:backoffice_users!subscriptions_bo_created_by_fkey(full_name)")
       .eq("user_id", id)
       .order("paid_at", { ascending: false }),
     admin
       .from("plan_changes")
-      .select("id, from_plan, to_plan, note, created_at, actor:profiles!plan_changes_changed_by_fkey(email)")
+      .select("id, from_plan, to_plan, note, created_at, actor:profiles!plan_changes_changed_by_fkey(email), bo_actor:backoffice_users!plan_changes_bo_changed_by_fkey(full_name)")
       .eq("user_id", id)
       .order("created_at", { ascending: false })
       .limit(50),
     admin.rpc("admin_user_usage", { p_user_ids: [id], p_days: 30 }),
     admin.from("plans").select("id, monthly_price_idr"),
-    admin.from("backoffice_members").select("user_id").eq("user_id", id).maybeSingle(),
-  ]);
+      ]);
   if (!u) notFound();
 
   const sales = subs ?? [];
@@ -53,7 +52,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   const use = (usage ?? [])[0] as { messages: number; images: number; pptx: number; cost_usd: number; last_active: string } | undefined;
   const prices = Object.fromEntries((plans ?? []).map((p) => [p.id, Number(p.monthly_price_idr)]));
   const paid = u.plan_id !== "beta";
-  const internal = u.role !== "user" || Boolean(member);
+  const internal = u.role !== "user";
 
   return (
     <div className="space-y-6">
@@ -63,7 +62,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           <h1 className="mt-1 text-xl font-semibold">{u.full_name || u.email}</h1>
           <p className="text-sm text-muted-foreground">
             {u.email}
-            {internal && " · tim internal"}
+            {internal && " · admin aplikasi"}
             {u.banned && " · diblokir"}
           </p>
         </div>
@@ -169,7 +168,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
             </thead>
             <tbody className="divide-y">
               {sales.map((s) => {
-                const by = s.creator as unknown as { email: string | null } | null;
+                const by = s.recorder as unknown as { full_name: string } | null;
                 return (
                   <tr key={s.id} className={s.refunded_at ? "text-muted-foreground line-through" : ""}>
                     <td className="py-2">{dateID(s.paid_at)}</td>
@@ -181,7 +180,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
                     </td>
                     <td>{s.payment_method ?? "-"}</td>
                     <td className="text-right tabular-nums">{rupiah(s.amount_idr)}</td>
-                    <td className="text-xs">{by?.email ?? "-"}</td>
+                    <td className="text-xs">{by?.full_name ?? "-"}</td>
                     <td className="text-right">
                       {s.refunded_at ? (
                         <span className="text-xs no-underline">dibatalkan</span>
@@ -219,6 +218,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           <ul className="divide-y text-sm">
             {(changes ?? []).map((c) => {
               const actor = c.actor as unknown as { email: string | null } | null;
+              const boActor = c.bo_actor as unknown as { full_name: string } | null;
               return (
                 <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2">
                   <span>
@@ -226,7 +226,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
                     {c.note && <span className="text-muted-foreground"> · {c.note}</span>}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {dateID(c.created_at)} · {actor?.email ?? "sistem / admin aplikasi"}
+                    {dateID(c.created_at)} · {boActor ? `${boActor.full_name} (back office)` : actor?.email ? `${actor.email} (admin aplikasi)` : "sistem"}
                   </span>
                 </li>
               );

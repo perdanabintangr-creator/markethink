@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireBackoffice } from "@/lib/backoffice";
+import { LogoMark } from "@/components/logo";
+import { LogoutButton } from "@/components/backoffice/logout-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DailyBars, Funnel, HBarList, monthLabel } from "@/components/backoffice/charts";
 import { SectionTitle, Stat } from "@/components/backoffice/stat";
@@ -7,7 +11,7 @@ import { PLAN_NAME, num, pct } from "@/lib/admin-format";
 import { SALE_KIND, dateID, rupiah } from "@/lib/backoffice-format";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Ringkasan" };
+export const metadata = { title: "Dashboard" };
 
 type Overview = Record<string, number>;
 interface MonthRow {
@@ -36,6 +40,7 @@ function change(now: number, before: number) {
 }
 
 export default async function BackofficeOverview() {
+  const { user } = await requireBackoffice();
   const admin = createAdminClient();
   const [ov, monthly, mix, funnel, recent] = await Promise.all([
     admin.rpc("bo_overview").single<Overview>(),
@@ -63,10 +68,42 @@ export default async function BackofficeOverview() {
     { n: v("waitlist"), label: "calon pelanggan di waitlist", href: "/backoffice/leads", hint: `${num(v("waitlist_this_month"))} baru bulan ini` },
   ];
 
+  const initials = user.full_name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
+  const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
+
   return (
     <div className="space-y-8">
+      <h1 className="text-2xl font-bold sm:text-3xl">Dashboard</h1>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-foreground text-base font-semibold text-background">{initials}</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Selamat datang</p>
+              <p className="truncate text-sm text-muted-foreground">
+                {user.full_name} · {user.role === "owner" ? "Owner" : "Tim"}
+              </p>
+            </div>
+            <LogoutButton />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <LogoMark className="size-12" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">Markethink AI</p>
+              <p className="text-sm text-muted-foreground">{today}</p>
+            </div>
+            <a href="/chat" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm font-medium hover:underline">
+              Buka aplikasi <ExternalLink className="size-4" />
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+
       <section className="space-y-3">
-        <SectionTitle hint="Pelanggan = semua akun selain admin & tim back office">Database pelanggan</SectionTitle>
+        <SectionTitle hint="Pelanggan = semua akun selain admin aplikasi">Database pelanggan</SectionTitle>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Total akun terdaftar" value={num(v("total_accounts"))} sub={`${num(v("customers"))} pelanggan · ${num(v("internal_accounts"))} tim internal`} />
           <Stat
@@ -80,7 +117,7 @@ export default async function BackofficeOverview() {
       </section>
 
       <section className="space-y-3">
-        <SectionTitle hint={<Link href="/backoffice/sales" className="underline">Lihat & catat penjualan →</Link>}>Penjualan</SectionTitle>
+        <SectionTitle hint={<Link href="/backoffice/sales/new" className="underline">Catat penjualan →</Link>}>Penjualan</SectionTitle>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Pendapatan bulan ini" value={rupiah(v("revenue_this_month"))} sub={change(v("revenue_this_month"), v("revenue_last_month"))} />
           <Stat label="MRR (pendapatan rutin / bulan)" value={rupiah(v("mrr_idr"))} sub="dari langganan yang sedang aktif" />
@@ -225,7 +262,7 @@ export default async function BackofficeOverview() {
               {!sales.length && (
                 <tr>
                   <td colSpan={5} className="py-4 text-muted-foreground">
-                    Belum ada penjualan tercatat. Saat ada pelanggan bayar, catat di menu <Link href="/backoffice/sales" className="underline">Penjualan</Link>.
+                    Belum ada penjualan tercatat. Saat ada pelanggan bayar, catat di menu <Link href="/backoffice/sales/new" className="underline">Catat penjualan</Link>.
                   </td>
                 </tr>
               )}

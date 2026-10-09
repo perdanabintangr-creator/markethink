@@ -1,7 +1,6 @@
-import { Suspense } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
-import { hasBackofficeAccess } from "@/lib/backoffice";
+import { getBackofficeUser, hasActiveOwner } from "@/lib/backoffice";
 import { LogoMark } from "@/components/logo";
 import { BackofficeLoginForm } from "./login-form";
 
@@ -9,9 +8,8 @@ export const metadata = { title: "Masuk Back Office", robots: { index: false, fo
 export const dynamic = "force-dynamic";
 
 export default async function BackofficeLoginPage() {
-  const { profile } = await getSession();
-  const signedIn = Boolean(profile);
-  if (profile && (await hasBackofficeAccess(profile))) redirect("/backoffice");
+  if (await getBackofficeUser()) redirect("/backoffice");
+  const hasOwner = await hasActiveOwner();
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-muted/40 px-4 py-10">
@@ -19,22 +17,15 @@ export default async function BackofficeLoginPage() {
         <div className="flex flex-col items-center gap-2 text-center">
           <LogoMark className="size-10" />
           <h1 className="text-xl font-semibold">Back Office Markethink</h1>
-          <p className="text-sm text-muted-foreground">Khusus tim bisnis: data pelanggan, langganan, dan penjualan.</p>
+          <p className="text-sm text-muted-foreground">Masuk dengan username & password tim.</p>
         </div>
-        {signedIn ? (
-          <div className="space-y-3 text-center text-sm">
-            <p className="rounded-lg bg-muted p-3">
-              Akun <b>{profile?.email}</b> belum punya akses back office. Minta admin menambahkan email kamu di menu <b>Tim</b>.
-            </p>
-            <form action="/auth/signout?next=/backoffice/login" method="post">
-              <button className="text-primary underline-offset-4 hover:underline">Masuk dengan akun lain</button>
-            </form>
+        {!hasOwner && (
+          <div className="space-y-2 rounded-lg bg-muted p-3 text-center text-sm">
+            <p>Belum ada akun owner back office.</p>
+            <Link href="/backoffice/setup" className="font-medium text-primary hover:underline">Buat akun owner pertama →</Link>
           </div>
-        ) : (
-          <Suspense>
-            <BackofficeLoginForm />
-          </Suspense>
         )}
+        <BackofficeLoginForm />
       </div>
     </main>
   );

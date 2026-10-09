@@ -25,3 +25,24 @@ describe("format back office", () => {
     expect(rupiah(null)).toBe("Rp0");
   });
 });
+
+describe("password back office", async () => {
+  const { hashPassword, verifyPassword, USERNAME_RE, normalizeUsername } = await import("@/lib/backoffice");
+
+  it("hash scrypt: benar diterima, salah ditolak, salt acak", async () => {
+    const h = await hashPassword("rahasia-123");
+    expect(h.startsWith("scrypt$")).toBe(true);
+    expect(h).not.toContain("rahasia-123");
+    expect(await verifyPassword("rahasia-123", h)).toBe(true);
+    expect(await verifyPassword("rahasia-124", h)).toBe(false);
+    expect(await hashPassword("rahasia-123")).not.toBe(h);
+    expect(await verifyPassword("x", "bukan-hash")).toBe(false);
+  });
+
+  it("username dinormalisasi & divalidasi", () => {
+    expect(normalizeUsername("  Rina.Sales ")).toBe("rina.sales");
+    expect(USERNAME_RE.test("rina.sales")).toBe(true);
+    expect(USERNAME_RE.test("ri")).toBe(false);
+    expect(USERNAME_RE.test("rina sales")).toBe(false);
+  });
+});

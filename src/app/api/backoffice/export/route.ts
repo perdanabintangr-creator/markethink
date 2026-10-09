@@ -1,5 +1,4 @@
-import { getSession } from "@/lib/auth";
-import { hasBackofficeAccess } from "@/lib/backoffice";
+import { getBackofficeUser } from "@/lib/backoffice";
 import { jsonError } from "@/lib/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -7,9 +6,7 @@ const PLAN: Record<string, string> = { beta: "Free", pro: "Pro", promax: "Promax
 
 /** Ekspor CSV (bisa dibuka di Excel/Sheets) untuk tim back office: pelanggan, penjualan, atau waitlist. */
 export async function GET(req: Request) {
-  const { profile } = await getSession();
-  if (!profile) return jsonError(401, "unauthorized");
-  if (!(await hasBackofficeAccess(profile))) return jsonError(403, "forbidden");
+  if (!(await getBackofficeUser())) return jsonError(401, "unauthorized");
   const url = new URL(req.url);
   const type = url.searchParams.get("type");
   const admin = createAdminClient();
