@@ -73,7 +73,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ tool: s
       message:
         msg === "FILE_NOT_FOUND"
           ? "File laporan tidak ditemukan. Upload ulang filenya."
-          : "Maaf, tool sedang bermasalah. Kuota kamu tidak terpotong — coba lagi sebentar lagi.",
+          : msg === "FILE_UNREADABLE"
+            ? "Isi file tidak terbaca. Upload export Excel/CSV dari Ads Manager, atau screenshot/PDF tabel laporan yang jelas. Kuota tidak terpotong."
+            : "Maaf, tool sedang bermasalah. Kuota kamu tidak terpotong — coba lagi sebentar lagi.",
     });
   }
 }

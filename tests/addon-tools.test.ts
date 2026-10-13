@@ -6,14 +6,17 @@ let nextObject: unknown;
 
 vi.mock("@/lib/addons/runtime", async (orig) => {
   const real = await orig<typeof import("@/lib/addons/runtime")>();
+  const store = async (_ctx: unknown, name: string, kind: "pptx" | "xlsx", bytes: Uint8Array | null, label: string) => {
+    if (!bytes) return null;
+    stored.push({ name, kind, bytes });
+    return { id: crypto.randomUUID(), name, mime: "", kind, label };
+  };
   return {
     ...real,
     aiObject: vi.fn(async () => structuredClone(nextObject)),
     addCost: vi.fn(),
-    storeToolFile: vi.fn(async (_ctx: unknown, name: string, kind: "pptx" | "xlsx", bytes: Uint8Array, label: string) => {
-      stored.push({ name, kind, bytes });
-      return { id: crypto.randomUUID(), name, mime: "", kind, label };
-    }),
+    storeToolFile: vi.fn(store),
+    storeMaybe: vi.fn(store),
   };
 });
 vi.mock("@/lib/ai/router", () => ({ routeTier: () => ({ model: {}, resolved: () => null, toolFallback: () => null }) }));
@@ -30,15 +33,12 @@ vi.mock("@ai-sdk/anthropic", () => ({ anthropic: { tools: { webSearch_20250305: 
 
 const { RUNNERS } = await import("@/lib/addons/tools");
 
+let attachmentRows: Record<string, unknown>[] = [];
 const admin = {
-  from: () => ({
-    select: () => ({
-      eq: () => ({
-        in: async () => ({ data: [{ id: "a", name: "laporan.csv", mime: "text/csv", storage_path: "p", extracted_text: "Kampanye,Biaya,Pembelian\nA,1000000,30" }] }),
-      }),
-    }),
-  }),
+  from: () => ({ select: () => ({ eq: () => ({ in: async () => ({ data: attachmentRows }) }) }) }),
+  storage: { from: () => ({ download: async () => ({ data: new Blob([new Uint8Array([37, 80, 68, 70])]) }) }) },
 };
+const csvRow = { id: "a", name: "laporan.csv", mime: "text/csv", storage_path: "p", extracted_text: "Kampanye,Biaya,Pembelian\nA,1000000,30" };
 const ctx = () => ({ admin: admin as never, userId: "u", runId: "r", cost: { usd: 0, model: null } });
 
 const isZip = (b: Uint8Array) => b[0] === 0x50 && b[1] === 0x4b;
@@ -55,6 +55,7 @@ const cases = [
 describe("tools add-on: hasil AI → file PPT & Excel", () => {
   beforeEach(() => {
     stored.length = 0;
+    attachmentRows = [csvRow];
   });
 
   for (const [tool, fixture, rawInput, kinds] of cases) {
@@ -83,5 +84,57 @@ describe("tools add-on: hasil AI → file PPT & Excel", () => {
     const r = RUNNERS.ads.input.safeParse({ platform: "meta", goal: "penjualan", attachment_ids: [] });
     expect(r.success).toBe(false);
     expect(r.error?.issues[0]?.message).toMatch(/Upload/);
+  });
+
+  // Hasil AI yang tipis (1 data) tidak boleh menggagalkan hasil — kasus nyata: laporan iklan dengan 1 kampanye.
+  const thin = {
+    ads: {
+      ...fx.adsFixture,
+      campaigns: [fx.adsFixture.campaigns[0]],
+      budget_plan: [fx.adsFixture.budget_plan[0]],
+      next_steps: [fx.adsFixture.next_steps[0]],
+      wins: [],
+      problems: ["Data terbatas"],
+      totals: { spend: 1000000, revenue: null, results: 30, roas: null, cpa: 33333, ctr: null },
+    },
+    live: { ...fx.liveFixture, segments: [fx.liveFixture.segments[0]], objections: [fx.liveFixture.objections[0]], opening_hooks: [], closing_lines: [] },
+    competitor: {
+      ...fx.competitorFixture,
+      competitors: [fx.competitorFixture.competitors[0]],
+      content_gaps: [fx.competitorFixture.content_gaps[0]],
+      recommendations: [fx.competitorFixture.recommendations[0]],
+    },
+    kol: { ...fx.kolFixture, deliverables: [], timeline: [fx.kolFixture.timeline[0]], kpis: [fx.kolFixture.kpis[0]], fee_estimate: { ...fx.kolFixture.fee_estimate, rows: [] } },
+  } as const;
+
+  for (const [tool, fixture, rawInput] of cases) {
+    if (!(tool in thin)) continue;
+    it(`${tool}: data tipis tetap menghasilkan file (PPT diperbaiki otomatis)`, async () => {
+      nextObject = thin[tool as keyof typeof thin];
+      void fixture;
+      const runner = RUNNERS[tool];
+      const res = await runner.run(ctx(), runner.input.parse(rawInput));
+      expect(res.files.length).toBeGreaterThanOrEqual(1);
+      expect(stored.some((f) => f.kind === "xlsx")).toBe(true);
+      expect(stored.some((f) => f.kind === "pptx")).toBe(true);
+    }, 30000);
+  }
+
+  it("ads: PDF hasil scan dikirim ke AI sebagai file (dibaca visual)", async () => {
+    const { aiObject } = await import("@/lib/addons/runtime");
+    attachmentRows = [{ id: "b", name: "laporan.pdf", mime: "application/pdf", storage_path: "p", extracted_text: "\n\n" }];
+    nextObject = fx.adsFixture;
+    const runner = RUNNERS.ads;
+    await runner.run(ctx(), runner.input.parse(cases[3][2]));
+    const call = vi.mocked(aiObject).mock.calls.at(-1)![1] as { vision?: boolean; messages: { content: { type: string; mediaType?: string }[] }[] };
+    expect(call.vision).toBe(true);
+    expect(call.messages[0].content.some((p) => p.type === "file" && p.mediaType === "application/pdf")).toBe(true);
+  });
+
+  it("ads: file yang tidak terbaca sama sekali → pesan jelas, bukan hasil karangan", async () => {
+    attachmentRows = [{ id: "c", name: "kosong.docx", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", storage_path: "p", extracted_text: null }];
+    nextObject = fx.adsFixture;
+    const runner = RUNNERS.ads;
+    await expect(runner.run(ctx(), runner.input.parse(cases[3][2]))).rejects.toThrow("FILE_UNREADABLE");
   });
 });

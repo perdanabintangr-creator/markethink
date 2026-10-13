@@ -1,5 +1,5 @@
 import "server-only";
-import { generateText, type ImagePart } from "ai";
+import { generateText, type FilePart, type ImagePart } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import type { z } from "zod";
 import { routeTier } from "@/lib/ai/router";
@@ -25,7 +25,7 @@ import {
   type AiToolId,
   type CompetitorOutput,
 } from "./schemas";
-import { addCost, aiObject, clip, fileSlug, makeDeck, makeWorkbook, storeToolFile, type ToolCtx, type ToolFile } from "./runtime";
+import { addCost, aiObject, clip, fileSlug, makeDeck, makeWorkbook, storeMaybe, storeToolFile, type ToolCtx, type ToolFile } from "./runtime";
 
 export interface ToolResult {
   title: string;
@@ -207,10 +207,10 @@ Aturan:
         rows: out.objections,
       },
     ]);
-    const files = await Promise.all([
-      storeToolFile(ctx, `skrip-live-${fileSlug(out.title)}.pptx`, "pptx", pptx, "PPT contekan host"),
+    const files = (await Promise.all([
+      storeMaybe(ctx, `skrip-live-${fileSlug(out.title)}.pptx`, "pptx", pptx, "PPT contekan host"),
       storeToolFile(ctx, `rundown-live-${fileSlug(out.title)}.xlsx`, "xlsx", xlsx, "Excel rundown"),
-    ]);
+    ])).filter((f): f is ToolFile => Boolean(f));
     return { title: out.title || "Skrip Live Selling", output: out, files };
   },
 };
@@ -278,22 +278,37 @@ const ads: Runner<typeof adsInput> = {
       .in("id", input.attachment_ids);
     if (!rows?.length) throw new Error("FILE_NOT_FOUND");
 
-    const parts: ImagePart[] = [];
+    const parts: (ImagePart | FilePart)[] = [];
     let textData = "";
     let hasImage = false;
+    let readable = false;
     for (const r of rows) {
-      if (String(r.mime).startsWith("image/")) {
+      const text = String(r.extracted_text ?? "");
+      const scannedPdf = r.mime === "application/pdf" && text.replace(/\s+/g, "").length < 80;
+      if (scannedPdf) {
+        // PDF hasil scan/gambar (mis. laporan "compressed"): kirim utuh agar AI membacanya secara visual.
         const { data } = await ctx.admin.storage.from("uploads").download(r.storage_path as string);
         if (!data) continue;
         hasImage = true;
+        readable = true;
+        parts.push({ type: "file", data: new Uint8Array(await data.arrayBuffer()), mediaType: "application/pdf", filename: r.name as string });
+        textData += `\n[PDF laporan (dibaca visual): ${r.name}]`;
+      } else if (String(r.mime).startsWith("image/")) {
+        const { data } = await ctx.admin.storage.from("uploads").download(r.storage_path as string);
+        if (!data) continue;
+        hasImage = true;
+        readable = true;
         parts.push({ type: "image", image: new Uint8Array(await data.arrayBuffer()), mediaType: r.mime as string });
         textData += `\n[Screenshot: ${r.name}]`;
-      } else if (r.extracted_text) {
-        textData += `\n\n=== File: ${r.name} ===\n${String(r.extracted_text).slice(0, 45_000)}`;
+      } else if (text.trim()) {
+        readable = true;
+        textData += `\n\n=== File: ${r.name} ===\n${text.slice(0, 45_000)}`;
       } else {
         textData += `\n[File ${r.name} tidak bisa dibaca isinya]`;
       }
     }
+
+    if (!readable) throw new Error("FILE_UNREADABLE");
 
     const out = await aiObject(ctx, {
       schema: adsOutput,
@@ -302,7 +317,7 @@ const ads: Runner<typeof adsInput> = {
       system: `${BASE}
 Kamu performance marketer senior yang mengaudit laporan ${PLATFORM_ADS[input.platform]}.
 Aturan:
-- Baca data laporan (tabel/CSV/screenshot). Gunakan angka asli dari data; jangan mengarang. Bila kolom tidak ada, isi null dan jelaskan di data_notes.
+- Baca data laporan (tabel/CSV/screenshot/PDF). Gunakan angka asli dari data; jangan mengarang kampanye atau angka. Bila kolom tidak ada, isi null dan jelaskan di data_notes. Masukkan SEMUA kampanye/ad set yang ada di laporan.
 - Mata uang Rupiah (angka penuh, tanpa titik/koma ribuan). CTR dalam persen (mis. 1.8). ROAS = pendapatan/biaya.
 - Tujuan iklan: ${input.goal}. ${input.target ? `Target user: ${input.target}.` : "Bila tidak ada target, bandingkan dengan rata-rata akun."}
 - status per kampanye/ad set: "bagus" (efisien, layak dinaikkan), "perhatian" (bisa diperbaiki), "boros" (biaya tinggi hasil rendah → matikan/ubah).
@@ -435,10 +450,10 @@ Aturan:
         rows: out.next_steps,
       },
     ]);
-    const files = await Promise.all([
-      storeToolFile(ctx, `rapor-iklan-${input.platform}.pptx`, "pptx", pptx, "PPT laporan"),
+    const files = (await Promise.all([
+      storeMaybe(ctx, `rapor-iklan-${input.platform}.pptx`, "pptx", pptx, "PPT laporan"),
       storeToolFile(ctx, `rapor-iklan-${input.platform}.xlsx`, "xlsx", xlsx, "Excel bertanda warna"),
-    ]);
+    ])).filter((f): f is ToolFile => Boolean(f));
     return { title: `Rapor ${PLATFORM_ADS[input.platform]}`, output: out, files };
   },
 };
@@ -629,10 +644,10 @@ Susun laporan riset kompetitor dari catatan riset. Aturan:
         rows: sources,
       },
     ]);
-    const files = await Promise.all([
-      storeToolFile(ctx, `riset-kompetitor-${fileSlug(input.brand)}.pptx`, "pptx", pptx, "PPT laporan riset"),
+    const files = (await Promise.all([
+      storeMaybe(ctx, `riset-kompetitor-${fileSlug(input.brand)}.pptx`, "pptx", pptx, "PPT laporan riset"),
       storeToolFile(ctx, `riset-kompetitor-${fileSlug(input.brand)}.xlsx`, "xlsx", xlsx, "Excel data riset"),
-    ]);
+    ])).filter((f): f is ToolFile => Boolean(f));
     return { title: `Riset kompetitor — ${input.brand}`, output: out, files };
   },
 };
@@ -747,10 +762,10 @@ Aturan:
         rows: out.timeline,
       },
     ]);
-    const files = await Promise.all([
-      storeToolFile(ctx, `brief-kol-${fileSlug(input.brand)}.pptx`, "pptx", pptx, "PPT brief kreator"),
+    const files = (await Promise.all([
+      storeMaybe(ctx, `brief-kol-${fileSlug(input.brand)}.pptx`, "pptx", pptx, "PPT brief kreator"),
       storeToolFile(ctx, `brief-kol-${fileSlug(input.brand)}.xlsx`, "xlsx", xlsx, "Excel fee & timeline"),
-    ]);
+    ])).filter((f): f is ToolFile => Boolean(f));
     return { title: out.campaign_name || `Brief KOL — ${input.brand}`, output: out, files };
   },
 };
