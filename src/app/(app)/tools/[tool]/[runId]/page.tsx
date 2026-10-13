@@ -4,7 +4,8 @@ import { ArrowLeft, CircleAlert, RotateCcw } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { toolInfo } from "@/lib/addons/catalog";
 import { Button } from "@/components/ui/button";
-import { FilesBar, dateID, type ToolFileLite } from "@/components/tools/common";
+import { FilesBar } from "@/components/tools/common";
+import { dateID, type ToolFileLite } from "@/lib/addons/format";
 import { ResultView } from "@/components/tools/result-view";
 import { ToolIcon } from "@/components/tools/tool-icon";
 

@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { addonInfo, toolInfo } from "@/lib/addons/catalog";
 import { getAddonStatus } from "@/lib/addons/entitlement";
 import { toLite } from "@/lib/addons/status-lite";
-import { dateID, quotaText } from "@/components/tools/common";
+import { dateID, quotaText } from "@/lib/addons/format";
 import { ToolRunner } from "@/components/tools/tool-runner";
 import { Calculators } from "@/components/tools/calculators";
 import { RequestAddonButton } from "@/components/tools/request-addon";

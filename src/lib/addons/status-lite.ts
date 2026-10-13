@@ -1,5 +1,5 @@
 import type { AddonStatus } from "./entitlement";
-import type { AddonStatusLite } from "@/components/tools/common";
+import type { AddonStatusLite } from "./format";
 
 /** Ubah status server (bisa Infinity) menjadi data aman untuk client. */
 export function toLite(s: AddonStatus): AddonStatusLite {

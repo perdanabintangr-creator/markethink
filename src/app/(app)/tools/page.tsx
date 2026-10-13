@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ADDONS, TOOLS } from "@/lib/addons/catalog";
 import { getAddonStatuses } from "@/lib/addons/entitlement";
 import { toLite } from "@/lib/addons/status-lite";
-import { quotaText, rupiah } from "@/components/tools/common";
+import { quotaText, rupiah } from "@/lib/addons/format";
 import { RequestAddonButton } from "@/components/tools/request-addon";
 import { ToolIcon } from "@/components/tools/tool-icon";
 
