@@ -23,6 +23,8 @@ export interface ChatSummary {
   updated_at: string;
   workspace_id: string | null;
   share_token: string | null;
+  /** Posisi di bagian "Disematkan" (null = tidak disematkan). */
+  pin_order?: number | null;
 }
 
 /** Hasil Tools Pro yang tampil di riwayat sidebar. */
@@ -31,6 +33,7 @@ export interface ToolRunSummary {
   tool: string;
   title: string | null;
   created_at: string;
+  pin_order?: number | null;
 }
 
 export interface WorkspaceSummary {
