@@ -68,5 +68,5 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Perkiraan biaya modal per pemakaian: sizing/persona/entry ±Rp5-8rb, survey ±Rp2rb.
 
 ## 2026-10-13 — Drag & drop di sidebar
-- Chat umum (tanpa project) bisa digeser ke folder project, atau lewat menu ⋯ → "Pindahkan ke project" (untuk HP). Aturan lama dilonggarkan: chat umum boleh masuk project walau sudah berisi percakapan; chat yang sudah di dalam project tetap terkunci (isi project tidak bocor keluar).
+- Chat umum (tanpa project) bisa digeser dengan mouse ke folder project (memakai pointer events + bayangan yang ikut kursor, bukan drag bawaan browser yang tidak jalan pada link), atau lewat menu ⋯ → "Pindahkan ke project" (untuk HP). Aturan lama dilonggarkan: chat umum boleh masuk project walau sudah berisi percakapan; chat yang sudah di dalam project tetap terkunci (isi project tidak bocor keluar).
 - Urutan project bisa diubah dengan menggeser folder; disimpan di kolom baru `workspaces.sort_order` (project baru tampil paling atas). Riwayat chat tetap urut otomatis berdasarkan waktu.

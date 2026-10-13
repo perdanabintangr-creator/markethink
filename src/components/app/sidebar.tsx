@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -140,6 +140,56 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     });
   }
 
+  // Geser dengan mouse (pointer events, bukan drag bawaan browser yang sering tidak jalan pada link).
+  const [drag, setDrag] = useState<{ kind: "chat" | "project"; id: string; title: string; x: number; y: number; over: string | null } | null>(null);
+  const dragRef = useRef<{ kind: "chat" | "project"; id: string; title: string; x0: number; y0: number; active: boolean } | null>(null);
+
+  function startDrag(e: React.PointerEvent, kind: "chat" | "project", id: string, title: string) {
+    // Sentuhan (HP) memakai menu ⋯ → "Pindahkan ke project", agar tidak bentrok dengan scroll.
+    if (e.pointerType === "touch" || e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("[data-no-drag]")) return;
+    dragRef.current = { kind, id, title, x0: e.clientX, y0: e.clientY, active: false };
+    const targetAt = (x: number, y: number) => {
+      const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-project-id]");
+      const over = el?.dataset.projectId ?? null;
+      return over && over !== id ? over : null;
+    };
+    const move = (ev: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      if (!d.active) {
+        if (Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < 6) return;
+        d.active = true;
+        document.body.classList.add("select-none", "cursor-grabbing");
+      }
+      setDrag({ kind, id, title, x: ev.clientX, y: ev.clientY, over: targetAt(ev.clientX, ev.clientY) });
+    };
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      const d = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      document.body.classList.remove("select-none", "cursor-grabbing");
+      if (!d?.active) return;
+      // Setelah menggeser, jangan sampai klik ikut membuka chat / menutup folder.
+      const block = (ce: MouseEvent) => {
+        ce.preventDefault();
+        ce.stopPropagation();
+      };
+      window.addEventListener("click", block, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener("click", block, { capture: true }), 50);
+      const target = ev.type === "pointerup" ? targetAt(ev.clientX, ev.clientY) : null;
+      if (!target) return;
+      if (kind === "chat") void moveChat(id, target);
+      else void moveProject(id, target);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  }
+
   /** Pindahkan chat umum ke dalam project (drag & drop atau menu). */
   async function moveChat(chatId: string, projectId: string) {
     const chat = chats.find((c) => c.id === chatId);
@@ -247,6 +297,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col gap-3 bg-muted/40 p-3">
+      {drag && (
+        <div
+          className="pointer-events-none fixed z-[100] flex max-w-60 items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1.5 text-sm shadow-lg"
+          style={{ left: drag.x + 12, top: drag.y + 8 }}
+        >
+          {drag.kind === "project" ? <Folder className="size-4 text-primary" /> : <MessageSquarePlus className="size-4 text-muted-foreground" />}
+          <span className="truncate">{drag.title}</span>
+          {drag.over && <span className="ml-1 shrink-0 text-xs text-primary">{drag.kind === "chat" ? "→ masukkan" : "↕ pindah"}</span>}
+        </div>
+      )}
       <div className="flex items-center justify-between px-1">
         <Logo href="/chat" />
       </div>
@@ -298,8 +358,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 onNavigate={onNavigate}
                 onRename={rename}
                 onRemove={remove}
-                onDropChat={(chatId) => moveChat(chatId, w.id)}
-                onDropProject={(id) => moveProject(id, w.id)}
+                onDragStart={(e) => startDrag(e, "project", w.id, w.name)}
+                dropTarget={drag?.over === w.id}
+                dragging={drag?.kind === "project" && drag.id === w.id}
               />
             );
           })}
@@ -327,6 +388,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 onRemove={remove}
                 projects={c.toolRun ? undefined : projects}
                 onMove={(projectId) => moveChat(c.id, projectId)}
+                onDragStart={(e) => startDrag(e, "chat", c.id, c.title)}
+                dragging={drag?.kind === "chat" && drag.id === c.id}
               />
             ))}
           </div>
@@ -436,9 +499,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-const DND_CHAT = "application/x-markethink-chat";
-const DND_PROJECT = "application/x-markethink-project";
-
 const TOOLS_OPEN_KEY = "mt_tools_menu_open";
 
 /** Menu "Tools Pro" yang bisa dibuka-tutup: submenu per kelompok (Market Research, Jualan Online, Iklan). */
@@ -534,8 +594,9 @@ function ProjectRow({
   onNavigate,
   onRename,
   onRemove,
-  onDropChat,
-  onDropProject,
+  onDragStart,
+  dropTarget,
+  dragging,
 }: {
   project: WorkspaceSummary;
   chats: ChatSummary[];
@@ -545,36 +606,22 @@ function ProjectRow({
   onNavigate?: () => void;
   onRename: (c: ChatSummary) => void;
   onRemove: (c: ChatSummary) => void;
-  onDropChat: (chatId: string) => void;
-  onDropProject: (projectId: string) => void;
+  onDragStart: (e: React.PointerEvent) => void;
+  dropTarget: boolean;
+  dragging: boolean;
 }) {
   const { t } = useApp();
   const Icon = open ? FolderOpen : Folder;
-  const [over, setOver] = useState(false);
   return (
     <div>
       <div
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData(DND_PROJECT, project.id);
-          e.dataTransfer.effectAllowed = "move";
-        }}
-        onDragOver={(e) => {
-          if (!e.dataTransfer.types.includes(DND_CHAT) && !e.dataTransfer.types.includes(DND_PROJECT)) return;
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
-          setOver(true);
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setOver(false);
-          const chatId = e.dataTransfer.getData(DND_CHAT);
-          const projectId = e.dataTransfer.getData(DND_PROJECT);
-          if (chatId) onDropChat(chatId);
-          else if (projectId) onDropProject(projectId);
-        }}
-        className={cn("group flex cursor-grab items-center rounded-lg hover:bg-accent active:cursor-grabbing", over && "bg-primary/15 ring-2 ring-primary")}
+        data-project-id={project.id}
+        onPointerDown={onDragStart}
+        className={cn(
+          "group flex cursor-grab items-center rounded-lg hover:bg-accent active:cursor-grabbing",
+          dropTarget && "bg-primary/15 ring-2 ring-primary",
+          dragging && "opacity-40",
+        )}
         title="Geser untuk mengubah urutan · lepas chat di sini untuk memasukkannya ke project"
       >
         <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-sm">
@@ -639,6 +686,8 @@ function ChatItem({
   onRemove,
   projects,
   onMove,
+  onDragStart,
+  dragging,
 }: {
   chat: HistoryItem;
   active: boolean;
@@ -648,21 +697,16 @@ function ChatItem({
   /** Bila diisi, chat bisa digeser/dipindah ke salah satu project ini. */
   projects?: WorkspaceSummary[];
   onMove?: (projectId: string) => void;
+  onDragStart?: (e: React.PointerEvent) => void;
+  dragging?: boolean;
 }) {
   const { t } = useApp();
   const movable = Boolean(projects && onMove && !chat.toolRun && !chat.workspace_id);
   return (
     <div
-      draggable={movable}
-      onDragStart={
-        movable
-          ? (e) => {
-              e.dataTransfer.setData(DND_CHAT, chat.id);
-              e.dataTransfer.effectAllowed = "move";
-            }
-          : undefined
-      }
-      className={cn("group flex items-center rounded-lg hover:bg-accent", active && "bg-accent")}
+      onPointerDown={movable ? onDragStart : undefined}
+      className={cn("group flex items-center rounded-lg hover:bg-accent", active && "bg-accent", movable && "cursor-grab", dragging && "opacity-40")}
+      title={movable ? "Geser ke folder project untuk memindahkan" : undefined}
     >
       <Link href={itemHref(chat)} onClick={onNavigate} draggable={false} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-sm">
         {chat.toolRun && (
