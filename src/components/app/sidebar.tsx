@@ -10,6 +10,7 @@ import {
   Wrench,
   ChevronRight,
   Folder,
+  FolderInput,
   FolderOpen,
   LayoutGrid,
   Languages,
@@ -79,6 +80,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Urutan project lokal (langsung berubah saat di-drag, lalu disimpan ke server).
+  const [order, setOrder] = useState<string[] | null>(null);
+  const projects = useMemo(() => {
+    if (!order) return workspaces;
+    const byId = new Map(workspaces.map((w) => [w.id, w]));
+    const known = order.map((id) => byId.get(id)).filter((w): w is WorkspaceSummary => Boolean(w));
+    return [...workspaces.filter((w) => !order.includes(w.id)), ...known];
+  }, [workspaces, order]);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/chats");
@@ -129,6 +138,40 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       else next.add(id);
       return next;
     });
+  }
+
+  /** Pindahkan chat umum ke dalam project (drag & drop atau menu). */
+  async function moveChat(chatId: string, projectId: string) {
+    const chat = chats.find((c) => c.id === chatId);
+    const project = workspaces.find((w) => w.id === projectId);
+    if (!chat || !project || chat.workspace_id === projectId) return;
+    if (chat.workspace_id) return void toast.error("Chat yang sudah berisi percakapan di project tidak bisa dipindah.");
+    setChats((list) => list.map((c) => (c.id === chatId ? { ...c, workspace_id: projectId } : c)));
+    setExpanded((s) => new Set(s).add(projectId));
+    const res = await fetch(`/api/chats/${chatId}`, { method: "PATCH", body: JSON.stringify({ workspace_id: projectId }) });
+    if (!res.ok) {
+      toast.error("Gagal memindahkan chat. Coba lagi.");
+    } else {
+      toast.success(`Dipindah ke project "${project.name}"`);
+    }
+    emitChatsChanged();
+  }
+
+  /** Geser project ke posisi project lain. */
+  async function moveProject(dragId: string, targetId: string) {
+    if (dragId === targetId) return;
+    const ids = projects.map((w) => w.id).filter((id) => id !== dragId);
+    const from = projects.findIndex((w) => w.id === dragId);
+    const to = projects.findIndex((w) => w.id === targetId);
+    ids.splice(ids.indexOf(targetId) + (from < to ? 1 : 0), 0, dragId);
+    setOrder(ids);
+    const res = await fetch("/api/workspaces/order", { method: "PATCH", body: JSON.stringify({ ids }) });
+    if (!res.ok) {
+      toast.error("Gagal menyimpan urutan project.");
+      setOrder(null);
+    } else {
+      router.refresh();
+    }
   }
 
   // Jendela isian di dalam aplikasi (bukan pop-up browser) untuk project baru, ganti nama, dan hapus chat.
@@ -241,7 +284,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               <Plus className="size-4" />
             </button>
           </div>
-          {workspaces.map((w) => {
+          {projects.map((w) => {
             const projectChats = matching.filter((c) => c.workspace_id === w.id);
             if (q && !projectChats.length && !w.name.toLowerCase().includes(q)) return null;
             return (
@@ -255,6 +298,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 onNavigate={onNavigate}
                 onRename={rename}
                 onRemove={remove}
+                onDropChat={(chatId) => moveChat(chatId, w.id)}
+                onDropProject={(id) => moveProject(id, w.id)}
               />
             );
           })}
@@ -280,6 +325,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 onNavigate={onNavigate}
                 onRename={rename}
                 onRemove={remove}
+                projects={c.toolRun ? undefined : projects}
+                onMove={(projectId) => moveChat(c.id, projectId)}
               />
             ))}
           </div>
@@ -389,6 +436,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+const DND_CHAT = "application/x-markethink-chat";
+const DND_PROJECT = "application/x-markethink-project";
+
 const TOOLS_OPEN_KEY = "mt_tools_menu_open";
 
 /** Menu "Tools Pro" yang bisa dibuka-tutup: submenu per kelompok (Market Research, Jualan Online, Iklan). */
@@ -484,6 +534,8 @@ function ProjectRow({
   onNavigate,
   onRename,
   onRemove,
+  onDropChat,
+  onDropProject,
 }: {
   project: WorkspaceSummary;
   chats: ChatSummary[];
@@ -493,12 +545,38 @@ function ProjectRow({
   onNavigate?: () => void;
   onRename: (c: ChatSummary) => void;
   onRemove: (c: ChatSummary) => void;
+  onDropChat: (chatId: string) => void;
+  onDropProject: (projectId: string) => void;
 }) {
   const { t } = useApp();
   const Icon = open ? FolderOpen : Folder;
+  const [over, setOver] = useState(false);
   return (
     <div>
-      <div className="group flex items-center rounded-lg hover:bg-accent">
+      <div
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData(DND_PROJECT, project.id);
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes(DND_CHAT) && !e.dataTransfer.types.includes(DND_PROJECT)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOver(false);
+          const chatId = e.dataTransfer.getData(DND_CHAT);
+          const projectId = e.dataTransfer.getData(DND_PROJECT);
+          if (chatId) onDropChat(chatId);
+          else if (projectId) onDropProject(projectId);
+        }}
+        className={cn("group flex cursor-grab items-center rounded-lg hover:bg-accent active:cursor-grabbing", over && "bg-primary/15 ring-2 ring-primary")}
+        title="Geser untuk mengubah urutan · lepas chat di sini untuk memasukkannya ke project"
+      >
         <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-sm">
           <ChevronRight className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />
           <Icon className="size-4 shrink-0 text-primary" />
@@ -559,17 +637,34 @@ function ChatItem({
   onNavigate,
   onRename,
   onRemove,
+  projects,
+  onMove,
 }: {
   chat: HistoryItem;
   active: boolean;
   onNavigate?: () => void;
   onRename: (c: HistoryItem) => void;
   onRemove: (c: HistoryItem) => void;
+  /** Bila diisi, chat bisa digeser/dipindah ke salah satu project ini. */
+  projects?: WorkspaceSummary[];
+  onMove?: (projectId: string) => void;
 }) {
   const { t } = useApp();
+  const movable = Boolean(projects && onMove && !chat.toolRun && !chat.workspace_id);
   return (
-    <div className={cn("group flex items-center rounded-lg hover:bg-accent", active && "bg-accent")}>
-      <Link href={itemHref(chat)} onClick={onNavigate} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-sm">
+    <div
+      draggable={movable}
+      onDragStart={
+        movable
+          ? (e) => {
+              e.dataTransfer.setData(DND_CHAT, chat.id);
+              e.dataTransfer.effectAllowed = "move";
+            }
+          : undefined
+      }
+      className={cn("group flex items-center rounded-lg hover:bg-accent", active && "bg-accent")}
+    >
+      <Link href={itemHref(chat)} onClick={onNavigate} draggable={false} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-sm">
         {chat.toolRun && (
           <span className="flex size-5 shrink-0 items-center justify-center rounded bg-primary/15 text-primary" title={toolInfo(chat.toolRun.tool)?.name}>
             <ToolIcon id={chat.toolRun.tool} className="size-3" />
@@ -590,6 +685,18 @@ function ChatItem({
           <DropdownMenuItem onClick={() => onRename(chat)}>
             <Pencil /> {t.rename}
           </DropdownMenuItem>
+          {movable && !!projects?.length && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Pindahkan ke project</DropdownMenuLabel>
+              {projects.slice(0, 8).map((p) => (
+                <DropdownMenuItem key={p.id} onClick={() => onMove?.(p.id)}>
+                  <FolderInput /> <span className="truncate">{p.name}</span>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem className="text-destructive" onClick={() => onRemove(chat)}>
             <Trash2 /> {chat.toolRun ? "Sembunyikan" : t.delete}
           </DropdownMenuItem>

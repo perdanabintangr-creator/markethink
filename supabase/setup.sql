@@ -2076,3 +2076,8 @@ update public.addons
        tagline = 'Riset pasar ala konsultan: ukuran pasar, persona, kompetitor, kelayakan & survei',
        updated_at = now()
  where id = 'riset_pro' and name = 'Riset Pasar Pro';
+
+
+-- ===== 20261013000023_workspace_order.sql =====
+-- Urutan project di sidebar bisa diatur user (drag & drop). Null = belum diatur (project baru tampil paling atas).
+alter table public.workspaces add column if not exists sort_order integer;

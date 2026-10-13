@@ -7,7 +7,11 @@ import { AppShell } from "@/components/app/app-shell";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, profile } = await requireUser();
   const [{ data: workspaces }, credits, allowedTiers, { data: plan }, { data: freeFlag }] = await Promise.all([
-    supabase.from("workspaces").select("id, name").order("updated_at", { ascending: false }),
+    supabase
+      .from("workspaces")
+      .select("id, name")
+      .order("sort_order", { ascending: true, nullsFirst: true })
+      .order("updated_at", { ascending: false }),
     getCreditStatus(user.id),
     getAllowedTiers(supabase, profile),
     supabase.from("plans").select("name").eq("id", profile.plan_id).maybeSingle(),

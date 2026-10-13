@@ -66,3 +66,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   - `survey` Desain Survei (tanpa web; jumlah responden dihitung rumus Cochran, screener, Van Westendorp/NPS, Excel siap Google Form).
 - Helper riset web dipindah ke `src/lib/addons/helpers.ts` (dipakai juga oleh Riset Kompetitor).
 - Perkiraan biaya modal per pemakaian: sizing/persona/entry ±Rp5-8rb, survey ±Rp2rb.
+
+## 2026-10-13 — Drag & drop di sidebar
+- Chat umum (tanpa project) bisa digeser ke folder project, atau lewat menu ⋯ → "Pindahkan ke project" (untuk HP). Aturan lama dilonggarkan: chat umum boleh masuk project walau sudah berisi percakapan; chat yang sudah di dalam project tetap terkunci (isi project tidak bocor keluar).
+- Urutan project bisa diubah dengan menggeser folder; disimpan di kolom baru `workspaces.sort_order` (project baru tampil paling atas). Riwayat chat tetap urut otomatis berdasarkan waktu.
