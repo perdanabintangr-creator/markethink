@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain, Check, ChevronDown, Gauge, Lock } from "lucide-react";
+import { Brain, Check, ChevronDown, Lock } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,32 @@ export interface TierOption {
   skills: { id: string[]; en: string[] };
   creditCost: number;
   minPlan: PlanId;
+}
+
+/** Satu baris kegunaan per otak — ringkas agar mudah dipilih. */
+const BEST_FOR: Partial<Record<TierId, { id: string; en: string }>> = {
+  junior: { id: "Cepat · caption & ide konten", en: "Fast · captions & ideas" },
+  senior: { id: "Seimbang · campaign & konten", en: "Balanced · campaigns & content" },
+  associate: { id: "Mendalam · strategi & riset", en: "Deep · strategy & research" },
+  director: { id: "Terpintar · strategi bisnis", en: "Smartest · business strategy" },
+};
+
+/** Indikator level kecerdasan (1–4 batang). */
+function LevelBars({ level, muted }: { level: number; muted?: boolean }) {
+  return (
+    <span className="flex h-4 items-end gap-[2px]" aria-hidden>
+      {[1, 2, 3, 4].map((k) => (
+        <span
+          key={k}
+          className={cn(
+            "w-[3px] rounded-full",
+            k <= level ? (muted ? "bg-muted-foreground/50" : "bg-primary") : "bg-muted-foreground/20",
+          )}
+          style={{ height: `${4 + k * 3}px` }}
+        />
+      ))}
+    </span>
+  );
 }
 
 export function ModelSelector({
@@ -56,48 +82,41 @@ export function ModelSelector({
           </button>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[22rem] max-w-[calc(100vw-1.5rem)]">
-        <DropdownMenuLabel>{lang === "en" ? "Choose your marketing brain" : "Pilih otak marketing"}</DropdownMenuLabel>
+      <DropdownMenuContent align="start" className="w-80 max-w-[calc(100vw-1.5rem)] p-1.5">
+        <DropdownMenuLabel className="px-2 pt-1 pb-2">{lang === "en" ? "Choose your marketing brain" : "Pilih otak marketing"}</DropdownMenuLabel>
         {tiers.map((t, i) => {
           const locked = !allowedTiers.includes(t.id);
+          const selected = t.id === value && !locked;
           return (
             <DropdownMenuItem
               key={t.id}
               onClick={() => (locked ? onLocked(t) : onChange(t.id))}
-              className={cn("items-start py-2.5", locked && "opacity-80")}
+              className={cn("gap-3 rounded-lg px-2.5 py-2.5", selected && "bg-accent")}
             >
-              <span className="mt-0.5 flex gap-0.5 text-primary">
-                {Array.from({ length: 4 }).map((_, k) => (
-                  <Gauge key={k} className={k <= i ? "opacity-100" : "opacity-20"} />
-                ))}
-              </span>
-              <span className="flex-1">
-                <span className="flex items-center gap-1.5 font-medium">
-                  {t.label}
+              <LevelBars level={i + 1} muted={locked} />
+              <span className="min-w-0 flex-1">
+                <span className={cn("flex items-center gap-1.5 text-sm font-medium", locked && "text-muted-foreground")}>
+                  {t.label.replace("Markethink ", "")}
                   {locked && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                      <Lock className="!size-2.5" /> {PLAN_LABEL[t.minPlan].toUpperCase()}
+                    <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 text-[10px] font-medium text-muted-foreground">
+                      <Lock className="!size-2.5" /> {PLAN_LABEL[t.minPlan]}
                     </span>
                   )}
                 </span>
-                <span className="block text-xs text-muted-foreground">
-                  {t.tagline[lang]} — {t.description[lang]}
-                </span>
-                <span className="mt-1 flex flex-wrap gap-1">
-                  {t.skills[lang].map((s) => (
-                    <span key={s} className="rounded border px-1.5 py-px text-[10px] text-muted-foreground">
-                      {s}
-                    </span>
-                  ))}
-                </span>
-                <span className="mt-1 block text-[11px] text-muted-foreground">
-                  {t.creditCost} {lang === "en" ? "credits / message" : "kredit / pesan"}
-                </span>
+                <span className="block truncate text-xs text-muted-foreground">{BEST_FOR[t.id]?.[lang] ?? t.tagline[lang]}</span>
               </span>
-              {t.id === value && !locked && <Check className="mt-0.5 text-primary" />}
+              <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
+                {t.creditCost} {lang === "en" ? "cr" : "kredit"}
+                <Check className={cn("!size-4 text-primary", !selected && "invisible")} />
+              </span>
             </DropdownMenuItem>
           );
         })}
+        <p className="px-2.5 pt-1.5 pb-1 text-[11px] leading-snug text-muted-foreground">
+          {lang === "en"
+            ? "Smarter brains use more credits per message."
+            : "Makin pintar otaknya, makin banyak kredit per pesan."}
+        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   );
