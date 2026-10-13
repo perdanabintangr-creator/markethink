@@ -8,6 +8,7 @@ import {
   TouchSensor,
   pointerWithin,
   closestCenter,
+  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
@@ -31,6 +32,7 @@ import {
   Folder,
   FolderInput,
   FolderOpen,
+  FolderOutput,
   LayoutGrid,
   Languages,
   Loader2,
@@ -200,8 +202,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       const allowed = (id: string) => {
         if (!active) return false;
         if (active.kind === "project") return id.startsWith("p:");
-        if (id.startsWith("p:")) return !active.item.toolRun;
-        if (id === HISTORY_ZONE) return isPinned(active.item);
+        if (id.startsWith("p:")) return !active.item.toolRun && id !== projectKey(active.item.workspace_id ?? "");
+        if (id === HISTORY_ZONE) return isPinned(active.item) || Boolean(active.item.workspace_id);
         return true;
       };
       const pick = (hits: ReturnType<CollisionDetection>) =>
@@ -255,8 +257,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
     const item = cur.item;
     if (target.startsWith("p:")) return void moveChat(item.id, target.slice(2));
+    // Chat dari dalam folder project yang dilepas di luar folder → keluarkan dari project dulu.
+    const fromProject = Boolean(item.workspace_id);
+    if (fromProject) void moveChat(item.id, null, { quiet: target === PIN_ZONE || pinned.some((c) => itemKey(c.id) === target) });
     if (target === HISTORY_ZONE) {
-      if (isPinned(item)) void savePins(pinned.filter((c) => c.id !== item.id), "Sematan dilepas");
+      if (fromProject) void placeInHistory(item, undefined, history[0]);
+      else if (isPinned(item)) void savePins(pinned.filter((c) => c.id !== item.id), "Sematan dilepas");
       return;
     }
     if (target === PIN_ZONE) {
@@ -332,21 +338,21 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   /** Pindahkan chat umum ke dalam project (drag & drop atau menu). */
-  async function moveChat(chatId: string, projectId: string) {
+  async function moveChat(chatId: string, projectId: string | null, opts: { quiet?: boolean } = {}) {
     const chat = chats.find((c) => c.id === chatId);
-    const project = workspaces.find((w) => w.id === projectId);
-    if (!chat || !project || chat.workspace_id === projectId) return;
-    if (chat.workspace_id) return void toast.error("Chat yang sudah berisi percakapan di project tidak bisa dipindah.");
-    setChats((list) => list.map((c) => (c.id === chatId ? { ...c, workspace_id: projectId, pin_order: null } : c)));
-    if (isPinned(chat)) void fetch("/api/pins", { method: "PATCH", body: JSON.stringify({ items: pinned.filter((c) => c.id !== chatId).map((c) => ({ id: c.id, kind: c.toolRun ? "run" : "chat" })) }) });
-    setExpanded((s) => new Set(s).add(projectId));
+    const project = projectId ? workspaces.find((w) => w.id === projectId) : null;
+    if (!chat || (projectId && !project) || chat.workspace_id === projectId) return;
+    setChats((list) => list.map((c) => (c.id === chatId ? { ...c, workspace_id: projectId, pin_order: projectId ? null : c.pin_order } : c)));
+    if (projectId && isPinned(chat))
+      void fetch("/api/pins", { method: "PATCH", body: JSON.stringify({ items: pinned.filter((c) => c.id !== chatId).map((c) => ({ id: c.id, kind: c.toolRun ? "run" : "chat" })) }) });
+    if (projectId) setExpanded((s) => new Set(s).add(projectId));
     const res = await fetch(`/api/chats/${chatId}`, { method: "PATCH", body: JSON.stringify({ workspace_id: projectId }) });
     if (!res.ok) {
       toast.error("Gagal memindahkan chat. Coba lagi.");
-    } else {
-      toast.success(`Dipindah ke project "${project.name}"`);
+      emitChatsChanged();
+    } else if (!opts.quiet) {
+      toast.success(project ? `Dipindah ke project "${project.name}"` : "Chat dikeluarkan dari project");
     }
-    emitChatsChanged();
   }
 
   /** Simpan urutan project baru. */
@@ -500,6 +506,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 onRename={rename}
                 onRemove={remove}
                 dropTarget={Boolean(activeItem) && over?.id === projectKey(w.id)}
+                projects={projects}
+                onMoveChat={(chatId, projectId) => void moveChat(chatId, projectId)}
               />
             );
           })}
@@ -735,6 +743,12 @@ function HistoryZone({ highlight, children }: { highlight: boolean; children: Re
   );
 }
 
+/** Chat di dalam folder project: bisa digeser keluar (ke riwayat, sematan, atau folder lain). */
+function DraggableRow({ chat, render }: { chat: HistoryItem; render: (dnd: RowDnd) => React.ReactNode }) {
+  const d = useDraggable({ id: itemKey(chat.id) });
+  return <>{render({ setNodeRef: d.setNodeRef, listeners: d.listeners, attributes: d.attributes, isDragging: d.isDragging })}</>;
+}
+
 /** Baris di "Disematkan": bisa diurutkan (item lain bergeser memberi ruang). */
 function SortableHistoryRow({ chat, line, render }: { chat: HistoryItem; line: "before" | "after" | null; render: (dnd: RowDnd) => React.ReactNode }) {
   const s = useSortable({ id: itemKey(chat.id) });
@@ -849,6 +863,8 @@ function ProjectRow({
   onRename,
   onRemove,
   dropTarget,
+  projects,
+  onMoveChat,
 }: {
   project: WorkspaceSummary;
   chats: ChatSummary[];
@@ -859,6 +875,8 @@ function ProjectRow({
   onRename: (c: ChatSummary) => void;
   onRemove: (c: ChatSummary) => void;
   dropTarget: boolean;
+  projects: WorkspaceSummary[];
+  onMoveChat: (chatId: string, projectId: string | null) => void;
 }) {
   const { t } = useApp();
   const Icon = open ? FolderOpen : Folder;
@@ -916,13 +934,21 @@ function ProjectRow({
             <Plus className="size-3.5" /> {t.newChatInProject}
           </Link>
           {chats.map((c) => (
-            <ChatItem
+            <DraggableRow
               key={c.id}
               chat={c}
-              active={pathname === `/chat/${c.id}`}
-              onNavigate={onNavigate}
-              onRename={onRename}
-              onRemove={onRemove}
+              render={(dnd) => (
+                <ChatItem
+                  chat={c}
+                  dnd={dnd}
+                  active={pathname === `/chat/${c.id}`}
+                  onNavigate={onNavigate}
+                  onRename={onRename}
+                  onRemove={onRemove}
+                  projects={projects}
+                  onMove={(projectId) => onMoveChat(c.id, projectId)}
+                />
+              )}
             />
           ))}
           {!chats.length && <p className="px-2 py-1 text-xs text-muted-foreground">{t.noProjectChats}</p>}
@@ -950,13 +976,14 @@ function ChatItem({
   onRemove: (c: HistoryItem) => void;
   /** Bila diisi, chat bisa digeser/dipindah ke salah satu project ini. */
   projects?: WorkspaceSummary[];
-  onMove?: (projectId: string) => void;
+  onMove?: (projectId: string | null) => void;
   /** Bila diisi, baris bisa digeser (drag & drop). */
   dnd?: RowDnd;
   onTogglePin?: (c: HistoryItem) => void;
 }) {
   const { t } = useApp();
-  const movable = Boolean(projects && onMove && !chat.toolRun && !chat.workspace_id);
+  const movable = Boolean(projects && onMove && !chat.toolRun);
+  const targets = (projects ?? []).filter((p) => p.id !== chat.workspace_id);
   return (
     <div
       ref={dnd?.setNodeRef}
@@ -990,11 +1017,16 @@ function ChatItem({
               {isPinned(chat) ? <PinOff /> : <Pin />} {isPinned(chat) ? "Lepas sematan" : "Sematkan"}
             </DropdownMenuItem>
           )}
-          {movable && !!projects?.length && (
+          {movable && chat.workspace_id && (
+            <DropdownMenuItem onClick={() => onMove?.(null)}>
+              <FolderOutput /> Keluarkan dari project
+            </DropdownMenuItem>
+          )}
+          {movable && targets.length > 0 && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Pindahkan ke project</DropdownMenuLabel>
-              {projects.slice(0, 8).map((p) => (
+              {targets.slice(0, 8).map((p) => (
                 <DropdownMenuItem key={p.id} onClick={() => onMove?.(p.id)}>
                   <FolderInput /> <span className="truncate">{p.name}</span>
                 </DropdownMenuItem>
