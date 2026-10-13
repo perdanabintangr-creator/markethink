@@ -1,4 +1,4 @@
-import { Calculator, MessageCircle, Radio, Stethoscope, Store, Telescope, Users, Wrench, type LucideIcon } from "lucide-react";
+import { Calculator, ClipboardList, Compass, PieChart, UserRound, MessageCircle, Radio, Stethoscope, Store, Telescope, Users, Wrench, type LucideIcon } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
   listing: Store,
@@ -8,6 +8,10 @@ const ICONS: Record<string, LucideIcon> = {
   calc: Calculator,
   competitor: Telescope,
   kol: Users,
+  sizing: PieChart,
+  persona: UserRound,
+  entry: Compass,
+  survey: ClipboardList,
 };
 
 export function ToolIcon({ id, className }: { id: string; className?: string }) {

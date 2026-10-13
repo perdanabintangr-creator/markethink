@@ -9,7 +9,20 @@ import { Input, Label, NativeSelect, Textarea } from "@/components/ui/input";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 import { emitChatsChanged } from "@/lib/events";
-import { KOL_TIER_LABEL, KOL_TIERS, PLATFORM_LABEL, PLATFORMS, WA_GOAL_LABEL, WA_GOALS } from "@/lib/addons/schemas";
+import {
+  BIZ_MODEL_LABEL,
+  BIZ_MODELS,
+  KOL_TIER_LABEL,
+  KOL_TIERS,
+  PLATFORM_LABEL,
+  PLATFORMS,
+  SURVEY_LENGTH,
+  SURVEY_TOPIC_LABEL,
+  SURVEY_TOPICS,
+  WA_GOAL_LABEL,
+  WA_GOALS,
+} from "@/lib/addons/schemas";
+import { sampleSize } from "@/lib/addons/sample";
 import { RequestAddonButton } from "./request-addon";
 import type { AddonStatusLite } from "./common";
 
@@ -19,6 +32,10 @@ const STEPS: Record<string, string[]> = {
   whatsapp: ["Memahami bisnismu…", "Menulis template pesan…", "Menyusun tips anti-spam…", "Menyusun file Excel…"],
   ads: ["Membaca laporan iklan…", "Menghitung performa tiap kampanye…", "Mendiagnosis iklan boros & bagus…", "Menyusun usulan budget…", "Membuat PPT & Excel…"],
   competitor: ["Mencari data kompetitor di web…", "Membaca sumber-sumber…", "Membandingkan harga & positioning…", "Menyusun SWOT & celah konten…", "Membuat PPT & Excel…"],
+  sizing: ["Mencari data pasar & laporan industri…", "Membaca sumber-sumber…", "Menghitung TAM, SAM & SOM…", "Menyusun proyeksi, tren & PESTEL…", "Membuat PPT & Excel…"],
+  persona: ["Mencari riset perilaku konsumen…", "Membaca survei & ulasan pembeli…", "Menyusun segmen pasar…", "Menulis persona & customer journey…", "Membuat PPT & Excel…"],
+  entry: ["Riset pemain & harga pasar…", "Mengecek izin & regulasi…", "Menilai kekuatan persaingan…", "Menghitung unit economics & risiko…", "Menyusun rencana 90 hari…", "Membuat PPT & Excel…"],
+  survey: ["Merumuskan tujuan & hipotesis…", "Menyusun screener…", "Menulis pertanyaan per bagian…", "Menyusun rencana analisis…", "Membuat Excel kuesioner…"],
   kol: ["Menyusun konsep kampanye…", "Menulis brief kreator…", "Menghitung estimasi fee…", "Membuat PPT & Excel…"],
 };
 
@@ -71,6 +88,23 @@ function collect(tool: string, form: HTMLFormElement, attachmentIds: string[]) {
       return { platform: str("platform"), goal: str("goal"), target: str("target"), notes: str("notes"), attachment_ids: attachmentIds };
     case "competitor":
       return { brand: str("brand"), product: str("product"), market: str("market"), competitors: str("competitors"), focus: str("focus") };
+    case "sizing":
+      return { product: str("product"), business: str("business"), area: str("area"), target: str("target"), price: str("price"), model: str("model"), goal: str("goal") };
+    case "persona":
+      return { product: str("product"), brand: str("brand"), area: str("area"), price: str("price"), model: str("model"), known: str("known"), goal: str("goal") };
+    case "entry":
+      return { idea: str("idea"), brand: str("brand"), area: str("area"), model: str("model"), price: str("price"), budget: str("budget"), assets: str("assets") };
+    case "survey":
+      return {
+        objective: str("objective"),
+        product: str("product"),
+        respondents: str("respondents"),
+        topics: all("topics"),
+        method: str("method"),
+        length: str("length"),
+        margin: Number(str("margin") || 5),
+        population: Number(str("population").replace(/\D/g, "") || 0),
+      };
     case "kol":
       return {
         brand: str("brand"),
@@ -86,6 +120,65 @@ function collect(tool: string, form: HTMLFormElement, attachmentIds: string[]) {
       };
   }
   return {};
+}
+
+const RESEARCH_TOOLS = new Set(["competitor", "sizing", "persona", "entry"]);
+
+/** Form survei + pratinjau jumlah responden (dihitung langsung saat isian berubah). */
+function SurveyFields() {
+  const [margin, setMargin] = useState(5);
+  const [population, setPopulation] = useState("");
+  const sample = sampleSize(margin, Number(population.replace(/\D/g, "") || 0));
+  return (
+    <>
+      <Field label="Apa yang ingin kamu ketahui? *" hint="Tulis tujuan riset / keputusan yang mau diambil.">
+        <Textarea name="objective" required maxLength={800} rows={3} placeholder="mis. Apakah pelanggan mau beli varian kopi gula aren 1 liter di harga Rp60rb, dan lewat kanal apa mereka biasa beli" />
+      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Target responden *">
+          <Input name="respondents" required maxLength={300} placeholder="mis. Pekerja 20-35 th di Jabodetabek, minum kopi ≥2×/minggu" />
+        </Field>
+        <Field label="Produk / brand (opsional)">
+          <Input name="product" maxLength={200} placeholder="mis. Kopi Senja literan" />
+        </Field>
+      </div>
+      <Field label="Topik yang ditanyakan *">
+        <Chips name="topics" options={SURVEY_TOPICS.map((t) => ({ value: t, label: SURVEY_TOPIC_LABEL[t] }))} defaults={["kebiasaan", "harga"]} />
+      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Cara sebar">
+          <NativeSelect name="method" defaultValue="online">
+            <option value="online">Online (Google Form, WA, IG)</option>
+            <option value="tatap_muka">Tatap muka</option>
+            <option value="telepon">Telepon</option>
+          </NativeSelect>
+        </Field>
+        <Field label="Panjang survei">
+          <NativeSelect name="length" defaultValue="sedang">
+            {Object.entries(SURVEY_LENGTH).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+        <Field label="Tingkat ketelitian">
+          <NativeSelect name="margin" value={margin} onChange={(e) => setMargin(Number(e.target.value))}>
+            <option value={3}>Sangat teliti (±3%)</option>
+            <option value={5}>Standar riset (±5%)</option>
+            <option value={10}>Cepat & hemat (±10%)</option>
+          </NativeSelect>
+        </Field>
+        <Field label="Jumlah populasi target (opsional)" hint="mis. jumlah pelanggan kamu. Kosongkan bila sangat besar.">
+          <Input name="population" inputMode="numeric" value={population} onChange={(e) => setPopulation(e.target.value)} placeholder="mis. 2000" />
+        </Field>
+      </div>
+      <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+        Kamu butuh minimal <b>{sample.n.toLocaleString("id-ID")} responden</b> — disarankan sebar ke{" "}
+        <b>{sample.recommended.toLocaleString("id-ID")}</b> (cadangan 20% untuk jawaban tidak valid).
+      </div>
+    </>
+  );
 }
 
 interface UploadedFile {
@@ -340,6 +433,89 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
           </>
         )}
 
+        {(tool === "sizing" || tool === "persona") && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Produk / kategori *">
+                <Input name="product" required maxLength={200} placeholder="mis. Kopi susu literan siap minum" />
+              </Field>
+              <Field label="Wilayah pasar" hint="Kosongkan = seluruh Indonesia">
+                <Input name="area" maxLength={120} placeholder="mis. Jabodetabek, Surabaya, Indonesia" />
+              </Field>
+              {tool === "sizing" ? (
+                <Field label="Bisnis kamu (opsional)">
+                  <Input name="business" maxLength={300} placeholder="mis. Kopi Senja, jual online via Shopee & TikTok" />
+                </Field>
+              ) : (
+                <Field label="Brand (opsional)">
+                  <Input name="brand" maxLength={100} placeholder="mis. Kopi Senja" />
+                </Field>
+              )}
+              <Field label="Harga rata-rata (opsional)">
+                <Input name="price" maxLength={80} placeholder="mis. Rp45.000 / liter" />
+              </Field>
+              <Field label="Model bisnis">
+                <NativeSelect name="model" defaultValue="b2c">
+                  {BIZ_MODELS.map((m) => (
+                    <option key={m} value={m}>
+                      {BIZ_MODEL_LABEL[m]}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+              {tool === "sizing" && (
+                <Field label="Target pembeli (opsional)">
+                  <Input name="target" maxLength={300} placeholder="mis. pekerja kantoran 22-35 th" />
+                </Field>
+              )}
+            </div>
+            {tool === "persona" && (
+              <Field label="Yang sudah kamu tahu tentang pelanggan (opsional)" hint="Makin banyak info, makin tajam persona-nya.">
+                <Textarea name="known" maxLength={800} rows={3} placeholder="mis. kebanyakan pembeli perempuan, beli saat promo gajian, sering tanya soal kadar gula" />
+              </Field>
+            )}
+            <Field label="Untuk keputusan apa riset ini? (opsional)">
+              <Input name="goal" maxLength={300} placeholder={tool === "sizing" ? "mis. cari investor / buka cabang / tentukan target omzet" : "mis. bikin konten & iklan yang lebih kena"} />
+            </Field>
+          </>
+        )}
+
+        {tool === "entry" && (
+          <>
+            <Field label="Rencana bisnis / produk *" hint="Ceritakan produk, cara jualan, dan target pembelinya.">
+              <Textarea name="idea" required maxLength={1200} rows={4} placeholder="mis. Mau jual frozen food dimsum premium untuk keluarga muda, dijual online di Shopee & reseller ibu-ibu" />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Brand (opsional)">
+                <Input name="brand" maxLength={100} />
+              </Field>
+              <Field label="Wilayah pasar" hint="Kosongkan = seluruh Indonesia">
+                <Input name="area" maxLength={120} placeholder="mis. Bandung" />
+              </Field>
+              <Field label="Model bisnis">
+                <NativeSelect name="model" defaultValue="b2c">
+                  {BIZ_MODELS.map((m) => (
+                    <option key={m} value={m}>
+                      {BIZ_MODEL_LABEL[m]}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <Field label="Rencana harga (opsional)">
+                <Input name="price" maxLength={80} placeholder="mis. Rp55.000 / pack" />
+              </Field>
+              <Field label="Modal yang tersedia (opsional)">
+                <Input name="budget" maxLength={80} placeholder="mis. Rp30 juta" />
+              </Field>
+            </div>
+            <Field label="Kekuatan / aset yang kamu punya (opsional)">
+              <Textarea name="assets" maxLength={600} rows={2} placeholder="mis. punya dapur sendiri, 5rb followers IG, jaringan reseller" />
+            </Field>
+          </>
+        )}
+
+        {tool === "survey" && <SurveyFields />}
+
         {tool === "kol" && (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -412,7 +588,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
           <div>
             <p className="font-medium">{steps[step]}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {elapsed}s · biasanya 30–{tool === "competitor" ? "120" : "60"} detik. Jangan tutup halaman ini.
+              {elapsed}s · biasanya 30–{RESEARCH_TOOLS.has(tool) ? "150" : "60"} detik. Jangan tutup halaman ini.
             </p>
           </div>
           <div className="flex gap-1.5">

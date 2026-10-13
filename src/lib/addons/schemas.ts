@@ -267,6 +267,251 @@ export const kolOutput = z.object({
   contract_points: z.array(t(200)),
 });
 
+// ================================================================ Market Research (ala konsultan)
+
+const priority = z.enum(["tinggi", "sedang", "rendah"]);
+const recs = z.array(z.object({ title: t(80), detail: t(260), priority }));
+export const BIZ_MODELS = ["b2c", "b2b", "keduanya"] as const;
+export const BIZ_MODEL_LABEL: Record<(typeof BIZ_MODELS)[number], string> = { b2c: "B2C (jual ke konsumen)", b2b: "B2B (jual ke bisnis)", keduanya: "B2C & B2B" };
+
+// ---------------------------------------------------------------- Ukuran & Tren Pasar
+
+export const sizingInput = z.object({
+  product: z.string().trim().min(2, "Isi produk / kategori").max(200),
+  business: opt(300),
+  area: opt(120),
+  target: opt(300),
+  price: opt(80),
+  model: z.enum(BIZ_MODELS).default("b2c"),
+  goal: opt(300),
+});
+
+const sizeLevel = z.object({
+  value_idr: z.number().describe("Nilai pasar per tahun dalam Rupiah (angka penuh, bukan juta)"),
+  buyers: t(80).describe("Perkiraan jumlah pembeli/unit, mis. '12 juta rumah tangga'"),
+  definition: t(200).describe("Siapa/apa yang termasuk di level ini"),
+  formula: t(260).describe("Cara hitung singkat dengan angka, mis. '12 jt RT × 6 beli/thn × Rp45rb'"),
+});
+
+export const sizingOutput = z.object({
+  summary: t(400).describe("2-3 kalimat inti: berapa besar pasarnya, tumbuh berapa, peluang utamanya"),
+  market_definition: t(240),
+  tam: sizeLevel,
+  sam: sizeLevel,
+  som: sizeLevel.describe("Target realistis 1-3 tahun pertama untuk bisnis user"),
+  bottom_up: z.array(z.object({ step: t(100), value: t(80), source: t(100).describe("sumber/asumsi") })).describe("4-7 langkah hitung bottom-up"),
+  cagr_pct: z.number().describe("Pertumbuhan pasar per tahun (%)"),
+  projection: z
+    .array(z.object({ year: z.number().int(), conservative: z.number(), base: z.number(), optimistic: z.number() }))
+    .describe("5 tahun ke depan, nilai SAM per tahun (Rupiah) untuk 3 skenario"),
+  lifecycle: z.enum(["perkenalan", "pertumbuhan", "dewasa", "penurunan"]),
+  lifecycle_note: t(200),
+  channels: z.array(z.object({ channel: t(40), share_pct: z.number() })).describe("Porsi penjualan per kanal (total ±100)"),
+  trends: z.array(z.object({ title: t(70), detail: t(220), impact: z.enum(["peluang", "ancaman"]) })).describe("4-6 tren"),
+  pestel: z
+    .array(
+      z.object({
+        factor: z.enum(["politik", "ekonomi", "sosial", "teknologi", "lingkungan", "hukum"]),
+        point: t(200),
+        impact: z.enum(["positif", "negatif", "netral"]),
+      }),
+    )
+    .describe("1-2 poin untuk tiap faktor PESTEL"),
+  drivers: z.array(t(160)),
+  barriers: z.array(t(160)),
+  recommendations: recs,
+  confidence: z.enum(["tinggi", "sedang", "rendah"]),
+  data_gaps: z.array(t(200)).describe("Data yang masih asumsi & cara memvalidasinya"),
+});
+
+// ---------------------------------------------------------------- Segmentasi & Persona
+
+export const personaInput = z.object({
+  product: z.string().trim().min(2, "Isi produk / kategori").max(200),
+  brand: opt(100),
+  area: opt(120),
+  price: opt(80),
+  model: z.enum(BIZ_MODELS).default("b2c"),
+  known: opt(800),
+  goal: opt(300),
+});
+
+export const personaOutput = z.object({
+  summary: t(400),
+  segments: z
+    .array(
+      z.object({
+        name: t(50),
+        description: t(200),
+        share_pct: z.number().describe("Perkiraan porsi pasar (%)"),
+        attractiveness: z.number().describe("1-10: ukuran, daya beli, pertumbuhan"),
+        ease: z.number().describe("1-10: seberapa mudah dimenangkan brand user"),
+        why: t(200),
+      }),
+    )
+    .describe("3-5 segmen"),
+  priority_segment: t(200).describe("Segmen yang disarankan digarap duluan + alasannya"),
+  personas: z
+    .array(
+      z.object({
+        name: t(40).describe("Nama panggilan Indonesia, mis. 'Rina, Ibu Muda Praktis'"),
+        segment: t(50),
+        age: t(30),
+        occupation: t(60),
+        income: t(60).describe("Kisaran penghasilan per bulan"),
+        location: t(60),
+        quote: t(160).describe("Kalimat khas persona, gaya bicara Indonesia"),
+        goals: z.array(t(120)),
+        pains: z.array(t(120)),
+        jobs: z.array(t(140)).describe("Jobs-to-be-done: 'Saat ..., saya ingin ..., agar ...'"),
+        triggers: z.array(t(120)),
+        objections: z.array(t(120)),
+        channels: z.array(t(40)),
+        message: t(200).describe("Pesan marketing yang paling kena untuk persona ini"),
+      }),
+    )
+    .describe("2-4 persona"),
+  journey: z
+    .array(
+      z.object({
+        stage: t(30),
+        doing: t(160),
+        thinking: t(160),
+        touchpoints: z.array(t(40)),
+        pain: t(160),
+        opportunity: t(200),
+      }),
+    )
+    .describe("5 tahap: Kenal → Pertimbangkan → Beli → Pakai/Ulang → Rekomendasi"),
+  drivers: z.array(z.object({ factor: t(50), importance: z.number().describe("1-10") })).describe("6-8 faktor keputusan beli"),
+  insights: z.array(z.object({ insight: t(200), evidence: t(220), implication: t(220) })).describe("3-5 consumer insight"),
+  recommendations: recs,
+});
+
+// ---------------------------------------------------------------- Kelayakan & Strategi Masuk Pasar
+
+export const entryInput = z.object({
+  idea: z.string().trim().min(10, "Ceritakan rencana bisnis/produk minimal 10 karakter").max(1200),
+  brand: opt(100),
+  area: opt(120),
+  model: z.enum(BIZ_MODELS).default("b2c"),
+  price: opt(80),
+  budget: opt(80),
+  assets: opt(600),
+});
+
+export const FORCES = ["pesaing", "pendatang_baru", "produk_pengganti", "kuasa_pembeli", "kuasa_pemasok"] as const;
+export const FORCE_LABEL: Record<(typeof FORCES)[number], string> = {
+  pesaing: "Persaingan antar pemain",
+  pendatang_baru: "Ancaman pendatang baru",
+  produk_pengganti: "Ancaman produk pengganti",
+  kuasa_pembeli: "Daya tawar pembeli",
+  kuasa_pemasok: "Daya tawar pemasok",
+};
+
+export const entryOutput = z.object({
+  summary: t(400),
+  verdict: z.enum(["go", "go_bersyarat", "tunda", "no_go"]),
+  verdict_reason: t(300),
+  scorecard: z
+    .array(z.object({ criterion: t(50), weight_pct: z.number(), score: z.number().describe("1-10"), note: t(180) }))
+    .describe("5-7 kriteria, total bobot 100: ukuran pasar, pertumbuhan, persaingan, margin, kemudahan masuk, kecocokan kemampuan, risiko regulasi"),
+  five_forces: z.array(z.object({ force: z.enum(FORCES), level: z.enum(["rendah", "sedang", "tinggi"]), reasons: z.array(t(160)) })),
+  barriers: z.array(t(160)),
+  regulations: z
+    .array(z.object({ name: t(60), status: z.enum(["wajib", "disarankan", "cek"]), detail: t(200), time: t(50), cost: t(60) }))
+    .describe("Izin & regulasi Indonesia yang relevan (NIB/OSS, PIRT, BPOM, Halal, SNI, merek DJKI, dsb.)"),
+  entry_modes: z.array(z.object({ mode: t(60), pros: t(180), cons: t(180), fit: z.number().describe("1-10") })).describe("3-4 cara masuk pasar"),
+  pricing: z.object({ strategy: t(60), price_range: t(80), rationale: t(260) }),
+  unit_economics: z.object({
+    price: z.number().describe("Harga jual per unit/pesanan (Rp)"),
+    cogs: z.number().describe("HPP per unit (Rp)"),
+    marketing: z.number().describe("Biaya marketing per pesanan (Rp)"),
+    other: z.number().describe("Biaya lain per pesanan: kemasan, ongkir, fee marketplace (Rp)"),
+    note: t(240),
+  }),
+  capital: z.array(z.object({ item: t(60), amount_idr: z.number() })).describe("Perkiraan modal awal per pos"),
+  risks: z.array(z.object({ risk: t(100), likelihood: z.number().describe("1-5"), impact: z.number().describe("1-5"), mitigation: t(200) })),
+  plan: z.array(z.object({ phase: t(40), focus: t(80), actions: z.array(t(140)), kpi: t(120) })).describe("3 fase: Hari 1-30, 31-60, 61-90"),
+  kpis: z.array(z.object({ metric: t(60), target: t(80) })),
+});
+
+// ---------------------------------------------------------------- Desain Survei & Kuesioner
+
+export const SURVEY_TOPICS = ["awareness", "kebiasaan", "harga", "konsep", "kepuasan", "media"] as const;
+export const SURVEY_TOPIC_LABEL: Record<(typeof SURVEY_TOPICS)[number], string> = {
+  awareness: "Kesadaran merek",
+  kebiasaan: "Kebiasaan & perilaku beli",
+  harga: "Sensitivitas harga",
+  konsep: "Uji konsep / produk baru",
+  kepuasan: "Kepuasan & NPS",
+  media: "Media & kanal favorit",
+};
+export const SURVEY_LENGTH = { singkat: "±5 menit (10-12 pertanyaan)", sedang: "±10 menit (18-22 pertanyaan)", lengkap: "±15 menit (25-30 pertanyaan)" } as const;
+
+export const surveyInput = z.object({
+  objective: z.string().trim().min(10, "Tulis tujuan riset minimal 10 karakter").max(800),
+  product: opt(200),
+  respondents: z.string().trim().min(3, "Isi target responden").max(300),
+  topics: z.array(z.enum(SURVEY_TOPICS)).min(1, "Pilih minimal 1 topik"),
+  method: z.enum(["online", "tatap_muka", "telepon"]).default("online"),
+  length: z.enum(["singkat", "sedang", "lengkap"]).default("sedang"),
+  margin: z.coerce.number().refine((v) => [3, 5, 10].includes(v)).default(5),
+  population: z.coerce.number().int().min(0).max(1_000_000_000).default(0),
+});
+
+export const QUESTION_TYPES = ["single", "multi", "likert", "skala", "nps", "ranking", "angka", "terbuka"] as const;
+export const QUESTION_TYPE_LABEL: Record<(typeof QUESTION_TYPES)[number], string> = {
+  single: "Pilihan tunggal",
+  multi: "Pilihan ganda (boleh >1)",
+  likert: "Skala setuju 1-5",
+  skala: "Skala 1-10",
+  nps: "NPS 0-10",
+  ranking: "Urutkan",
+  angka: "Angka",
+  terbuka: "Isian bebas",
+};
+
+export const surveyOutput = z.object({
+  title: t(90),
+  intro: t(500).describe("Kalimat pembuka untuk responden: tujuan, durasi, kerahasiaan, insentif"),
+  objectives: z.array(t(160)),
+  hypotheses: z.array(t(200)),
+  screener: z.array(z.object({ text: t(200), options: z.array(t(60)), qualify: t(120).describe("Jawaban yang lolos / yang dihentikan") })),
+  quotas: z.array(z.object({ group: t(60), share_pct: z.number() })).describe("Kuota responden per kelompok (total 100)"),
+  sections: z
+    .array(
+      z.object({
+        title: t(60),
+        purpose: t(160),
+        questions: z.array(
+          z.object({
+            code: t(8).describe("Q1, Q2, …"),
+            text: t(240),
+            type: z.enum(QUESTION_TYPES),
+            options: z.array(t(80)).describe("Kosong untuk terbuka/angka/nps"),
+            note: t(140).describe("Logika lompat / instruksi, kosong bila tidak ada"),
+          }),
+        ),
+      }),
+    ),
+  analysis: z.array(z.object({ objective: t(120), questions: t(60), method: t(160), output: t(160) })),
+  fieldwork: z.array(t(200)).describe("Tips sebar, insentif, cek kualitas jawaban"),
+  incentive: t(120),
+});
+
+export type SizingOutput = z.infer<typeof sizingOutput> & { sources?: { title: string; url: string }[] };
+export type PersonaOutput = z.infer<typeof personaOutput> & { sources?: { title: string; url: string }[] };
+export type EntryOutput = z.infer<typeof entryOutput> & {
+  sources?: { title: string; url: string }[];
+  /** Dihitung program dari scorecard (bukan AI). */
+  weighted_score?: number;
+};
+export type SurveyOutput = z.infer<typeof surveyOutput> & {
+  /** Dihitung program (rumus Cochran), bukan AI. */
+  sample?: { n: number; recommended: number; margin: number; confidence: number; population: number | null };
+};
+
 export type ListingOutput = z.infer<typeof listingOutput>;
 export type LiveOutput = z.infer<typeof liveOutput>;
 export type WhatsappOutput = z.infer<typeof whatsappOutput>;
@@ -281,5 +526,9 @@ export const TOOL_INPUTS = {
   ads: adsInput,
   competitor: competitorInput,
   kol: kolInput,
+  sizing: sizingInput,
+  persona: personaInput,
+  entry: entryInput,
+  survey: surveyInput,
 } as const;
 export type AiToolId = keyof typeof TOOL_INPUTS;

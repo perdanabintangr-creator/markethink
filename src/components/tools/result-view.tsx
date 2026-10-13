@@ -1,12 +1,27 @@
 "use client";
 
-import type { AdsOutput, CompetitorOutput, KolOutput, ListingOutput, LiveOutput, WhatsappOutput } from "@/lib/addons/schemas";
+import type {
+  AdsOutput,
+  CompetitorOutput,
+  EntryOutput,
+  KolOutput,
+  ListingOutput,
+  LiveOutput,
+  PersonaOutput,
+  SizingOutput,
+  SurveyOutput,
+  WhatsappOutput,
+} from "@/lib/addons/schemas";
 import { ListingResult } from "./results/listing";
 import { LiveResult } from "./results/live";
 import { WhatsappResult } from "./results/whatsapp";
 import { AdsResult } from "./results/ads";
 import { CompetitorResult } from "./results/competitor";
 import { KolResult } from "./results/kol";
+import { SizingResult } from "./results/sizing";
+import { PersonaResult } from "./results/persona";
+import { EntryResult } from "./results/entry";
+import { SurveyResult } from "./results/survey";
 
 export function ResultView({ tool, output, input }: { tool: string; output: unknown; input: Record<string, unknown> }) {
   switch (tool) {
@@ -22,6 +37,14 @@ export function ResultView({ tool, output, input }: { tool: string; output: unkn
       return <CompetitorResult data={output as CompetitorOutput} brand={String(input.brand ?? "Brand kamu")} />;
     case "kol":
       return <KolResult data={output as KolOutput} />;
+    case "sizing":
+      return <SizingResult data={output as SizingOutput} />;
+    case "persona":
+      return <PersonaResult data={output as PersonaOutput} />;
+    case "entry":
+      return <EntryResult data={output as EntryOutput} />;
+    case "survey":
+      return <SurveyResult data={output as SurveyOutput} />;
   }
   return null;
 }

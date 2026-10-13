@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Folder,
   FolderOpen,
+  LayoutGrid,
   Languages,
   Loader2,
   LogOut,
@@ -40,7 +41,7 @@ import {
 import { CHATS_CHANGED, emitChatsChanged } from "@/lib/events";
 import type { ChatSummary, ToolRunSummary, WorkspaceSummary } from "@/lib/types";
 import { ToolIcon } from "@/components/tools/tool-icon";
-import { toolInfo } from "@/lib/addons/catalog";
+import { MENU_GROUPS, TOOLS, toolInfo } from "@/lib/addons/catalog";
 
 /** Item riwayat: chat biasa atau hasil Tools Pro (punya `toolRun`). */
 type HistoryItem = ChatSummary & { toolRun?: { tool: string } };
@@ -200,10 +201,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     router.refresh();
   }
 
-  const nav = [
-    { href: "/tools", label: t.toolsPro, icon: Wrench, badge: t.newBadge },
-    { href: "/agents", label: t.agents, icon: Bot },
-  ];
 
   return (
     <div className="flex h-full flex-col gap-3 bg-muted/40 p-3">
@@ -216,22 +213,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       </Button>
       <nav className="space-y-0.5">
-        {nav.map((n) => (
-          <Link
-            key={n.href}
-            href={n.href}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent",
-              pathname.startsWith(n.href) && "bg-accent font-medium",
-            )}
-          >
-            <n.icon className="size-4" /> {n.label}
-            {"badge" in n && n.badge && (
-              <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{n.badge}</span>
-            )}
-          </Link>
-        ))}
+        <ToolsMenu pathname={pathname} onNavigate={onNavigate} />
+        <Link
+          href="/agents"
+          onClick={onNavigate}
+          className={cn("flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent", pathname.startsWith("/agents") && "bg-accent font-medium")}
+        >
+          <Bot className="size-4" /> {t.agents}
+        </Link>
       </nav>
 
       <div className="relative">
@@ -396,6 +385,92 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+const TOOLS_OPEN_KEY = "mt_tools_menu_open";
+
+/** Menu "Tools Pro" yang bisa dibuka-tutup: submenu per kelompok (Market Research, Jualan Online, Iklan). */
+function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const { t } = useApp();
+  const inTools = pathname.startsWith("/tools");
+  const [open, setOpen] = useState(inTools);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(TOOLS_OPEN_KEY);
+      if (saved !== null) setOpen(saved === "1" || inTools);
+    } catch {
+      /* penyimpanan browser tidak tersedia */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (inTools) setOpen(true);
+  }, [inTools]);
+
+  function toggle() {
+    setOpen((v) => {
+      try {
+        localStorage.setItem(TOOLS_OPEN_KEY, v ? "0" : "1");
+      } catch {
+        /* abaikan */
+      }
+      return !v;
+    });
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        className={cn("flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent", inTools && !open && "bg-accent font-medium")}
+      >
+        <Wrench className="size-4" /> {t.toolsPro}
+        <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{t.newBadge}</span>
+        <ChevronRight className={cn("size-3.5 text-muted-foreground transition-transform", open && "rotate-90")} />
+      </button>
+      {open && (
+        <div className="mb-1 ml-4 max-h-[42vh] overflow-y-auto border-l pl-1.5">
+          <Link
+            href="/tools"
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground",
+              pathname === "/tools" && "bg-accent font-medium text-foreground",
+            )}
+          >
+            <LayoutGrid className="size-3.5" /> Semua tools & kuota
+          </Link>
+          {MENU_GROUPS.map((g) => (
+            <div key={g.addon} className="mt-1.5">
+              <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">{g.label}</p>
+              {TOOLS.filter((tool) => tool.addon === g.addon).map((tool) => {
+                const href = `/tools/${tool.id}`;
+                const active = pathname === href || pathname.startsWith(`${href}/`);
+                return (
+                  <Link
+                    key={tool.id}
+                    href={href}
+                    onClick={onNavigate}
+                    title={tool.name}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground",
+                      active && "bg-accent font-medium text-foreground",
+                    )}
+                  >
+                    <ToolIcon id={tool.id} className="size-3.5 shrink-0" />
+                    <span className="truncate">{tool.menu}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

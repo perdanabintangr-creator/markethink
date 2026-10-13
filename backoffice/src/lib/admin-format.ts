@@ -24,12 +24,16 @@ export const COST_CATEGORY: Record<string, string> = {
   "tool:ads": "Tools · Analis laporan iklan",
   "tool:competitor": "Tools · Riset kompetitor",
   "tool:kol": "Tools · Brief KOL",
+  "tool:sizing": "Tools · Ukuran & tren pasar",
+  "tool:persona": "Tools · Persona konsumen",
+  "tool:entry": "Tools · Studi kelayakan",
+  "tool:survey": "Tools · Desain survei",
 };
 
 export const ADDON_NAME: Record<string, string> = {
   jualan_kit: "Jualan Online Kit",
   dokter_iklan: "Dokter Iklan",
-  riset_pro: "Riset Pasar Pro",
+  riset_pro: "Market Research Pro",
 };
 
 export const FEATURE_NAME: Record<string, string> = {

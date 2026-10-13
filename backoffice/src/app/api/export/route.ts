@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const jsonError = (status: number, error: string) => Response.json({ error }, { status });
 
 const PLAN: Record<string, string> = { beta: "Free", pro: "Pro", promax: "Promax" };
-const ADDON: Record<string, string> = { jualan_kit: "Jualan Online Kit", dokter_iklan: "Dokter Iklan", riset_pro: "Riset Pasar Pro" };
+const ADDON: Record<string, string> = { jualan_kit: "Jualan Online Kit", dokter_iklan: "Dokter Iklan", riset_pro: "Market Research Pro" };
 
 /** Ekspor CSV (bisa dibuka di Excel/Sheets) untuk tim back office: pelanggan, penjualan, atau waitlist. */
 export async function GET(req: Request) {

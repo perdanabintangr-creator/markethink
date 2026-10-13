@@ -149,3 +149,192 @@ export const kolFixture = {
   dm_template: "Halo kak {nama_kreator}! Kami dari Kopi Senja ingin mengajak kolaborasi…",
   contract_points: ["Hak pakai konten 3 bulan", "Pembayaran 50% di muka", "Maks 2 revisi"],
 };
+
+// ---------------------------------------------------------------- Market Research
+
+const rec = (title: string, priority: "tinggi" | "sedang" | "rendah" = "tinggi") => ({ title, detail: long("Detail langkah yang bisa langsung dieksekusi tim", 200), priority });
+
+export const sizingFixture = {
+  summary: "Pasar kopi siap minum di Jabodetabek bernilai ±Rp9,6 triliun dan tumbuh 12%/tahun; kanal online tumbuh tercepat.",
+  market_definition: "Kopi susu siap minum (RTD & literan) untuk konsumen 18-40 tahun.",
+  tam: { value_idr: 9_600_000_000_000, buyers: "16 juta peminum kopi", definition: "Semua penjualan kopi siap minum di Jabodetabek", formula: "16 jt × 50 gelas/thn × Rp12rb" },
+  sam: { value_idr: 1_200_000_000_000, buyers: "2 juta pembeli online", definition: "Kopi literan dibeli online", formula: "2 jt × 13 liter/thn × Rp45rb" },
+  som: { value_idr: 12_000_000_000, buyers: "20 ribu pelanggan", definition: "1% SAM dalam 3 tahun", formula: "1% × SAM" },
+  bottom_up: [
+    { step: "Penduduk 18-40 th Jabodetabek", value: "14 juta", source: "BPS 2025" },
+    { step: "Peminum kopi rutin", value: "45%", source: "Survei Jakpat" },
+    { step: "Beli kopi literan online", value: "30%", source: "Asumsi" },
+    { step: "Belanja per tahun", value: "Rp585rb", source: "13 liter × Rp45rb" },
+  ],
+  cagr_pct: 12,
+  projection: [2026, 2027, 2028, 2029, 2030].map((year, i) => ({
+    year,
+    conservative: 1.2e12 * 1.08 ** i,
+    base: 1.2e12 * 1.12 ** i,
+    optimistic: 1.2e12 * 1.17 ** i,
+  })),
+  lifecycle: "pertumbuhan",
+  lifecycle_note: "Pemain baru masih bisa masuk lewat diferensiasi rasa & kanal.",
+  channels: [
+    { channel: "Marketplace", share_pct: 40 },
+    { channel: "Social commerce", share_pct: 25 },
+    { channel: "Gerai", share_pct: 35 },
+  ],
+  trends: [
+    { title: "Gula rendah", detail: "Konsumen makin peduli kadar gula.", impact: "peluang" },
+    { title: "Perang harga", detail: "Brand besar agresif promo.", impact: "ancaman" },
+  ],
+  pestel: [
+    { factor: "politik", point: "Rencana cukai minuman berpemanis.", impact: "negatif" },
+    { factor: "ekonomi", point: "Daya beli kelas menengah tertekan.", impact: "negatif" },
+    { factor: "sosial", point: "Budaya ngopi di rumah meningkat.", impact: "positif" },
+    { factor: "teknologi", point: "Live shopping mendorong penjualan.", impact: "positif" },
+    { factor: "lingkungan", point: "Tuntutan kemasan ramah lingkungan.", impact: "netral" },
+    { factor: "hukum", point: "Wajib PIRT/BPOM & halal.", impact: "netral" },
+  ],
+  drivers: ["Kebiasaan ngopi harian", "Pertumbuhan e-commerce"],
+  barriers: ["Umur simpan pendek", "Ongkir rantai dingin"],
+  recommendations: [rec("Fokus varian gula aren rendah gula"), rec("Masuk TikTok Shop dulu", "sedang"), rec("Bundling langganan mingguan", "rendah")],
+  confidence: "sedang",
+  data_gaps: ["Validasi frekuensi beli lewat survei 200 responden"],
+};
+
+export const personaFixture = {
+  summary: "Dua segmen utama: pekerja kantoran praktis dan ibu muda pencari camilan keluarga.",
+  segments: [
+    { name: "Pekerja praktis", description: "Butuh kopi enak tanpa antre.", share_pct: 45, attractiveness: 8, ease: 7, why: "Belanja rutin" },
+    { name: "Ibu muda", description: "Stok kopi di kulkas untuk keluarga.", share_pct: 30, attractiveness: 7, ease: 6, why: "Beli banyak" },
+    { name: "Mahasiswa", description: "Sensitif harga.", share_pct: 25, attractiveness: 4, ease: 8, why: "Ramai tapi murah" },
+  ],
+  priority_segment: "Pekerja praktis — paling sering beli dan mudah dijangkau lewat TikTok.",
+  personas: [
+    {
+      name: "Rina, Karyawati Praktis",
+      segment: "Pekerja praktis",
+      age: "27 tahun",
+      occupation: "Staf admin",
+      income: "Rp7-9 jt/bulan",
+      location: "Bekasi",
+      quote: "Pengennya kopi enak tapi nggak ribet antre tiap pagi.",
+      goals: ["Hemat waktu pagi", "Hemat uang jajan"],
+      pains: ["Antre lama", "Kopi kemanisan"],
+      jobs: ["Saat berangkat kerja, saya ingin kopi siap minum, agar tetap fokus"],
+      triggers: ["Promo gajian", "Review TikTok"],
+      objections: ["Takut cepat basi"],
+      channels: ["TikTok", "Shopee"],
+      message: "Kopi kafe di kulkasmu, cukup tuang.",
+    },
+    {
+      name: "Dewi, Ibu Muda",
+      segment: "Ibu muda",
+      age: "32 tahun",
+      occupation: "Ibu rumah tangga",
+      income: "Rp10-15 jt/bulan (RT)",
+      location: "Depok",
+      quote: "Kalau ada tamu enak ada stok kopi.",
+      goals: ["Stok praktis"],
+      pains: ["Ongkir mahal"],
+      jobs: ["Saat ada tamu, saya ingin suguhan cepat, agar tidak repot"],
+      triggers: ["Gratis ongkir"],
+      objections: ["Harga per liter"],
+      channels: ["WhatsApp", "Instagram"],
+      message: "Stok kopi keluarga, hemat lebih banyak.",
+    },
+  ],
+  journey: ["Kenal", "Pertimbangkan", "Beli", "Pakai ulang", "Rekomendasi"].map((stage) => ({
+    stage,
+    doing: "Melihat konten TikTok",
+    thinking: "Enak nggak ya?",
+    touchpoints: ["TikTok", "Shopee"],
+    pain: "Ragu rasa",
+    opportunity: "Tampilkan uji rasa jujur",
+  })),
+  drivers: [
+    { factor: "Rasa", importance: 9 },
+    { factor: "Harga", importance: 8 },
+    { factor: "Review", importance: 7 },
+  ],
+  insights: [
+    { insight: "Kopi literan dianggap investasi hemat", evidence: "Ulasan menyebut 'lebih hemat dari beli cup'", implication: "Komunikasikan harga per gelas" },
+    { insight: "Takut basi menahan pembelian", evidence: "Pertanyaan umur simpan sering muncul", implication: "Tampilkan tanggal & cara simpan" },
+  ],
+  recommendations: [rec("Konten 'harga per gelas'"), rec("Garansi segar", "sedang")],
+};
+
+export const entryFixture = {
+  summary: "Bisnis dimsum frozen premium layak dijalankan bertahap lewat marketplace & reseller.",
+  verdict: "go_bersyarat",
+  verdict_reason: "Pasar tumbuh dan margin sehat, tetapi perlu PIRT & halal sebelum skala besar.",
+  scorecard: [
+    { criterion: "Ukuran pasar", weight_pct: 25, score: 8, note: "Besar" },
+    { criterion: "Persaingan", weight_pct: 20, score: 5, note: "Ramai" },
+    { criterion: "Margin", weight_pct: 20, score: 7, note: "40%" },
+    { criterion: "Kemudahan masuk", weight_pct: 15, score: 7, note: "Modal kecil" },
+    { criterion: "Risiko regulasi", weight_pct: 20, score: 6, note: "Perlu izin" },
+  ],
+  five_forces: [
+    { force: "pesaing", level: "tinggi", reasons: ["Banyak brand frozen food"] },
+    { force: "pendatang_baru", level: "tinggi", reasons: ["Modal masuk rendah"] },
+    { force: "produk_pengganti", level: "sedang", reasons: ["Makanan siap saji lain"] },
+    { force: "kuasa_pembeli", level: "sedang", reasons: ["Mudah pindah brand"] },
+    { force: "kuasa_pemasok", level: "rendah", reasons: ["Bahan mudah didapat"] },
+  ],
+  barriers: ["Rantai dingin", "Kepercayaan merek"],
+  regulations: [
+    { name: "NIB (OSS)", status: "wajib", detail: "Daftar usaha", time: "1 hari", cost: "Gratis" },
+    { name: "SPP-IRT", status: "wajib", detail: "Izin pangan rumahan", time: "2-4 minggu", cost: "Gratis-Rp500rb" },
+    { name: "Sertifikat halal", status: "wajib", detail: "BPJPH self-declare", time: "2-4 minggu", cost: "Gratis (SEHATI)" },
+  ],
+  entry_modes: [
+    { mode: "Marketplace", pros: "Jangkauan luas", cons: "Persaingan harga", fit: 8 },
+    { mode: "Reseller", pros: "Modal promosi kecil", cons: "Margin terbagi", fit: 7 },
+    { mode: "B2B kafe", pros: "Order besar", cons: "Tempo bayar", fit: 5 },
+  ],
+  pricing: { strategy: "Premium terjangkau", price_range: "Rp50-60rb/pack", rationale: "Di atas brand massal, di bawah restoran." },
+  unit_economics: { price: 55000, cogs: 25000, marketing: 8000, other: 7000, note: "Belum termasuk gaji pemilik." },
+  capital: [
+    { item: "Freezer", amount_idr: 6_000_000 },
+    { item: "Bahan awal", amount_idr: 5_000_000 },
+    { item: "Izin & kemasan", amount_idr: 3_000_000 },
+  ],
+  risks: [
+    { risk: "Produk rusak saat kirim", likelihood: 3, impact: 4, mitigation: "Kemasan ice gel & kurir instan" },
+    { risk: "Perang harga", likelihood: 4, impact: 3, mitigation: "Bundling & diferensiasi rasa" },
+  ],
+  plan: [
+    { phase: "Hari 1-30", focus: "Izin & uji rasa", actions: ["Urus NIB", "Tes 50 pembeli"], kpi: "50 order" },
+    { phase: "Hari 31-60", focus: "Marketplace", actions: ["Buka toko Shopee"], kpi: "200 order" },
+    { phase: "Hari 61-90", focus: "Reseller", actions: ["Rekrut 10 reseller"], kpi: "500 order" },
+  ],
+  kpis: [{ metric: "Repeat order", target: "30%" }],
+};
+
+export const surveyFixture = {
+  title: "Survei Minat Kopi Literan Gula Aren",
+  intro: "Halo! Survei 10 menit ini untuk memahami kebiasaan minum kopimu. Jawaban dirahasiakan.",
+  objectives: ["Mengukur minat beli", "Menentukan harga optimal"],
+  hypotheses: ["Pekerja kantoran mau membayar Rp55-65rb per liter"],
+  screener: [{ text: "Seberapa sering kamu minum kopi?", options: ["Setiap hari", "2-3×/minggu", "Jarang"], qualify: "Lanjut bila minimal 2-3×/minggu" }],
+  quotas: [
+    { group: "Pria", share_pct: 50 },
+    { group: "Wanita", share_pct: 50 },
+  ],
+  sections: [
+    {
+      title: "Kebiasaan",
+      purpose: "Memahami pola beli",
+      questions: [
+        { code: "x", text: "Di mana kamu biasa beli kopi?", type: "multi", options: ["Gerai", "Online", "Minimarket"], note: "" },
+        { code: "x", text: "Seberapa besar kemungkinan kamu merekomendasikan brand kopi favoritmu?", type: "nps", options: [], note: "" },
+      ],
+    },
+    {
+      title: "Harga",
+      purpose: "Van Westendorp",
+      questions: [{ code: "x", text: "Di harga berapa kopi literan terasa terlalu mahal?", type: "angka", options: [], note: "" }],
+    },
+  ],
+  analysis: [{ objective: "Harga optimal", questions: "Q3", method: "Van Westendorp", output: "Rentang harga" }],
+  fieldwork: ["Sebar lewat grup WA kantor", "Tambahkan pertanyaan cek perhatian"],
+  incentive: "Voucher Rp10rb untuk 50 responden terpilih",
+};

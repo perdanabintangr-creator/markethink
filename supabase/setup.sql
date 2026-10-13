@@ -2066,3 +2066,13 @@ $$;
 -- ===== 20261013000021_tool_runs_hidden.sql =====
 -- Hasil tools bisa disembunyikan dari riwayat sidebar (tetap dihitung kuota; tidak dihapus).
 alter table public.tool_runs add column if not exists hidden boolean not null default false;
+
+
+-- ===== 20261013000022_market_research.sql =====
+-- Add-on "Riset Pasar Pro" menjadi "Market Research Pro": tambah tools ukuran pasar, persona, studi kelayakan & desain survei.
+-- Harga & kuota tidak berubah.
+update public.addons
+   set name = 'Market Research Pro',
+       tagline = 'Riset pasar ala konsultan: ukuran pasar, persona, kompetitor, kelayakan & survei',
+       updated_at = now()
+ where id = 'riset_pro' and name = 'Riset Pasar Pro';

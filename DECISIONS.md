@@ -56,3 +56,13 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - 2026-10-13 — Fix: halaman Tools Pro error ("Ada yang tidak beres") karena halaman server memanggil fungsi format (rupiah/tanggal/teks kuota) dari modul "use client". Fungsi & tipe dipindah ke `src/lib/addons/format.ts` (aman server & client); dicek tidak ada impor fungsi lain dari modul client di halaman server.
 - 2026-10-13 — Fix Tools Pro (laporan founder: Analis Laporan Iklan gagal 3×): (1) PDF laporan hasil scan/"compressed" tidak punya teks → kini dikirim utuh ke AI untuk dibaca visual; file yang benar-benar tak terbaca → pesan jelas (bukan hasil karangan). (2) PPT tidak lagi bisa menggagalkan hasil: slide dengan data kurang (grafik 1 data, kartu tunggal, timeline < 3) otomatis diubah jadi poin/dibuang (`sanitizeDeck`); bila PPT tetap gagal, hasil + Excel tetap jadi. Tes data tipis untuk semua tool ditambahkan.
 - 2026-10-13 — Hasil Tools Pro tampil di **riwayat sidebar** (Hari ini / 7 hari terakhir …) bersama chat, dengan ikon tool & bisa dicari, diganti nama, atau disembunyikan. Disembunyikan = `tool_runs.hidden` (tidak dihapus, tetap dihitung kuota agar tidak bisa diakali). API `/api/chats` ikut mengirim `toolRuns`; ganti nama/sembunyikan lewat `/api/tools/runs/:id`. Migrasi 0021.
+
+## 2026-10-13 — Tools Pro jadi dropdown + Market Research Pro
+- Sidebar: "Tools Pro" kini dropdown (buka/tutup, diingat browser; otomatis terbuka di halaman /tools) dengan submenu per kelompok: Market Research, Jualan Online, Iklan.
+- Add-on `riset_pro` diganti nama "Market Research Pro" (harga Rp50rb & kuota 6/bulan TIDAK berubah). 4 tools baru mengikuti kerja konsultan (McKinsey/BCG: TAM-SAM-SOM, Porter, scorecard go/no-go; Nielsen/Kantar/Jakpat/Populix: persona, journey, kuesioner):
+  - `sizing` Ukuran & Tren Pasar (riset web, TAM/SAM/SOM + bottom-up, proyeksi 3 skenario, kanal, tren, PESTEL).
+  - `persona` Segmentasi & Persona (riset web, matriks segmen, persona, customer journey, faktor beli, insight).
+  - `entry` Studi Kelayakan (riset web, scorecard → skor dihitung program, 5 Forces, izin RI, unit economics, modal, matriks risiko, rencana 90 hari).
+  - `survey` Desain Survei (tanpa web; jumlah responden dihitung rumus Cochran, screener, Van Westendorp/NPS, Excel siap Google Form).
+- Helper riset web dipindah ke `src/lib/addons/helpers.ts` (dipakai juga oleh Riset Kompetitor).
+- Perkiraan biaya modal per pemakaian: sizing/persona/entry ±Rp5-8rb, survey ±Rp2rb.
