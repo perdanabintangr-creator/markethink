@@ -38,7 +38,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CHATS_CHANGED, emitChatsChanged } from "@/lib/events";
-import type { ChatSummary, WorkspaceSummary } from "@/lib/types";
+import type { ChatSummary, ToolRunSummary, WorkspaceSummary } from "@/lib/types";
+import { ToolIcon } from "@/components/tools/tool-icon";
+import { toolInfo } from "@/lib/addons/catalog";
+
+/** Item riwayat: chat biasa atau hasil Tools Pro (punya `toolRun`). */
+type HistoryItem = ChatSummary & { toolRun?: { tool: string } };
+
+const runToItem = (r: ToolRunSummary): HistoryItem => ({
+  id: r.id,
+  title: r.title || toolInfo(r.tool)?.name || "Tools Pro",
+  updated_at: r.created_at,
+  workspace_id: null,
+  share_token: null,
+  toolRun: { tool: r.tool },
+});
+const itemHref = (c: HistoryItem) => (c.toolRun ? `/tools/${c.toolRun.tool}/${c.id}` : `/chat/${c.id}`);
 import { cn } from "@/lib/utils";
 import { useApp } from "./app-context";
 import { CreditMeter } from "./credit-meter";
@@ -59,13 +74,18 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter();
   const { setTheme } = useTheme();
   const [chats, setChats] = useState<ChatSummary[]>([]);
+  const [runs, setRuns] = useState<HistoryItem[]>([]);
   const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     const res = await fetch("/api/chats");
-    if (res.ok) setChats((await res.json()).chats);
+    if (res.ok) {
+      const data = await res.json();
+      setChats(data.chats);
+      setRuns(((data.toolRuns ?? []) as ToolRunSummary[]).map(runToItem));
+    }
     setLoaded(true);
   }, []);
 
@@ -87,8 +107,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   const groups = useMemo(() => {
     // Chat di dalam project tampil di folder project-nya, bukan di riwayat umum.
-    const list = matching.filter((c) => !c.workspace_id);
-    const out: { label: string; items: ChatSummary[] }[] = [];
+    const runMatches = q ? runs.filter((r) => r.title.toLowerCase().includes(q)) : runs;
+    const list: HistoryItem[] = [...matching.filter((c) => !c.workspace_id), ...runMatches].sort((a, b) =>
+      b.updated_at.localeCompare(a.updated_at),
+    );
+    const out: { label: string; items: HistoryItem[] }[] = [];
     for (const c of list) {
       const label = groupLabel(c.updated_at);
       const g = out.find((x) => x.label === label);
@@ -96,7 +119,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       else out.push({ label, items: [c] });
     }
     return out;
-  }, [matching]);
+  }, [matching, runs, q]);
 
   function toggleProject(id: string) {
     setExpanded((s) => {
@@ -109,7 +132,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   // Jendela isian di dalam aplikasi (bukan pop-up browser) untuk project baru, ganti nama, dan hapus chat.
   const [dlg, setDlg] = useState<
-    { kind: "newProject" } | { kind: "rename"; chat: ChatSummary } | { kind: "delete"; chat: ChatSummary } | null
+    { kind: "newProject" } | { kind: "rename"; chat: HistoryItem } | { kind: "delete"; chat: HistoryItem } | null
   >(null);
   const [dlgValue, setDlgValue] = useState("");
   const [dlgError, setDlgError] = useState<string | null>(null);
@@ -123,8 +146,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   const newProject = () => openDialog({ kind: "newProject" });
-  const rename = (chat: ChatSummary) => openDialog({ kind: "rename", chat });
-  const remove = (chat: ChatSummary) => openDialog({ kind: "delete", chat });
+  const rename = (chat: HistoryItem) => openDialog({ kind: "rename", chat });
+  const remove = (chat: HistoryItem) => openDialog({ kind: "delete", chat });
 
   async function submitDialog(e?: React.FormEvent) {
     e?.preventDefault();
@@ -154,17 +177,18 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         const title = dlgValue.trim();
         if (!title) return;
         if (title !== dlg.chat.title) {
-          await fetch(`/api/chats/${dlg.chat.id}`, { method: "PATCH", body: JSON.stringify({ title }) });
+          const url = dlg.chat.toolRun ? `/api/tools/runs/${dlg.chat.id}` : `/api/chats/${dlg.chat.id}`;
+          await fetch(url, { method: "PATCH", body: JSON.stringify({ title }) });
           emitChatsChanged();
         }
         setDlg(null);
       } else {
         const chat = dlg.chat;
-        await fetch(`/api/chats/${chat.id}`, { method: "DELETE" });
+        await fetch(chat.toolRun ? `/api/tools/runs/${chat.id}` : `/api/chats/${chat.id}`, { method: "DELETE" });
         setDlg(null);
-        toast.success("Chat dihapus");
+        toast.success(chat.toolRun ? "Hasil disembunyikan dari riwayat" : "Chat dihapus");
         emitChatsChanged();
-        if (pathname === `/chat/${chat.id}`) router.push("/chat");
+        if (pathname === itemHref(chat)) router.push(chat.toolRun ? "/tools" : "/chat");
       }
     } finally {
       setDlgBusy(false);
@@ -263,7 +287,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               <ChatItem
                 key={c.id}
                 chat={c}
-                active={pathname === `/chat/${c.id}`}
+                active={pathname === itemHref(c)}
                 onNavigate={onNavigate}
                 onRename={rename}
                 onRemove={remove}
@@ -328,9 +352,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           {dlg?.kind === "delete" ? (
             <>
               <DialogHeader>
-                <DialogTitle>Hapus chat?</DialogTitle>
+                <DialogTitle>{dlg.chat.toolRun ? "Sembunyikan dari riwayat?" : "Hapus chat?"}</DialogTitle>
                 <DialogDescription>
-                  Chat &quot;{dlg.chat.title}&quot; akan dihapus permanen dan tidak bisa dikembalikan.
+                  {dlg.chat.toolRun
+                    ? `"${dlg.chat.title}" tidak tampil lagi di riwayat sidebar. Hasilnya tetap bisa dibuka dari halaman tool-nya.`
+                    : `Chat "${dlg.chat.title}" akan dihapus permanen dan tidak bisa dikembalikan.`}
                 </DialogDescription>
               </DialogHeader>
               <div className="flex justify-end gap-2">
@@ -459,17 +485,22 @@ function ChatItem({
   onRename,
   onRemove,
 }: {
-  chat: ChatSummary;
+  chat: HistoryItem;
   active: boolean;
   onNavigate?: () => void;
-  onRename: (c: ChatSummary) => void;
-  onRemove: (c: ChatSummary) => void;
+  onRename: (c: HistoryItem) => void;
+  onRemove: (c: HistoryItem) => void;
 }) {
   const { t } = useApp();
   return (
     <div className={cn("group flex items-center rounded-lg hover:bg-accent", active && "bg-accent")}>
-      <Link href={`/chat/${chat.id}`} onClick={onNavigate} className="flex-1 truncate px-2 py-1.5 text-sm">
-        {chat.title}
+      <Link href={itemHref(chat)} onClick={onNavigate} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-sm">
+        {chat.toolRun && (
+          <span className="flex size-5 shrink-0 items-center justify-center rounded bg-primary/15 text-primary" title={toolInfo(chat.toolRun.tool)?.name}>
+            <ToolIcon id={chat.toolRun.tool} className="size-3" />
+          </span>
+        )}
+        <span className="truncate">{chat.title}</span>
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -485,7 +516,7 @@ function ChatItem({
             <Pencil /> {t.rename}
           </DropdownMenuItem>
           <DropdownMenuItem className="text-destructive" onClick={() => onRemove(chat)}>
-            <Trash2 /> {t.delete}
+            <Trash2 /> {chat.toolRun ? "Sembunyikan" : t.delete}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

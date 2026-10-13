@@ -2061,3 +2061,8 @@ as $$
   limit greatest(1, least(p_limit, 500))
   offset greatest(0, p_offset);
 $$;
+
+
+-- ===== 20261013000021_tool_runs_hidden.sql =====
+-- Hasil tools bisa disembunyikan dari riwayat sidebar (tetap dihitung kuota; tidak dihapus).
+alter table public.tool_runs add column if not exists hidden boolean not null default false;

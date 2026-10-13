@@ -11,6 +11,14 @@ export async function GET(req: Request) {
     .order("updated_at", { ascending: false })
     .limit(q ? 50 : 200);
   if (q) query = query.ilike("title", `%${q.replace(/[%_]/g, "")}%`);
-  const { data } = await query;
-  return NextResponse.json({ chats: data ?? [] });
+  let runsQuery = s.supabase
+    .from("tool_runs")
+    .select("id, tool, title, created_at")
+    .eq("status", "ok")
+    .eq("hidden", false)
+    .order("created_at", { ascending: false })
+    .limit(q ? 50 : 100);
+  if (q) runsQuery = runsQuery.ilike("title", `%${q.replace(/[%_]/g, "")}%`);
+  const [{ data }, { data: toolRuns }] = await Promise.all([query, runsQuery]);
+  return NextResponse.json({ chats: data ?? [], toolRuns: toolRuns ?? [] });
 }

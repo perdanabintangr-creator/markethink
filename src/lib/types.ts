@@ -25,6 +25,14 @@ export interface ChatSummary {
   share_token: string | null;
 }
 
+/** Hasil Tools Pro yang tampil di riwayat sidebar. */
+export interface ToolRunSummary {
+  id: string;
+  tool: string;
+  title: string | null;
+  created_at: string;
+}
+
 export interface WorkspaceSummary {
   id: string;
   name: string;

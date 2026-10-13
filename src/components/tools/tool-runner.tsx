@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, NativeSelect, Textarea } from "@/components/ui/input";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
+import { emitChatsChanged } from "@/lib/events";
 import { KOL_TIER_LABEL, KOL_TIERS, PLATFORM_LABEL, PLATFORMS, WA_GOAL_LABEL, WA_GOALS } from "@/lib/addons/schemas";
 import { RequestAddonButton } from "./request-addon";
 import type { AddonStatusLite } from "./common";
@@ -149,6 +150,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
         toast.error(data.message ?? (res.status === 429 ? "Terlalu cepat, tunggu sebentar." : "Gagal memproses. Coba lagi."));
         return;
       }
+      emitChatsChanged();
       router.push(`/tools/${tool}/${data.runId}`);
       router.refresh();
     } catch {
