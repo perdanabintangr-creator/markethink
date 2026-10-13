@@ -2087,3 +2087,10 @@ alter table public.workspaces add column if not exists sort_order integer;
 -- Chat & hasil Tools Pro bisa disematkan di atas riwayat sidebar dan diurutkan dengan drag & drop (null = tidak disematkan).
 alter table public.chats add column if not exists pin_order integer;
 alter table public.tool_runs add column if not exists pin_order integer;
+
+
+-- ===== 20261013000025_history_order.sql =====
+-- Urutan manual riwayat chat di sidebar (drag & drop). Null = ikut waktu aktivitas terakhir.
+-- Nilai = angka urut (semakin besar semakin atas), default memakai epoch milidetik waktu aktivitas.
+alter table public.chats add column if not exists sort_key double precision;
+alter table public.tool_runs add column if not exists sort_key double precision;

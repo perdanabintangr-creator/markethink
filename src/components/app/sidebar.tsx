@@ -8,7 +8,6 @@ import {
   TouchSensor,
   pointerWithin,
   closestCenter,
-  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
@@ -77,7 +76,10 @@ const runToItem = (r: ToolRunSummary): HistoryItem => ({
   share_token: null,
   toolRun: { tool: r.tool },
   pin_order: r.pin_order ?? null,
+  sort_key: r.sort_key ?? null,
 });
+/** Angka urut riwayat: urutan manual bila ada, selain itu waktu aktivitas terakhir. */
+const orderKey = (c: HistoryItem) => c.sort_key ?? Date.parse(c.updated_at);
 const isPinned = (c: HistoryItem) => c.pin_order !== null && c.pin_order !== undefined;
 
 /** ID drag & drop: "i:<id>" = chat/hasil tools, "p:<id>" = folder project, "zone:*" = area lepas. */
@@ -111,16 +113,6 @@ const itemHref = (c: HistoryItem) => (c.toolRun ? `/tools/${c.toolRun.tool}/${c.
 import { cn } from "@/lib/utils";
 import { useApp } from "./app-context";
 import { CreditMeter } from "./credit-meter";
-
-function groupLabel(date: string) {
-  const d = new Date(date);
-  const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
-  if (days < 1) return "Hari ini";
-  if (days < 2) return "Kemarin";
-  if (days < 7) return "7 hari terakhir";
-  if (days < 30) return "30 hari terakhir";
-  return "Lebih lama";
-}
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t, user, lang, workspaces } = useApp();
@@ -167,20 +159,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     if (id) setExpanded((s) => (s.has(id) ? s : new Set(s).add(id)));
   }, [activeChat?.workspace_id]);
 
-  const groups = useMemo(() => {
-    // Chat di dalam project tampil di folder project-nya, bukan di riwayat umum.
+  // Riwayat umum (chat tanpa project + hasil tools), urut sesuai posisi yang diatur user (default: terbaru di atas).
+  const history = useMemo(() => {
     const runMatches = q ? runs.filter((r) => r.title.toLowerCase().includes(q)) : runs;
-    const list: HistoryItem[] = [...matching.filter((c) => !c.workspace_id), ...runMatches]
-      .filter((c) => !isPinned(c))
-      .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
-    const out: { label: string; items: HistoryItem[] }[] = [];
-    for (const c of list) {
-      const label = groupLabel(c.updated_at);
-      const g = out.find((x) => x.label === label);
-      if (g) g.items.push(c);
-      else out.push({ label, items: [c] });
-    }
-    return out;
+    const list: HistoryItem[] = [...matching.filter((c) => !c.workspace_id), ...runMatches];
+    return list.filter((c) => !isPinned(c)).sort((a, b) => orderKey(b) - orderKey(a));
   }, [matching, runs, q]);
 
   // Bagian "Disematkan": chat umum + hasil Tools Pro, urut sesuai posisi yang diatur user.
@@ -281,6 +264,20 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       return;
     }
     if (target.startsWith("i:")) {
+      const overHistory = history.find((c) => itemKey(c.id) === target);
+      if (overHistory) {
+        // Atur posisi di riwayat: dari riwayat sendiri (geser urutan) atau dari "Disematkan" (lepas sematan di posisi itu).
+        const without = history.filter((c) => c.id !== item.id);
+        const from = history.findIndex((c) => c.id === item.id);
+        const overIdx = without.findIndex((c) => c.id === overHistory.id);
+        const at = from !== -1 ? history.findIndex((c) => c.id === overHistory.id) : overIdx + (after ? 1 : 0);
+        if (from === at) return;
+        const list = [...without];
+        list.splice(at, 0, item);
+        void placeInHistory(item, list[at - 1], list[at + 1]);
+        if (isPinned(item)) void savePins(pinned.filter((c) => c.id !== item.id), "Sematan dilepas");
+        return;
+      }
       const overItem = pinned.find((c) => itemKey(c.id) === target);
       if (!overItem) return;
       if (isPinned(item)) {
@@ -293,6 +290,23 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         list.splice(list.findIndex((c) => c.id === overItem.id) + (after ? 1 : 0), 0, item);
         void savePins(list, "Chat disematkan");
       }
+    }
+  }
+
+  /** Taruh item riwayat di antara dua tetangganya (angka urut di tengah-tengah), lalu simpan. */
+  async function placeInHistory(item: HistoryItem, above?: HistoryItem, below?: HistoryItem) {
+    const key =
+      above && below ? (orderKey(above) + orderKey(below)) / 2 : above ? orderKey(above) - 1_000 : below ? orderKey(below) + 1_000 : Date.now();
+    const apply = <T extends HistoryItem>(c: T): T => (c.id === item.id ? { ...c, sort_key: key } : c);
+    setChats((cs) => cs.map(apply));
+    setRuns((rs) => rs.map(apply));
+    const res = await fetch("/api/history-order", {
+      method: "PATCH",
+      body: JSON.stringify({ id: item.id, kind: item.toolRun ? "run" : "chat", sort_key: key }),
+    });
+    if (!res.ok) {
+      toast.error("Gagal menyimpan urutan. Coba lagi.");
+      emitChatsChanged();
     }
   }
 
@@ -530,31 +544,30 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <HistoryZone highlight={over?.id === HISTORY_ZONE}>
           {/* Belum ada sematan: area lepas melayang di atas label riwayat (tanpa menggeser daftar). */}
           {activeItem && !pinned.length && <EmptyPinTarget highlight={over?.id === PIN_ZONE} />}
-          {loaded && !groups.length && !pinned.length && <p className="px-2 py-4 text-sm text-muted-foreground">{t.noChats}</p>}
-          {groups.map((g) => (
-            <div key={g.label} className="mb-3">
-              <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">{g.label}</p>
-              {g.items.map((c) => (
-                <DraggableHistoryRow
-                  key={c.id}
-                  chat={c}
-                  render={(dnd) => (
-                    <ChatItem
-                      chat={c}
-                      dnd={dnd}
-                      active={pathname === itemHref(c)}
-                      onNavigate={onNavigate}
-                      onRename={rename}
-                      onRemove={remove}
-                      onTogglePin={togglePin}
-                      projects={c.toolRun ? undefined : projects}
-                      onMove={(projectId) => moveChat(c.id, projectId)}
-                    />
-                  )}
-                />
-              ))}
-            </div>
-          ))}
+          {loaded && !history.length && !pinned.length && <p className="px-2 py-4 text-sm text-muted-foreground">{t.noChats}</p>}
+          {history.length > 0 && <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">Riwayat</p>}
+          <SortableContext items={history.map((c) => itemKey(c.id))} strategy={onlyWhen(Boolean(activeItem && !isPinned(activeItem)))}>
+            {history.map((c) => (
+              <SortableHistoryRow
+                key={c.id}
+                chat={c}
+                line={activeItem && isPinned(activeItem) && over?.id === itemKey(c.id) ? (over.after ? "after" : "before") : null}
+                render={(dnd) => (
+                  <ChatItem
+                    chat={c}
+                    dnd={dnd}
+                    active={pathname === itemHref(c)}
+                    onNavigate={onNavigate}
+                    onRename={rename}
+                    onRemove={remove}
+                    onTogglePin={togglePin}
+                    projects={c.toolRun ? undefined : projects}
+                    onMove={(projectId) => moveChat(c.id, projectId)}
+                  />
+                )}
+              />
+            ))}
+          </SortableContext>
         </HistoryZone>
       </div>
 
@@ -717,12 +730,6 @@ function HistoryZone({ highlight, children }: { highlight: boolean; children: Re
       {children}
     </div>
   );
-}
-
-/** Baris riwayat yang bisa digeser (ke "Disematkan" atau ke folder project). */
-function DraggableHistoryRow({ chat, render }: { chat: HistoryItem; render: (dnd: RowDnd) => React.ReactNode }) {
-  const d = useDraggable({ id: itemKey(chat.id) });
-  return <>{render({ setNodeRef: d.setNodeRef, listeners: d.listeners, attributes: d.attributes, isDragging: d.isDragging })}</>;
 }
 
 /** Baris di "Disematkan": bisa diurutkan (item lain bergeser memberi ruang). */
