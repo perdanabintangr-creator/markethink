@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowUp, CornerDownRight, FileText, Globe, Image as ImageIcon, Loader2, Paperclip, Square, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ export function Composer({
   brainSlot,
   quote,
   onClearQuote,
+  prefill,
+  autoFocus,
 }: {
   onSend: (text: string, attachments: PendingAttachment[]) => void;
   onStop: () => void;
@@ -39,6 +41,9 @@ export function Composer({
   /** Potongan jawaban AI yang sedang ditanyakan (dari blok teks). */
   quote?: string | null;
   onClearQuote?: () => void;
+  /** Isi kotak ketik dari luar (chip jalan pintas). `key` berubah tiap kali dipilih. */
+  prefill?: { text: string; key: number } | null;
+  autoFocus?: boolean;
 }) {
   const { t } = useApp();
   const [text, setText] = useState("");
@@ -51,6 +56,25 @@ export function Composer({
   useEffect(() => {
     if (quote) taRef.current?.focus();
   }, [quote]);
+
+  // Chip jalan pintas: isi kerangka perintah lalu sorot bagian [..] pertama agar user tinggal mengetik.
+  const pendingSelect = useRef<[number, number] | null>(null);
+  useEffect(() => {
+    if (!prefill) return;
+    const start = prefill.text.indexOf("[");
+    const end = prefill.text.indexOf("]", start);
+    pendingSelect.current = start >= 0 && end > start ? [start, end + 1] : [prefill.text.length, prefill.text.length];
+    setText(prefill.text);
+  }, [prefill]);
+  useLayoutEffect(() => {
+    const ta = taRef.current;
+    if (!ta || !pendingSelect.current) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, 240)}px`;
+    ta.focus();
+    ta.setSelectionRange(...pendingSelect.current);
+    pendingSelect.current = null;
+  }, [text]);
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
@@ -152,6 +176,7 @@ export function Composer({
           }
         }}
         rows={1}
+        autoFocus={autoFocus}
         maxLength={20000}
         placeholder={t.placeholder}
         className="block max-h-60 w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"

@@ -26,16 +26,10 @@ import { ChatMessage, messageToText } from "./message";
 import { buildQuotedMessage } from "@/lib/quote";
 import { Composer, type PendingAttachment } from "./composer";
 import { ModelSelector, type TierOption } from "./model-selector";
-import { BrainPicker } from "./brain-picker";
+import { QuickStarts, type QuickStart } from "./quick-starts";
 import { QuotaDialog } from "./quota-dialog";
 
 
-const SUGGESTIONS = [
-  "Buatkan campaign plan 1 bulan untuk launching kopi susu literan di Jakarta",
-  "Analisis tren marketing TikTok Shop untuk UMKM fashion tahun ini",
-  "Tulis 5 caption Instagram untuk promo 12.12 brand skincare lokal",
-  "Bantu saya bikin buyer persona untuk aplikasi belajar bahasa Inggris",
-];
 
 export function ChatView({
   chatId,
@@ -58,7 +52,7 @@ export function ChatView({
   initialCanvasIds: string[];
   initialShareToken: string | null;
 }) {
-  const { t, workspaces, allowedTiers, freeModels } = useApp();
+  const { t, lang, user, workspaces, allowedTiers, freeModels } = useApp();
   const [tier, setTier] = useState<TierId>(() => pickTier(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
@@ -237,6 +231,31 @@ export function ChatView({
   const workspaceName = workspaces.find((w) => w.id === workspaceId)?.name;
   const lastAssistantIndex = messages.map((m) => m.role).lastIndexOf("assistant");
 
+  const [prefill, setPrefill] = useState<{ text: string; key: number } | null>(null);
+  const firstName = (user.name ?? "").trim().split(/\s+/)[0] ?? "";
+  const pickQuickStart = (q: QuickStart) => {
+    if (q.research) setResearch(true);
+    setPrefill({ text: q.prompt[lang], key: Date.now() });
+  };
+  const composer = (extra: { autoFocus?: boolean } = {}) => (
+    <Composer
+      onSend={(text, files) => {
+        setPrefill(null);
+        send(text, files);
+      }}
+      onStop={stop}
+      busy={busy}
+      research={research}
+      onResearchChange={setResearch}
+      brainSlot={<ModelSelector compact tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />}
+      quote={quote}
+      onClearQuote={() => setQuote(null)}
+      prefill={prefill}
+      autoFocus={extra.autoFocus}
+    />
+  );
+  const disclaimer = <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{freeModels ? t.disclaimerFree : t.disclaimer}</p>;
+
   return (
     <div className="flex h-full">
       <div className={cn("flex h-full min-w-0 flex-1 flex-col", canvasId && "hidden lg:flex")}>
@@ -311,28 +330,20 @@ export function ChatView({
           className="relative min-h-0 flex-1 overflow-y-auto"
         >
           {messages.length === 0 ? (
-            <div className="mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center px-4 py-8 text-center">
-              <h1 className="text-2xl font-semibold sm:text-3xl">{activeAgent ? activeAgent.name : t.emptyTitle}</h1>
-              <p className="mt-2 text-muted-foreground">{t.emptySubtitle}</p>
-              <div className="mt-6 w-full">
-                <BrainPicker tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />
+            <div className="mx-auto flex min-h-full max-w-3xl flex-col justify-center px-3 py-8 sm:px-4">
+              <div className="mb-6 text-center">
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                  {activeAgent ? activeAgent.name : firstName ? `${t.hello}, ${firstName}` : t.emptyTitle}
+                </h1>
+                <p className="mt-2 text-sm text-muted-foreground sm:text-base">{activeAgent ? t.agentReady : t.emptyTitle}</p>
               </div>
-              <div className="mt-4 grid w-full gap-2 sm:grid-cols-2">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => send(s)}
-                    className="rounded-xl border bg-card p-3 text-left text-sm hover:bg-accent"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <Button asChild variant="link" className="mt-4">
-                <Link href="/agents">
-                  <Bot /> Lihat semua Marketing Agents
-                </Link>
-              </Button>
+              {composer({ autoFocus: true })}
+              {!activeAgent && (
+                <div className="mt-4">
+                  <QuickStarts lang={lang} onPick={pickQuickStart} />
+                </div>
+              )}
+              <div className="mt-3">{disclaimer}</div>
             </div>
           ) : (
             <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
@@ -373,8 +384,9 @@ export function ChatView({
           )}
         </div>
 
+        {messages.length > 0 && (
         <div className="relative mx-auto w-full max-w-3xl px-3 pb-3 sm:px-4">
-          {!atBottom && messages.length > 0 && (
+          {!atBottom && (
             <button
               onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })}
               className="absolute -top-12 left-1/2 -translate-x-1/2 rounded-full border bg-background p-2 shadow"
@@ -383,18 +395,10 @@ export function ChatView({
               <ArrowDown className="size-4" />
             </button>
           )}
-          <Composer
-            onSend={send}
-            onStop={stop}
-            busy={busy}
-            research={research}
-            onResearchChange={setResearch}
-            brainSlot={<ModelSelector compact tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />}
-            quote={quote}
-            onClearQuote={() => setQuote(null)}
-          />
-          <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{freeModels ? t.disclaimerFree : t.disclaimer}</p>
+          {composer()}
+          {disclaimer}
         </div>
+        )}
       </div>
 
       {canvasId && (
