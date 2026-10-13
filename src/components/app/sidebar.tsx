@@ -1,6 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  TouchSensor,
+  pointerWithin,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy, type SortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -60,11 +80,33 @@ const runToItem = (r: ToolRunSummary): HistoryItem => ({
 });
 const isPinned = (c: HistoryItem) => c.pin_order !== null && c.pin_order !== undefined;
 
-type DropTarget =
-  | { type: "project"; id: string }
-  | { type: "pin"; index: number; after: boolean }
-  | { type: "pinzone" }
-  | { type: "history" };
+/** ID drag & drop: "i:<id>" = chat/hasil tools, "p:<id>" = folder project, "zone:*" = area lepas. */
+const itemKey = (id: string) => `i:${id}`;
+const projectKey = (id: string) => `p:${id}`;
+const PIN_ZONE = "zone:pins";
+const HISTORY_ZONE = "zone:history";
+
+/** Penanganan drag untuk satu baris (dari useSortable / useDraggable). */
+interface RowDnd {
+  setNodeRef: (el: HTMLElement | null) => void;
+  listeners: DraggableSyntheticListeners;
+  attributes: DraggableAttributes;
+  style?: React.CSSProperties;
+  isDragging: boolean;
+}
+
+/** Strategi urutan yang hanya menggeser item bila yang di-drag berasal dari daftar yang sama. */
+const onlyWhen = (enabled: boolean): SortingStrategy => (args) => (enabled ? verticalListSortingStrategy(args) : null);
+
+/** Setelah drag selesai, cegah klik "nyasar" yang membuka chat / menutup folder. */
+function swallowNextClick() {
+  const block = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  window.addEventListener("click", block, { capture: true, once: true });
+  setTimeout(() => window.removeEventListener("click", block, { capture: true }), 80);
+}
 const itemHref = (c: HistoryItem) => (c.toolRun ? `/tools/${c.toolRun.tool}/${c.id}` : `/chat/${c.id}`);
 import { cn } from "@/lib/utils";
 import { useApp } from "./app-context";
@@ -158,88 +200,101 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   // Geser dengan mouse (pointer events, bukan drag bawaan browser yang sering tidak jalan pada link).
-  const [drag, setDrag] = useState<{ kind: "item" | "project"; id: string; title: string; x: number; y: number; over: DropTarget | null } | null>(null);
-  const dragRef = useRef<{ x0: number; y0: number; active: boolean } | null>(null);
+  const allItems = useMemo<HistoryItem[]>(() => [...chats, ...runs], [chats, runs]);
 
-  /** Mulai menggeser chat/hasil tools ("item") atau folder project dengan mouse. */
-  function startDrag(e: React.PointerEvent, kind: "item" | "project", item: { id: string; title: string; isRun?: boolean; inProject?: boolean; pinned?: boolean }) {
-    // Sentuhan (HP) memakai menu ⋯, agar tidak bentrok dengan scroll.
-    if (e.pointerType === "touch" || e.button !== 0) return;
-    if ((e.target as HTMLElement).closest("[data-no-drag]")) return;
-    dragRef.current = { x0: e.clientX, y0: e.clientY, active: false };
-    const targetAt = (x: number, y: number): DropTarget | null => {
-      const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-drop]");
-      if (!el) return null;
-      const type = el.dataset.drop;
-      if (type === "project") {
-        const id = el.dataset.id!;
-        if (kind === "project") return id === item.id ? null : { type, id };
-        return item.isRun ? null : { type, id };
-      }
-      if (kind === "project" || item.inProject) return null;
-      if (type === "pin") {
-        const r = el.getBoundingClientRect();
-        return { type, index: Number(el.dataset.index), after: y > r.top + r.height / 2 };
-      }
-      if (type === "pinzone") return { type };
-      if (type === "history") return item.pinned ? { type } : null;
-      return null;
-    };
-    const move = (ev: PointerEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
-      if (!d.active) {
-        if (Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < 6) return;
-        d.active = true;
-        document.body.classList.add("select-none", "cursor-grabbing");
-      }
-      setDrag({ kind, id: item.id, title: item.title, x: ev.clientX, y: ev.clientY, over: targetAt(ev.clientX, ev.clientY) });
-    };
-    const up = (ev: PointerEvent) => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
-      const d = dragRef.current;
-      dragRef.current = null;
-      setDrag(null);
-      document.body.classList.remove("select-none", "cursor-grabbing");
-      if (!d?.active) return;
-      // Setelah menggeser, jangan sampai klik ikut membuka chat / menutup folder.
-      const block = (ce: MouseEvent) => {
-        ce.preventDefault();
-        ce.stopPropagation();
+  // ---------------- Drag & drop (ala ChatGPT/Claude): baris ikut kursor, item lain bergeser memberi ruang.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    // HP: tekan-tahan sebentar lalu geser (agar tidak bentrok dengan scroll).
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  );
+  const [active, setActive] = useState<{ kind: "item"; item: HistoryItem } | { kind: "project"; project: WorkspaceSummary } | null>(null);
+  const [over, setOver] = useState<{ id: string; after: boolean } | null>(null);
+  const activeItem = active?.kind === "item" ? active.item : null;
+
+  const collision: CollisionDetection = useCallback(
+    (args) => {
+      const allowed = (id: string) => {
+        if (!active) return false;
+        if (active.kind === "project") return id.startsWith("p:");
+        if (id.startsWith("p:")) return !active.item.toolRun;
+        if (id === HISTORY_ZONE) return isPinned(active.item);
+        return true;
       };
-      window.addEventListener("click", block, { capture: true, once: true });
-      setTimeout(() => window.removeEventListener("click", block, { capture: true }), 50);
-      const target = ev.type === "pointerup" ? targetAt(ev.clientX, ev.clientY) : null;
-      if (!target) return;
-      if (kind === "project") {
-        if (target.type === "project") void moveProject(item.id, target.id);
-        return;
-      }
-      if (target.type === "project") return void moveChat(item.id, target.id);
-      const current = pinned.filter((c) => c.id !== item.id);
-      const dragged = allItems.find((c) => c.id === item.id);
-      if (!dragged) return;
-      if (target.type === "history") {
-        if (isPinned(dragged)) void savePins(current, "Sematan dilepas");
-        return;
-      }
-      let at = current.length;
-      if (target.type === "pin") {
-        const overItem = pinned[target.index];
-        const idx = overItem ? current.findIndex((c) => c.id === overItem.id) : -1;
-        at = idx === -1 ? current.length : idx + (target.after ? 1 : 0);
-      }
-      current.splice(at, 0, dragged);
-      void savePins(current, isPinned(dragged) ? undefined : "Chat disematkan");
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
+      const pick = (hits: ReturnType<CollisionDetection>) =>
+        hits.filter((h) => allowed(String(h.id))).sort((a, b) => Number(String(a.id).startsWith("zone:")) - Number(String(b.id).startsWith("zone:")));
+      // Folder project: cara standar daftar urut (titik tengah terdekat). Chat: elemen tepat di bawah kursor.
+      if (active?.kind === "project") return pick(closestCenter({ ...args, droppableContainers: args.droppableContainers.filter((c) => allowed(String(c.id))) }));
+      return pick(pointerWithin(args));
+    },
+    [active],
+  );
+
+  function onDragStart(e: DragStartEvent) {
+    const id = String(e.active.id);
+    if (id.startsWith("p:")) {
+      const project = projects.find((w) => projectKey(w.id) === id);
+      if (project) setActive({ kind: "project", project });
+    } else {
+      const item = allItems.find((c) => itemKey(c.id) === id);
+      if (item) setActive({ kind: "item", item });
+    }
   }
 
-  const allItems = useMemo<HistoryItem[]>(() => [...chats, ...runs], [chats, runs]);
+  function onDragMove(e: DragMoveEvent) {
+    const overId = e.over ? String(e.over.id) : null;
+    if (!overId) return setOver(null);
+    const start = e.activatorEvent as MouseEvent | TouchEvent;
+    const y0 = "touches" in start ? (start.touches[0]?.clientY ?? 0) : start.clientY;
+    const o = e.over!.rect;
+    const after = y0 + e.delta.y > o.top + o.height / 2;
+    setOver((cur) => (cur?.id === overId && cur.after === after ? cur : { id: overId, after }));
+  }
+
+  function onDragEnd(e: DragEndEvent) {
+    const cur = active;
+    const target = e.over ? String(e.over.id) : null;
+    const after = over?.after ?? false;
+    setActive(null);
+    setOver(null);
+    swallowNextClick();
+    if (!cur || !target) return;
+
+    if (cur.kind === "project") {
+      if (target.startsWith("p:")) {
+        const ids = projects.map((w) => w.id);
+        const from = ids.indexOf(cur.project.id);
+        const to = ids.indexOf(target.slice(2));
+        if (from !== -1 && to !== -1 && from !== to) void saveProjectOrder(arrayMove(ids, from, to));
+      }
+      return;
+    }
+
+    const item = cur.item;
+    if (target.startsWith("p:")) return void moveChat(item.id, target.slice(2));
+    if (target === HISTORY_ZONE) {
+      if (isPinned(item)) void savePins(pinned.filter((c) => c.id !== item.id), "Sematan dilepas");
+      return;
+    }
+    if (target === PIN_ZONE) {
+      if (!isPinned(item)) void savePins([...pinned, item], "Chat disematkan");
+      return;
+    }
+    if (target.startsWith("i:")) {
+      const overItem = pinned.find((c) => itemKey(c.id) === target);
+      if (!overItem) return;
+      if (isPinned(item)) {
+        // Urutkan ulang di dalam "Disematkan".
+        const from = pinned.findIndex((c) => c.id === item.id);
+        const to = pinned.findIndex((c) => c.id === overItem.id);
+        if (from !== to) void savePins(arrayMove(pinned, from, to));
+      } else {
+        const list = [...pinned];
+        list.splice(list.findIndex((c) => c.id === overItem.id) + (after ? 1 : 0), 0, item);
+        void savePins(list, "Chat disematkan");
+      }
+    }
+  }
 
   /** Simpan daftar sematan (urutan = posisi). Tampilan langsung berubah, lalu disimpan ke server. */
   async function savePins(list: HistoryItem[], message?: string) {
@@ -262,9 +317,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     void savePins(isPinned(c) ? rest : [c, ...rest], isPinned(c) ? "Sematan dilepas" : "Chat disematkan");
   }
 
-  const overKey = (t: DropTarget | null | undefined) =>
-    !t ? "" : t.type === "project" ? `p:${t.id}` : t.type === "pin" ? `pin:${t.index}:${t.after ? "a" : "b"}` : t.type;
-
   /** Pindahkan chat umum ke dalam project (drag & drop atau menu). */
   async function moveChat(chatId: string, projectId: string) {
     const chat = chats.find((c) => c.id === chatId);
@@ -283,13 +335,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     emitChatsChanged();
   }
 
-  /** Geser project ke posisi project lain. */
-  async function moveProject(dragId: string, targetId: string) {
-    if (dragId === targetId) return;
-    const ids = projects.map((w) => w.id).filter((id) => id !== dragId);
-    const from = projects.findIndex((w) => w.id === dragId);
-    const to = projects.findIndex((w) => w.id === targetId);
-    ids.splice(ids.indexOf(targetId) + (from < to ? 1 : 0), 0, dragId);
+  /** Simpan urutan project baru. */
+  async function saveProjectOrder(ids: string[]) {
     setOrder(ids);
     const res = await fetch("/api/workspaces/order", { method: "PATCH", body: JSON.stringify({ ids }) });
     if (!res.ok) {
@@ -373,20 +420,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col gap-3 bg-muted/40 p-3">
-      {drag && (
-        <div
-          className="pointer-events-none fixed z-[100] flex max-w-60 items-center gap-1.5 rounded-lg border bg-background px-2.5 py-1.5 text-sm shadow-lg"
-          style={{ left: drag.x + 12, top: drag.y + 8 }}
-        >
-          {drag.kind === "project" ? <Folder className="size-4 text-primary" /> : <MessageSquarePlus className="size-4 text-muted-foreground" />}
-          <span className="truncate">{drag.title}</span>
-          {drag.over && (
-            <span className="ml-1 shrink-0 text-xs text-primary">
-              {drag.over.type === "project" ? (drag.kind === "item" ? "→ masukkan" : "↕ pindah") : drag.over.type === "history" ? "lepas sematan" : "📌 sematkan"}
-            </span>
-          )}
-        </div>
-      )}
       <div className="flex items-center justify-between px-1">
         <Logo href="/chat" />
       </div>
@@ -411,6 +444,19 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.searchChats} className="h-9 pl-8" />
       </div>
 
+      <DndContext
+        id="sidebar-dnd"
+        sensors={sensors}
+        collisionDetection={collision}
+        onDragStart={onDragStart}
+        onDragMove={onDragMove}
+        onDragEnd={onDragEnd}
+        autoScroll={{ threshold: { x: 0, y: 0.1 }, acceleration: 6 }}
+        onDragCancel={() => {
+          setActive(null);
+          setOver(null);
+        }}
+      >
       <div className="-mx-1 flex-1 overflow-y-auto px-1">
         <div className="mb-3">
           <div className="flex items-center justify-between px-2 pb-1">
@@ -424,6 +470,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               <Plus className="size-4" />
             </button>
           </div>
+          <SortableContext items={projects.map((w) => projectKey(w.id))} strategy={onlyWhen(active?.kind === "project")}>
           {projects.map((w) => {
             const projectChats = matching.filter((c) => c.workspace_id === w.id);
             if (q && !projectChats.length && !w.name.toLowerCase().includes(q)) return null;
@@ -438,12 +485,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 onNavigate={onNavigate}
                 onRename={rename}
                 onRemove={remove}
-                onDragStart={(e) => startDrag(e, "project", { id: w.id, title: w.name })}
-                dropTarget={overKey(drag?.over) === `p:${w.id}`}
-                dragging={drag?.kind === "project" && drag.id === w.id}
+                dropTarget={Boolean(activeItem) && over?.id === projectKey(w.id)}
               />
             );
           })}
+          </SortableContext>
           {!workspaces.length && (
             <button
               onClick={newProject}
@@ -454,57 +500,84 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           )}
         </div>
 
-        {(pinned.length > 0 || drag?.kind === "item") && (
-          <div data-drop="pinzone" className={cn("mb-3 rounded-lg", overKey(drag?.over) === "pinzone" && "bg-primary/10 ring-2 ring-primary")}>
-            <p className="flex items-center gap-1 px-2 pb-1 text-xs font-medium text-muted-foreground">
-              <Pin className="size-3" /> Disematkan
-            </p>
-            {!pinned.length && <p className="px-2 py-2 text-xs text-muted-foreground">Lepas di sini untuk menyematkan chat di atas.</p>}
-            {pinned.map((c, i) => (
-              <div key={c.id} data-drop="pin" data-index={i} className="relative">
-                {overKey(drag?.over) === `pin:${i}:b` && <span className="absolute inset-x-1 -top-px h-0.5 rounded bg-primary" />}
-                <ChatItem
+        {pinned.length > 0 && (
+          <PinZone highlight={over?.id === PIN_ZONE && Boolean(activeItem) && !isPinned(activeItem!)}>
+            <SortableContext items={pinned.map((c) => itemKey(c.id))} strategy={onlyWhen(Boolean(activeItem && isPinned(activeItem)))}>
+              {pinned.map((c) => (
+                <SortableHistoryRow
+                  key={c.id}
                   chat={c}
-                  active={pathname === itemHref(c)}
-                  onNavigate={onNavigate}
-                  onRename={rename}
-                  onRemove={remove}
-                  onTogglePin={togglePin}
-                  projects={c.toolRun ? undefined : projects}
-                  onMove={(projectId) => moveChat(c.id, projectId)}
-                  onDragStart={(e) => startDrag(e, "item", { id: c.id, title: c.title, isRun: Boolean(c.toolRun), pinned: isPinned(c) })}
-                  dragging={drag?.kind === "item" && drag.id === c.id}
+                  line={activeItem && !isPinned(activeItem) && over?.id === itemKey(c.id) ? (over.after ? "after" : "before") : null}
+                  render={(dnd) => (
+                    <ChatItem
+                      chat={c}
+                      dnd={dnd}
+                      active={pathname === itemHref(c)}
+                      onNavigate={onNavigate}
+                      onRename={rename}
+                      onRemove={remove}
+                      onTogglePin={togglePin}
+                      projects={c.toolRun ? undefined : projects}
+                      onMove={(projectId) => moveChat(c.id, projectId)}
+                    />
+                  )}
                 />
-                {overKey(drag?.over) === `pin:${i}:a` && <span className="absolute inset-x-1 -bottom-px h-0.5 rounded bg-primary" />}
-              </div>
-            ))}
-          </div>
+              ))}
+            </SortableContext>
+          </PinZone>
         )}
 
-        <div data-drop="history" className={cn("rounded-lg", overKey(drag?.over) === "history" && "bg-muted ring-1 ring-border")}>
+        <HistoryZone highlight={over?.id === HISTORY_ZONE}>
+          {/* Belum ada sematan: area lepas melayang di atas label riwayat (tanpa menggeser daftar). */}
+          {activeItem && !pinned.length && <EmptyPinTarget highlight={over?.id === PIN_ZONE} />}
           {loaded && !groups.length && !pinned.length && <p className="px-2 py-4 text-sm text-muted-foreground">{t.noChats}</p>}
           {groups.map((g) => (
             <div key={g.label} className="mb-3">
               <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">{g.label}</p>
               {g.items.map((c) => (
-                <ChatItem
+                <DraggableHistoryRow
                   key={c.id}
                   chat={c}
-                  active={pathname === itemHref(c)}
-                  onNavigate={onNavigate}
-                  onRename={rename}
-                  onRemove={remove}
-                  onTogglePin={togglePin}
-                  projects={c.toolRun ? undefined : projects}
-                  onMove={(projectId) => moveChat(c.id, projectId)}
-                  onDragStart={(e) => startDrag(e, "item", { id: c.id, title: c.title, isRun: Boolean(c.toolRun), pinned: isPinned(c) })}
-                  dragging={drag?.kind === "item" && drag.id === c.id}
+                  render={(dnd) => (
+                    <ChatItem
+                      chat={c}
+                      dnd={dnd}
+                      active={pathname === itemHref(c)}
+                      onNavigate={onNavigate}
+                      onRename={rename}
+                      onRemove={remove}
+                      onTogglePin={togglePin}
+                      projects={c.toolRun ? undefined : projects}
+                      onMove={(projectId) => moveChat(c.id, projectId)}
+                    />
+                  )}
                 />
               ))}
             </div>
           ))}
-        </div>
+        </HistoryZone>
       </div>
+
+      <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
+        {active?.kind === "item" && (
+          <div className="flex cursor-grabbing items-center gap-1.5 rounded-lg border bg-background px-2 py-1.5 text-sm shadow-xl ring-1 ring-primary/30">
+            {active.item.toolRun && (
+              <span className="flex size-5 shrink-0 items-center justify-center rounded bg-primary/15 text-primary">
+                <ToolIcon id={active.item.toolRun.tool} className="size-3" />
+              </span>
+            )}
+            <span className="truncate">{active.item.title}</span>
+          </div>
+        )}
+        {active?.kind === "project" && (
+          <div className="flex cursor-grabbing items-center gap-1.5 rounded-lg border bg-background px-2 py-1.5 text-sm shadow-xl ring-1 ring-primary/30">
+            <ChevronRight className="size-3.5 text-muted-foreground" />
+            <Folder className="size-4 text-primary" />
+            <span className="truncate">{active.project.name}</span>
+          </div>
+        )}
+      </DragOverlay>
+      </DndContext>
 
       <CreditMeter />
 
@@ -609,6 +682,67 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function PinZone({ highlight, children }: { highlight: boolean; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id: PIN_ZONE });
+  return (
+    <div ref={setNodeRef} className={cn("mb-3 rounded-lg transition-colors", highlight && "bg-primary/10 ring-2 ring-primary")}>
+      <p className="flex items-center gap-1 px-2 pb-1 text-xs font-medium text-muted-foreground">
+        <Pin className="size-3" /> Disematkan
+      </p>
+      {children}
+      {highlight && <p className="px-2 py-1.5 text-xs text-primary">Lepas untuk menyematkan</p>}
+    </div>
+  );
+}
+
+function EmptyPinTarget({ highlight }: { highlight: boolean }) {
+  const { setNodeRef } = useDroppable({ id: PIN_ZONE });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "absolute inset-x-0 top-0 z-10 flex h-9 -translate-y-1 items-center gap-1.5 rounded-lg border border-dashed border-primary/50 bg-background/95 px-2 text-xs text-primary shadow-sm transition-colors",
+        highlight && "border-solid bg-primary/10 ring-2 ring-primary",
+      )}
+    >
+      <Pin className="size-3.5" /> Lepas di sini untuk menyematkan
+    </div>
+  );
+}
+
+function HistoryZone({ highlight, children }: { highlight: boolean; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id: HISTORY_ZONE });
+  return (
+    <div ref={setNodeRef} className={cn("relative min-h-16 rounded-lg transition-colors", highlight && "bg-muted ring-1 ring-border")}>
+      {children}
+    </div>
+  );
+}
+
+/** Baris riwayat yang bisa digeser (ke "Disematkan" atau ke folder project). */
+function DraggableHistoryRow({ chat, render }: { chat: HistoryItem; render: (dnd: RowDnd) => React.ReactNode }) {
+  const d = useDraggable({ id: itemKey(chat.id) });
+  return <>{render({ setNodeRef: d.setNodeRef, listeners: d.listeners, attributes: d.attributes, isDragging: d.isDragging })}</>;
+}
+
+/** Baris di "Disematkan": bisa diurutkan (item lain bergeser memberi ruang). */
+function SortableHistoryRow({ chat, line, render }: { chat: HistoryItem; line: "before" | "after" | null; render: (dnd: RowDnd) => React.ReactNode }) {
+  const s = useSortable({ id: itemKey(chat.id) });
+  return (
+    <div className="relative">
+      {line === "before" && <span className="absolute inset-x-1 -top-px z-10 h-0.5 rounded bg-primary" />}
+      {render({
+        setNodeRef: s.setNodeRef,
+        listeners: s.listeners,
+        attributes: s.attributes,
+        isDragging: s.isDragging,
+        style: { transform: CSS.Translate.toString(s.transform), transition: s.transition },
+      })}
+      {line === "after" && <span className="absolute inset-x-1 -bottom-px z-10 h-0.5 rounded bg-primary" />}
+    </div>
+  );
+}
+
 const TOOLS_OPEN_KEY = "mt_tools_menu_open";
 
 /** Menu "Tools Pro" yang bisa dibuka-tutup: submenu per kelompok (Market Research, Jualan Online, Iklan). */
@@ -704,9 +838,7 @@ function ProjectRow({
   onNavigate,
   onRename,
   onRemove,
-  onDragStart,
   dropTarget,
-  dragging,
 }: {
   project: WorkspaceSummary;
   chats: ChatSummary[];
@@ -716,24 +848,25 @@ function ProjectRow({
   onNavigate?: () => void;
   onRename: (c: ChatSummary) => void;
   onRemove: (c: ChatSummary) => void;
-  onDragStart: (e: React.PointerEvent) => void;
   dropTarget: boolean;
-  dragging: boolean;
 }) {
   const { t } = useApp();
   const Icon = open ? FolderOpen : Folder;
+  const sortable = useSortable({ id: projectKey(project.id) });
   return (
-    <div>
+    <div
+      ref={sortable.setNodeRef}
+      style={{ transform: CSS.Translate.toString(sortable.transform), transition: sortable.transition }}
+      className={cn("relative", sortable.isDragging && "z-10 opacity-40")}
+    >
       <div
-        data-drop="project"
-        data-id={project.id}
-        onPointerDown={onDragStart}
+        {...sortable.attributes}
+        {...sortable.listeners}
+        tabIndex={-1}
         className={cn(
-          "group flex cursor-grab items-center rounded-lg hover:bg-accent active:cursor-grabbing",
+          "group flex items-center rounded-lg transition-colors hover:bg-accent",
           dropTarget && "bg-primary/15 ring-2 ring-primary",
-          dragging && "opacity-40",
         )}
-        title="Geser untuk mengubah urutan · lepas chat di sini untuk memasukkannya ke project"
       >
         <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-sm">
           <ChevronRight className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />
@@ -763,7 +896,7 @@ function ProjectRow({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {open && (
+      {open && !sortable.isDragging && (
         <div className="mb-1 ml-4 border-l pl-1.5">
           <Link
             href={`/chat?workspace=${project.id}`}
@@ -797,8 +930,7 @@ function ChatItem({
   onRemove,
   projects,
   onMove,
-  onDragStart,
-  dragging,
+  dnd,
   onTogglePin,
 }: {
   chat: HistoryItem;
@@ -809,18 +941,18 @@ function ChatItem({
   /** Bila diisi, chat bisa digeser/dipindah ke salah satu project ini. */
   projects?: WorkspaceSummary[];
   onMove?: (projectId: string) => void;
-  onDragStart?: (e: React.PointerEvent) => void;
-  dragging?: boolean;
+  /** Bila diisi, baris bisa digeser (drag & drop). */
+  dnd?: RowDnd;
   onTogglePin?: (c: HistoryItem) => void;
 }) {
   const { t } = useApp();
-  const draggableItem = Boolean(onDragStart && !chat.workspace_id);
   const movable = Boolean(projects && onMove && !chat.toolRun && !chat.workspace_id);
   return (
     <div
-      onPointerDown={draggableItem ? onDragStart : undefined}
-      className={cn("group flex items-center rounded-lg hover:bg-accent", active && "bg-accent", draggableItem && "cursor-grab", dragging && "opacity-40")}
-      title={draggableItem ? "Geser untuk menyematkan / mengatur posisi, atau ke folder project" : undefined}
+      ref={dnd?.setNodeRef}
+      style={dnd?.style}
+      {...(dnd ? { ...dnd.attributes, ...dnd.listeners, tabIndex: -1 } : {})}
+      className={cn("group flex touch-manipulation items-center rounded-lg hover:bg-accent", active && "bg-accent", dnd?.isDragging && "opacity-40")}
     >
       <Link href={itemHref(chat)} onClick={onNavigate} draggable={false} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-sm">
         {chat.toolRun && (
