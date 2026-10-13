@@ -7,7 +7,7 @@ import { LogoutButton } from "@/components/backoffice/logout-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DailyBars, Funnel, HBarList, monthLabel } from "@/components/backoffice/charts";
 import { SectionTitle, Stat } from "@/components/backoffice/stat";
-import { PLAN_NAME, num, pct } from "@/lib/admin-format";
+import { PLAN_NAME, USD_IDR, num, pct } from "@/lib/admin-format";
 import { SALE_KIND, dateID, rupiah } from "@/lib/backoffice-format";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ function change(now: number, before: number) {
 export default async function BackofficeOverview() {
   const { user } = await requireBackoffice();
   const admin = createAdminClient();
-  const [ov, monthly, mix, funnel, recent] = await Promise.all([
+  const [ov, monthly, mix, funnel, recent, addonSum] = await Promise.all([
     admin.rpc("bo_overview").single<Overview>(),
     admin.rpc("bo_monthly", { p_months: 12 }),
     admin.rpc("bo_plan_mix"),
@@ -53,7 +53,17 @@ export default async function BackofficeOverview() {
       .is("refunded_at", null)
       .order("paid_at", { ascending: false })
       .limit(6),
+    admin.rpc("bo_addon_summary"),
   ]);
+  const addons = (addonSum.data ?? []) as {
+    addon_id: string;
+    name: string;
+    price_idr: number;
+    active_users: number;
+    revenue_this_month: number;
+    runs_this_month: number;
+    cost_usd_this_month: number;
+  }[];
   const k = ov.data ?? {};
   const months = (monthly.data ?? []) as MonthRow[];
   const plans = (mix.data ?? []) as PlanMix[];
@@ -132,6 +142,23 @@ export default async function BackofficeOverview() {
             sub={`total pendapatan sejak awal ${rupiah(v("revenue_total"))}`}
             tone={v("churn_this_month") > 0 ? "warn" : undefined}
           />
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <SectionTitle hint={<Link href="/sales/prices" className="underline">Atur harga & kuota add-on →</Link>}>Add-on Tools Pro</SectionTitle>
+        <div className="grid gap-3 md:grid-cols-3">
+          {addons.map((a) => (
+            <Card key={a.addon_id}>
+              <CardContent className="p-4">
+                <p className="text-sm font-medium">{a.name}</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{num(a.active_users)} <span className="text-sm font-normal text-muted-foreground">pelanggan aktif</span></p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Bulan ini: {rupiah(a.revenue_this_month)} · {num(a.runs_this_month)}× dipakai · biaya AI {rupiah(Number(a.cost_usd_this_month) * USD_IDR)}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 

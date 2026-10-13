@@ -6,14 +6,18 @@ import { Input } from "@/components/ui/input";
 import { PageTitle } from "@/components/backoffice/stat";
 import { PLAN_NAME } from "@/lib/admin-format";
 import { rupiah } from "@/lib/backoffice-format";
-import { updatePlanPrice } from "../../../actions";
+import { updateAddon, updatePlanPrice } from "../../../actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Harga paket" };
 
 export default async function PricesPage() {
   const { isOwner } = await requireBackoffice();
-  const { data: plans } = await createAdminClient().from("plans").select("id, name, monthly_price_idr, sort_order").neq("id", "beta").order("sort_order");
+  const admin = createAdminClient();
+  const [{ data: plans }, { data: addons }] = await Promise.all([
+    admin.from("plans").select("id, name, monthly_price_idr, sort_order").neq("id", "beta").order("sort_order"),
+    admin.from("addons").select("id, name, tagline, price_idr, monthly_quota, promax_quota, trial_quota").order("sort_order"),
+  ]);
   return (
     <div className="max-w-2xl">
       <PageTitle
@@ -40,6 +44,37 @@ export default async function PricesPage() {
         </CardContent>
       </Card>
       <p className="mt-3 text-xs text-muted-foreground">Mengubah harga tidak mengubah penjualan yang sudah tercatat.</p>
+
+      <h2 className="mt-8 mb-1 text-lg font-semibold">Add-on Tools Pro</h2>
+      <p className="mb-3 text-sm text-muted-foreground">Harga per bulan & jatah pemakaian. Promax = gratis per bulan; Percobaan = gratis sekali untuk semua user.</p>
+      <Card>
+        <CardContent className="divide-y p-0">
+          {(addons ?? []).map((a) => (
+            <form key={a.id} action={updateAddon.bind(null, a.id)} className="space-y-3 p-4">
+              <div>
+                <p className="font-medium">{a.name}</p>
+                <p className="text-xs text-muted-foreground">{a.tagline}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(
+                  [
+                    ["price", "Harga/bulan (Rp)", a.price_idr],
+                    ["monthly_quota", "Kuota/bulan", a.monthly_quota],
+                    ["promax_quota", "Gratis Promax", a.promax_quota],
+                    ["trial_quota", "Percobaan", a.trial_quota],
+                  ] as const
+                ).map(([name, label, value]) => (
+                  <label key={name} className="space-y-1 text-xs text-muted-foreground">
+                    {label}
+                    <Input name={name} inputMode="numeric" defaultValue={value} disabled={!isOwner} />
+                  </label>
+                ))}
+              </div>
+              {isOwner && <Button type="submit" size="sm">Simpan</Button>}
+            </form>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }

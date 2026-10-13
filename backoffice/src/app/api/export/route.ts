@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const jsonError = (status: number, error: string) => Response.json({ error }, { status });
 
 const PLAN: Record<string, string> = { beta: "Free", pro: "Pro", promax: "Promax" };
+const ADDON: Record<string, string> = { jualan_kit: "Jualan Online Kit", dokter_iklan: "Dokter Iklan", riset_pro: "Riset Pasar Pro" };
 
 /** Ekspor CSV (bisa dibuka di Excel/Sheets) untuk tim back office: pelanggan, penjualan, atau waitlist. */
 export async function GET(req: Request) {
@@ -38,6 +39,33 @@ export async function GET(req: Request) {
     }));
   } else if (type === "sales") {
     const month = url.searchParams.get("month");
+    let qa = admin
+      .from("addon_subscriptions")
+      .select("paid_at, addon_id, months, amount_idr, payment_method, period_start, period_end, refunded_at, note, customer:profiles!addon_subscriptions_user_id_fkey(email, full_name)")
+      .order("paid_at", { ascending: false })
+      .limit(10000);
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const [y, m] = month.split("-").map(Number);
+      qa = qa.gte("paid_at", new Date(Date.UTC(y, m - 1, 1, -7)).toISOString()).lt("paid_at", new Date(Date.UTC(y, m, 1, -7)).toISOString());
+    }
+    const { data: addonData } = await qa;
+    const addonRows = (addonData ?? []).map((s) => {
+      const c = s.customer as unknown as { email: string | null; full_name: string | null } | null;
+      return {
+        tanggal_bayar: s.paid_at,
+        email: c?.email,
+        nama: c?.full_name,
+        paket: `Add-on ${ADDON[s.addon_id] ?? s.addon_id}`,
+        durasi_bulan: s.months,
+        jenis: "add-on",
+        nominal_rp: s.amount_idr,
+        metode: s.payment_method,
+        mulai: s.period_start,
+        sampai: s.period_end,
+        dibatalkan: s.refunded_at ? "ya" : "",
+        catatan: s.note,
+      };
+    });
     let q = admin
       .from("subscriptions")
       .select("paid_at, plan_id, months, kind, amount_idr, payment_method, current_period_start, current_period_end, refunded_at, note, customer:profiles!subscriptions_user_id_fkey(email, full_name)")
@@ -48,7 +76,7 @@ export async function GET(req: Request) {
       q = q.gte("paid_at", new Date(Date.UTC(y, m - 1, 1, -7)).toISOString()).lt("paid_at", new Date(Date.UTC(y, m, 1, -7)).toISOString());
     }
     const { data } = await q;
-    rows = (data ?? []).map((s) => {
+    rows = [...(data ?? []).map((s) => {
       const c = s.customer as unknown as { email: string | null; full_name: string | null } | null;
       return {
         tanggal_bayar: s.paid_at,
@@ -64,7 +92,7 @@ export async function GET(req: Request) {
         dibatalkan: s.refunded_at ? "ya" : "",
         catatan: s.note,
       };
-    });
+    }), ...addonRows];
   } else if (type === "waitlist") {
     const { data } = await admin.from("waitlist").select("email, plan_interest, note, created_at").order("created_at", { ascending: false }).limit(10000);
     rows = data ?? [];

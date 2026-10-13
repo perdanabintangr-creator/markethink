@@ -11,8 +11,8 @@ export function AppShell({ value, children }: { value: AppContextValue; children
   const [open, setOpen] = useState(false);
   return (
     <AppContextProvider value={value}>
-      <div className="flex h-dvh overflow-hidden">
-        <aside className="hidden w-72 shrink-0 border-r md:block">
+      <div className="flex h-dvh overflow-hidden print:block print:h-auto print:overflow-visible">
+        <aside className="hidden w-72 shrink-0 border-r md:block print:hidden">
           <Sidebar />
         </aside>
         <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
@@ -25,13 +25,13 @@ export function AppShell({ value, children }: { value: AppContextValue; children
           </DialogPrimitive.Portal>
         </DialogPrimitive.Root>
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex h-12 items-center gap-2 border-b px-3 md:hidden">
+          <div className="flex h-12 items-center gap-2 border-b px-3 md:hidden print:hidden">
             <button onClick={() => setOpen(true)} className="rounded-md p-1.5 hover:bg-accent" aria-label="Buka menu">
               <Menu className="size-5" />
             </button>
             <Logo href="/chat" className="text-sm" />
           </div>
-          <main className="min-h-0 flex-1">{children}</main>
+          <main className="min-h-0 flex-1 print:h-auto">{children}</main>
         </div>
       </div>
     </AppContextProvider>

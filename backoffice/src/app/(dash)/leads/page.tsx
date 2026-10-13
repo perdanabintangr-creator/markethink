@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
-import { PLAN_NAME } from "@/lib/admin-format";
+import { ADDON_NAME, PLAN_NAME } from "@/lib/admin-format";
 import { PageTitle } from "@/components/backoffice/stat";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +52,7 @@ export default async function LeadsPage() {
                     {p?.full_name && <div className="text-xs text-muted-foreground">{p.full_name}</div>}
                   </td>
                   <td className="p-2">{p ? (PLAN_NAME[p.plan_id] ?? p.plan_id) : "-"}</td>
-                  <td className="p-2">{w.plan_interest ?? "-"}</td>
+                  <td className="p-2">{w.plan_interest?.startsWith("addon:") ? `Add-on ${ADDON_NAME[w.plan_interest.slice(6)] ?? w.plan_interest.slice(6)}` : (PLAN_NAME[w.plan_interest ?? ""] ?? w.plan_interest ?? "-")}</td>
                   <td className="p-2 text-xs">{w.note ?? "-"}</td>
                   <td className="p-2 text-xs">{new Date(w.created_at).toLocaleDateString("id-ID")}</td>
                 </tr>

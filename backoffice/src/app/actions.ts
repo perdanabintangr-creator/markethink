@@ -341,3 +341,73 @@ export async function toggleAgent(agentId: string, active: boolean) {
   await createAdminClient().from("agents").update({ is_active: active }).eq("id", agentId);
   revalidatePath("/agents");
 }
+
+// ---------------------------------------------------------------- Add-on (Tools Pro)
+
+const ADDON_IDS = ["jualan_kit", "dokter_iklan", "riset_pro"] as const;
+
+const addonSaleSchema = z.object({
+  user_id: z.string().uuid(),
+  addon_id: z.enum(ADDON_IDS),
+  months: z.coerce.number().int().min(1).max(36),
+  amount: z.coerce.number().int().min(0).max(1_000_000_000),
+  method: z.enum(PAYMENT_METHODS),
+  paid_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  note: z.string().trim().max(500).optional(),
+});
+
+/** Catat pembelian add-on → langsung aktif (perpanjangan menyambung dari periode aktif). */
+export async function recordAddonSale(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user } = await requireBackoffice();
+  const parsed = addonSaleSchema.safeParse(Object.fromEntries([...formData].filter(([, v]) => v !== "")));
+  if (!parsed.success) return { error: "Data add-on belum lengkap / tidak valid." };
+  const d = parsed.data;
+  const { error } = await createAdminClient().rpc("bo_record_addon_sale", {
+    p_user: d.user_id,
+    p_addon: d.addon_id,
+    p_months: d.months,
+    p_amount: d.amount,
+    p_method: d.method,
+    p_note: d.note ?? null,
+    p_actor: user.id,
+    p_paid_at: d.paid_at ? new Date(`${d.paid_at}T12:00:00+07:00`).toISOString() : null,
+  });
+  if (error) return { error: "Gagal menyimpan add-on. Coba lagi." };
+  refresh(d.user_id);
+  return { ok: "Add-on aktif & penjualan tercatat." };
+}
+
+/** Batalkan pembelian add-on (salah catat/refund): tidak dihitung pendapatan & periodenya ditutup. */
+export async function refundAddonSale(saleId: string, userId: string) {
+  await requireBackoffice();
+  const admin = createAdminClient();
+  const { data: sale } = await admin.from("addon_subscriptions").select("period_start, period_end").eq("id", saleId).maybeSingle();
+  if (!sale) return;
+  const t = Date.now();
+  const end = new Date(sale.period_end).getTime() > t ? new Date(Math.max(new Date(sale.period_start).getTime(), t)).toISOString() : sale.period_end;
+  await admin.from("addon_subscriptions").update({ refunded_at: new Date().toISOString(), period_end: end }).eq("id", saleId).is("refunded_at", null);
+  refresh(userId);
+}
+
+/** Owner: ubah harga & kuota add-on. */
+export async function updateAddon(addonId: string, formData: FormData) {
+  const { isOwner } = await requireBackoffice();
+  if (!isOwner || !(ADDON_IDS as readonly string[]).includes(addonId)) return;
+  const int = (k: string, max: number) => z.coerce.number().int().min(0).max(max).safeParse(String(formData.get(k) ?? "").replace(/\D/g, ""));
+  const price = int("price", 100_000_000);
+  const quota = int("monthly_quota", 1000);
+  const promax = int("promax_quota", 1000);
+  const trial = int("trial_quota", 100);
+  if (!price.success || !quota.success || !promax.success || !trial.success) return;
+  await createAdminClient()
+    .from("addons")
+    .update({
+      price_idr: price.data,
+      monthly_quota: quota.data,
+      promax_quota: promax.data,
+      trial_quota: trial.data,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", addonId);
+  refresh();
+}

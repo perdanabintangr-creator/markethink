@@ -10,7 +10,9 @@ import { ConfirmAction } from "@/components/backoffice/confirm-submit";
 import { PLAN_NAME, USD_IDR, num } from "@/lib/admin-format";
 import { SALE_KIND, dateID, daysUntil, durationSince, rupiah } from "@/lib/backoffice-format";
 import { experienceLabel, roleLabel } from "@/lib/personas";
-import { changePlan, grantCredits, refundSale, setBetaAccess, setCreditOverride, setUserBan } from "../../../actions";
+import { changePlan, grantCredits, refundAddonSale, refundSale, setBetaAccess, setCreditOverride, setUserBan } from "../../../actions";
+import { AddonSaleForm } from "@/components/backoffice/addon-sale-form";
+import { ADDON_NAME } from "@/lib/admin-format";
 import { requireBackoffice } from "@/lib/backoffice";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +23,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const admin = createAdminClient();
-  const [{ data: u }, { data: subs }, { data: changes }, { data: usage }, { data: plans }] = await Promise.all([
+  const [{ data: u }, { data: subs }, { data: changes }, { data: usage }, { data: plans }, { data: addonSubs }, { data: addonRows }, { data: runs }] = await Promise.all([
     admin
       .from("profiles")
       .select("id, email, full_name, role, plan_id, plan_started_at, banned, beta_access, daily_credit_override, persona_role, industry, experience, goal, onboarded, created_at, last_active_at")
@@ -40,6 +42,13 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       .limit(50),
     admin.rpc("admin_user_usage", { p_user_ids: [id], p_days: 30 }),
     admin.from("plans").select("id, monthly_price_idr"),
+    admin
+      .from("addon_subscriptions")
+      .select("id, addon_id, period_start, period_end, amount_idr, months, payment_method, paid_at, refunded_at, note")
+      .eq("user_id", id)
+      .order("paid_at", { ascending: false }),
+    admin.from("addons").select("id, name, price_idr").order("sort_order"),
+    admin.from("tool_runs").select("tool, status, source, created_at").eq("user_id", id).gte("created_at", new Date(Date.now() - 30 * 86_400_000).toISOString()),
       ]);
   if (!u) notFound();
 
@@ -203,6 +212,67 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Add-on Tools Pro</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Aktif:{" "}
+            {(() => {
+              const now = new Date().toISOString();
+              const act = (addonSubs ?? []).filter((a) => !a.refunded_at && a.period_end > now);
+              const byAddon = new Map<string, string>();
+              for (const a of act) if (!byAddon.has(a.addon_id) || a.period_end > byAddon.get(a.addon_id)!) byAddon.set(a.addon_id, a.period_end);
+              return byAddon.size ? [...byAddon].map(([k, v]) => `${ADDON_NAME[k] ?? k} s/d ${dateID(v)}`).join(" · ") : "belum ada";
+            })()}
+            {" · "}Pemakaian 30 hari: {(runs ?? []).filter((r) => r.status === "ok").length}× tools
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <AddonSaleForm userId={u.id} addons={(addonRows ?? []).map((a) => ({ id: a.id, name: a.name, price: Number(a.price_idr) }))} />
+          {!!addonSubs?.length && (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[620px] text-sm">
+                <thead className="text-left text-xs text-muted-foreground">
+                  <tr>
+                    <th className="py-2">Tanggal bayar</th>
+                    <th>Add-on</th>
+                    <th>Periode</th>
+                    <th>Metode</th>
+                    <th className="text-right">Nominal</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {addonSubs.map((a) => (
+                    <tr key={a.id} className={a.refunded_at ? "text-muted-foreground line-through" : ""}>
+                      <td className="py-2">{dateID(a.paid_at)}</td>
+                      <td>{ADDON_NAME[a.addon_id] ?? a.addon_id} · {a.months} bln</td>
+                      <td className="text-xs">{dateID(a.period_start)} – {dateID(a.period_end)}</td>
+                      <td>{a.payment_method ?? "-"}</td>
+                      <td className="text-right tabular-nums">{rupiah(a.amount_idr)}</td>
+                      <td className="text-right">
+                        {!a.refunded_at && (
+                          <ConfirmAction
+                            action={refundAddonSale.bind(null, a.id, u.id)}
+                            title="Batalkan add-on ini?"
+                            description="Nominal tidak dihitung lagi sebagai pendapatan dan add-on langsung nonaktif."
+                            confirmLabel="Ya, batalkan"
+                            size="sm"
+                            variant="ghost"
+                          >
+                            Batalkan
+                          </ConfirmAction>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-2">

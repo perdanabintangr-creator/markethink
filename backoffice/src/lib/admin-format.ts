@@ -18,6 +18,18 @@ export const COST_CATEGORY: Record<string, string> = {
   image: "Gambar di chat",
   deck_image: "Foto di PPT",
   pptx: "Pembuatan PPT",
+  "tool:listing": "Tools · Listing marketplace",
+  "tool:live": "Tools · Skrip live selling",
+  "tool:whatsapp": "Tools · Template WhatsApp",
+  "tool:ads": "Tools · Analis laporan iklan",
+  "tool:competitor": "Tools · Riset kompetitor",
+  "tool:kol": "Tools · Brief KOL",
+};
+
+export const ADDON_NAME: Record<string, string> = {
+  jualan_kit: "Jualan Online Kit",
+  dokter_iklan: "Dokter Iklan",
+  riset_pro: "Riset Pasar Pro",
 };
 
 export const FEATURE_NAME: Record<string, string> = {

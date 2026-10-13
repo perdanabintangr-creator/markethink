@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import {
   Bot,
+  Wrench,
   ChevronRight,
   Folder,
   FolderOpen,
@@ -176,6 +177,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   const nav = [
+    { href: "/tools", label: t.toolsPro, icon: Wrench, badge: t.newBadge },
     { href: "/agents", label: t.agents, icon: Bot },
   ];
 
@@ -201,6 +203,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             )}
           >
             <n.icon className="size-4" /> {n.label}
+            {"badge" in n && n.badge && (
+              <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{n.badge}</span>
+            )}
           </Link>
         ))}
       </nav>
