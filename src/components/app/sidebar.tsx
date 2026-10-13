@@ -542,10 +542,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         )}
 
         <HistoryZone highlight={over?.id === HISTORY_ZONE}>
-          {/* Belum ada sematan: area lepas melayang di atas label riwayat (tanpa menggeser daftar). */}
-          {activeItem && !pinned.length && <EmptyPinTarget highlight={over?.id === PIN_ZONE} />}
           {loaded && !history.length && !pinned.length && <p className="px-2 py-4 text-sm text-muted-foreground">{t.noChats}</p>}
-          {history.length > 0 && <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">Riwayat</p>}
+          {/* Label "Riwayat"; saat menggeser (dan belum ada sematan) berubah jadi area sematkan dengan tinggi sama — daftar tidak bergeser. */}
+          {activeItem && !pinned.length ? (
+            <EmptyPinTarget highlight={over?.id === PIN_ZONE} />
+          ) : (
+            history.length > 0 && <p className="flex h-7 items-center px-2 text-xs font-medium text-muted-foreground">Riwayat</p>
+          )}
           <SortableContext items={history.map((c) => itemKey(c.id))} strategy={onlyWhen(Boolean(activeItem && !isPinned(activeItem)))}>
             {history.map((c) => (
               <SortableHistoryRow
@@ -714,7 +717,7 @@ function EmptyPinTarget({ highlight }: { highlight: boolean }) {
     <div
       ref={setNodeRef}
       className={cn(
-        "absolute inset-x-0 top-0 z-10 flex h-9 -translate-y-1 items-center gap-1.5 rounded-lg border border-dashed border-primary/50 bg-background/95 px-2 text-xs text-primary shadow-sm transition-colors",
+        "flex h-7 items-center gap-1.5 rounded-md border border-dashed border-primary/50 bg-primary/5 px-2 text-xs text-primary transition-colors",
         highlight && "border-solid bg-primary/10 ring-2 ring-primary",
       )}
     >
