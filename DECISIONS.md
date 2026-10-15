@@ -89,3 +89,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   (2 kredit harian per pertanyaan, otak Senior, riwayat di tabel `tool_run_messages`). AI merangkum koreksi dalam blok [[KOREKSI]] → tombol
   "Perbaiki hasil" membuat versi baru dengan input sama + koreksi + hasil sebelumnya (kolom `tool_runs.revision_of/revision_note`), GRATIS maks 3×
   per hasil (tidak memotong kuota add-on; revisi tidak riset web ulang). Biaya diskusi tampil di back office sebagai "Tools · Diskusi hasil".
+- 2026-10-15 — Revisi permintaan founder: diskusi hasil dipindah ke **chat utama**. Tombol "Bahas di Chat" (`POST /api/tools/runs/:id/to-chat`)
+  membuat chat baru berisi hasil (dikonversi ke Markdown oleh `resultToMarkdown`) sebagai pesan pertama `tool-<runId>`; satu hasil → satu chat
+  (`chats.source_run_id`). Pesan hasil itu selalu ikut konteks walau chat panjang. Panel diskusi samping & API-nya dihapus (tabel
+  `tool_run_messages` tidak dipakai). "Perbaiki hasil" kini dialog di halaman hasil (gratis 3×).

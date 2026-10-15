@@ -233,7 +233,13 @@ export async function POST(req: Request) {
                 : null,
       });
 
-      const { messages: resolvedRaw, hasImages } = await resolveAttachments(supabase, messages.slice(historyStart(messages.length)));
+      const { messages: resolvedRaw, hasImages } = await resolveAttachments(
+        supabase,
+        // Hasil Tools Pro ("Bahas di Chat") di pesan pertama selalu ikut sebagai konteks walau chat sudah panjang.
+        historyStart(messages.length) > 0 && messages[0]?.id?.startsWith("tool-")
+          ? [messages[0], ...messages.slice(historyStart(messages.length))]
+          : messages.slice(historyStart(messages.length)),
+      );
       // Jejak tool tidak dikirim ulang apa adanya — hasil gambar/PPT diringkas jadi teks.
       const resolved = resolvedRaw.map(summarizeToolParts);
       if (turnContext) {

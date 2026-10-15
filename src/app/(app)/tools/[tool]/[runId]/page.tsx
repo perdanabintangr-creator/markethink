@@ -8,7 +8,7 @@ import { FilesBar } from "@/components/tools/common";
 import { dateID, type ToolFileLite } from "@/lib/addons/format";
 import { ResultView } from "@/components/tools/result-view";
 import { ToolIcon } from "@/components/tools/tool-icon";
-import { RunDiscussion } from "@/components/tools/run-discussion";
+import { DiscussInChat, ReviseButton } from "@/components/tools/run-discussion";
 import { PRO_FORMS } from "@/lib/addons/pro/forms";
 import { MAX_REVISIONS } from "@/lib/addons/format";
 
@@ -78,8 +78,11 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
 
         {run.status === "ok" && run.output ? (
           <>
-            <RunDiscussion runId={run.id} tool={tool} revisable={Boolean(PRO_FORMS[tool])} revisionsLeft={Math.max(0, MAX_REVISIONS - (revisions ?? 0))} />
-            <FilesBar files={(run.files ?? []) as ToolFileLite[]} />
+            <DiscussInChat runId={run.id} />
+            <div className="flex flex-wrap items-center gap-2">
+              <FilesBar files={(run.files ?? []) as ToolFileLite[]} />
+              {PRO_FORMS[tool] && <ReviseButton runId={run.id} tool={tool} revisionsLeft={Math.max(0, MAX_REVISIONS - (revisions ?? 0))} />}
+            </div>
             <ResultView tool={tool} output={run.output} input={(run.input ?? {}) as Record<string, unknown>} />
             <p className="pt-2 text-center text-xs text-muted-foreground">Dibuat dengan Markethink Tools Pro · cek ulang angka & klaim sebelum dipublikasikan.</p>
           </>
