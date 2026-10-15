@@ -120,3 +120,13 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Sematan dipisah per mode tetapi disimpan bersama (menyimpan sematan di satu mode tidak melepas sematan mode lain).
 - Chat biasa: system prompt berisi daftar ±25 hasil Tools Pro terbaru user + tool `read_tool_result` untuk membaca isi versi terbarunya
   saat user menyinggung hasil Tools Pro. Hasil tetap diubah lewat "Bahas di Chat".
+
+## Markethink Agent (ACC founder 15 Okt 2026)
+- Halaman `/tools/agent` (mode Tools Pro). User menulis satu tujuan (+ info bisnis opsional) → AI (otak Senior) menyusun rencana 2–5 langkah
+  dari Tools Pro yang tersedia, urut fondasi → eksekusi, dibatasi sisa kuota per grup add-on (dicek program, bukan hanya AI).
+- User bisa membuang langkah sebelum menjalankan. Browser menjalankan langkah satu per satu (`/api/agent/[id]/step`, satu tool per request,
+  aman untuk batas 300 dtk Vercel). Tiap langkah: AI mengisi brief tool dari tujuan + hasil langkah sebelumnya → executeTool (logika sama dengan halaman tools).
+- Setiap langkah memakai 1 kuota tool-nya (aturan kuota sama dengan pemakaian manual). Langkah gagal tidak memotong kuota & bisa diulang.
+- Selesai → ringkasan eksekutif (inti strategi, rencana eksekusi, metrik, risiko) + "Bahas paket di Chat" (chat `source_agent_id`).
+- Tidak dipakai Agent: kalkulator, Dokter Iklan, Laporan Bulanan, Laporan KOL (butuh upload data performa).
+- Tabel `agent_runs`, kolom `tool_runs.agent_run_id`, `chats.source_agent_id` (migrasi 0030, sudah diterapkan ke production). Biaya AI Agent dicatat di usage_logs `tool:agent`.
