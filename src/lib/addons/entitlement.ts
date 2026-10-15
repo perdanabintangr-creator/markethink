@@ -70,15 +70,16 @@ export async function getAddonStatuses(admin: SupabaseClient, profile: Profileis
       .gt("period_end", nowIso),
     admin
       .from("tool_runs")
-      .select("addon_id, source, status, created_at")
+      .select("addon_id, source, status, created_at, revision_of")
       .eq("user_id", profile.id)
       .neq("status", "error")
       .limit(5000),
   ]);
 
   const now = new Date();
+  // Revisi (perbaikan hasil berdasarkan koreksi user) tidak memotong kuota.
   const counted = (runs ?? []).filter(
-    (r) => r.status === "ok" || now.getTime() - new Date(r.created_at).getTime() < STALE_RUNNING_MS,
+    (r) => !r.revision_of && (r.status === "ok" || now.getTime() - new Date(r.created_at).getTime() < STALE_RUNNING_MS),
   );
   const monthStart = wibMonthStart();
   const isAdmin = profile.role === "admin";

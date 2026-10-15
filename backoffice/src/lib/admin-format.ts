@@ -42,6 +42,7 @@ export const COST_CATEGORY: Record<string, string> = {
   "tool:kolreport": "Tools · Laporan KOL",
   "tool:press": "Tools · Siaran pers",
   "tool:report": "Tools · Laporan bulanan",
+  tool_chat: "Tools · Diskusi hasil",
 };
 
 export const ADDON_NAME: Record<string, string> = {

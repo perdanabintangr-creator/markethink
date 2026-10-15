@@ -42,3 +42,6 @@ export function quotaText(s: AddonStatusLite) {
   if (!parts.length) return "Belum aktif";
   return parts.join(" · ");
 }
+
+/** Batas perbaikan (revisi) gratis per hasil Tools Pro — revisi tidak memotong kuota add-on. */
+export const MAX_REVISIONS = 3;

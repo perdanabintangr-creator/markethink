@@ -109,7 +109,12 @@ export function makeRunner<O extends z.ZodTypeAny>(def: ProDef<O>): Runner<z.Zod
       let notes = "";
       let sources: { title: string; url: string }[] = [];
       let webNote = "";
-      const web = def.web?.(brief, raw);
+      // Revisi tidak riset ulang: pakai sumber dari hasil sebelumnya.
+      const web = ctx.revision ? null : def.web?.(brief, raw);
+      if (ctx.revision) {
+        const prev = ctx.revision.previous as { sources?: { title: string; url: string }[] } | null;
+        sources = prev?.sources ?? [];
+      }
       if (web) {
         const r = await webResearch(ctx, { system: `${EXPERT}\n\n${web.system}`, prompt: untrusted("brief", brief), maxUses: web.maxUses ?? 6 });
         notes = r.text;
@@ -131,6 +136,8 @@ ${webNote ? `\n${webNote}` : ""}`;
         untrusted("brief", brief),
         loaded.text && `Data dari file user:\n${untrusted("file", loaded.text)}`,
         notes && `Catatan riset web (pakai angka & fakta ini, sebut sumbernya bila relevan):\n${untrusted("riset", notes.slice(0, 30_000))}`,
+        ctx.revision &&
+          `REVISI — ini perbaikan dari hasil sebelumnya. Hasil sebelumnya (JSON):\n${untrusted("hasil-sebelumnya", JSON.stringify(ctx.revision.previous).slice(0, 60_000))}\n\nKoreksi & arahan dari user (WAJIB dipenuhi; data dari user mengalahkan asumsi sebelumnya):\n${untrusted("koreksi", ctx.revision.note)}\n\nPerbaiki semua bagian yang terdampak koreksi (termasuk angka turunan, ringkasan, dan rekomendasi). Bagian yang tidak terkait koreksi dipertahankan kualitasnya.`,
       ]
         .filter(Boolean)
         .join("\n\n");

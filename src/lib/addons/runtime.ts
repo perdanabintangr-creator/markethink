@@ -13,6 +13,8 @@ export interface ToolCtx {
   runId: string;
   /** Akumulasi biaya AI (USD) selama tool berjalan. */
   cost: { usd: number; model: string | null };
+  /** Revisi: perbaiki hasil sebelumnya sesuai koreksi user (tidak memotong kuota). */
+  revision?: { note: string; previous: unknown };
 }
 
 export interface ToolFile {

@@ -8,11 +8,15 @@ import { FilesBar } from "@/components/tools/common";
 import { dateID, type ToolFileLite } from "@/lib/addons/format";
 import { ResultView } from "@/components/tools/result-view";
 import { ToolIcon } from "@/components/tools/tool-icon";
+import { RunDiscussion } from "@/components/tools/run-discussion";
+import { PRO_FORMS } from "@/lib/addons/pro/forms";
+import { MAX_REVISIONS } from "@/lib/addons/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Hasil Tools Pro" };
 
 const SOURCE_LABEL: Record<string, string> = { trial: "Percobaan gratis", promax: "Jatah Promax", paid: "Add-on", admin: "Admin" };
+
 
 export default async function ToolResultPage({ params }: { params: Promise<{ tool: string; runId: string }> }) {
   const { tool, runId } = await params;
@@ -21,11 +25,17 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
   const { supabase } = await requireUser();
   const { data: run } = await supabase
     .from("tool_runs")
-    .select("id, tool, title, status, source, input, output, files, error, created_at")
+    .select("id, tool, title, status, source, input, output, files, error, created_at, revision_of, revision_note")
     .eq("id", runId)
     .eq("tool", tool)
     .maybeSingle();
   if (!run) notFound();
+  const root = (run.revision_of as string | null) ?? run.id;
+  const { count: revisions } = await supabase
+    .from("tool_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("revision_of", root)
+    .neq("status", "error");
 
   return (
     <div className="h-full overflow-y-auto print:h-auto print:overflow-visible">
@@ -47,14 +57,28 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
           </span>
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">
-              {info.name} · {dateID(run.created_at)} · {SOURCE_LABEL[run.source] ?? run.source}
+              {info.name} · {dateID(run.created_at)} · {run.revision_of ? "Versi perbaikan (gratis)" : (SOURCE_LABEL[run.source] ?? run.source)}
             </p>
             <h1 className="text-xl font-bold sm:text-2xl">{run.title ?? info.name}</h1>
           </div>
         </div>
 
+        {run.revision_of && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm print:hidden">
+            <p>
+              Versi perbaikan dari{" "}
+              <Link href={`/tools/${tool}/${run.revision_of}`} className="font-medium text-primary hover:underline">
+                hasil sebelumnya
+              </Link>
+              . Yang dikoreksi:
+            </p>
+            <p className="mt-1 whitespace-pre-line text-muted-foreground">{run.revision_note}</p>
+          </div>
+        )}
+
         {run.status === "ok" && run.output ? (
           <>
+            <RunDiscussion runId={run.id} tool={tool} revisable={Boolean(PRO_FORMS[tool])} revisionsLeft={Math.max(0, MAX_REVISIONS - (revisions ?? 0))} />
             <FilesBar files={(run.files ?? []) as ToolFileLite[]} />
             <ResultView tool={tool} output={run.output} input={(run.input ?? {}) as Record<string, unknown>} />
             <p className="pt-2 text-center text-xs text-muted-foreground">Dibuat dengan Markethink Tools Pro · cek ulang angka & klaim sebelum dipublikasikan.</p>

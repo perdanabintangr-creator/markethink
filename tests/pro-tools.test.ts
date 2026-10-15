@@ -54,6 +54,19 @@ describe("Tools Pro per role", () => {
     for (const id of Object.keys(PRO_FORMS)) expect(fixtures.some((f) => f.tool === id), `fixture ${id}`).toBe(true);
   });
 
+  it("revisi: hasil sebelumnya & koreksi user ikut dikirim ke AI, tanpa riset web ulang", async () => {
+    const { aiObject } = await import("@/lib/addons/runtime");
+    const fx = fixtures.find((f) => f.tool === "report")!;
+    nextObject = fx.output;
+    const runner = RUNNERS.report;
+    const revision = { note: "Harga per sesi Rp25.000, bukan Rp35.000", previous: { headline: "lama", sources: [{ title: "S", url: "https://s.id" }] } };
+    const res = await runner.run({ ...ctx(), revision }, runner.input.parse(fx.input));
+    const call = vi.mocked(aiObject).mock.calls.at(-1)![1] as { prompt?: string };
+    expect(call.prompt).toContain("REVISI");
+    expect(call.prompt).toContain("Rp25.000");
+    expect((res.output as { sources?: unknown[] }).sources).toHaveLength(1);
+  });
+
   for (const fx of fixtures) {
     it(`${fx.tool}: membuat ${fx.kinds.join(" + ")}`, async () => {
       nextObject = fx.output;

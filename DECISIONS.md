@@ -85,3 +85,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Angka penting dihitung program (bukan AI): margin promo, metrik & skor KOL, ekonomi loyalty, skor audit, budget dinormalisasi, durasi adegan naskah.
 - Harga & kuota add-on baru = DRAFT (strategi 75rb/6, konten 50rb/15, crm 30rb/10, kolpr 50rb/10, laporan 50rb/8) — menunggu ACC founder.
 - Tes generik `tests/pro-tools.test.ts` memakai semua fixture `tests/fixtures/pro/*.ts` (PPT/Excel valid + data tipis).
+- 2026-10-15 — **Diskusi hasil Tools Pro** (permintaan founder): di setiap halaman hasil ada panel "Diskusikan hasil ini" untuk bertanya/mengoreksi data & maksud
+  (2 kredit harian per pertanyaan, otak Senior, riwayat di tabel `tool_run_messages`). AI merangkum koreksi dalam blok [[KOREKSI]] → tombol
+  "Perbaiki hasil" membuat versi baru dengan input sama + koreksi + hasil sebelumnya (kolom `tool_runs.revision_of/revision_note`), GRATIS maks 3×
+  per hasil (tidak memotong kuota add-on; revisi tidak riset web ulang). Biaya diskusi tampil di back office sebagai "Tools · Diskusi hasil".
