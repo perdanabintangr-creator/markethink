@@ -19,7 +19,7 @@ import { guardRequest } from "@/lib/ratelimit";
 import { consumeCredits, refundCredits } from "@/lib/credits";
 import { routeTier } from "@/lib/ai/router";
 import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
-import { SERPER_COST_USD, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
+import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
 import { estimateCostUsd, getTier, messageCreditCost } from "@/lib/ai/models.config";
 import {
   attachmentIds,
@@ -302,6 +302,13 @@ export async function POST(req: Request) {
                     writer.write({ type: "data-status", data: { state: "searching", label: `Mencari di web: ${truncate(query, 60)}` }, transient: true });
                     try {
                       const found = await webSearch(query, { maxResults: 6, signal: req.signal });
+                      // Baca isi 3 halaman teratas (gratis) agar jawaban tidak hanya dari cuplikan Google.
+                      const readable = found.filter((f) => !/instagram|tiktok|facebook|youtube|lemon8|shopee|tokopedia/i.test(f.url)).slice(0, 3);
+                      const pages = await Promise.allSettled(readable.map((f) => fetchPageText(f.url, { maxChars: 2500, timeoutMs: 6000 })));
+                      readable.forEach((f, i) => {
+                        const r = pages[i];
+                        if (r.status === "fulfilled" && r.value) f.content = `${f.content}\n\nIsi halaman (cuplikan):\n${r.value}`;
+                      });
                       const numbered = found.map((s) => ({ ...s, id: ++nextSourceId }));
                       for (const s of numbered) writer.write({ type: "source-url", sourceId: String(s.id), url: s.url, title: s.title });
                       writer.write({ type: "data-status", data: { state: "done", label: `${numbered.length} sumber ditemukan` }, transient: true });

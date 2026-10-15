@@ -49,3 +49,17 @@ describe("Imagen", () => {
     expect(imagenAspect("2:1")).toBe("1:1");
   });
 });
+
+describe("baca isi halaman", async () => {
+  const { htmlToText, fetchPageText } = await import("@/lib/ai/research");
+  it("membersihkan HTML jadi teks (tanpa skrip/menu)", () => {
+    const t = htmlToText("<html><nav>Menu</nav><script>x()</script><main><h1>Harga Paket</h1><p>Basic Rp35.000 &amp; Premium Rp50.000</p></main></html>");
+    expect(t).toContain("Harga Paket");
+    expect(t).toContain("Basic Rp35.000 & Premium Rp50.000");
+    expect(t).not.toContain("Menu");
+    expect(t).not.toContain("x()");
+  });
+  it("melewati situs media sosial", async () => {
+    expect(await fetchPageText("https://www.instagram.com/p/abc")).toBeNull();
+  });
+});

@@ -72,6 +72,46 @@ async function tavilySearch(query: string, opts: { maxResults?: number; signal?:
   }));
 }
 
+/** Situs yang isinya dibangun JavaScript / butuh login — cukup pakai cuplikan Google. */
+const SKIP_FETCH = /(instagram|tiktok|facebook|fb\.|twitter|x\.com|youtube|youtu\.be|lemon8|threads\.net|linkedin|shopee|tokopedia|pinterest)/i;
+
+/** Ambil teks utama sebuah halaman (gratis, tanpa API) agar riset tidak hanya bergantung pada cuplikan Google. */
+export async function fetchPageText(url: string, opts: { timeoutMs?: number; maxChars?: number } = {}): Promise<string | null> {
+  if (SKIP_FETCH.test(url) || !/^https?:\/\//.test(url)) return null;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; MarkethinkResearch/1.0)", Accept: "text/html,application/xhtml+xml" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 7000),
+    });
+    const type = res.headers.get("content-type") ?? "";
+    if (!res.ok || !type.includes("html")) return null;
+    const text = htmlToText((await res.text()).slice(0, 600_000));
+    return text.length > 200 ? text.slice(0, opts.maxChars ?? 4000) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** HTML → teks bersih (buang skrip, gaya, menu, footer). */
+export function htmlToText(html: string) {
+  const body = html.match(/<(article|main)[\s\S]*?<\/\1>/i)?.[0] ?? html;
+  return body
+    .replace(/<(script|style|noscript|svg|nav|footer|header|form|iframe)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n+/g, "\n")
+    .trim();
+}
+
 /** Pencarian web untuk Riset Web: Serper (paling murah) bila tersedia, selain itu Tavily. */
 export async function webSearch(query: string, opts: { maxResults?: number; signal?: AbortSignal } = {}): Promise<Source[]> {
   if (serperEnabled()) {

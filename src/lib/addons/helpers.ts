@@ -1,7 +1,7 @@
 import "server-only";
 import { generateText } from "ai";
 import { DEFAULT_TOOL_TIER } from "./tool-tier";
-import { SERPER_COST_USD, formatSources, serperEnabled, serperSearch } from "@/lib/ai/research";
+import { SERPER_COST_USD, fetchPageText, formatSources, serperEnabled, serperSearch } from "@/lib/ai/research";
 import { anthropic } from "@ai-sdk/anthropic";
 import { routeTier } from "@/lib/ai/router";
 import { addCost, type ToolCtx } from "./runtime";
@@ -122,6 +122,8 @@ async function serperResearch(
     model: qRouted.model,
     system: `Kamu peneliti pasar. Dari tugas riset & brief, tulis ${max} kata kunci pencarian Google yang spesifik dan beragam
 (bahasa Indonesia; boleh bahasa Inggris untuk data industri/laporan global). Sertakan tahun terkini bila relevan.
+Bila brief menyebut nama brand/kompetitor, buat kata kunci khusus untuk masing-masing (mis. "<brand> harga paket", "<brand> promo",
+"<brand> review", "<brand> lokasi") — data spesifik per brand lebih penting daripada kata kunci umum.
 Balas hanya daftar kata kunci, satu per baris, tanpa nomor dan tanpa penjelasan.`,
     prompt: `TUGAS RISET:\n${opts.system.slice(-3000)}\n\nBRIEF:\n${opts.prompt.slice(0, 4000)}`,
     maxOutputTokens: 400,
@@ -147,6 +149,14 @@ Balas hanya daftar kata kunci, satu per baris, tanpa nomor dan tanpa penjelasan.
     .slice(0, 30)
     .map((r, i) => ({ ...r, id: i + 1 }));
   if (!found.length) throw new Error("hasil Serper kosong");
+
+  // Baca isi halaman teratas (gratis) — cuplikan Google sering tidak memuat harga, paket, atau detail promo.
+  const toRead = found.filter((f) => !/instagram|tiktok|facebook|youtube|lemon8|shopee|tokopedia/i.test(f.url)).slice(0, 8);
+  const pages = await Promise.allSettled(toRead.map((f) => fetchPageText(f.url, { maxChars: 3500 })));
+  toRead.forEach((f, i) => {
+    const r = pages[i];
+    if (r.status === "fulfilled" && r.value) f.content = `${f.content}\n\nIsi halaman (cuplikan):\n${r.value}`;
+  });
 
   const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER);
   const notes = await generateText({

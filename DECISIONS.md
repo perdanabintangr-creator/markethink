@@ -155,3 +155,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - **Riset Web**: bila `SERPER_API_KEY` diisi → chat memakai tool `web_search` berbasis Serper (Google, gl=id) menggantikan pencarian
   bawaan Claude ($10/1.000 → ±$1/1.000); mode Riset Web memakai Serper (cadangan Tavily); Tools Pro/Agent: Junior menyusun kata kunci →
   Serper paralel → otak pilihan menulis catatan riset bernomor. Gagal → otomatis kembali ke pencarian Claude.
+- Uji pertama Serper (Riset Kompetitor PhotoBebaz): biaya $0,50 → $0,087 (−83%), 90 → 54 dtk, tapi data harga kompetitor tidak ketemu
+  karena hanya cuplikan Google. Perbaikan: baca isi halaman teratas (fetch HTML → teks, gratis; lewati medsos/marketplace) —
+  Tools Pro maks 8 halaman, chat 3 halaman — dan kata kunci khusus per brand/kompetitor (harga, promo, review, lokasi).
