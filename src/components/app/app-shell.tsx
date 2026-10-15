@@ -6,11 +6,13 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Logo } from "@/components/logo";
 import { AppContextProvider, type AppContextValue } from "./app-context";
 import { Sidebar } from "./sidebar";
+import { UpdateNotifier } from "./update-notifier";
 
 export function AppShell({ value, children }: { value: AppContextValue; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <AppContextProvider value={value}>
+      <UpdateNotifier />
       <div className="flex h-dvh overflow-hidden print:block print:h-auto print:overflow-visible">
         <aside className="hidden w-72 shrink-0 border-r md:block print:hidden">
           <Sidebar />
