@@ -8,6 +8,7 @@ import {
   createUIMessageStreamResponse,
   stepCountIs,
   streamText,
+  tool,
 } from "ai";
 import { z } from "zod";
 import { anthropic } from "@ai-sdk/anthropic";
@@ -18,7 +19,7 @@ import { guardRequest } from "@/lib/ratelimit";
 import { consumeCredits, refundCredits } from "@/lib/credits";
 import { routeTier } from "@/lib/ai/router";
 import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
-import { formatSources, webSearch, type Source } from "@/lib/ai/research";
+import { SERPER_COST_USD, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
 import { estimateCostUsd, getTier, messageCreditCost } from "@/lib/ai/models.config";
 import {
   attachmentIds,
@@ -188,8 +189,11 @@ export async function POST(req: Request) {
       ]);
 
       let sources: Source[] = [];
-      const useTavily = research && Boolean(process.env.TAVILY_API_KEY);
+      // Riset Web: API pencarian sendiri (Serper ±$1/1.000 → Tavily) sebelum AI menjawab.
+      const useTavily = research && searchApiEnabled();
+      let apiSearches = 0;
       if (useTavily && lastText.trim()) {
+        apiSearches++;
         writer.write({ type: "data-status", data: { state: "searching", label: "Mencari di web…" }, transient: true });
         try {
           sources = await webSearch(lastText, { signal: req.signal });
@@ -255,8 +259,12 @@ export async function POST(req: Request) {
       }
       // Pencarian web Claude (berbayar) — paket Free dibatasi per hari; Google Search (gratis) untuk Gemini.
       const paidSearchCapped = Boolean(await dailyLimitReached(dailyLimits, user.id, "search"));
+      // Serper terpasang → AI mencari lewat Serper (10× lebih murah dari pencarian bawaan Claude, bisa dipakai semua model).
+      const serperOn = webSearchEnabled && tier.webSearches > 0 && serperEnabled() && !paidSearchCapped && !preferFree;
       const webSearchOn =
-        webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY) && !paidSearchCapped;
+        !serperOn && webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY) && !paidSearchCapped;
+      const maxSearches = research ? tier.webSearches + 2 : tier.webSearches;
+      let nextSourceId = sources.length;
       const googleSearchOn = webSearchEnabled && preferFree;
       const routed = routeTier(tierId, { needsVision: hasImages, preferFree });
 
@@ -281,7 +289,32 @@ export async function POST(req: Request) {
             // Foto AI di PPT hanya untuk paket tanpa batas harian gambar (Pro/Promax/admin).
             deckImages: !imageBlockedReason && dailyLimits.image === undefined,
           }),
-          ...(webSearchOn
+          ...(serperOn
+            ? {
+                web_search: tool({
+                  description:
+                    "Cari informasi terkini di Google (hasil untuk Indonesia): harga, tren, data pasar, berita, kompetitor. " +
+                    "Pakai kata kunci spesifik; boleh beberapa kali dengan kata kunci berbeda. Kutip sumber dengan nomor [n] sesuai hasil.",
+                  inputSchema: z.object({ query: z.string().min(2).max(300).describe("Kata kunci pencarian") }),
+                  execute: async ({ query }) => {
+                    if (apiSearches >= maxSearches + (useTavily ? 1 : 0)) return { error: "Batas pencarian untuk pesan ini tercapai. Jawab dari hasil yang ada." };
+                    apiSearches++;
+                    writer.write({ type: "data-status", data: { state: "searching", label: `Mencari di web: ${truncate(query, 60)}` }, transient: true });
+                    try {
+                      const found = await webSearch(query, { maxResults: 6, signal: req.signal });
+                      const numbered = found.map((s) => ({ ...s, id: ++nextSourceId }));
+                      for (const s of numbered) writer.write({ type: "source-url", sourceId: String(s.id), url: s.url, title: s.title });
+                      writer.write({ type: "data-status", data: { state: "done", label: `${numbered.length} sumber ditemukan` }, transient: true });
+                      return { results: formatSources(numbered) };
+                    } catch (err) {
+                      console.error("[serper] gagal", err);
+                      writer.write({ type: "data-status", data: { state: "done", label: "Riset web tidak tersedia" }, transient: true });
+                      return { error: "Pencarian web sedang tidak tersedia. Jawab dari pengetahuan umum dan beri label perkiraan." };
+                    }
+                  },
+                }),
+              }
+            : webSearchOn
             ? {
                 web_search: anthropic.tools.webSearch_20250305({
                   maxUses: research ? tier.webSearches + 2 : tier.webSearches,
@@ -297,10 +330,11 @@ export async function POST(req: Request) {
         onFinish: async ({ totalUsage: usage, steps }) => {
           settled = true;
           const used = routed.resolved() ?? routed.candidates[0];
-          const searches = steps.reduce((sum, step) => {
+          const claudeSearches = steps.reduce((sum, step) => {
             const raw = step.providerMetadata?.anthropic?.usage as { server_tool_use?: { web_search_requests?: number } } | undefined;
             return sum + (raw?.server_tool_use?.web_search_requests ?? 0);
           }, 0);
+          const searches = claudeSearches + apiSearches;
           const cacheWrite = steps.reduce(
             (sum, step) => sum + Number(step.providerMetadata?.anthropic?.cacheCreationInputTokens ?? 0),
             0,
@@ -318,7 +352,8 @@ export async function POST(req: Request) {
               (freeTierModel(used)
                 ? 0
                 : estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0, { read: cacheRead, write: cacheWrite })) +
-              searches * 0.01,
+              claudeSearches * 0.01 +
+              (serperEnabled() ? apiSearches * SERPER_COST_USD : 0),
             cache_read_tokens: cacheRead,
             cache_write_tokens: cacheWrite,
             web_searches: searches,

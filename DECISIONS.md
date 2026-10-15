@@ -147,3 +147,11 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   Agent dengan Director: jumlah langkah per grup = sisa kuota ÷ 2.
 - Menu "Marketing Agents" di mode Chat dihapus dan diganti tautan **Markethink Agent** (ke `/tools/agent`). Halaman `/agents` dialihkan ke sana;
   data agent lama & chat yang memakainya tetap utuh.
+
+## Penghematan gambar & Riset Web (15 Okt 2026, ACC founder)
+- **Gambar baru** (chat & foto PPT): Imagen 4 Fast (±$0,02/gambar) bila `IMAGEN_API_KEY` diisi; edit/variasi gambar & cadangan tetap
+  Gemini Flash Image via OpenRouter (±$0,034). Key Imagen dari project Google ber-billing terpisah agar Gemini gratis tetap gratis.
+  Seedream di OpenRouter tidak lebih murah ($0,035) → tidak dipakai.
+- **Riset Web**: bila `SERPER_API_KEY` diisi → chat memakai tool `web_search` berbasis Serper (Google, gl=id) menggantikan pencarian
+  bawaan Claude ($10/1.000 → ±$1/1.000); mode Riset Web memakai Serper (cadangan Tavily); Tools Pro/Agent: Junior menyusun kata kunci →
+  Serper paralel → otak pilihan menulis catatan riset bernomor. Gagal → otomatis kembali ke pencarian Claude.

@@ -1,4 +1,6 @@
 import "server-only";
+import { experimental_generateImage as generateImageSdk } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 const GOOGLE_API = "https://generativelanguage.googleapis.com/v1beta";
 const OPENROUTER_API = "https://openrouter.ai/api/v1";
@@ -7,7 +9,7 @@ const HOUR = 60 * 60 * 1000;
 export interface GeneratedImage {
   bytes: Uint8Array;
   mime: string;
-  provider: "openrouter" | "google";
+  provider: "openrouter" | "google" | "imagen";
   model: string;
   caption: string | null;
   /** Biaya nyata dari provider (USD) bila dilaporkan. */
@@ -25,18 +27,50 @@ export function cleanKey(raw: string | undefined) {
 const keys = () => ({
   openrouter: cleanKey(process.env.OPENROUTER_API_KEY),
   google: cleanKey(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+  // Key Google AI Studio dari project ber-billing khusus Imagen (terpisah agar Gemini gratis tetap gratis).
+  imagen: cleanKey(process.env.IMAGEN_API_KEY),
 });
 
-export const imageGenerationEnabled = () => Boolean(keys().openrouter || keys().google);
+export const imageGenerationEnabled = () => Boolean(keys().openrouter || keys().google || keys().imagen);
+
+/** Imagen 4 Fast: ±$0,02/gambar (lebih murah dari Gemini Flash Image ±$0,034). Override: env IMAGEN_MODEL / IMAGEN_COST_USD. */
+const IMAGEN_MODEL = process.env.IMAGEN_MODEL || "imagen-4.0-fast-generate-001";
+const IMAGEN_COST_USD = Number(process.env.IMAGEN_COST_USD) || 0.02;
+/** Imagen hanya mendukung 1:1, 3:4, 4:3, 9:16, 16:9. */
+export function imagenAspect(ratio: string): "1:1" | "3:4" | "4:3" | "9:16" | "16:9" {
+  if (ratio === "4:5") return "3:4";
+  return (["1:1", "3:4", "4:3", "9:16", "16:9"] as const).find((r) => r === ratio) ?? "1:1";
+}
+
+async function viaImagen(key: string, prompt: string, aspectRatio: string): Promise<GeneratedImage> {
+  const google = createGoogleGenerativeAI({ apiKey: key });
+  const { image } = await generateImageSdk({
+    model: google.image(IMAGEN_MODEL),
+    prompt: prompt.slice(0, 4000),
+    aspectRatio: imagenAspect(aspectRatio),
+    n: 1,
+    providerOptions: { google: { personGeneration: "allow_adult" } },
+    maxRetries: 1,
+  });
+  return { bytes: image.uint8Array, mime: image.mediaType || "image/png", provider: "imagen", model: IMAGEN_MODEL, caption: null, costUsd: IMAGEN_COST_USD };
+}
 
 /**
  * Buat gambar dari prompt; `references` = gambar acuan (edit/variasi) berupa base64.
  * Urutan provider: OpenRouter (top-up kecil, prabayar) → Google AI Studio (butuh billing).
  */
 export async function generateImage(prompt: string, aspectRatio: string, references: Reference[] = []): Promise<GeneratedImage> {
-  const { openrouter, google } = keys();
-  if (!openrouter && !google) throw new Error("Belum ada API key pembuat gambar (OPENROUTER_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY)");
+  const { openrouter, google, imagen } = keys();
+  if (!openrouter && !google && !imagen) throw new Error("Belum ada API key pembuat gambar (OPENROUTER_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY)");
   const errors: string[] = [];
+  // Gambar baru (tanpa acuan) → Imagen 4 Fast lebih murah. Edit/variasi gambar butuh Gemini (Imagen tidak menerima gambar acuan).
+  if (imagen && !references.length) {
+    try {
+      return await viaImagen(imagen, prompt, aspectRatio);
+    } catch (err) {
+      errors.push(`imagen: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
   if (openrouter) {
     try {
       return await viaOpenRouter(openrouter, prompt, aspectRatio, references);

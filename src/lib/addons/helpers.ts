@@ -1,6 +1,7 @@
 import "server-only";
 import { generateText } from "ai";
 import { DEFAULT_TOOL_TIER } from "./tool-tier";
+import { SERPER_COST_USD, formatSources, serperEnabled, serperSearch } from "@/lib/ai/research";
 import { anthropic } from "@ai-sdk/anthropic";
 import { routeTier } from "@/lib/ai/router";
 import { addCost, type ToolCtx } from "./runtime";
@@ -77,6 +78,14 @@ export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: 
     const prev = ctx.revision.previous as { sources?: { title: string; url: string }[] } | null;
     return { text: "(Revisi — tidak ada riset web baru. Pakai data & sumber dari hasil sebelumnya.)", sources: prev?.sources ?? [], webNote: "" };
   }
+  // Serper terpasang → riset lewat pencarian Google Serper (±10× lebih murah dari pencarian bawaan Claude).
+  if (serperEnabled()) {
+    try {
+      return await serperResearch(ctx, opts);
+    } catch (err) {
+      console.error("[serper] riset gagal, pakai pencarian Claude", err);
+    }
+  }
   const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER);
   const research = await generateText({
     model: routed.model,
@@ -97,4 +106,60 @@ export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: 
   ).slice(0, 15);
   const webNote = routed.toolFallback() ? "Catatan: pencarian web sedang tidak tersedia, analisis memakai pengetahuan umum AI." : "";
   return { text: research.text, sources, webNote };
+}
+
+/**
+ * Riset dengan Serper: (1) otak Junior menyusun kata kunci Google, (2) semua dicari paralel lewat Serper,
+ * (3) otak pilihan menulis catatan riset bernomor sumber [n] dari hasil pencarian.
+ */
+async function serperResearch(
+  ctx: ToolCtx,
+  opts: { system: string; prompt: string; maxUses?: number; maxOutputTokens?: number },
+): Promise<WebResearch> {
+  const max = Math.max(3, Math.min(8, opts.maxUses ?? 6));
+  const qRouted = routeTier("junior");
+  const q = await generateText({
+    model: qRouted.model,
+    system: `Kamu peneliti pasar. Dari tugas riset & brief, tulis ${max} kata kunci pencarian Google yang spesifik dan beragam
+(bahasa Indonesia; boleh bahasa Inggris untuk data industri/laporan global). Sertakan tahun terkini bila relevan.
+Balas hanya daftar kata kunci, satu per baris, tanpa nomor dan tanpa penjelasan.`,
+    prompt: `TUGAS RISET:\n${opts.system.slice(-3000)}\n\nBRIEF:\n${opts.prompt.slice(0, 4000)}`,
+    maxOutputTokens: 400,
+    maxRetries: 1,
+  });
+  addCost(ctx, qRouted.resolved(), q.usage);
+  const queries = [
+    ...new Set(
+      q.text
+        .split("\n")
+        .map((l) => l.replace(/^[\s\-*\d.)]+/, "").replace(/^["']|["']$/g, "").trim())
+        .filter((l) => l.length > 2),
+    ),
+  ].slice(0, max);
+  if (!queries.length) throw new Error("kata kunci kosong");
+
+  const settled = await Promise.allSettled(queries.map((query) => serperSearch(query, { maxResults: 6 })));
+  ctx.cost.usd += queries.length * SERPER_COST_USD;
+  const seen = new Set<string>();
+  const found = settled
+    .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+    .filter((r) => !seen.has(r.url) && (seen.add(r.url), true))
+    .slice(0, 30)
+    .map((r, i) => ({ ...r, id: i + 1 }));
+  if (!found.length) throw new Error("hasil Serper kosong");
+
+  const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER);
+  const notes = await generateText({
+    model: routed.model,
+    system: `${opts.system}
+
+Hasil pencarian Google sudah tersedia di bawah (cuplikan per sumber, bernomor). Tulis CATATAN RISET yang padat fakta
+(angka, nama brand, harga, tanggal, tren) dan cantumkan nomor sumber [n] di setiap fakta. Jangan mengarang data yang tidak ada
+di hasil pencarian; bila harus memperkirakan, tulis "perkiraan" beserta dasar hitungannya. Sebutkan juga data yang tidak ditemukan.`,
+    prompt: `${opts.prompt}\n\nHasil pencarian:\n${formatSources(found)}`,
+    maxOutputTokens: opts.maxOutputTokens ?? 6000,
+    maxRetries: 1,
+  });
+  addCost(ctx, routed.resolved(), notes.usage);
+  return { text: notes.text, sources: found.map((f) => ({ title: f.title, url: f.url })), webNote: "" };
 }
