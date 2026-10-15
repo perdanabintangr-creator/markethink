@@ -71,6 +71,11 @@ export interface WebResearch {
 
 /** Riset web otomatis (pencarian Claude) → catatan riset + daftar sumber. Biaya pencarian ikut dihitung. */
 export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: string; maxUses?: number; maxOutputTokens?: number }): Promise<WebResearch> {
+  // Revisi tidak riset ulang (lebih cepat & hemat): pakai data & sumber dari hasil sebelumnya.
+  if (ctx.revision) {
+    const prev = ctx.revision.previous as { sources?: { title: string; url: string }[] } | null;
+    return { text: "(Revisi — tidak ada riset web baru. Pakai data & sumber dari hasil sebelumnya.)", sources: prev?.sources ?? [], webNote: "" };
+  }
   const routed = routeTier("senior");
   const research = await generateText({
     model: routed.model,

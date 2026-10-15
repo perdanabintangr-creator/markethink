@@ -6,7 +6,6 @@ import { toolInfo } from "@/lib/addons/catalog";
 import { getAddonStatus } from "@/lib/addons/entitlement";
 import { RUNNERS, isAiTool } from "@/lib/addons/tools";
 import type { ToolCtx } from "@/lib/addons/runtime";
-import { PRO_FORMS } from "@/lib/addons/pro/forms";
 import { MAX_REVISIONS } from "@/lib/addons/format";
 
 export const maxDuration = 300;
@@ -30,7 +29,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ tool: s
   let rawInput: unknown = body;
   if (revise) {
     const note = String(revise.note ?? "").trim().slice(0, 3000);
-    if (!PRO_FORMS[tool]) return jsonError(400, "revision_unsupported", { message: "Tool ini belum mendukung perbaikan otomatis." });
     if (note.length < 5) return jsonError(400, "invalid_input", { message: "Tulis dulu apa yang perlu diperbaiki." });
     const { data: orig } = await admin
       .from("tool_runs")

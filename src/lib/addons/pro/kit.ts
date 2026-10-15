@@ -4,7 +4,7 @@ import type { z } from "zod";
 import { untrusted } from "@/lib/ai/prompt";
 import type { AddonId, ToolId } from "../catalog";
 import { EXPERT, webResearch } from "../helpers";
-import { aiObject, makeDeck, makeWorkbook, storeMaybe, storeToolFile, type SheetSpec, type ToolCtx, type ToolFile } from "../runtime";
+import { aiObject, revisionBlock, makeDeck, makeWorkbook, storeMaybe, storeToolFile, type SheetSpec, type ToolCtx, type ToolFile } from "../runtime";
 import type { Runner, ToolResult } from "../tools";
 import { briefFromFields, filesField, schemaFromFields, type ToolForm } from "./fields";
 
@@ -136,8 +136,7 @@ ${webNote ? `\n${webNote}` : ""}`;
         untrusted("brief", brief),
         loaded.text && `Data dari file user:\n${untrusted("file", loaded.text)}`,
         notes && `Catatan riset web (pakai angka & fakta ini, sebut sumbernya bila relevan):\n${untrusted("riset", notes.slice(0, 30_000))}`,
-        ctx.revision &&
-          `REVISI — ini perbaikan dari hasil sebelumnya. Hasil sebelumnya (JSON):\n${untrusted("hasil-sebelumnya", JSON.stringify(ctx.revision.previous).slice(0, 60_000))}\n\nKoreksi & arahan dari user (WAJIB dipenuhi; data dari user mengalahkan asumsi sebelumnya):\n${untrusted("koreksi", ctx.revision.note)}\n\nPerbaiki semua bagian yang terdampak koreksi (termasuk angka turunan, ringkasan, dan rekomendasi). Bagian yang tidak terkait koreksi dipertahankan kualitasnya.`,
+        ctx.revision && revisionBlock(ctx.revision),
       ]
         .filter(Boolean)
         .join("\n\n");
@@ -148,6 +147,7 @@ ${webNote ? `\n${webNote}` : ""}`;
         system,
         vision: loaded.hasImage,
         maxOutputTokens: def.maxOutputTokens ?? 12000,
+        revisionHandled: true,
         ...(loaded.parts.length ? { messages: [{ role: "user" as const, content }] } : { prompt: text }),
       })) as z.infer<O> & Record<string, unknown>;
       def.post?.(out, raw);

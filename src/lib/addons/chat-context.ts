@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toolInfo } from "./catalog";
-import { PRO_FORMS } from "./pro/forms";
+import { isAiTool } from "./tools";
 import { resultToMarkdown } from "./to-markdown";
 
 /** Versi terbaru (berhasil) dari rantai hasil Tools Pro: hasil asal + revisinya. */
@@ -25,7 +25,7 @@ export async function toolRunChatPrompt(db: SupabaseClient, rootId: string) {
   const latest = await latestRunInChain(db, rootId);
   if (!latest) return "";
   const info = toolInfo(latest.tool as string);
-  const revisable = Boolean(PRO_FORMS[latest.tool as string]);
+  const revisable = isAiTool(latest.tool as string);
   const parts = [
     `KONTEKS HASIL TOOLS PRO
 Chat ini membahas hasil "${info?.name ?? latest.tool}" milik user. Hasilnya tampil di panel kanan layar user.`,

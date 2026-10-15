@@ -67,6 +67,18 @@ describe("Tools Pro per role", () => {
     expect((res.output as { sources?: unknown[] }).sources).toHaveLength(1);
   });
 
+  it("revisi tool lama: riset web tidak diulang, sumber lama dipakai", async () => {
+    const { webResearch } = await import("@/lib/addons/helpers");
+    const { generateText } = await import("ai");
+    vi.mocked(generateText).mockClear();
+    const revision = { note: "Fokus segmen rock n roll", previous: { sources: [{ title: "Lama", url: "https://lama.id" }] } };
+    const r = await webResearch({ ...ctx(), revision }, { system: "s", prompt: "p" });
+    expect(generateText).not.toHaveBeenCalled();
+    expect(r.sources).toEqual(revision.previous.sources);
+    const { revisionBlock } = await import("@/lib/addons/runtime");
+    expect(revisionBlock(revision)).toContain("rock n roll");
+  });
+
   for (const fx of fixtures) {
     it(`${fx.tool}: membuat ${fx.kinds.join(" + ")}`, async () => {
       nextObject = fx.output;

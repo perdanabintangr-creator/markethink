@@ -7,6 +7,7 @@ import { routeTier } from "@/lib/ai/router";
 import { estimateCostUsd } from "@/lib/ai/models.config";
 import { buildPresentation, presentationSchema } from "@/lib/pptx";
 import { sanitizeFileName } from "@/lib/files";
+import { untrusted } from "@/lib/ai/prompt";
 
 export interface ToolCtx {
   admin: SupabaseClient;
@@ -38,10 +39,31 @@ export const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presenta
  * 3) bila jawaban terpotong karena terlalu panjang → ulang dengan instruksi lebih ringkas;
  *    bila masih tidak sesuai skema → satu putaran perbaikan oleh AI.
  */
+/** Instruksi revisi: hasil sebelumnya + koreksi user (dipakai semua Tools Pro). */
+export function revisionBlock(rev: { note: string; previous: unknown }) {
+  return `REVISI — ini perbaikan dari hasil sebelumnya. Hasil sebelumnya (JSON):\n${untrusted("hasil-sebelumnya", JSON.stringify(rev.previous).slice(0, 60_000))}\n\nKoreksi & arahan dari user (WAJIB dipenuhi; data dari user mengalahkan asumsi sebelumnya):\n${untrusted("koreksi", rev.note)}\n\nPerbaiki semua bagian yang terdampak koreksi (termasuk angka turunan, ringkasan, dan rekomendasi). Bagian yang tidak terkait koreksi dipertahankan kualitasnya.`;
+}
+
 export async function aiObject<T extends z.ZodTypeAny>(
   ctx: ToolCtx,
-  opts: { schema: T; system: string; prompt?: string; messages?: ModelMessage[]; vision?: boolean; maxOutputTokens?: number },
+  opts: {
+    schema: T;
+    system: string;
+    prompt?: string;
+    messages?: ModelMessage[];
+    vision?: boolean;
+    maxOutputTokens?: number;
+    /** true bila pemanggil sudah memasukkan blok revisi ke prompt sendiri. */
+    revisionHandled?: boolean;
+  },
 ): Promise<z.infer<T>> {
+  // Revisi untuk tool yang belum menyisipkan konteks revisi sendiri: tambahkan hasil sebelumnya + koreksi user.
+  if (ctx.revision && !opts.revisionHandled) {
+    const block = revisionBlock(ctx.revision);
+    opts = opts.messages
+      ? { ...opts, messages: [...opts.messages, { role: "user", content: block }] }
+      : { ...opts, prompt: `${opts.prompt ?? ""}\n\n${block}` };
+  }
   const routed = routeTier("senior", { needsVision: opts.vision });
   const maxOutputTokens = Math.max(opts.maxOutputTokens ?? 12000, 12000);
   const format = `
