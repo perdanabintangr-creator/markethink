@@ -11,6 +11,7 @@ import { ToolRunner } from "@/components/tools/tool-runner";
 import { Calculators } from "@/components/tools/calculators";
 import { RequestAddonButton } from "@/components/tools/request-addon";
 import { ToolIcon } from "@/components/tools/tool-icon";
+import { ToolLocked } from "@/components/tools/tool-locked";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,12 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
   const addon = addonInfo(info.addon)!;
   const { supabase, profile } = await requireUser();
   const status = toLite(await getAddonStatus(createAdminClient(), profile, info.addon));
+  // Terkunci: tidak punya jatah apa pun (mis. paket Free tanpa add-on) → tampilkan pilihan beli add-on / upgrade, bukan form.
+  const locked = !status.hasAccess && !status.nextSource && !status.paidUntil && status.trialRemaining === 0 && status.isFree;
+  const { data: planRows } = locked
+    ? await supabase.from("plans").select("id, name, monthly_price_idr, daily_credits").in("id", ["pro", "promax"]).order("sort_order")
+    : { data: [] };
+  const plans = (planRows ?? []).map((p) => ({ id: p.id as "pro" | "promax", name: p.name as string, price: Number(p.monthly_price_idr), credits: Number(p.daily_credits) }));
   const { data: runs } = info.noQuota
     ? { data: [] }
     : await supabase
@@ -54,7 +61,7 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
               </p>
             </div>
           </div>
-          {!status.isAdmin && !status.paidUntil && (
+          {!status.isAdmin && !status.paidUntil && !locked && (
             <RequestAddonButton addon={addon.id} name={status.name} price={status.price} quota={status.quota} variant="outline" />
           )}
         </div>
@@ -67,7 +74,13 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
           ))}
         </div>
 
-        {info.noQuota ? <Calculators locked={!status.hasAccess} status={status} /> : <ToolRunner tool={tool} status={status} />}
+        {locked ? (
+          <ToolLocked status={status} toolName={info.name} plans={plans} />
+        ) : info.noQuota ? (
+          <Calculators locked={!status.hasAccess} status={status} />
+        ) : (
+          <ToolRunner tool={tool} status={status} />
+        )}
 
         {!!runs?.length && (
           <section>

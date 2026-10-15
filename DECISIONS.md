@@ -98,3 +98,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   project) via `storage_used_bytes()`; file hasil AI tidak dihitung. Dicek saat minta URL upload (`/api/upload/sign`). Meter di Pengaturan user.
   Foto >1 MB dikompres di browser (maks 2048 px, WebP 85%). Back office: kartu "Kapasitas server" (vs batas gratis Supabase 1 GB file / 500 MB DB,
   peringatan ≥70%) + pemakai terbesar; kuota per paket bisa diubah di Pengaturan aplikasi. Hapus otomatis file lama BELUM (menunggu ACC).
+- 2026-10-15 — **Tools Pro terkunci untuk paket Free** (founder): Free tidak dapat percobaan gratis; halaman tool menampilkan pilihan "Beli add-on"
+  (harga/bulan & kuota) atau "Upgrade ke Pro/Promax" (permintaan masuk back office → Calon pelanggan). Gembok di submenu sidebar untuk Free.
+  Pro tetap coba gratis 1× per add-on; Promax gratis 3× per add-on per bulan; API menolak (402) tanpa jatah.

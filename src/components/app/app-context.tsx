@@ -14,6 +14,8 @@ export interface AppContextValue {
   /** Tier otak yang boleh dipakai sesuai paket user. */
   allowedTiers: TierId[];
   planName: string;
+  /** ID paket (beta = Free) — mis. untuk menandai Tools Pro yang terkunci. */
+  planId: string;
   /** Paket memakai model gratis (Gemini free tier) → tampilkan pemberitahuan privasi. */
   freeModels: boolean;
 }

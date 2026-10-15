@@ -33,6 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         credits: { dailyLimit: credits.dailyLimit, remaining: credits.remaining },
         allowedTiers,
         planName: plan?.name ?? profile.plan_id,
+        planId: profile.plan_id,
         freeModels: profile.role !== "admin" && Boolean(freeFlag?.enabled),
       }}
     >

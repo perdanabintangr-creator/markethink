@@ -34,6 +34,7 @@ import {
   FolderOpen,
   FolderOutput,
   LayoutGrid,
+  Lock,
   Languages,
   Loader2,
   LogOut,
@@ -771,7 +772,9 @@ const TOOLS_OPEN_KEY = "mt_tools_menu_open";
 
 /** Menu "Tools Pro" yang bisa dibuka-tutup: submenu per kelompok (Market Research, Jualan Online, Iklan). */
 function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
-  const { t } = useApp();
+  const { t, planId, user } = useApp();
+  // Paket Free: Tools Pro terkunci (perlu beli add-on/upgrade) → tandai dengan gembok.
+  const lockedPlan = planId === "beta" && user.role !== "admin";
   const inTools = pathname.startsWith("/tools");
   const [open, setOpen] = useState(inTools);
   // Kelompok role yang terbuka: default kelompok tool yang sedang dibuka.
@@ -868,6 +871,7 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
                       >
                         <ToolIcon id={tool.id} className="size-3.5 shrink-0" />
                         <span className="truncate">{tool.menu}</span>
+                        {lockedPlan && <Lock className="ml-auto size-3 shrink-0 opacity-60" aria-label="Terkunci" />}
                       </Link>
                     );
                   })}

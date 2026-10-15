@@ -17,6 +17,7 @@ export interface AddonStatusLite {
   trialQuota: number;
   isAdmin: boolean;
   isPromax: boolean;
+  isFree: boolean;
   paidUntil: string | null;
   paidRemaining: number;
   promaxRemaining: number;
@@ -39,7 +40,7 @@ export function quotaText(s: AddonStatusLite) {
   if (s.isPromax) parts.push(`Gratis Promax: sisa ${s.promaxRemaining}/${s.promaxQuota} bulan ini`);
   if (s.paidUntil) parts.push(`Add-on aktif s/d ${dateID(s.paidUntil)} · sisa ${s.paidRemaining}/${s.quota} bulan ini`);
   if (s.trialRemaining > 0) parts.push(`Coba gratis ${s.trialRemaining}×`);
-  if (!parts.length) return "Belum aktif";
+  if (!parts.length) return s.isFree ? "🔒 Terkunci di paket Free" : "Belum aktif";
   return parts.join(" · ");
 }
 

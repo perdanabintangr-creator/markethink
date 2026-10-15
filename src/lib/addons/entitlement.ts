@@ -20,6 +20,8 @@ export interface AddonStatus {
   trialQuota: number;
   isAdmin: boolean;
   isPromax: boolean;
+  /** Paket Free: tanpa percobaan gratis, Tools Pro terkunci sampai beli add-on/upgrade. */
+  isFree: boolean;
   paidUntil: string | null;
   paidRemaining: number;
   promaxRemaining: number;
@@ -84,6 +86,7 @@ export async function getAddonStatuses(admin: SupabaseClient, profile: Profileis
   const monthStart = wibMonthStart();
   const isAdmin = profile.role === "admin";
   const isPromax = profile.plan_id === "promax";
+  const isFree = profile.plan_id === "beta";
 
   return ADDONS.map((info) => {
     const row = (rows ?? []).find((r) => r.id === info.id);
@@ -107,7 +110,8 @@ export async function getAddonStatuses(admin: SupabaseClient, profile: Profileis
     const promaxRemaining = isPromax
       ? Math.max(0, promaxQuota - mine.filter((r) => r.source === "promax" && new Date(r.created_at) >= monthStart).length)
       : 0;
-    const trialRemaining = Math.max(0, trialQuota - mine.filter((r) => r.source === "trial").length);
+    // Paket Free tidak mendapat percobaan gratis Tools Pro (keputusan founder): harus beli add-on atau upgrade paket.
+    const trialRemaining = isFree ? 0 : Math.max(0, trialQuota - mine.filter((r) => r.source === "trial").length);
 
     const nextSource: RunSource | null = isAdmin
       ? "admin"
@@ -128,6 +132,7 @@ export async function getAddonStatuses(admin: SupabaseClient, profile: Profileis
       trialQuota,
       isAdmin,
       isPromax,
+      isFree,
       paidUntil,
       paidRemaining,
       promaxRemaining,
