@@ -45,4 +45,7 @@ export function quotaText(s: AddonStatusLite) {
 }
 
 /** Batas perbaikan (revisi) gratis per hasil Tools Pro — revisi tidak memotong kuota add-on. */
-export const MAX_REVISIONS = 3;
+export const MAX_REVISIONS = 5;
+
+/** Blok yang ditulis AI di chat "Bahas di Chat" untuk memicu pembaruan hasil di panel kanan. */
+export const UPDATE_RESULT_BLOCK = /\[\[PERBARUI_HASIL\]\]([\s\S]*?)(?:\[\[\/PERBARUI_HASIL\]\]|$)/;

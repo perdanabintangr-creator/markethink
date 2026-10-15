@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
-import { ArrowDown, Bot, Briefcase, Check, ChevronDown, FileText, FolderOpen, Link2, Share2, X } from "lucide-react";
+import { ArrowDown, Bot, Briefcase, Check, ChevronDown, FileText, FolderOpen, Link2, PanelRight, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { pickTier, useApp } from "@/components/app/app-context";
 import { CanvasPanel } from "@/components/canvas/canvas-panel";
+import { ToolRunPanel } from "@/components/tools/tool-run-panel";
+import { UPDATE_RESULT_BLOCK } from "@/lib/addons/format";
 import { emitChatsChanged, emitCredits } from "@/lib/events";
 import { track } from "@/lib/analytics";
 import type { TierId } from "@/lib/ai/models.config";
@@ -41,6 +43,7 @@ export function ChatView({
   agent,
   initialCanvasIds,
   initialShareToken,
+  toolRun = null,
 }: {
   chatId: string;
   initialMessages: MtMessage[];
@@ -51,6 +54,8 @@ export function ChatView({
   agent: { id: string; name: string; output_canvas: boolean } | null;
   initialCanvasIds: string[];
   initialShareToken: string | null;
+  /** Chat dari "Bahas di Chat": hasil Tools Pro tampil di panel kanan & bisa diperbarui lewat percakapan. */
+  toolRun?: { rootId: string; tool: string } | null;
 }) {
   const { t, lang, user, workspaces, allowedTiers, freeModels } = useApp();
   const [tier, setTier] = useState<TierId>(() => pickTier(initialTier, allowedTiers));
@@ -69,6 +74,39 @@ export function ChatView({
   const [atBottom, setAtBottom] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoCanvasDone = useRef(initialCanvasIds.length > 0);
+  const [runOpen, setRunOpen] = useState(false);
+  const [runRefresh, setRunRefresh] = useState(0);
+  const [runUpdating, setRunUpdating] = useState<{ since: number } | null>(null);
+  const latestRunId = useRef<string | null>(toolRun?.rootId ?? null);
+  // Panel hasil otomatis terbuka di layar lebar.
+  useEffect(() => {
+    if (toolRun && window.innerWidth >= 1024) setRunOpen(true);
+  }, [toolRun]);
+
+  const updateToolRun = useCallback(
+    async (note: string) => {
+      if (!toolRun || !note.trim()) return;
+      setRunOpen(true);
+      setRunUpdating({ since: Date.now() });
+      try {
+        const res = await fetch(`/api/tools/${toolRun.tool}`, {
+          method: "POST",
+          body: JSON.stringify({ __revise: { runId: latestRunId.current ?? toolRun.rootId, note } }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return void toast.error(data.message ?? "Gagal memperbarui hasil. Coba minta lagi.");
+        latestRunId.current = data.runId;
+        setRunRefresh((n) => n + 1);
+        toast.success("Hasil diperbarui — lihat panel kanan");
+        emitChatsChanged();
+      } catch {
+        toast.error("Koneksi terputus saat memperbarui hasil. Coba lagi.");
+      } finally {
+        setRunUpdating(null);
+      }
+    },
+    [toolRun],
+  );
 
   const opts = useRef({ tier, research, workspaceId, agentId: agent?.id ?? null });
   opts.current = { tier, research, workspaceId, agentId: activeAgent?.id ?? null };
@@ -108,6 +146,8 @@ export function ChatView({
       emitChatsChanged();
       setTimeout(emitChatsChanged, 4000);
       const text = messageToText(message);
+      const update = toolRun ? text.match(UPDATE_RESULT_BLOCK) : null;
+      if (update) void updateToolRun(update[1].trim());
       if (activeAgent?.output_canvas && !autoCanvasDone.current && text.length > 400) {
         autoCanvasDone.current = true;
         void createCanvas(text);
@@ -258,7 +298,7 @@ export function ChatView({
 
   return (
     <div className="flex h-full">
-      <div className={cn("flex h-full min-w-0 flex-1 flex-col", canvasId && "hidden lg:flex")}>
+      <div className={cn("flex h-full min-w-0 flex-1 flex-col", (canvasId || (toolRun && runOpen)) && "hidden lg:flex")}>
         <header className="flex items-center gap-1 border-b px-2 py-1.5 sm:px-3">
           <ModelSelector tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />
           {persisted || messages.length > 0 ? (
@@ -297,6 +337,11 @@ export function ChatView({
           </DropdownMenu>
           )}
           <div className="flex-1" />
+          {toolRun && !runOpen && (
+            <Button variant="ghost" size="sm" onClick={() => setRunOpen(true)}>
+              <PanelRight /> <span className="hidden sm:inline">Hasil</span>
+            </Button>
+          )}
           {canvasIds.length > 0 && !canvasId && (
             <Button variant="ghost" size="sm" onClick={() => setCanvasId(canvasIds[0])}>
               <FileText /> <span className="hidden sm:inline">Canvas</span>
@@ -401,10 +446,23 @@ export function ChatView({
         )}
       </div>
 
-      {canvasId && (
+      {canvasId ? (
         <div className="h-full w-full border-l lg:w-1/2 lg:max-w-3xl">
           <CanvasPanel key={canvasId} canvasId={canvasId} onClose={() => setCanvasId(null)} />
         </div>
+      ) : (
+        toolRun &&
+        runOpen && (
+          <div className="h-full w-full border-l lg:w-1/2 lg:max-w-3xl">
+            <ToolRunPanel
+              rootId={toolRun.rootId}
+              refreshKey={runRefresh}
+              updating={runUpdating}
+              onClose={() => setRunOpen(false)}
+              onLoaded={(d) => (latestRunId.current = d.run.id)}
+            />
+          </div>
+        )
       )}
 
       <QuotaDialog

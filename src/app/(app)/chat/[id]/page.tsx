@@ -12,7 +12,7 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
   const { supabase } = await requireUser();
   const { data: chat } = await supabase
     .from("chats")
-    .select("id, tier, workspace_id, share_token, agent:agents(id, name, output_canvas)")
+    .select("id, tier, workspace_id, share_token, source_run_id, agent:agents(id, name, output_canvas), run:tool_runs!chats_source_run_id_fkey(id, tool)")
     .eq("id", id)
     .maybeSingle();
   if (!chat) notFound();
@@ -26,6 +26,7 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
     parts: r.parts,
     metadata: r.metadata ?? undefined,
   })) as MtMessage[];
+  const run = (Array.isArray(chat.run) ? chat.run[0] : chat.run) as { id: string; tool: string } | null;
   const agent = (Array.isArray(chat.agent) ? chat.agent[0] : chat.agent) as
     | { id: string; name: string; output_canvas: boolean }
     | null;
@@ -42,6 +43,7 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
       agent={agent ?? null}
       initialCanvasIds={(canvases ?? []).map((c) => c.id)}
       initialShareToken={chat.share_token}
+      toolRun={run ? { rootId: run.id, tool: run.tool } : null}
     />
   );
 }

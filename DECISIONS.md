@@ -106,3 +106,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   `aiObject` kini: AI menulis JSON biasa sesuai JSON Schema di prompt → program memperbaiki JSON terpotong (jsonrepair) & menyesuaikan tipe kecil
   (`src/lib/addons/json-output.ts`) → bila terpotong diulang lebih ringkas → bila tetap tidak sesuai skema, 1 putaran perbaikan oleh AI.
   Batas waktu dihitung dari awal proses (250 dtk dari 300 dtk Vercel). Caption Kalender Konten dipersingkat agar lebih cepat.
+
+## Panel hasil otomatis di chat "Bahas di Chat"
+- Chat yang dibuat dari hasil Tools Pro (`chats.source_run_id`) membuka panel kanan berisi versi TERBARU hasil (layar ≥1024px otomatis terbuka; tombol "Hasil" di header untuk membuka lagi).
+- Bila user meminta perubahan di chat, AI menutup balasan dengan blok `[[PERBARUI_HASIL]]…[[/PERBARUI_HASIL]]`; klien menyembunyikan blok itu dan memanggil revisi (`__revise`) → panel memuat versi baru (termasuk PPT/Excel).
+- Batas revisi gratis per hasil dinaikkan 3 → 5 (`MAX_REVISIONS` di `src/lib/addons/format.ts`), tidak memotong kuota.

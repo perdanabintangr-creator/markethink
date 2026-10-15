@@ -1,3 +1,4 @@
+import { toolRunChatPrompt } from "@/lib/addons/chat-context";
 import { after } from "next/server";
 import {
   consumeStream,
@@ -121,7 +122,7 @@ export async function POST(req: Request) {
   // --- chat: ambil atau buat ---
   const { data: existing } = await supabase
     .from("chats")
-    .select("id, workspace_id, agent_id, title")
+    .select("id, workspace_id, agent_id, title, source_run_id")
     .eq("id", chatId)
     .maybeSingle();
   let workspaceId = existing?.workspace_id ?? parsed.data.workspaceId ?? null;
@@ -205,7 +206,7 @@ export async function POST(req: Request) {
         });
       }
 
-      const system = await buildSystemPrompt(
+      const baseSystem = await buildSystemPrompt(
         {
           role: [roleLabel(profile.persona_role), profile.goal && `tujuan utama: ${profile.goal}`].filter(Boolean).join(" — "),
           industry: profile.industry,
@@ -221,6 +222,9 @@ export async function POST(req: Request) {
           project: wsCtx.name,
         },
       );
+      // Chat dari hasil Tools Pro: AI tahu versi terbaru & bisa memicu pembaruan hasil di panel kanan.
+      const runPrompt = existing?.source_run_id ? await toolRunChatPrompt(admin, existing.source_run_id as string) : "";
+      const system = runPrompt ? `${baseSystem}\n\n${runPrompt}` : baseSystem;
       // Konteks yang berubah tiap pesan ditaruh di pesan user terakhir agar system prompt tetap bisa di-cache.
       const turnContext = buildTurnContext({
         knowledge: wsCtx.knowledge,

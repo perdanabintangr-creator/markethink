@@ -1,5 +1,6 @@
 "use client";
 
+import { UPDATE_RESULT_BLOCK } from "@/lib/addons/format";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -217,7 +218,7 @@ export function ChatMessage({
       <MaybeSelectionAsk enabled={!(isLast && isStreaming)} onQuote={onQuote} onExplain={onExplain}>
         {blocks.map((b, i) =>
           b.kind === "text" ? (
-            <Markdown key={i}>{linkCitations(b.text, sources)}</Markdown>
+            <Markdown key={i}>{linkCitations(hideUpdateBlock(b.text), sources)}</Markdown>
           ) : b.part.type === "tool-generate_image" ? (
             <ImageResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
           ) : (
@@ -461,4 +462,9 @@ function IconBtn({
       {children}
     </button>
   );
+}
+
+/** Blok [[PERBARUI_HASIL]] (instruksi untuk sistem) diganti keterangan singkat untuk user. */
+function hideUpdateBlock(text: string) {
+  return text.replace(UPDATE_RESULT_BLOCK, "\n\n> 🔄 **Hasil di panel kanan diperbarui** sesuai permintaan ini.");
 }
