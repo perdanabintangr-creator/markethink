@@ -77,6 +77,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tool: s
     userId: s.user.id,
     runId: run.id,
     cost: { usd: 0, model: null },
+    startedAt: Date.now(),
     ...(revision ? { revision: { note: revision.note, previous: revision.previous } } : {}),
   };
   const started = Date.now();

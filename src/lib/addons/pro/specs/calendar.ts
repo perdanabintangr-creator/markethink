@@ -60,10 +60,10 @@ export const calendarOutput = z.object({
         pillar: t(30).describe("Harus salah satu nama pilar"),
         title: t(80).describe("Judul internal/ide konten"),
         hook: t(120).describe("Kalimat/visual 3 detik pertama atau slide pertama"),
-        caption: t(700).describe("Caption siap posting, gaya bahasa target; boleh baris baru & emoji secukupnya"),
+        caption: t(420).describe("Caption siap posting 2-4 paragraf pendek, gaya bahasa target; boleh baris baru & emoji secukupnya"),
         cta: t(80),
         hashtags: z.array(t(30)).describe("3-8 hashtag relevan"),
-        visual: t(220).describe("Arahan visual/shot singkat untuk desainer atau videografer"),
+        visual: t(150).describe("Arahan visual/shot singkat untuk desainer atau videografer"),
       }),
     )
     .describe("Semua posting sebulan, urut tanggal"),

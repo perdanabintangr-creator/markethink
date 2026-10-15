@@ -1,5 +1,6 @@
 import "server-only";
-import { generateObject, type ModelMessage } from "ai";
+import { generateText, type ModelMessage } from "ai";
+import { coerceToSchema, extractJson, schemaForPrompt } from "./json-output";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { z } from "zod";
 import { routeTier } from "@/lib/ai/router";
@@ -15,6 +16,8 @@ export interface ToolCtx {
   cost: { usd: number; model: string | null };
   /** Revisi: perbaiki hasil sebelumnya sesuai koreksi user (tidak memotong kuota). */
   revision?: { note: string; previous: unknown };
+  /** Waktu mulai proses (ms) — untuk menjaga batas waktu server. */
+  startedAt?: number;
 }
 
 export interface ToolFile {
@@ -28,18 +31,82 @@ export interface ToolFile {
 export const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 export const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
-/** Panggil AI (otak Senior) dan minta hasil terstruktur sesuai skema. */
+/**
+ * Panggil AI (otak Senior) dan minta hasil terstruktur sesuai skema — dengan cara yang tahan banting:
+ * 1) AI menulis JSON biasa mengikuti JSON Schema di prompt (tidak memakai mode "strict grammar" yang ditolak untuk skema besar);
+ * 2) program memperbaiki JSON terpotong & tipe kecil yang salah;
+ * 3) bila jawaban terpotong karena terlalu panjang → ulang dengan instruksi lebih ringkas;
+ *    bila masih tidak sesuai skema → satu putaran perbaikan oleh AI.
+ */
 export async function aiObject<T extends z.ZodTypeAny>(
   ctx: ToolCtx,
   opts: { schema: T; system: string; prompt?: string; messages?: ModelMessage[]; vision?: boolean; maxOutputTokens?: number },
 ): Promise<z.infer<T>> {
   const routed = routeTier("senior", { needsVision: opts.vision });
-  const base = { model: routed.model, schema: opts.schema, system: opts.system, maxOutputTokens: opts.maxOutputTokens ?? 8000, maxRetries: 1 };
-  const result = opts.messages
-    ? await generateObject({ ...base, messages: opts.messages })
-    : await generateObject({ ...base, prompt: opts.prompt ?? "" });
-  addCost(ctx, routed.resolved(), result.usage);
-  return result.object as z.infer<T>;
+  const maxOutputTokens = Math.max(opts.maxOutputTokens ?? 12000, 12000);
+  const format = `
+
+FORMAT JAWABAN (WAJIB)
+Balas HANYA dengan satu objek JSON yang valid — tanpa teks pembuka/penutup dan tanpa \`\`\`. Ikuti JSON Schema berikut persis
+(nama field, tipe, dan pilihan enum). Semua field wajib diisi; pakai "" / [] / null hanya bila memang tidak ada datanya.
+Angka ditulis sebagai angka (mis. 1500000, bukan "Rp1,5 jt"). Jaga panjang teks secukupnya agar seluruh JSON selesai ditulis.
+JSON Schema: ${schemaForPrompt(opts.schema)}`;
+
+  // Batas waktu server (Vercel 300 dtk) — sisakan ruang untuk membuat file PPT/Excel.
+  const deadline = (ctx.startedAt ?? Date.now()) + 250_000;
+  const left = () => deadline - Date.now();
+  const signal = () => AbortSignal.timeout(Math.max(15_000, left()));
+
+  const ask = async (system: string, tokens: number, extra?: string) => {
+    const base = { model: routed.model, system, maxOutputTokens: tokens, maxRetries: 2, abortSignal: signal() };
+    const result = opts.messages
+      ? await generateText({ ...base, messages: extra ? [...opts.messages, { role: "user" as const, content: extra }] : opts.messages })
+      : await generateText({ ...base, prompt: extra ? `${opts.prompt ?? ""}\n\n${extra}` : (opts.prompt ?? "") });
+    addCost(ctx, routed.resolved(), result.usage);
+    return result;
+  };
+  const tryParse = (text: string) => {
+    try {
+      return coerceToSchema(opts.schema, extractJson(text));
+    } catch (err) {
+      return { ok: false as const, issues: `JSON tidak terbaca: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  };
+
+  let res = await ask(opts.system + format, maxOutputTokens);
+  let parsed = tryParse(res.text);
+  if (parsed.ok && res.finishReason !== "length") return parsed.data;
+
+  // Terpotong tapi waktu sudah mepet → pakai hasil yang sudah diperbaiki program (daftar terakhir bisa lebih pendek).
+  if (parsed.ok && left() < 120_000) return parsed.data;
+
+  if (res.finishReason === "length" && left() > 120_000) {
+    // Terpotong karena terlalu panjang → ulang dengan batas lebih besar & isi lebih ringkas.
+    res = await ask(
+      opts.system + format,
+      Math.min(Math.round(maxOutputTokens * 1.6), 32000),
+      "Catatan sistem: jawaban sebelumnya terlalu panjang dan terpotong. Tulis ulang LENGKAP dengan teks tiap field ±40% lebih ringkas (jumlah item tetap sesuai aturan).",
+    );
+    parsed = tryParse(res.text);
+    if (parsed.ok) return parsed.data;
+  }
+  if (parsed.ok) return parsed.data;
+  if (left() < 60_000) throw new Error(`AI_INVALID_OUTPUT: ${parsed.issues.slice(0, 500)}`);
+
+  // Putaran perbaikan: AI membetulkan JSON-nya sendiri sesuai skema.
+  const fix = await generateText({
+    model: routed.model,
+    system: `Kamu memperbaiki JSON agar valid dan sesuai JSON Schema. Pertahankan isi & bahasa aslinya, lengkapi field yang hilang secara wajar,
+balas HANYA JSON valid tanpa teks lain.\nJSON Schema: ${schemaForPrompt(opts.schema)}`,
+    prompt: `Masalah yang ditemukan: ${parsed.ok ? "-" : parsed.issues}\n\nJSON yang perlu diperbaiki:\n${res.text.slice(0, 120_000)}`,
+    maxOutputTokens: Math.min(Math.round(maxOutputTokens * 1.6), 32000),
+    maxRetries: 1,
+    abortSignal: signal(),
+  });
+  addCost(ctx, routed.resolved(), fix.usage);
+  const fixed = tryParse(fix.text);
+  if (fixed.ok) return fixed.data;
+  throw new Error(`AI_INVALID_OUTPUT: ${fixed.issues.slice(0, 500)}`);
 }
 
 export function addCost(

@@ -101,3 +101,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - 2026-10-15 — **Tools Pro terkunci untuk paket Free** (founder): Free tidak dapat percobaan gratis; halaman tool menampilkan pilihan "Beli add-on"
   (harga/bulan & kuota) atau "Upgrade ke Pro/Promax" (permintaan masuk back office → Calon pelanggan). Gembok di submenu sidebar untuk Free.
   Pro tetap coba gratis 1× per add-on; Promax gratis 3× per add-on per bulan; API menolak (402) tanpa jatah.
+- 2026-10-15 — **Fix keandalan Tools Pro** (error berulang di produksi): (1) Claude Sonnet 5.5 menolak structured output untuk skema besar
+  ("compiled grammar is too large") lalu jatuh ke Gemini yang sedang penuh; (2) jawaban panjang terpotong → "could not parse".
+  `aiObject` kini: AI menulis JSON biasa sesuai JSON Schema di prompt → program memperbaiki JSON terpotong (jsonrepair) & menyesuaikan tipe kecil
+  (`src/lib/addons/json-output.ts`) → bila terpotong diulang lebih ringkas → bila tetap tidak sesuai skema, 1 putaran perbaikan oleh AI.
+  Batas waktu dihitung dari awal proses (250 dtk dari 300 dtk Vercel). Caption Kalender Konten dipersingkat agar lebih cepat.
