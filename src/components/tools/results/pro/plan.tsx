@@ -11,7 +11,7 @@ const STAGE_TONE: Record<(typeof STAGES)[number], string> = {
   conversion: "border-emerald-500/40 bg-emerald-500/5",
   retention: "border-amber-500/40 bg-amber-500/5",
 };
-export const SPLIT_COLORS = ["#6366f1", "#0ea5e9", "#14b8a6", "#f59e0b", "#ec4899", "#8b5cf6", "#64748b"];
+export const SPLIT_COLORS = ["#2563eb", "#0ea5e9", "#14b8a6", "#f59e0b", "#ec4899", "#8b5cf6", "#64748b"];
 
 /** Bar komposisi 100% + rincian pos budget (dipakai plan, campaign, gtm). */
 export function BudgetSplit({ items }: { items: { item: string; pct: number; amount: number | null; note: string }[] }) {

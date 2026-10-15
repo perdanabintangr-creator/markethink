@@ -152,8 +152,8 @@ interface Theme {
 }
 
 const THEMES: Record<(typeof THEME_NAMES)[number], Theme> = {
-  midnight: { dark: true, bg: "0B1020", surface: "151B2E", surface2: "1F2742", text: "F5F7FB", muted: "9AA4BF", accent: "7C5CFF", accent2: "22D3EE", onAccent: "FFFFFF" },
-  clean: { dark: false, bg: "FFFFFF", surface: "F3F5FA", surface2: "E6EAF3", text: "0F172A", muted: "64748B", accent: "4F46E5", accent2: "0EA5E9", onAccent: "FFFFFF" },
+  midnight: { dark: true, bg: "0B1020", surface: "151B2E", surface2: "1F2742", text: "F5F7FB", muted: "9AA4BF", accent: "2F7BFF", accent2: "22D3EE", onAccent: "FFFFFF" },
+  clean: { dark: false, bg: "FFFFFF", surface: "F3F5FA", surface2: "E6EAF3", text: "0F172A", muted: "64748B", accent: "1E5BFF", accent2: "06B6D4", onAccent: "FFFFFF" },
   sunset: { dark: false, bg: "FFF9F3", surface: "FFEEDD", surface2: "FFE0C2", text: "3B1708", muted: "8A4B2A", accent: "EA580C", accent2: "DB2777", onAccent: "FFFFFF" },
   forest: { dark: false, bg: "F6FAF5", surface: "E6F0E3", surface2: "D3E5CE", text: "13261A", muted: "4F6B57", accent: "15803D", accent2: "CA8A04", onAccent: "FFFFFF" },
   ocean: { dark: true, bg: "06202E", surface: "0C3346", surface2: "114560", text: "EAF6FB", muted: "8FB8C9", accent: "06B6D4", accent2: "F59E0B", onAccent: "042029" },

@@ -5,7 +5,7 @@ import { FORMAT_LABEL, PLATFORM_LABEL, variantText, type AdVariant, type AdcopyO
 import { cn } from "@/lib/utils";
 import { CopyButton, DataTable, KeyValues, Pill, SectionCard, StatGrid, Summary } from "./kit";
 
-const COLORS = ["#6366f1", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6"];
+const COLORS = ["#2563eb", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6"];
 const RULE = { kill: { label: "Matikan", tone: "bad" }, scale: { label: "Naikkan", tone: "good" }, iterate: { label: "Perbaiki", tone: "warn" } } as const;
 const chars = (s: string) => [...s].length;
 

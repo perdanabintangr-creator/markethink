@@ -66,7 +66,7 @@ export default async function LandingPage() {
           </span>
           <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-6xl">
             Otak marketing kamu,{" "}
-            <span className="bg-gradient-to-r from-[#6d5dfc] to-[#c04cfd] bg-clip-text text-transparent">berbasis AI</span>
+            <span className="bg-gradient-to-r from-[#1e5bff] to-[#22d3ee] bg-clip-text text-transparent">berbasis AI</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
             Dari ide sampai eksekusi: riset → strategi → konten → kalender → KPI. Chat seperti ChatGPT, riset ber-sitasi

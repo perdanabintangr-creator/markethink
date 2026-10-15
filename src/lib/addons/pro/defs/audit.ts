@@ -197,7 +197,7 @@ RENCANA 30 HARI & KPI
             { header: "Perbaikan", key: "fix", width: 55 },
           ],
           rows: [...out.aspects, { name: "SKOR TOTAL (rata-rata × 10)", score: out.score_total, priority: "", finding: out.verdict, evidence: "", fix: "" }],
-          rowColor: (r) => (String(r.name).startsWith("SKOR TOTAL") ? "EDE9FE" : Number(r.score) >= 7.5 ? "E8F8EF" : Number(r.score) < 5.5 ? "FDECEC" : "FFF7E0"),
+          rowColor: (r) => (String(r.name).startsWith("SKOR TOTAL") ? "DBEAFE" : Number(r.score) >= 7.5 ? "E8F8EF" : Number(r.score) < 5.5 ? "FDECEC" : "FFF7E0"),
         },
         {
           name: "Keep-Stop-Start",

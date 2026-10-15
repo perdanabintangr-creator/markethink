@@ -5,7 +5,7 @@ import { scriptText, tag, type ScriptItem, type ScriptOutput } from "@/lib/addon
 import { cn } from "@/lib/utils";
 import { CardGrid, CopyButton, CopyCard, KeyValues, Pill, SectionCard, StatGrid, Summary } from "./kit";
 
-const COLORS = ["#6366f1", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6", "#ef4444", "#22c55e", "#64748b"];
+const COLORS = ["#2563eb", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6", "#ef4444", "#22c55e", "#64748b"];
 
 export function ScriptResult({ data }: { data: ScriptOutput }) {
   const duration = data.scripts[0]?.scenes.at(-1)?.end ?? 0;

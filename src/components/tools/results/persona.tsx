@@ -4,7 +4,7 @@ import type { PersonaOutput } from "@/lib/addons/schemas";
 import { Pill, SectionCard } from "../common";
 import { BarList, Recommendations, Sources, Summary } from "./research-common";
 
-const COLORS = ["#6366f1", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6"];
+const COLORS = ["#2563eb", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6"];
 
 /** Matriks segmen: daya tarik (Y) vs kemudahan dimenangkan (X), ukuran gelembung = porsi pasar. */
 function SegmentMatrix({ data }: { data: PersonaOutput }) {

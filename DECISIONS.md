@@ -130,3 +130,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Selesai → ringkasan eksekutif (inti strategi, rencana eksekusi, metrik, risiko) + "Bahas paket di Chat" (chat `source_agent_id`).
 - Tidak dipakai Agent: kalkulator, Dokter Iklan, Laporan Bulanan, Laporan KOL (butuh upload data performa).
 - Tabel `agent_runs`, kolom `tool_runs.agent_run_id`, `chats.source_agent_id` (migrasi 0030, sudah diterapkan ke production). Biaya AI Agent dicatat di usage_logs `tool:agent`.
+
+## Warna brand: biru futuristik (15 Okt 2026, permintaan founder)
+- Ungu diganti biru elektrik: primary light `oklch(0.57 0.22 258)` (≈ #1E5BFF), dark `oklch(0.7 0.17 245)`; aksen cahaya cyan `--glow` (≈ #22D3EE).
+- Tombol utama: gradasi biru → biru-cyan (`--primary-2`) dengan glow halus. Logo & favicon: gradasi #1E5BFF → #22D3EE.
+- Tema PPT "midnight"/"clean" ikut biru; warna kategori grafik tetap beragam (biru menggantikan indigo sebagai warna pertama).

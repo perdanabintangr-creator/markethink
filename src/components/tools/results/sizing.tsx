@@ -35,7 +35,7 @@ function Projection({ data }: { data: SizingOutput }) {
   const y = (v: number) => H - pad - (Math.max(0, v) / max) * (H - pad * 2);
   const series = [
     { key: "optimistic" as const, name: "Optimis", color: "#10b981" },
-    { key: "base" as const, name: "Dasar", color: "#6366f1" },
+    { key: "base" as const, name: "Dasar", color: "#2563eb" },
     { key: "conservative" as const, name: "Konservatif", color: "#f59e0b" },
   ];
   return (

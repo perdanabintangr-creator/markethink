@@ -5,7 +5,7 @@ import type { CalendarOutput } from "@/lib/addons/pro/specs/calendar";
 import { cn } from "@/lib/utils";
 import { CopyCard, KeyValues, Pill, Points, SectionCard, StatGrid, Summary } from "./kit";
 
-const COLORS = ["#6366f1", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6"];
+const COLORS = ["#2563eb", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6"];
 const DOW = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 
 export function CalendarResult({ data }: { data: CalendarOutput }) {

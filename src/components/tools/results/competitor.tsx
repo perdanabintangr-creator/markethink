@@ -3,7 +3,7 @@
 import type { CompetitorOutput } from "@/lib/addons/schemas";
 import { Bullets, Pill, SectionCard } from "../common";
 
-const COLORS = ["#6366f1", "#0ea5e9", "#f59e0b", "#ec4899", "#14b8a6", "#8b5cf6"];
+const COLORS = ["#2563eb", "#0ea5e9", "#f59e0b", "#ec4899", "#14b8a6", "#8b5cf6"];
 
 /** Peta posisi: harga (X) vs kekuatan brand (Y). */
 function PositioningMap({ data, brand }: { data: CompetitorOutput; brand: string }) {
