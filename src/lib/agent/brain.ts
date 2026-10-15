@@ -8,6 +8,7 @@ import { RUNNERS } from "@/lib/addons/tools";
 import { PRO_FORMS } from "@/lib/addons/pro/forms";
 import { untrusted } from "@/lib/ai/prompt";
 import { routeTier } from "@/lib/ai/router";
+import { DEFAULT_TOOL_TIER } from "@/lib/addons/tool-tier";
 import { AGENT_MAX_STEPS, AGENT_TOOL_IDS, AGENT_TOOLS, type AgentStep } from "./catalog";
 
 const todayWIB = () => new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" });
@@ -133,7 +134,7 @@ export async function summarizeMission(
   ctx: ToolCtx,
   opts: { goal: string; title: string; results: { name: string; title: string; markdown: string }[]; failed: string[] },
 ) {
-  const routed = routeTier("senior");
+  const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER);
   const body = opts.results.map((r) => `### ${r.name} — ${r.title}\n${r.markdown}`).join("\n\n").slice(0, 60_000);
   const res = await generateText({
     model: routed.model,

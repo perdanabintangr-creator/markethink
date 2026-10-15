@@ -19,6 +19,7 @@ import { pickTier, useApp } from "@/components/app/app-context";
 import { CanvasPanel } from "@/components/canvas/canvas-panel";
 import { ToolRunPanel } from "@/components/tools/tool-run-panel";
 import { UPDATE_RESULT_BLOCK } from "@/lib/addons/format";
+import { readToolTierPref } from "@/lib/addons/tool-tier";
 import { emitChatsChanged, emitCredits } from "@/lib/events";
 import { track } from "@/lib/analytics";
 import type { TierId } from "@/lib/ai/models.config";
@@ -91,7 +92,7 @@ export function ChatView({
       try {
         const res = await fetch(`/api/tools/${toolRun.tool}`, {
           method: "POST",
-          body: JSON.stringify({ __revise: { runId: latestRunId.current ?? toolRun.rootId, note } }),
+          body: JSON.stringify({ __revise: { runId: latestRunId.current ?? toolRun.rootId, note }, __tier: readToolTierPref() }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return void toast.error(data.message ?? "Gagal memperbarui hasil. Coba minta lagi.");

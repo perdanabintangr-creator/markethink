@@ -5,6 +5,8 @@ import { guardRequest } from "@/lib/ratelimit";
 import { toolInfo } from "@/lib/addons/catalog";
 import { isAiTool } from "@/lib/addons/tools";
 import { executeTool } from "@/lib/addons/execute";
+import { resolveToolTier } from "@/lib/addons/tool-tier";
+import { getAllowedTiers } from "@/lib/plan";
 
 export const maxDuration = 300;
 
@@ -26,6 +28,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tool: s
     rawInput: body,
     revise: revise ? { runId: String(revise.runId ?? ""), note: String(revise.note ?? "") } : undefined,
     startedAt,
+    tier: resolveToolTier(body?.__tier, await getAllowedTiers(s.supabase, s.profile)),
   });
   if (res.ok) return NextResponse.json({ runId: res.runId });
   return jsonError(res.status, res.code, {

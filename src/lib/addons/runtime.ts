@@ -8,6 +8,7 @@ import { estimateCostUsd } from "@/lib/ai/models.config";
 import { buildPresentation, presentationSchema } from "@/lib/pptx";
 import { sanitizeFileName } from "@/lib/files";
 import { untrusted } from "@/lib/ai/prompt";
+import { DEFAULT_TOOL_TIER, type ToolTier } from "./tool-tier";
 
 export interface ToolCtx {
   admin: SupabaseClient;
@@ -19,6 +20,8 @@ export interface ToolCtx {
   revision?: { note: string; previous: unknown };
   /** Waktu mulai proses (ms) — untuk menjaga batas waktu server. */
   startedAt?: number;
+  /** Otak yang dipakai (default Associate). */
+  tier?: ToolTier;
 }
 
 export interface ToolFile {
@@ -64,7 +67,7 @@ export async function aiObject<T extends z.ZodTypeAny>(
       ? { ...opts, messages: [...opts.messages, { role: "user", content: block }] }
       : { ...opts, prompt: `${opts.prompt ?? ""}\n\n${block}` };
   }
-  const routed = routeTier("senior", { needsVision: opts.vision });
+  const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER, { needsVision: opts.vision });
   const maxOutputTokens = Math.max(opts.maxOutputTokens ?? 12000, 12000);
   const format = `
 

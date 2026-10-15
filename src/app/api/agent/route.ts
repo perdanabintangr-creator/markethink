@@ -4,6 +4,8 @@ import { apiSession, jsonError } from "@/lib/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { planMission } from "@/lib/agent/brain";
+import { resolveToolTier } from "@/lib/addons/tool-tier";
+import { getAllowedTiers } from "@/lib/plan";
 import { agentCtx, logAgentCost, profileLine, quotaByAddon } from "@/lib/agent/server";
 
 export const maxDuration = 120;
@@ -11,6 +13,7 @@ export const maxDuration = 120;
 const body = z.object({
   goal: z.string().trim().min(15, "Ceritakan tujuannya sedikit lebih lengkap (min. 15 karakter).").max(2000),
   context: z.string().trim().max(3000).optional().default(""),
+  tier: z.string().optional(),
 });
 
 /** Buat misi Agent: AI menyusun rencana langkah (Tools Pro berurutan) sesuai tujuan & kuota user. */
@@ -23,6 +26,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return jsonError(400, "invalid_input", { message: parsed.error.issues[0]?.message });
 
   const admin = createAdminClient();
+  const tier = resolveToolTier(parsed.data.tier, await getAllowedTiers(s.supabase, s.profile));
   const quota = await quotaByAddon(admin, s.profile);
   if (!Object.values(quota).some((n) => n > 0)) {
     return jsonError(402, "agent_locked", {
@@ -32,12 +36,12 @@ export async function POST(req: Request) {
 
   const { data: row, error } = await admin
     .from("agent_runs")
-    .insert({ user_id: s.user.id, goal: parsed.data.goal, context: parsed.data.context })
+    .insert({ user_id: s.user.id, goal: parsed.data.goal, context: parsed.data.context, tier })
     .select("id")
     .single();
   if (error || !row) return jsonError(500, "create_failed");
 
-  const ctx = agentCtx(admin, s.user.id, row.id, startedAt);
+  const ctx = agentCtx(admin, s.user.id, row.id, startedAt, tier);
   try {
     const plan = await planMission(ctx, { goal: parsed.data.goal, context: parsed.data.context, profileLine: profileLine(s.profile), quota });
     if (!plan.steps.length) {

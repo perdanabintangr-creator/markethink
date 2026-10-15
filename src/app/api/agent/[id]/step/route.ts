@@ -52,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return left;
   };
 
-  const ctx = agentCtx(admin, s.user.id, id, startedAt);
+  const ctx = agentCtx(admin, s.user.id, id, startedAt, run.tier ?? undefined);
   try {
     // Hasil langkah sebelumnya jadi bahan brief langkah ini (konsisten antar tools).
     const prevIds = plan.filter((p, i) => i < index && p.status === "ok" && p.run_id).map((p) => p.run_id!) as string[];
@@ -67,7 +67,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const input = await fillStepInput(ctx, { tool: step.tool, goal: run.goal, context: run.context, profileLine: profileLine(s.profile), previous });
     await logAgentCost(admin, s.user.id, id, ctx, run.cost_usd);
 
-    const res = await executeTool({ admin, profile: s.profile, tool: step.tool, rawInput: input, startedAt, agentRunId: id });
+    const res = await executeTool({ admin, profile: s.profile, tool: step.tool, rawInput: input, startedAt, agentRunId: id, tier: run.tier ?? undefined });
     if (res.ok) {
       step.status = "ok";
       step.run_id = res.runId;

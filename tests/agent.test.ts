@@ -48,3 +48,13 @@ describe("Markethink Agent", () => {
     expect(res.ok).toBe(true);
   });
 });
+
+describe("pilihan otak Tools Pro", async () => {
+  const { resolveToolTier } = await import("@/lib/addons/tool-tier");
+  it("Director hanya untuk paket yang membuka tier Director, selain itu Associate", () => {
+    expect(resolveToolTier("director", ["junior", "senior", "associate", "director"])).toBe("director");
+    expect(resolveToolTier("director", ["junior", "senior", "associate"])).toBe("associate");
+    expect(resolveToolTier(undefined, ["director"])).toBe("associate");
+    expect(resolveToolTier("senior", ["senior"])).toBe("associate");
+  });
+});

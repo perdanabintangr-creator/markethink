@@ -27,6 +27,7 @@ import { PRO_FORMS } from "@/lib/addons/pro/forms";
 import type { Field as ProField } from "@/lib/addons/pro/fields";
 import { toolInfo } from "@/lib/addons/catalog";
 import { WorkingShowcase } from "./working-showcase";
+import { BrainPicker, useToolTier } from "./brain-picker";
 import { RequestAddonButton } from "./request-addon";
 import type { AddonStatusLite } from "./common";
 
@@ -260,6 +261,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
   const steps = pro?.steps ?? STEPS[tool] ?? ["Memproses…"];
   const typical = toolInfo(tool)?.seconds ?? 60;
   const canRun = Boolean(status.nextSource);
+  const brain = useToolTier();
 
   async function upload(list: FileList | null) {
     if (!list?.length) return;
@@ -284,7 +286,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
     const input = collect(tool, e.currentTarget, files.map((f) => f.id));
     setBusy(true);
     try {
-      const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify(input) });
+      const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify({ ...input, __tier: brain.tier }) });
       const data = await res.json().catch(() => ({}));
       if (res.status === 402) {
         setBuyOpen(true);
@@ -660,6 +662,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
           </>
         )}
 
+        <BrainPicker value={brain.tier} onChange={brain.setTier} canDirector={brain.canDirector} disabled={busy} />
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <p className="text-xs text-muted-foreground">
             {status.nextSource === "trial"

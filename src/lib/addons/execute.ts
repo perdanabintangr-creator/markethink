@@ -5,6 +5,7 @@ import { getAddonStatus } from "./entitlement";
 import { RUNNERS, isAiTool } from "./tools";
 import type { ToolCtx } from "./runtime";
 import { MAX_REVISIONS } from "./format";
+import { DEFAULT_TOOL_TIER, type ToolTier } from "./tool-tier";
 
 export type ExecResult =
   | { ok: true; runId: string; title: string; output: unknown }
@@ -21,10 +22,12 @@ interface ExecOpts {
   startedAt?: number;
   /** Hasil dibuat oleh Markethink Agent. */
   agentRunId?: string;
+  /** Otak yang dipakai (sudah divalidasi terhadap paket user). */
+  tier?: ToolTier;
 }
 
 /** Jalankan tool add-on: cek kuota → catat run → AI terstruktur + file PPT/Excel → simpan hasil. Dipakai halaman tools & Agent. */
-export async function executeTool({ admin, profile, tool, rawInput, revise, startedAt, agentRunId }: ExecOpts): Promise<ExecResult> {
+export async function executeTool({ admin, profile, tool, rawInput, revise, startedAt, agentRunId, tier }: ExecOpts): Promise<ExecResult> {
   const info = toolInfo(tool);
   if (!info || !isAiTool(tool)) return { ok: false, status: 404, code: "unknown_tool" };
   const runner = RUNNERS[tool];
@@ -86,6 +89,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
     runId: run.id,
     cost: { usd: 0, model: null },
     startedAt: startedAt ?? Date.now(),
+    tier: tier ?? DEFAULT_TOOL_TIER,
     ...(revision ? { revision: { note: revision.note, previous: revision.previous } } : {}),
   };
   const started = Date.now();

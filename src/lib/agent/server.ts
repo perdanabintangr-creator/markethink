@@ -5,12 +5,13 @@ import { getAddonStatuses } from "@/lib/addons/entitlement";
 import { roleLabel } from "@/lib/personas";
 import type { ToolCtx } from "@/lib/addons/runtime";
 import type { AgentRunLite } from "./catalog";
+import { DEFAULT_TOOL_TIER, type ToolTier } from "@/lib/addons/tool-tier";
 
-export const AGENT_SELECT = "id, goal, context, title, plan, status, summary, chat_id, created_at, cost_usd";
+export const AGENT_SELECT = "id, goal, context, title, plan, status, summary, chat_id, created_at, cost_usd, tier";
 
 export async function loadAgentRun(admin: SupabaseClient, id: string, userId: string) {
   const { data } = await admin.from("agent_runs").select(AGENT_SELECT).eq("id", id).eq("user_id", userId).maybeSingle();
-  return data as (AgentRunLite & { cost_usd: number }) | null;
+  return data as (AgentRunLite & { cost_usd: number; tier: ToolTier | null }) | null;
 }
 
 export function profileLine(p: Profile) {
@@ -26,8 +27,8 @@ export async function quotaByAddon(admin: SupabaseClient, profile: Profile) {
 }
 
 /** Konteks biaya AI untuk langkah perencanaan/pengisian brief/ringkasan Agent. */
-export function agentCtx(admin: SupabaseClient, userId: string, agentId: string, startedAt: number): ToolCtx {
-  return { admin, userId, runId: agentId, cost: { usd: 0, model: null }, startedAt };
+export function agentCtx(admin: SupabaseClient, userId: string, agentId: string, startedAt: number, tier?: ToolTier): ToolCtx {
+  return { admin, userId, runId: agentId, cost: { usd: 0, model: null }, startedAt, tier: tier ?? DEFAULT_TOOL_TIER };
 }
 
 /** Catat biaya AI Agent (di luar biaya tiap tool) ke usage_logs & total misi. */

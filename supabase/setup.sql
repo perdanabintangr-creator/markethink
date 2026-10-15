@@ -2247,3 +2247,8 @@ create index if not exists tool_runs_agent_idx on public.tool_runs (agent_run_id
 
 -- Chat "Bahas paket di Chat" dari misi Agent (tampil di mode Tools Pro).
 alter table public.chats add column if not exists source_agent_id uuid references public.agent_runs(id) on delete set null;
+
+
+-- ===== 20261015000031_agent_tier.sql =====
+-- Otak yang dipilih untuk misi (associate | director).
+alter table public.agent_runs add column if not exists tier text not null default 'associate';

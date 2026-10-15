@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
+import { BrainPicker, useToolTier } from "@/components/tools/brain-picker";
 import { AGENT_EXAMPLES } from "@/lib/agent/catalog";
 import { cn } from "@/lib/utils";
 
@@ -19,13 +20,14 @@ export function AgentStart({ locked }: { locked: boolean }) {
   const [context, setContext] = useState("");
   const [showContext, setShowContext] = useState(false);
   const [busy, setBusy] = useState(false);
+  const brain = useToolTier();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (goal.trim().length < 15) return toast.error("Ceritakan tujuannya sedikit lebih lengkap, ya.");
     setBusy(true);
     try {
-      const res = await fetch("/api/agent", { method: "POST", body: JSON.stringify({ goal, context }) });
+      const res = await fetch("/api/agent", { method: "POST", body: JSON.stringify({ goal, context, tier: brain.tier }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.id) return void toast.error(data.message ?? "Agent gagal menyusun rencana. Coba lagi.");
       router.push(`/tools/agent/${data.id}`);
@@ -84,6 +86,9 @@ export function AgentStart({ locked }: { locked: boolean }) {
         />
       )}
 
+      <div className="mt-4">
+        <BrainPicker value={brain.tier} onChange={brain.setTier} canDirector={brain.canDirector} disabled={locked || busy} />
+      </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
         <p className="text-xs text-muted-foreground">
           Agent menyusun rencana dulu — kamu bisa cek & buang langkah sebelum dijalankan. Setiap langkah memakai 1 kuota tool-nya.

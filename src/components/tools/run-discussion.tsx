@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { emitChatsChanged } from "@/lib/events";
+import { readToolTierPref } from "@/lib/addons/tool-tier";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
 import { REVISE_STEPS } from "@/components/tools/tool-run-panel";
 
@@ -54,7 +55,7 @@ export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; to
     if (note.trim().length < 5) return toast.error("Tulis dulu apa yang perlu diperbaiki.");
     setBusy(true);
     try {
-      const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify({ __revise: { runId, note } }) });
+      const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify({ __revise: { runId, note }, __tier: readToolTierPref() }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return void toast.error(data.message ?? "Gagal memperbaiki hasil. Coba lagi.");
       toast.success("Versi perbaikan sudah jadi");

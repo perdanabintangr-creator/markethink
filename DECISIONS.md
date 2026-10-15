@@ -135,3 +135,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Ungu diganti biru elektrik: primary light `oklch(0.57 0.22 258)` (≈ #1E5BFF), dark `oklch(0.7 0.17 245)`; aksen cahaya cyan `--glow` (≈ #22D3EE).
 - Tombol utama: gradasi biru → biru-cyan (`--primary-2`) dengan glow halus. Logo & favicon: gradasi #1E5BFF → #22D3EE.
 - Tema PPT "midnight"/"clean" ikut biru; warna kategori grafik tetap beragam (biru menggantikan indigo sebagai warna pertama).
+
+## Otak Tools Pro & Agent: Associate (default) / Director (15 Okt 2026, permintaan founder)
+- Semua Tools Pro, revisi, dan Markethink Agent memakai otak **Associate** (Claude Opus 5.5 → cadangan Gemini Pro) secara default,
+  dengan pilihan **Director** (Claude Fable 5.1 → Opus) untuk paket yang membuka tier Director (Promax/admin). Sebelumnya Senior (Sonnet).
+- Pilihan di form tool & Agent ("Otak: Associate | Director"), diingat di browser; server memvalidasi terhadap paket (`resolveToolTier`).
+- Kolom `agent_runs.tier` (migrasi 0031).

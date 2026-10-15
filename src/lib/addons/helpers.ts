@@ -1,5 +1,6 @@
 import "server-only";
 import { generateText } from "ai";
+import { DEFAULT_TOOL_TIER } from "./tool-tier";
 import { anthropic } from "@ai-sdk/anthropic";
 import { routeTier } from "@/lib/ai/router";
 import { addCost, type ToolCtx } from "./runtime";
@@ -76,7 +77,7 @@ export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: 
     const prev = ctx.revision.previous as { sources?: { title: string; url: string }[] } | null;
     return { text: "(Revisi — tidak ada riset web baru. Pakai data & sumber dari hasil sebelumnya.)", sources: prev?.sources ?? [], webNote: "" };
   }
-  const routed = routeTier("senior");
+  const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER);
   const research = await generateText({
     model: routed.model,
     system: opts.system,
