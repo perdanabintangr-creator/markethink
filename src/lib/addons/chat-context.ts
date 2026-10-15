@@ -41,7 +41,10 @@ jelaskan singkat apa yang akan kamu ubah dan kenapa (gaya konsultan, 2-6 poin), 
 Instruksi revisi yang lengkap, spesifik, dan bisa langsung dieksekusi — gabungkan semua koreksi user di percakapan ini, sebut bagian mana yang diubah dan arahnya.
 [[/PERBARUI_HASIL]]
 Sistem lalu otomatis membuat versi baru hasil (termasuk PPT/Excel) di panel kanan. Jangan tulis blok ini bila user hanya bertanya/diskusi,
-dan jangan menulis ulang seluruh hasil di chat.`);
+dan jangan menulis ulang seluruh hasil di chat.
+Anggap juga sebagai permintaan perubahan bila user menyetujui tawaranmu sebelumnya untuk memperbarui hasil (mis. "ya", "boleh", "update", "gas", "masukkan ke hasil").
+Bila diskusi menghasilkan ide/arah baru yang mengubah isi hasil tetapi user belum meminta perubahan, JANGAN tulis blok; cukup tutup dengan satu kalimat tawaran:
+"Mau saya masukkan ke hasil di panel kanan? Balas *ya*, atau klik **Perbarui hasil** di bawah jawaban ini."`);
   }
   return parts.join("\n\n");
 }

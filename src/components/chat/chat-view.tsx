@@ -108,6 +108,23 @@ export function ChatView({
     [toolRun],
   );
 
+  /** Tombol "Perbarui hasil" di bawah jawaban: jadikan pembahasan itu arahan revisi. */
+  const applyToResult = useCallback(
+    (question: MtMessage | undefined, answer: string) => {
+      const q = question?.role === "user" ? messageToText(question).trim().slice(0, 500) : "";
+      const note = [
+        "Terapkan hasil pembahasan di chat berikut ke hasil ini (ubah bagian yang terdampak, pertahankan sisanya).",
+        q && `Permintaan user: ${q}`,
+        `Jawaban yang disetujui user:\n${answer.trim()}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+        .slice(0, 3000);
+      void updateToolRun(note);
+    },
+    [updateToolRun],
+  );
+
   const opts = useRef({ tier, research, workspaceId, agentId: agent?.id ?? null });
   opts.current = { tier, research, workspaceId, agentId: activeAgent?.id ?? null };
 
@@ -409,6 +426,12 @@ export function ChatView({
                   onEdit={m.role === "user" ? (text) => editMessage(i, text) : undefined}
                   onOpenCanvas={m.role === "assistant" ? createCanvas : undefined}
                   onQuote={m.role === "assistant" ? setQuote : undefined}
+                  onApplyToResult={
+                    toolRun && m.role === "assistant" && !busy && !runUpdating && i > 0 && !UPDATE_RESULT_BLOCK.test(messageToText(m))
+                      ? (text) => applyToResult(messages[i - 1], text)
+                      : undefined
+                  }
+                  applyHighlight={i === lastAssistantIndex}
                   onExplain={
                     m.role === "assistant" && !busy ? (text) => send(buildQuotedMessage(text, t.explainPrompt)) : undefined
                   }

@@ -17,6 +17,7 @@ import {
   RefreshCw,
   ThumbsDown,
   ThumbsUp,
+  Wand2,
 } from "lucide-react";
 import type { FileUIPart, SourceUrlUIPart } from "ai";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,8 @@ export function ChatMessage({
   onOpenCanvas,
   onQuote,
   onExplain,
+  onApplyToResult,
+  applyHighlight,
   statusLabel,
 }: {
   message: MtMessage;
@@ -95,6 +98,10 @@ export function ChatMessage({
   onQuote?: (text: string) => void;
   /** Blok teks di jawaban → langsung minta penjelasan. */
   onExplain?: (text: string) => void;
+  /** Chat dari hasil Tools Pro: terapkan isi jawaban ini ke hasil (buat versi baru). */
+  onApplyToResult?: (text: string) => void;
+  /** Jawaban terakhir: tampilkan ajakan memperbarui hasil yang lebih menonjol. */
+  applyHighlight?: boolean;
   statusLabel?: string | null;
 }) {
   const { t } = useApp();
@@ -246,12 +253,27 @@ export function ChatMessage({
               <PanelRight /> {t.openCanvas}
             </Button>
           )}
+          {onApplyToResult && !applyHighlight && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onApplyToResult(hideUpdateBlock(text))}>
+              <RefreshCw /> Terapkan ke hasil
+            </Button>
+          )}
           {message.metadata?.tier && (
             <span className="ml-auto text-[11px]">
               {TIER_LABEL[message.metadata.tier]}
               {message.metadata.credits ? ` · ${message.metadata.credits} ${t.credits}` : ""}
             </span>
           )}
+        </div>
+      )}
+
+      {showActions && onApplyToResult && applyHighlight && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm">
+          <Wand2 className="size-4 shrink-0 text-primary" />
+          <span className="min-w-0 flex-1 text-muted-foreground">Ada masukan di jawaban ini yang mau dimasukkan ke hasil di panel kanan?</span>
+          <Button size="sm" className="h-8" onClick={() => onApplyToResult(hideUpdateBlock(text))}>
+            <RefreshCw /> Perbarui hasil
+          </Button>
         </div>
       )}
 

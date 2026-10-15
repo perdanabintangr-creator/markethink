@@ -111,3 +111,5 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Chat yang dibuat dari hasil Tools Pro (`chats.source_run_id`) membuka panel kanan berisi versi TERBARU hasil (layar ≥1024px otomatis terbuka; tombol "Hasil" di header untuk membuka lagi).
 - Bila user meminta perubahan di chat, AI menutup balasan dengan blok `[[PERBARUI_HASIL]]…[[/PERBARUI_HASIL]]`; klien menyembunyikan blok itu dan memanggil revisi (`__revise`) → panel memuat versi baru (termasuk PPT/Excel).
 - Batas revisi gratis per hasil dinaikkan 3 → 5 (`MAX_REVISIONS` di `src/lib/addons/format.ts`), tidak memotong kuota.
+- Hasil di panel kanan TIDAK berubah otomatis saat user hanya bertanya/diskusi (agar versi & jatah revisi tidak terbuang). Perubahan terjadi bila user memintanya,
+  menjawab "ya" atas tawaran AI, atau klik tombol **Perbarui hasil** (di bawah jawaban terakhir) / **Terapkan ke hasil** (jawaban sebelumnya).
