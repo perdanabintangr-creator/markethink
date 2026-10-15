@@ -1,5 +1,5 @@
 /** Contoh hasil AI untuk tool "report". */
-export default {
+const fixture = {
   tool: "report",
   input: { brand: "Kopi Senja", period: "September 2026", data: "Omzet Rp84 jt (Agu Rp71 jt), 1.240 order, Meta Ads Rp12 jt ROAS 3,1x", channels: ["meta_ads", "marketplace"], audience: "owner", color: "#E11D48" },
   kinds: ["pptx", "xlsx"],
@@ -32,3 +32,5 @@ export default {
     data_notes: "Data TikTok organik tidak tersedia.",
   },
 };
+
+export default fixture;

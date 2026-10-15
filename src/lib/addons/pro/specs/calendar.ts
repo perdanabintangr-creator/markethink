@@ -5,7 +5,7 @@ import { PLATFORM_OPTIONS, monthOptions, t } from "./common";
 export const calendarForm: ToolForm = {
   fields: [
     { type: "text", name: "brand", label: "Nama brand *", required: true, max: 100, placeholder: "mis. Kopi Senja", half: true },
-    { type: "select", name: "month", label: "Bulan", options: opts(monthOptions(3)), default: monthOptions(3)[1][0], half: true },
+    { type: "select", name: "month", loose: true, label: "Bulan", options: opts(monthOptions(3)), default: monthOptions(3)[1][0], half: true },
     {
       type: "textarea",
       name: "business",

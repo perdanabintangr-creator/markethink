@@ -16,7 +16,8 @@ interface Base {
 export type Field =
   | (Base & { type: "text"; required?: boolean; max: number; placeholder?: string })
   | (Base & { type: "textarea"; required?: boolean; min?: number; max: number; rows?: number; placeholder?: string })
-  | (Base & { type: "select"; options: { value: string; label: string }[]; default: string })
+  /** `loose`: terima nilai di luar daftar (mis. pilihan bulan yang bergeser saat ganti bulan). */
+  | (Base & { type: "select"; options: { value: string; label: string }[]; default: string; loose?: boolean })
   | (Base & { type: "chips"; options: { value: string; label: string }[]; defaults: string[]; min?: number })
   | (Base & { type: "number"; min: number; max: number; default: number; suffix?: string })
   /** Upload file (Excel/CSV/PDF/gambar) → `attachment_ids`. */
@@ -45,7 +46,9 @@ export function schemaFromFields(fields: Field[]) {
         break;
       }
       case "select":
-        shape[f.name] = z.enum(f.options.map((o) => o.value) as [string, ...string[]]).default(f.default);
+        shape[f.name] = f.loose
+          ? z.string().trim().min(1).max(30).default(f.default)
+          : z.enum(f.options.map((o) => o.value) as [string, ...string[]]).default(f.default);
         break;
       case "chips":
         shape[f.name] = z

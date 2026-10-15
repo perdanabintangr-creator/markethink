@@ -12,6 +12,7 @@ export const calendarDef: ProDef<typeof calendarOutput> = {
   form: calendarForm,
   output: calendarOutput,
   maxOutputTokens: 16000,
+  validate: (input) => (/^\d{4}-\d{2}$/.test(String(input.month)) ? null : "Pilih bulan kalender dulu, ya."),
   role: `Kamu Head of Content & Social Media yang sudah memegang puluhan akun brand Indonesia. Kamu menyusun kalender konten bulanan
 yang diserahkan ke tim kreatif dan langsung dieksekusi tanpa banyak revisi.`,
   rules: (input) => {

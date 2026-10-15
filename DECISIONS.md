@@ -74,3 +74,14 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Drag & drop sidebar memakai @dnd-kit (gratis, MIT) agar terasa seperti ChatGPT/Claude: baris yang digeser melayang ikut kursor, item lain bergeser memberi ruang (urutan sematan & folder project), folder tujuan menyala, scroll otomatis di tepi, dan di HP cukup tekan-tahan ±0,25 detik lalu geser. Saat belum ada sematan, area "Lepas di sini untuk menyematkan" melayang di atas riwayat (tidak menggeser daftar).
 - Riwayat sidebar kini satu daftar "Riwayat" yang urutannya bisa diatur dengan drag (label Hari ini/Kemarin dihapus karena bertentangan dengan urutan manual). Posisi disimpan di kolom `sort_key` (chats & tool_runs) = angka di tengah dua tetangga; item tanpa sort_key ikut waktu aktivitas, jadi chat baru tetap muncul paling atas. API `PATCH /api/history-order`.
 - Kunci chat di project DICABUT (permintaan founder): chat di dalam folder bisa digeser keluar ke Riwayat (di posisi lepas), ke folder lain, atau ke Disematkan; juga lewat menu ⋯ → "Keluarkan dari project" / "Pindahkan ke project". Pesan lama tetap; mulai pesan berikutnya chat memakai konteks (brand kit/dokumen/memory) tempat barunya. API `PATCH /api/chats/:id` tidak lagi menolak 409.
+
+## 2026-10-15 — Tools Pro per role marketing (25 tools, 8 add-on)
+- Permintaan founder: Tools Pro dikelompokkan per role & hasil setara pakar/agency, tidak terasa AI. Kelompok (= add-on): Strategi & Brand (strategi_pro),
+  Market Research (riset_pro), Konten & Sosmed (konten_pro), Iklan & Performance (dokter_iklan), Jualan Online (jualan_kit), CRM & Retensi (crm_pro),
+  KOL & PR (kolpr_pro), Laporan (laporan_pro). WhatsApp pindah ke CRM, Brief KOL ke KOL & PR (belum ada pembelian, aman).
+- 14 tools baru: plan, brand, campaign, gtm, calendar, script, audit, adcopy, promo, flow, loyalty, kolreport, press, report.
+- Kerangka `src/lib/addons/pro/`: form deklaratif (fields → form + validasi zod + brief AI), `makeRunner` (file upload, riset web opsional,
+  `validate` → pesan user `USER:`), standar gaya `EXPERT` (helpers.ts, juga dipakai tools lama) dengan daftar frasa klise AI terlarang.
+- Angka penting dihitung program (bukan AI): margin promo, metrik & skor KOL, ekonomi loyalty, skor audit, budget dinormalisasi, durasi adegan naskah.
+- Harga & kuota add-on baru = DRAFT (strategi 75rb/6, konten 50rb/15, crm 30rb/10, kolpr 50rb/10, laporan 50rb/8) — menunggu ACC founder.
+- Tes generik `tests/pro-tools.test.ts` memakai semua fixture `tests/fixtures/pro/*.ts` (PPT/Excel valid + data tipis).

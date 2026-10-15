@@ -17,7 +17,7 @@ const posts = Array.from({ length: 20 }, (_, i) => {
   };
 });
 
-export default {
+const fixture = {
   tool: "calendar",
   input: { brand: "Kopi Senja", month: "2026-11", business: "Kopi susu literan gula aren Rp45rb untuk pekerja kantoran", platforms: ["instagram", "tiktok"], goal: "sales", per_week: 5 },
   kinds: ["pptx", "xlsx"],
@@ -43,3 +43,5 @@ export default {
     workflow: ["Syuting batch tiap Senin untuk 5 konten seminggu.", "Approval caption H-2 lewat WhatsApp.", "Potong 1 Reels jadi 2 video TikTok."],
   },
 };
+
+export default fixture;
