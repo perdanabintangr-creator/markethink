@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, MessageSquareText, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { emitChatsChanged } from "@/lib/events";
+import { WorkingShowcase } from "@/components/tools/working-showcase";
+import { REVISE_STEPS } from "@/components/tools/tool-run-panel";
 
 /** Tombol melayang "Bahas di Chat": buka hasil ini di chat utama (otak, Riset Web, upload — seperti chat biasa). */
 export function DiscussInChat({ runId }: { runId: string }) {
@@ -47,19 +49,10 @@ export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; to
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-
-  useEffect(() => {
-    if (!busy) return;
-    const started = Date.now();
-    const t = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
-    return () => clearInterval(t);
-  }, [busy]);
 
   async function submit() {
     if (note.trim().length < 5) return toast.error("Tulis dulu apa yang perlu diperbaiki.");
     setBusy(true);
-    setElapsed(0);
     try {
       const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify({ __revise: { runId, note } }) });
       const data = await res.json().catch(() => ({}));
@@ -90,6 +83,11 @@ export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; to
               Bingung mana yang perlu dikoreksi? Bahas dulu lewat “Bahas di Chat”.
             </DialogDescription>
           </DialogHeader>
+          {busy ? (
+            <div className="flex justify-center py-4">
+              <WorkingShowcase tool={tool} typical={90} title="Meracik versi perbaikan…" note="Jangan tutup halaman ini." steps={REVISE_STEPS} compact />
+            </div>
+          ) : (
           <Textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -98,13 +96,13 @@ export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; to
             autoFocus
             placeholder={"mis.\n- Harga per sesi Rp25.000 (bukan Rp35.000)\n- Booth aktif 23\n- Tujuan utama: naikkan sesi di hari kerja, bukan buka titik baru"}
           />
+          )}
           <div className="flex items-center justify-end gap-2">
-            {busy && <span className="mr-auto text-xs text-muted-foreground">Biasanya 40–120 detik. Jangan tutup halaman ini.</span>}
             <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
               Batal
             </Button>
             <Button type="button" onClick={submit} disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? `Memperbaiki… ${elapsed}s` : "Buat versi perbaikan"}
+              {busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? "Memperbaiki…" : "Buat versi perbaikan"}
             </Button>
           </div>
         </DialogContent>

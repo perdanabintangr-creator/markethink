@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Loader2, Lock, Paperclip, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import { sampleSize } from "@/lib/addons/sample";
 import { PRO_FORMS } from "@/lib/addons/pro/forms";
 import type { Field as ProField } from "@/lib/addons/pro/fields";
 import { toolInfo } from "@/lib/addons/catalog";
+import { WorkingShowcase } from "./working-showcase";
 import { RequestAddonButton } from "./request-addon";
 import type { AddonStatusLite } from "./common";
 
@@ -251,8 +252,6 @@ interface UploadedFile {
 export function ToolRunner({ tool, status }: { tool: string; status: AddonStatusLite }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState(0);
-  const [elapsed, setElapsed] = useState(0);
   const [buyOpen, setBuyOpen] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(0);
@@ -261,17 +260,6 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
   const steps = pro?.steps ?? STEPS[tool] ?? ["Memproses…"];
   const typical = toolInfo(tool)?.seconds ?? 60;
   const canRun = Boolean(status.nextSource);
-
-  useEffect(() => {
-    if (!busy) return;
-    const started = Date.now();
-    const t = setInterval(() => {
-      const sec = Math.floor((Date.now() - started) / 1000);
-      setElapsed(sec);
-      setStep(Math.min(steps.length - 1, Math.floor(sec / Math.max(8, typical / steps.length))));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [busy, steps.length, typical]);
 
   async function upload(list: FileList | null) {
     if (!list?.length) return;
@@ -295,8 +283,6 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
     if (pro?.fields.some((f) => f.type === "files" && f.required) && !files.length) return toast.error("Upload dulu filenya, ya.");
     const input = collect(tool, e.currentTarget, files.map((f) => f.id));
     setBusy(true);
-    setStep(0);
-    setElapsed(0);
     try {
       const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify(input) });
       const data = await res.json().catch(() => ({}));
@@ -694,18 +680,9 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
       </form>
 
       {busy && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-2xl bg-background/90 p-6 text-center backdrop-blur-sm">
-          <Loader2 className="size-8 animate-spin text-primary" />
-          <div>
-            <p className="font-medium">{steps[step]}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {elapsed}s · biasanya {Math.round(typical * 0.5)}–{typical} detik. Jangan tutup halaman ini.
-            </p>
-          </div>
-          <div className="flex gap-1.5">
-            {steps.map((_, i) => (
-              <span key={i} className={cn("h-1.5 w-8 rounded-full", i <= step ? "bg-primary" : "bg-muted")} />
-            ))}
+        <div className="absolute inset-0 z-10 flex items-start justify-center rounded-2xl bg-background/90 p-6 pt-16 backdrop-blur-sm">
+          <div className="sticky top-24 flex w-full justify-center">
+            <WorkingShowcase tool={tool} steps={steps} typical={typical} note="Jangan tutup halaman ini — hasilnya langsung terbuka begitu siap." />
           </div>
         </div>
       )}
