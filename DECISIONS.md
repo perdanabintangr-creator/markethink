@@ -141,3 +141,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   dengan pilihan **Director** (Claude Fable 5.1 → Opus) untuk paket yang membuka tier Director (Promax/admin). Sebelumnya Senior (Sonnet).
 - Pilihan di form tool & Agent ("Otak: Associate | Director"), diingat di browser; server memvalidasi terhadap paket (`resolveToolTier`).
 - Kolom `agent_runs.tier` (migrasi 0031).
+
+- **Revisi (founder pilih opsi A, 15 Okt 2026):** default kembali ke **Senior** (biaya ±Rp5 rb/hasil). Associate (paket Pro/Promax) & Director
+  (Promax/admin) tetap bisa dipilih; **Director memakai 2 kuota** per hasil (`tool_runs.quota_units`, migrasi 0032). Revisi tetap gratis (tidak memotong kuota).
+  Agent dengan Director: jumlah langkah per grup = sisa kuota ÷ 2.

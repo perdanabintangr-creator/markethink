@@ -51,10 +51,22 @@ describe("Markethink Agent", () => {
 
 describe("pilihan otak Tools Pro", async () => {
   const { resolveToolTier } = await import("@/lib/addons/tool-tier");
-  it("Director hanya untuk paket yang membuka tier Director, selain itu Associate", () => {
+  it("default Senior; Associate/Director hanya bila paket membukanya", () => {
     expect(resolveToolTier("director", ["junior", "senior", "associate", "director"])).toBe("director");
-    expect(resolveToolTier("director", ["junior", "senior", "associate"])).toBe("associate");
-    expect(resolveToolTier(undefined, ["director"])).toBe("associate");
-    expect(resolveToolTier("senior", ["senior"])).toBe("associate");
+    expect(resolveToolTier("director", ["junior", "senior", "associate"])).toBe("senior");
+    expect(resolveToolTier("associate", ["junior", "senior", "associate"])).toBe("associate");
+    expect(resolveToolTier("associate", ["junior"])).toBe("senior");
+    expect(resolveToolTier(undefined, ["director"])).toBe("senior");
+  });
+});
+
+describe("kuota Director (2 unit)", async () => {
+  const { pickSource } = await import("@/lib/addons/entitlement");
+  const base = { isAdmin: false, promaxRemaining: 0, paidRemaining: 0, trialRemaining: 0 } as never as Parameters<typeof pickSource>[0];
+  it("memilih sumber yang sisanya cukup", () => {
+    expect(pickSource({ ...base, paidRemaining: 1 }, 2)).toBeNull();
+    expect(pickSource({ ...base, paidRemaining: 1 }, 1)).toBe("paid");
+    expect(pickSource({ ...base, promaxRemaining: 1, paidRemaining: 3 }, 2)).toBe("paid");
+    expect(pickSource({ ...base, isAdmin: true }, 2)).toBe("admin");
   });
 });

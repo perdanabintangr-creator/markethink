@@ -87,7 +87,7 @@ export function AgentStart({ locked }: { locked: boolean }) {
       )}
 
       <div className="mt-4">
-        <BrainPicker value={brain.tier} onChange={brain.setTier} canDirector={brain.canDirector} disabled={locked || busy} />
+        <BrainPicker value={brain.tier} onChange={brain.setTier} allowed={brain.allowed} disabled={locked || busy} />
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
         <p className="text-xs text-muted-foreground">

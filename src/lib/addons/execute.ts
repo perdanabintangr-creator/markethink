@@ -1,11 +1,11 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toolInfo } from "./catalog";
-import { getAddonStatus } from "./entitlement";
+import { getAddonStatus, pickSource } from "./entitlement";
 import { RUNNERS, isAiTool } from "./tools";
 import type { ToolCtx } from "./runtime";
 import { MAX_REVISIONS } from "./format";
-import { DEFAULT_TOOL_TIER, type ToolTier } from "./tool-tier";
+import { DEFAULT_TOOL_TIER, quotaUnits, type ToolTier } from "./tool-tier";
 
 export type ExecResult =
   | { ok: true; runId: string; title: string; output: unknown }
@@ -60,11 +60,20 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   const parsed = runner.input.safeParse(rawInput);
   if (!parsed.success) return { ok: false, status: 400, code: "invalid_input", message: parsed.error.issues[0]?.message ?? "Data belum lengkap." };
 
+  const useTier = tier ?? DEFAULT_TOOL_TIER;
+  const units = revision ? 1 : quotaUnits(useTier);
   let source = revision?.source ?? null;
   if (!revision) {
     const status = await getAddonStatus(admin, profile, info.addon);
     if (!status.nextSource) return { ok: false, status: 402, code: "addon_required", addon: info.addon };
-    source = status.nextSource;
+    source = pickSource(status, units);
+    if (!source)
+      return {
+        ok: false,
+        status: 402,
+        code: "quota_short",
+        message: "Otak Director memakai 2 kuota, sisa kuota add-on ini tinggal 1. Pilih otak Senior/Associate atau tambah kuota.",
+      };
   }
 
   const { data: run, error: runErr } = await admin
@@ -78,6 +87,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
       title: info.name,
       ...(revision ? { revision_of: revision.root, revision_note: revision.note } : {}),
       ...(agentRunId ? { agent_run_id: agentRunId } : {}),
+      quota_units: units,
     })
     .select("id")
     .single();
@@ -89,7 +99,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
     runId: run.id,
     cost: { usd: 0, model: null },
     startedAt: startedAt ?? Date.now(),
-    tier: tier ?? DEFAULT_TOOL_TIER,
+    tier: useTier,
     ...(revision ? { revision: { note: revision.note, previous: revision.previous } } : {}),
   };
   const started = Date.now();

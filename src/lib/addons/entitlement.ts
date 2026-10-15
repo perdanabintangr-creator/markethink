@@ -72,7 +72,7 @@ export async function getAddonStatuses(admin: SupabaseClient, profile: Profileis
       .gt("period_end", nowIso),
     admin
       .from("tool_runs")
-      .select("addon_id, source, status, created_at, revision_of")
+      .select("addon_id, source, status, created_at, revision_of, quota_units")
       .eq("user_id", profile.id)
       .neq("status", "error")
       .limit(5000),
@@ -94,6 +94,8 @@ export async function getAddonStatuses(admin: SupabaseClient, profile: Profileis
     const promaxQuota = row ? Number(row.promax_quota) : 3;
     const trialQuota = row ? Number(row.trial_quota) : 1;
     const mine = counted.filter((r) => r.addon_id === info.id);
+    // Jumlah kuota terpakai (otak Director memakai 2 kuota per hasil).
+    const units = (list: typeof mine) => list.reduce((sum, r) => sum + Number(r.quota_units ?? 1), 0);
 
     // Pembelian yang sedang berjalan (bisa ada antrean perpanjangan sesudahnya).
     const active = (subs ?? [])
@@ -104,14 +106,14 @@ export async function getAddonStatuses(admin: SupabaseClient, profile: Profileis
     let paidRemaining = 0;
     if (current) {
       const windowStart = paidWindowStart(new Date(current.period_start), now);
-      const used = mine.filter((r) => r.source === "paid" && new Date(r.created_at) >= windowStart).length;
+      const used = units(mine.filter((r) => r.source === "paid" && new Date(r.created_at) >= windowStart));
       paidRemaining = Math.max(0, quota - used);
     }
     const promaxRemaining = isPromax
-      ? Math.max(0, promaxQuota - mine.filter((r) => r.source === "promax" && new Date(r.created_at) >= monthStart).length)
+      ? Math.max(0, promaxQuota - units(mine.filter((r) => r.source === "promax" && new Date(r.created_at) >= monthStart)))
       : 0;
     // Paket Free tidak mendapat percobaan gratis Tools Pro (keputusan founder): harus beli add-on atau upgrade paket.
-    const trialRemaining = isFree ? 0 : Math.max(0, trialQuota - mine.filter((r) => r.source === "trial").length);
+    const trialRemaining = isFree ? 0 : Math.max(0, trialQuota - units(mine.filter((r) => r.source === "trial")));
 
     const nextSource: RunSource | null = isAdmin
       ? "admin"
@@ -146,4 +148,13 @@ export async function getAddonStatuses(admin: SupabaseClient, profile: Profileis
 
 export async function getAddonStatus(admin: SupabaseClient, profile: Profileish, addonId: AddonId) {
   return (await getAddonStatuses(admin, profile)).find((s) => s.id === addonId)!;
+}
+
+/** Sumber kuota untuk satu hasil yang memakai `units` kuota (Director = 2). null = kuota tidak cukup. */
+export function pickSource(status: AddonStatus, units: number): RunSource | null {
+  if (status.isAdmin) return "admin";
+  if (status.promaxRemaining >= units) return "promax";
+  if (status.paidRemaining >= units) return "paid";
+  if (status.trialRemaining >= units) return "trial";
+  return null;
 }

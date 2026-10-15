@@ -662,7 +662,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
           </>
         )}
 
-        <BrainPicker value={brain.tier} onChange={brain.setTier} canDirector={brain.canDirector} disabled={busy} />
+        <BrainPicker value={brain.tier} onChange={brain.setTier} allowed={brain.allowed} disabled={busy} />
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <p className="text-xs text-muted-foreground">
             {status.nextSource === "trial"

@@ -2252,3 +2252,8 @@ alter table public.chats add column if not exists source_agent_id uuid reference
 -- ===== 20261015000031_agent_tier.sql =====
 -- Otak yang dipilih untuk misi (associate | director).
 alter table public.agent_runs add column if not exists tier text not null default 'associate';
+
+
+-- ===== 20261015000032_tool_run_units.sql =====
+-- Pemakaian kuota per hasil: otak Director memakai 2 kuota, lainnya 1.
+alter table public.tool_runs add column if not exists quota_units integer not null default 1;

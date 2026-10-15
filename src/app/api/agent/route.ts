@@ -4,7 +4,7 @@ import { apiSession, jsonError } from "@/lib/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { planMission } from "@/lib/agent/brain";
-import { resolveToolTier } from "@/lib/addons/tool-tier";
+import { quotaUnits, resolveToolTier } from "@/lib/addons/tool-tier";
 import { getAllowedTiers } from "@/lib/plan";
 import { agentCtx, logAgentCost, profileLine, quotaByAddon } from "@/lib/agent/server";
 
@@ -43,7 +43,10 @@ export async function POST(req: Request) {
 
   const ctx = agentCtx(admin, s.user.id, row.id, startedAt, tier);
   try {
-    const plan = await planMission(ctx, { goal: parsed.data.goal, context: parsed.data.context, profileLine: profileLine(s.profile), quota });
+    // Director memakai 2 kuota per langkah → jumlah langkah per grup dihitung dari kuota ÷ 2.
+    const per = quotaUnits(tier);
+    const stepQuota = Object.fromEntries(Object.entries(quota).map(([k, n]) => [k, n === Infinity ? n : Math.floor(n / per)]));
+    const plan = await planMission(ctx, { goal: parsed.data.goal, context: parsed.data.context, profileLine: profileLine(s.profile), quota: stepQuota });
     if (!plan.steps.length) {
       await admin.from("agent_runs").delete().eq("id", row.id);
       return jsonError(422, "no_steps", { message: "Kuota Tools Pro yang dibutuhkan misi ini sudah habis. Cek kuota di halaman Tools Pro." });
