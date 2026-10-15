@@ -145,3 +145,5 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - **Revisi (founder pilih opsi A, 15 Okt 2026):** default kembali ke **Senior** (biaya ±Rp5 rb/hasil). Associate (paket Pro/Promax) & Director
   (Promax/admin) tetap bisa dipilih; **Director memakai 2 kuota** per hasil (`tool_runs.quota_units`, migrasi 0032). Revisi tetap gratis (tidak memotong kuota).
   Agent dengan Director: jumlah langkah per grup = sisa kuota ÷ 2.
+- Menu "Marketing Agents" di mode Chat dihapus dan diganti tautan **Markethink Agent** (ke `/tools/agent`). Halaman `/agents` dialihkan ke sana;
+  data agent lama & chat yang memakainya tetap utuh.

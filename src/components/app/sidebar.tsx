@@ -26,7 +26,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import {
-  Bot,
   BrainCircuit,
   Wrench,
   ChevronRight,
@@ -497,11 +496,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </Button>
           <nav className="space-y-0.5">
             <Link
-              href="/agents"
+              href="/tools/agent"
               onClick={onNavigate}
-              className={cn("flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent", pathname.startsWith("/agents") && "bg-accent font-medium")}
+              className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent"
             >
-              <Bot className="size-4" /> {t.agents}
+              <BrainCircuit className="size-4 text-primary" /> Markethink Agent
+              <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{t.newBadge}</span>
             </Link>
           </nav>
         </>
