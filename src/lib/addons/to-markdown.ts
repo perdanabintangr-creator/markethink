@@ -10,6 +10,7 @@ const LABELS: Record<string, string> = {
   channels: "Kanal",
   recommendations: "Rekomendasi",
   sources: "Sumber",
+  research_notes: "Temuan riset lengkap",
   risks: "Risiko",
   budget: "Budget",
   roadmap: "Roadmap",
@@ -356,12 +357,14 @@ const indent = (s: string) =>
 
 export function resultToMarkdown(output: unknown, maxChars = 24_000) {
   if (!output || typeof output !== "object") return "";
-  const { sources, ...rest } = output as Record<string, unknown> & { sources?: { title: string; url: string }[] };
+  const { sources, research_notes, ...rest } = output as Record<string, unknown> & { sources?: { title: string; url: string }[] };
   let md = render(rest, 0);
+  // Temuan riset lengkap di akhir agar isi utama tidak terpotong lebih dulu.
+  if (typeof research_notes === "string" && research_notes.trim()) md += `\n\n## Temuan riset lengkap\n\n${research_notes.slice(0, 10_000)}`;
   if (Array.isArray(sources) && sources.length) {
     md += `\n\n## Sumber\n\n${sources
-      .slice(0, 15)
-      .map((s) => `- [${s.title || s.url}](${s.url})`)
+      .slice(0, 30)
+      .map((s, i) => `${i + 1}. [${s.title || s.url}](${s.url})`)
       .join("\n")}`;
   }
   return md.length > maxChars ? `${md.slice(0, maxChars)}\n\n_(dipotong — lihat halaman hasil untuk versi lengkap)_` : md;

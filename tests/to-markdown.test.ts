@@ -17,3 +17,17 @@ describe("hasil Tools Pro → Markdown untuk chat", () => {
     expect(resultToMarkdown({ summary: "x", sources: [{ title: "BPS", url: "https://bps.go.id" }] })).toContain("[BPS](https://bps.go.id)");
   });
 });
+
+describe("temuan riset lengkap", () => {
+  it("ditaruh di akhir sebelum daftar sumber bernomor", async () => {
+    const { resultToMarkdown } = await import("@/lib/addons/to-markdown");
+    const md = resultToMarkdown({
+      summary: "Ringkas",
+      research_notes: "### Photomatics\n- Frame kolab Sal Priadi [1]",
+      sources: [{ title: "Sumber A", url: "https://a.id" }],
+    });
+    expect(md.indexOf("Ringkas")).toBeLessThan(md.indexOf("Temuan riset lengkap"));
+    expect(md).toContain("Frame kolab Sal Priadi [1]");
+    expect(md).toContain("1. [Sumber A](https://a.id)");
+  });
+});

@@ -20,8 +20,10 @@ export interface ToolCtx {
   revision?: { note: string; previous: unknown };
   /** Waktu mulai proses (ms) — untuk menjaga batas waktu server. */
   startedAt?: number;
-  /** Otak yang dipakai (default Associate). */
+  /** Otak yang dipakai (default Senior). */
   tier?: ToolTier;
+  /** Catatan riset web lengkap (diisi webResearch) — ikut disimpan di hasil sebagai "Temuan riset lengkap". */
+  researchNotes?: string;
 }
 
 export interface ToolFile {

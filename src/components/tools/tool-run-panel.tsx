@@ -8,6 +8,7 @@ import { FilesBar } from "@/components/tools/common";
 import { ResultView } from "@/components/tools/result-view";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
+import { ResearchNotes } from "@/components/tools/research-notes";
 import { toolInfo } from "@/lib/addons/catalog";
 import { dateID, type ToolFileLite } from "@/lib/addons/format";
 
@@ -97,6 +98,7 @@ export function ToolRunPanel({
           <div className="space-y-4">
             <FilesBar files={data.run.files ?? []} />
             <ResultView tool={data.run.tool} output={data.run.output} input={data.run.input ?? {}} />
+            <ResearchNotes output={data.run.output} />
           </div>
         )}
       </div>

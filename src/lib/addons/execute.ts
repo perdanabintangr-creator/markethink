@@ -105,6 +105,10 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   const started = Date.now();
   try {
     const result = await runner.run(ctx, parsed.data);
+    // Temuan riset lengkap ikut disimpan (revisi memakai temuan dari hasil sebelumnya).
+    const prevNotes = (revision?.previous as { research_notes?: unknown } | null)?.research_notes;
+    const notes = ctx.researchNotes ?? (typeof prevNotes === "string" ? prevNotes : undefined);
+    if (notes && result.output && typeof result.output === "object") (result.output as Record<string, unknown>).research_notes = notes.slice(0, 40_000);
     const title = `${result.title}${revision ? " · revisi" : ""}`.slice(0, 200);
     await admin
       .from("tool_runs")

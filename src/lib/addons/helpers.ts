@@ -105,6 +105,7 @@ export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: 
     research.sources.filter((s) => s.sourceType === "url").map((s) => ({ title: (s as { title?: string }).title ?? s.url, url: s.url })),
   ).slice(0, 15);
   const webNote = routed.toolFallback() ? "Catatan: pencarian web sedang tidak tersedia, analisis memakai pengetahuan umum AI." : "";
+  if (research.text.trim()) ctx.researchNotes = research.text;
   return { text: research.text, sources, webNote };
 }
 
@@ -163,13 +164,17 @@ Balas hanya daftar kata kunci, satu per baris, tanpa nomor dan tanpa penjelasan.
     model: routed.model,
     system: `${opts.system}
 
-Hasil pencarian Google sudah tersedia di bawah (cuplikan per sumber, bernomor). Tulis CATATAN RISET yang padat fakta
-(angka, nama brand, harga, tanggal, tren) dan cantumkan nomor sumber [n] di setiap fakta. Jangan mengarang data yang tidak ada
-di hasil pencarian; bila harus memperkirakan, tulis "perkiraan" beserta dasar hitungannya. Sebutkan juga data yang tidak ditemukan.`,
+Hasil pencarian Google sudah tersedia di bawah (cuplikan + isi halaman, bernomor). Tulis CATATAN RISET MENDALAM dalam Markdown:
+- Kelompokkan per topik atau per brand/kompetitor dengan subjudul (###).
+- Tulis SEMUA fakta spesifik yang ditemukan: harga & paket, promo (dengan periode), lokasi/titik, kolaborasi & event, program
+  loyalitas, kanal & gaya konten, ulasan/keluhan, angka pasar, tanggal. Detail kecil yang unik justru paling berharga.
+- Cantumkan nomor sumber [n] di setiap fakta. Jangan mengarang data yang tidak ada di hasil pencarian; bila memperkirakan, tulis
+  "perkiraan" + dasarnya. Akhiri dengan subjudul "### Belum ditemukan" berisi data penting yang belum ketemu.`,
     prompt: `${opts.prompt}\n\nHasil pencarian:\n${formatSources(found)}`,
     maxOutputTokens: opts.maxOutputTokens ?? 6000,
     maxRetries: 1,
   });
   addCost(ctx, routed.resolved(), notes.usage);
+  if (notes.text.trim()) ctx.researchNotes = notes.text;
   return { text: notes.text, sources: found.map((f) => ({ title: f.title, url: f.url })), webNote: "" };
 }

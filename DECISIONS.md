@@ -158,3 +158,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Uji pertama Serper (Riset Kompetitor PhotoBebaz): biaya $0,50 → $0,087 (−83%), 90 → 54 dtk, tapi data harga kompetitor tidak ketemu
   karena hanya cuplikan Google. Perbaikan: baca isi halaman teratas (fetch HTML → teks, gratis; lewati medsos/marketplace) —
   Tools Pro maks 8 halaman, chat 3 halaman — dan kata kunci khusus per brand/kompetitor (harga, promo, review, lokasi).
+- **Temuan riset lengkap** (permintaan founder): catatan riset web (Serper: Markdown per topik/kompetitor, semua fakta detail + [n],
+  bagian "Belum ditemukan") disimpan di `output.research_notes` lewat `ctx.researchNotes` → tampil sebagai kartu "Temuan riset lengkap"
+  di halaman hasil & panel chat (ikut tercetak di PDF), ikut di konteks "Bahas di Chat"/Agent. Revisi memakai temuan hasil sebelumnya.
