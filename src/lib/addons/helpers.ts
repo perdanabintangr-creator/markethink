@@ -105,7 +105,10 @@ export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: 
     research.sources.filter((s) => s.sourceType === "url").map((s) => ({ title: (s as { title?: string }).title ?? s.url, url: s.url })),
   ).slice(0, 15);
   const webNote = routed.toolFallback() ? "Catatan: pencarian web sedang tidak tersedia, analisis memakai pengetahuan umum AI." : "";
-  if (research.text.trim()) ctx.researchNotes = research.text;
+  if (research.text.trim()) {
+    ctx.researchNotes = research.text;
+    ctx.researchSources = sources;
+  }
   return { text: research.text, sources, webNote };
 }
 
@@ -175,6 +178,9 @@ Hasil pencarian Google sudah tersedia di bawah (cuplikan + isi halaman, bernomor
     maxRetries: 1,
   });
   addCost(ctx, routed.resolved(), notes.usage);
-  if (notes.text.trim()) ctx.researchNotes = notes.text;
+  if (notes.text.trim()) {
+    ctx.researchNotes = notes.text;
+    ctx.researchSources = found.map((f) => ({ title: f.title, url: f.url }));
+  }
   return { text: notes.text, sources: found.map((f) => ({ title: f.title, url: f.url })), webNote: "" };
 }

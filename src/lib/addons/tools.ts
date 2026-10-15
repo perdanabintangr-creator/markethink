@@ -25,7 +25,7 @@ import {
 import { BASE, fmt, padSteps, shortRp, webResearch } from "./helpers";
 import { RESEARCH_RUNNERS } from "./research";
 import { PRO_RUNNERS } from "./pro";
-import { aiObject, clip, fileSlug, makeDeck, makeWorkbook, storeMaybe, storeToolFile, type ToolCtx, type ToolFile } from "./runtime";
+import { aiObject, clip, fileSlug, makeDeck, makeWorkbook, withNotes, storeMaybe, storeToolFile, type ToolCtx, type ToolFile } from "./runtime";
 
 export interface ToolResult {
   title: string;
@@ -75,7 +75,7 @@ Aturan:
     out.listings = out.listings.filter((l) => input.platforms.includes(l.platform));
     if (!input.current_title) out.before_after = null;
 
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Kata kunci",
         title: `Kata kunci — ${input.product}`,
@@ -102,7 +102,7 @@ Aturan:
           { k: "Hashtag", v: l.hashtags.join(" ") },
         ],
       })),
-    ]);
+    ]));
     const file = await storeToolFile(ctx, `listing-${fileSlug(input.product)}.xlsx`, "xlsx", xlsx, "Excel listing & kata kunci");
     return { title: input.product, output: out, files: [file] };
   },
@@ -165,7 +165,7 @@ Aturan:
         { layout: "closing", title: "Closing", bullets: out.closing_lines.slice(0, 4).map((c) => clip(c, 140)) },
       ].slice(0, 20),
     });
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Rundown",
         title: out.title,
@@ -197,7 +197,7 @@ Aturan:
         ],
         rows: out.objections,
       },
-    ]);
+    ]));
     const files = (await Promise.all([
       storeMaybe(ctx, `skrip-live-${fileSlug(out.title)}.pptx`, "pptx", pptx, "PPT contekan host"),
       storeToolFile(ctx, `rundown-live-${fileSlug(out.title)}.xlsx`, "xlsx", xlsx, "Excel rundown"),
@@ -235,7 +235,7 @@ Aturan:
       ),
     });
     out.messages = out.messages.filter((m) => input.goals.includes(m.category));
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Template WA",
         title: `Template WhatsApp — ${input.business}`,
@@ -248,7 +248,7 @@ Aturan:
         ],
         rows: out.messages.map((m) => ({ ...m, cat: WA_GOAL_LABEL[m.category] })),
       },
-    ]);
+    ]));
     const file = await storeToolFile(ctx, `template-wa-${fileSlug(input.business)}.xlsx`, "xlsx", xlsx, "Excel template WhatsApp");
     return { title: `Template WA — ${input.business}`, output: out, files: [file] };
   },
@@ -403,7 +403,7 @@ Aturan:
       ],
     });
     const colors: Record<string, string> = { bagus: "DCFCE7", perhatian: "FEF3C7", boros: "FEE2E2" };
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Rapor kampanye",
         title: `Rapor ${PLATFORM_ADS[input.platform]} — skor ${out.score}/100`,
@@ -440,7 +440,7 @@ Aturan:
         ],
         rows: out.next_steps,
       },
-    ]);
+    ]));
     const files = (await Promise.all([
       storeMaybe(ctx, `rapor-iklan-${input.platform}.pptx`, "pptx", pptx, "PPT laporan"),
       storeToolFile(ctx, `rapor-iklan-${input.platform}.xlsx`, "xlsx", xlsx, "Excel bertanda warna"),
@@ -566,7 +566,7 @@ Susun laporan riset kompetitor dari catatan riset. Aturan:
         },
       ].slice(0, 20),
     });
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Kompetitor",
         title: `Riset kompetitor — ${input.brand}`,
@@ -605,7 +605,7 @@ Susun laporan riset kompetitor dari catatan riset. Aturan:
         ],
         rows: sources,
       },
-    ]);
+    ]));
     const files = (await Promise.all([
       storeMaybe(ctx, `riset-kompetitor-${fileSlug(input.brand)}.pptx`, "pptx", pptx, "PPT laporan riset"),
       storeToolFile(ctx, `riset-kompetitor-${fileSlug(input.brand)}.xlsx`, "xlsx", xlsx, "Excel data riset"),
@@ -688,7 +688,7 @@ Aturan:
         { layout: "closing", title: clip(out.cta, 90), bullets: [clip(out.hashtags.join(" "), 140)] },
       ],
     });
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Estimasi fee",
         title: out.campaign_name,
@@ -718,7 +718,7 @@ Aturan:
         ],
         rows: out.timeline,
       },
-    ]);
+    ]));
     const files = (await Promise.all([
       storeMaybe(ctx, `brief-kol-${fileSlug(input.brand)}.pptx`, "pptx", pptx, "PPT brief kreator"),
       storeToolFile(ctx, `brief-kol-${fileSlug(input.brand)}.xlsx`, "xlsx", xlsx, "Excel fee & timeline"),

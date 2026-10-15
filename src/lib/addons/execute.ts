@@ -104,10 +104,15 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   };
   const started = Date.now();
   try {
+    // Revisi tidak riset ulang → temuan riset & sumber dari hasil sebelumnya ikut dipakai (halaman, Excel).
+    const prev = revision?.previous as { research_notes?: unknown; sources?: { title: string; url: string }[] } | null;
+    if (typeof prev?.research_notes === "string") {
+      ctx.researchNotes = prev.research_notes;
+      ctx.researchSources = Array.isArray(prev.sources) ? prev.sources : [];
+    }
     const result = await runner.run(ctx, parsed.data);
-    // Temuan riset lengkap ikut disimpan (revisi memakai temuan dari hasil sebelumnya).
-    const prevNotes = (revision?.previous as { research_notes?: unknown } | null)?.research_notes;
-    const notes = ctx.researchNotes ?? (typeof prevNotes === "string" ? prevNotes : undefined);
+    // Temuan riset lengkap ikut disimpan di hasil.
+    const notes = ctx.researchNotes;
     if (notes && result.output && typeof result.output === "object") (result.output as Record<string, unknown>).research_notes = notes.slice(0, 40_000);
     const title = `${result.title}${revision ? " · revisi" : ""}`.slice(0, 200);
     await admin

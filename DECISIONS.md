@@ -161,3 +161,5 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - **Temuan riset lengkap** (permintaan founder): catatan riset web (Serper: Markdown per topik/kompetitor, semua fakta detail + [n],
   bagian "Belum ditemukan") disimpan di `output.research_notes` lewat `ctx.researchNotes` → tampil sebagai kartu "Temuan riset lengkap"
   di halaman hasil & panel chat (ikut tercetak di PDF), ikut di konteks "Bahas di Chat"/Agent. Revisi memakai temuan hasil sebelumnya.
+- Excel semua Tools Pro yang melakukan riset web kini punya sheet **"Temuan riset"** (Topik | Temuan | Sumber URL; baris "Belum
+  ditemukan" diberi warna). Dibuat dari `ctx.researchNotes` lewat `withNotes()`; revisi memakai temuan & sumber hasil sebelumnya.

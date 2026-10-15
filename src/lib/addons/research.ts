@@ -2,7 +2,7 @@ import "server-only";
 import type { z } from "zod";
 import { untrusted } from "@/lib/ai/prompt";
 import { BASE, fmt, padSteps, shortRp, webResearch } from "./helpers";
-import { aiObject, clip, fileSlug, makeDeck, makeWorkbook, storeMaybe, storeToolFile, type ToolFile } from "./runtime";
+import { aiObject, clip, fileSlug, makeDeck, makeWorkbook, withNotes, storeMaybe, storeToolFile, type ToolFile } from "./runtime";
 import { sampleSize } from "./sample";
 import {
   BIZ_MODEL_LABEL,
@@ -182,7 +182,7 @@ ${research.webNote}`,
         sourcesSlide(research.sources),
       ],
     });
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Ukuran pasar",
         title: `Ukuran pasar ${input.product} — ${area}`,
@@ -232,7 +232,7 @@ ${research.webNote}`,
         rowColor: (r) => (r.impact === "positif" || r.impact === "peluang" ? "E8F8EF" : r.impact === "negatif" || r.impact === "ancaman" ? "FDECEC" : null),
       },
       sourcesSheet(research.sources),
-    ]);
+    ]));
     const slug = fileSlug(input.product);
     const files = await store([
       storeMaybe(ctx, `ukuran-pasar-${slug}.pptx`, "pptx", pptx, "PPT laporan pasar"),
@@ -337,7 +337,7 @@ Susun laporan SEGMENTASI & PERSONA dari catatan riset. Aturan:
         sourcesSlide(research.sources),
       ],
     });
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Segmen",
         columns: [
@@ -398,7 +398,7 @@ Susun laporan SEGMENTASI & PERSONA dari catatan riset. Aturan:
         rows: out.insights,
       },
       sourcesSheet(research.sources),
-    ]);
+    ]));
     const slug = fileSlug(input.brand || input.product);
     const files = await store([
       storeMaybe(ctx, `persona-${slug}.pptx`, "pptx", pptx, "PPT persona & segmen"),
@@ -537,7 +537,7 @@ ${research.webNote}`,
         sourcesSlide(research.sources),
       ],
     });
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Scorecard",
         title: `Skor kelayakan: ${out.weighted_score}/100 — ${VERDICT_LABEL[out.verdict]}`,
@@ -609,7 +609,7 @@ ${research.webNote}`,
         rows: out.plan.map((p) => ({ ...p, actions: p.actions.join("\n") })),
       },
       sourcesSheet(research.sources),
-    ]);
+    ]));
     const slug = fileSlug(input.brand || input.idea);
     const files = await store([
       storeMaybe(ctx, `studi-kelayakan-${slug}.pptx`, "pptx", pptx, "PPT studi kelayakan"),
@@ -657,7 +657,7 @@ Kamu research director lembaga riset (standar ESOMAR, gaya kuesioner Nielsen/Kan
     for (const s of out.sections) for (const item of s.questions) item.code = `Q${++q}`;
     out.sample = sample;
 
-    const xlsx = await makeWorkbook([
+    const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Kuesioner",
         title: out.title,
@@ -720,7 +720,7 @@ Kamu research director lembaga riset (standar ESOMAR, gaya kuesioner Nielsen/Kan
           ...out.fieldwork.map((t) => ({ kind: "Tips lapangan", text: t })),
         ],
       },
-    ]);
+    ]));
     const files = await store([storeToolFile(ctx, `kuesioner-${fileSlug(out.title || input.objective)}.xlsx`, "xlsx", xlsx, "Excel kuesioner (siap Google Form)")]);
     return { title: clip(out.title || "Desain survei", 80), output: out, files };
   },

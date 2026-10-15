@@ -4,7 +4,7 @@ import type { z } from "zod";
 import { untrusted } from "@/lib/ai/prompt";
 import type { AddonId, ToolId } from "../catalog";
 import { EXPERT, webResearch } from "../helpers";
-import { aiObject, revisionBlock, makeDeck, makeWorkbook, storeMaybe, storeToolFile, type SheetSpec, type ToolCtx, type ToolFile } from "../runtime";
+import { aiObject, revisionBlock, makeDeck, makeWorkbook, withNotes, storeMaybe, storeToolFile, type SheetSpec, type ToolCtx, type ToolFile } from "../runtime";
 import type { Runner, ToolResult } from "../tools";
 import { briefFromFields, filesField, schemaFromFields, type ToolForm } from "./fields";
 
@@ -156,7 +156,7 @@ ${webNote ? `\n${webNote}` : ""}`;
       const spec = def.files(out, raw);
       const [pptx, xlsx] = await Promise.all([
         spec.deck ? makeDeck(spec.deck) : Promise.resolve(null),
-        spec.sheets?.length ? makeWorkbook(spec.sheets) : Promise.resolve(null),
+        spec.sheets?.length ? makeWorkbook(withNotes(ctx, spec.sheets)) : Promise.resolve(null),
       ]);
       const files = (
         await Promise.all([

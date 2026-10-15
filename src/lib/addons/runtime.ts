@@ -24,6 +24,8 @@ export interface ToolCtx {
   tier?: ToolTier;
   /** Catatan riset web lengkap (diisi webResearch) — ikut disimpan di hasil sebagai "Temuan riset lengkap". */
   researchNotes?: string;
+  /** Sumber riset (urutan = nomor [n] di catatan riset). */
+  researchSources?: { title: string; url: string }[];
 }
 
 export interface ToolFile {
@@ -287,6 +289,47 @@ export interface SheetSpec {
   rowColor?: (row: Record<string, unknown>) => string | null;
   /** Judul di atas tabel. */
   title?: string;
+}
+
+/**
+ * Sheet "Temuan riset": catatan riset Markdown → baris (Topik | Temuan | Sumber). Nomor [n] diubah jadi URL sumbernya.
+ */
+export function notesSheet(notes: string, sources: { title: string; url: string }[] = []): SheetSpec {
+  const rows: Record<string, string>[] = [];
+  let topic = "Umum";
+  for (const raw of notes.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) {
+      topic = h[1].replace(/\*\*/g, "").trim();
+      continue;
+    }
+    const text = line.replace(/^([-*•]|\d+[.)])\s+/, "").replace(/\*\*/g, "").trim();
+    if (!text) continue;
+    const refs = [...new Set([...text.matchAll(/\[(\d{1,2})\]/g)].map((m) => Number(m[1])))];
+    rows.push({
+      topic,
+      finding: text.replace(/\s*\[(\d{1,2})\]/g, "").trim(),
+      source: refs.map((n) => sources[n - 1]?.url ?? `[${n}]`).join("\n"),
+    });
+  }
+  return {
+    name: "Temuan riset",
+    title: "Temuan riset lengkap (riset web Markethink)",
+    columns: [
+      { header: "Topik", key: "topic", width: 26, wrap: true },
+      { header: "Temuan", key: "finding", width: 90, wrap: true },
+      { header: "Sumber", key: "source", width: 60, wrap: true },
+    ],
+    rows,
+    rowColor: (r) => (/belum ditemukan/i.test(String(r.topic)) ? "FFF7E0" : null),
+  };
+}
+
+/** Tambahkan sheet "Temuan riset" (bila tool ini melakukan riset web) ke daftar sheet Excel. */
+export function withNotes(ctx: ToolCtx, sheets: SheetSpec[], sources?: { title: string; url: string }[]): SheetSpec[] {
+  return ctx.researchNotes?.trim() ? [...sheets, notesSheet(ctx.researchNotes, sources ?? ctx.researchSources ?? [])] : sheets;
 }
 
 /** Excel rapi: judul, header berwarna, kolom lebar otomatis, angka Rupiah, baris berwarna. */
