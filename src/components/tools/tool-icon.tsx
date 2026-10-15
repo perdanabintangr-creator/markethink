@@ -25,6 +25,7 @@ import {
   FileBarChart,
   PenLine,
   Wrench,
+  BrainCircuit,
   type LucideIcon,
 } from "lucide-react";
 
@@ -54,6 +55,7 @@ const ICONS: Record<string, LucideIcon> = {
   kolreport: BarChart3,
   press: Newspaper,
   report: FileBarChart,
+  agent: BrainCircuit,
 };
 
 export function ToolIcon({ id, className }: { id: string; className?: string }) {

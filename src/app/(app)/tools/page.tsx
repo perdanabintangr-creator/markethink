@@ -24,6 +24,19 @@ export default async function ToolsHub() {
           <p className="mt-1 text-muted-foreground">
             Dikelompokkan per peran di tim marketing. Hasilnya setara deliverable konsultan & agency: halaman visual + file PPT/Excel siap presentasi.
           </p>
+          <Link
+            href="/tools/agent"
+            className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 to-transparent p-4 transition-colors hover:border-primary/60"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <ToolIcon id="agent" className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">Markethink Agent · Baru</span>
+              <span className="block text-sm text-muted-foreground">Beri satu tujuan, Agent menjalankan beberapa tools berurutan sampai paket kerjanya lengkap.</span>
+            </span>
+            <ArrowRight className="size-4 shrink-0 text-primary" />
+          </Link>
           <nav className="mt-4 flex flex-wrap gap-2">
             {ADDONS.map((a) => (
               <a key={a.id} href={`#${a.id}`} className="rounded-full border px-3 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground">

@@ -29,6 +29,8 @@ export interface ChatSummary {
   sort_key?: number | null;
   /** Chat "Bahas di Chat" dari hasil Tools Pro (tampil di mode Tools Pro). */
   source_run_id?: string | null;
+  /** Chat "Bahas paket" dari misi Markethink Agent (tampil di mode Tools Pro). */
+  source_agent_id?: string | null;
 }
 
 /** Hasil Tools Pro yang tampil di riwayat sidebar. */

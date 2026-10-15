@@ -27,6 +27,7 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import {
   Bot,
+  BrainCircuit,
   Wrench,
   ChevronRight,
   Folder,
@@ -86,7 +87,7 @@ const runToItem = (r: ToolRunSummary): HistoryItem => ({
 /** Angka urut riwayat: urutan manual bila ada, selain itu waktu aktivitas terakhir. */
 const orderKey = (c: HistoryItem) => c.sort_key ?? Date.parse(c.updated_at);
 /** Item milik mode Tools Pro: hasil tools & chat "Bahas di Chat" dari hasil tools. */
-const isToolsItem = (c: HistoryItem) => Boolean(c.toolRun || c.source_run_id);
+const isToolsItem = (c: HistoryItem) => Boolean(c.toolRun || c.source_run_id || c.source_agent_id);
 type SidebarMode = "chat" | "tools";
 const MODE_KEY = "mt_sidebar_mode";
 const isPinned = (c: HistoryItem) => c.pin_order !== null && c.pin_order !== undefined;
@@ -166,7 +167,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const routeMode: SidebarMode | null = pathname.startsWith("/tools")
     ? "tools"
     : pathname.startsWith("/chat/") && activeChat
-      ? activeChat.source_run_id
+      ? activeChat.source_run_id || activeChat.source_agent_id
         ? "tools"
         : "chat"
       : pathname === "/chat"
@@ -505,11 +506,21 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </nav>
         </>
       ) : (
-        <Button asChild variant={pathname === "/tools" ? "default" : "outline"} className="w-full justify-start" onClick={onNavigate}>
-          <Link href="/tools">
-            <LayoutGrid /> Semua tools & kuota
+        <div className="space-y-1.5">
+          <Button asChild className="w-full justify-start" onClick={onNavigate}>
+            <Link href="/tools/agent">
+              <BrainCircuit /> Markethink Agent
+              <span className="ml-auto rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[10px] font-semibold">{t.newBadge}</span>
+            </Link>
+          </Button>
+          <Link
+            href="/tools"
+            onClick={onNavigate}
+            className={cn("flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent", pathname === "/tools" && "bg-accent font-medium")}
+          >
+            <LayoutGrid className="size-4" /> Semua tools & kuota
           </Link>
-        </Button>
+        </div>
       )}
 
       <div className="relative">
@@ -1068,7 +1079,7 @@ function ChatItem({
             <ToolIcon id={chat.toolRun.tool} className="size-3" />
           </span>
         )}
-        {!chat.toolRun && chat.source_run_id && (
+        {!chat.toolRun && (chat.source_run_id || chat.source_agent_id) && (
           <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground" title="Diskusi hasil Tools Pro">
             <MessageSquareText className="size-3" />
           </span>

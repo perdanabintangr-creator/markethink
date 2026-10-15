@@ -243,7 +243,7 @@ export async function POST(req: Request) {
       const { messages: resolvedRaw, hasImages } = await resolveAttachments(
         supabase,
         // Hasil Tools Pro ("Bahas di Chat") di pesan pertama selalu ikut sebagai konteks walau chat sudah panjang.
-        historyStart(messages.length) > 0 && messages[0]?.id?.startsWith("tool-")
+        historyStart(messages.length) > 0 && /^(tool|agent)-/.test(messages[0]?.id ?? "")
           ? [messages[0], ...messages.slice(historyStart(messages.length))]
           : messages.slice(historyStart(messages.length)),
       );
