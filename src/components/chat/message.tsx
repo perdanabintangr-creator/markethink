@@ -18,6 +18,7 @@ import {
   ThumbsDown,
   ThumbsUp,
   Wand2,
+  FolderOpen,
 } from "lucide-react";
 import type { FileUIPart, SourceUrlUIPart } from "ai";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ interface ToolPart {
 }
 
 type Block = { kind: "text"; text: string } | { kind: "tool"; part: ToolPart };
-const RENDERED_TOOLS = new Set(["tool-generate_image", "tool-create_presentation"]);
+const RENDERED_TOOLS = new Set(["tool-generate_image", "tool-create_presentation", "tool-read_tool_result"]);
 
 /** Urutan tampilan jawaban: teks (potongan bersebelahan digabung) diselingi hasil gambar/PPT. */
 function assistantBlocks(m: MtMessage): Block[] {
@@ -226,6 +227,8 @@ export function ChatMessage({
         {blocks.map((b, i) =>
           b.kind === "text" ? (
             <Markdown key={i}>{linkCitations(hideUpdateBlock(b.text), sources)}</Markdown>
+          ) : b.part.type === "tool-read_tool_result" ? (
+            <ReadResultChip key={b.part.toolCallId ?? i} part={b.part} />
           ) : b.part.type === "tool-generate_image" ? (
             <ImageResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
           ) : (
@@ -489,4 +492,27 @@ function IconBtn({
 /** Blok [[PERBARUI_HASIL]] (instruksi untuk sistem) diganti keterangan singkat untuk user. */
 function hideUpdateBlock(text: string) {
   return text.replace(UPDATE_RESULT_BLOCK, "\n\n> 🔄 **Hasil di panel kanan diperbarui** sesuai permintaan ini.");
+}
+
+/** Penanda AI sedang/sudah membaca hasil Tools Pro user (chat biasa). */
+function ReadResultChip({ part }: { part: ToolPart }) {
+  const out = part.output as { ok?: boolean; title?: string; tool?: string; link?: string } | undefined;
+  const done = part.state === "output-available" || part.state === "output-error";
+  const cls = "not-prose inline-flex max-w-full items-center gap-1.5 rounded-full border bg-muted/50 px-3 py-1 text-xs text-muted-foreground";
+  if (!done) {
+    return (
+      <span className={cn(cls, "animate-pulse")}>
+        <FolderOpen className="size-3.5 text-primary" /> Membaca hasil Tools Pro…
+      </span>
+    );
+  }
+  if (!out?.ok || !out.link) return null;
+  return (
+    <a href={out.link} className={cn(cls, "hover:bg-accent hover:text-foreground")}>
+      <FolderOpen className="size-3.5 shrink-0 text-primary" />
+      <span className="truncate">
+        Membaca hasil Tools Pro: <span className="font-medium text-foreground">{out.title}</span>
+      </span>
+    </a>
+  );
 }

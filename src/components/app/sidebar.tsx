@@ -39,6 +39,8 @@ import {
   Loader2,
   LogOut,
   MessageSquarePlus,
+  MessageSquareText,
+  MessagesSquare,
   Monitor,
   Moon,
   MoreHorizontal,
@@ -83,6 +85,10 @@ const runToItem = (r: ToolRunSummary): HistoryItem => ({
 });
 /** Angka urut riwayat: urutan manual bila ada, selain itu waktu aktivitas terakhir. */
 const orderKey = (c: HistoryItem) => c.sort_key ?? Date.parse(c.updated_at);
+/** Item milik mode Tools Pro: hasil tools & chat "Bahas di Chat" dari hasil tools. */
+const isToolsItem = (c: HistoryItem) => Boolean(c.toolRun || c.source_run_id);
+type SidebarMode = "chat" | "tools";
+const MODE_KEY = "mt_sidebar_mode";
 const isPinned = (c: HistoryItem) => c.pin_order !== null && c.pin_order !== undefined;
 
 /** ID drag & drop: "i:<id>" = chat/hasil tools, "p:<id>" = folder project, "zone:*" = area lepas. */
@@ -156,6 +162,36 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const matching = useMemo(() => (q ? chats.filter((c) => c.title.toLowerCase().includes(q)) : chats), [chats, q]);
   const activeChat = chats.find((c) => pathname === `/chat/${c.id}`);
 
+  // Mode sidebar ala Claude Code: "Chat" (chat & project) atau "Tools Pro" (menu tools & riwayat hasil).
+  const routeMode: SidebarMode | null = pathname.startsWith("/tools")
+    ? "tools"
+    : pathname.startsWith("/chat/") && activeChat
+      ? activeChat.source_run_id
+        ? "tools"
+        : "chat"
+      : pathname === "/chat"
+        ? "chat"
+        : null;
+  const [mode, setModeState] = useState<SidebarMode>(routeMode ?? "chat");
+  useEffect(() => {
+    if (routeMode) return setModeState(routeMode);
+    try {
+      if (localStorage.getItem(MODE_KEY) === "tools") setModeState("tools");
+    } catch {
+      /* penyimpanan browser tidak tersedia */
+    }
+  }, [routeMode]);
+  function switchMode(next: SidebarMode) {
+    setModeState(next);
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch {
+      /* abaikan */
+    }
+    if (next !== routeMode) router.push(next === "tools" ? "/tools" : "/chat");
+  }
+  const inMode = useCallback((c: HistoryItem) => isToolsItem(c) === (mode === "tools"), [mode]);
+
   // Project yang sedang dibuka otomatis terbuka di sidebar.
   useEffect(() => {
     const id = activeChat?.workspace_id;
@@ -166,15 +202,20 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const history = useMemo(() => {
     const runMatches = q ? runs.filter((r) => r.title.toLowerCase().includes(q)) : runs;
     const list: HistoryItem[] = [...matching.filter((c) => !c.workspace_id), ...runMatches];
-    return list.filter((c) => !isPinned(c)).sort((a, b) => orderKey(b) - orderKey(a));
-  }, [matching, runs, q]);
+    return list.filter((c) => !isPinned(c) && inMode(c)).sort((a, b) => orderKey(b) - orderKey(a));
+  }, [matching, runs, q, inMode]);
 
   // Bagian "Disematkan": chat umum + hasil Tools Pro, urut sesuai posisi yang diatur user.
+  // Semua sematan (kedua mode) — dipakai saat menyimpan agar sematan mode lain tidak ikut terlepas.
+  const pinnedAll = useMemo(
+    (): HistoryItem[] => [...chats.filter((c) => !c.workspace_id), ...runs].filter(isPinned).sort((a, b) => a.pin_order! - b.pin_order!),
+    [chats, runs],
+  );
   const pinned = useMemo(() => {
     const runMatches = q ? runs.filter((r) => r.title.toLowerCase().includes(q)) : runs;
     const list: HistoryItem[] = [...matching.filter((c) => !c.workspace_id), ...runMatches];
-    return list.filter(isPinned).sort((a, b) => a.pin_order! - b.pin_order!);
-  }, [matching, runs, q]);
+    return list.filter((c) => isPinned(c) && inMode(c)).sort((a, b) => a.pin_order! - b.pin_order!);
+  }, [matching, runs, q, inMode]);
 
   function toggleProject(id: string) {
     setExpanded((s) => {
@@ -318,7 +359,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   /** Simpan daftar sematan (urutan = posisi). Tampilan langsung berubah, lalu disimpan ke server. */
-  async function savePins(list: HistoryItem[], message?: string) {
+  async function savePins(current: HistoryItem[], message?: string) {
+    const list = [...current, ...pinnedAll.filter((c) => !inMode(c) && !current.some((x) => x.id === c.id))];
     const order = new Map(list.map((c, i) => [c.id, i]));
     const apply = <T extends HistoryItem>(c: T): T => ({ ...c, pin_order: order.get(c.id) ?? null });
     setChats((cs) => cs.map(apply));
@@ -345,7 +387,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     if (!chat || (projectId && !project) || chat.workspace_id === projectId) return;
     setChats((list) => list.map((c) => (c.id === chatId ? { ...c, workspace_id: projectId, pin_order: projectId ? null : c.pin_order } : c)));
     if (projectId && isPinned(chat))
-      void fetch("/api/pins", { method: "PATCH", body: JSON.stringify({ items: pinned.filter((c) => c.id !== chatId).map((c) => ({ id: c.id, kind: c.toolRun ? "run" : "chat" })) }) });
+      void fetch("/api/pins", { method: "PATCH", body: JSON.stringify({ items: pinnedAll.filter((c) => c.id !== chatId).map((c) => ({ id: c.id, kind: c.toolRun ? "run" : "chat" })) }) });
     if (projectId) setExpanded((s) => new Set(s).add(projectId));
     const res = await fetch(`/api/chats/${chatId}`, { method: "PATCH", body: JSON.stringify({ workspace_id: projectId }) });
     if (!res.ok) {
@@ -444,25 +486,35 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex items-center justify-between px-1">
         <Logo href="/chat" />
       </div>
-      <Button asChild className="w-full justify-start" onClick={onNavigate}>
-        <Link href="/chat">
-          <MessageSquarePlus /> {t.newChat}
-        </Link>
-      </Button>
-      <nav className="space-y-0.5">
-        <ToolsMenu pathname={pathname} onNavigate={onNavigate} />
-        <Link
-          href="/agents"
-          onClick={onNavigate}
-          className={cn("flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent", pathname.startsWith("/agents") && "bg-accent font-medium")}
-        >
-          <Bot className="size-4" /> {t.agents}
-        </Link>
-      </nav>
+      <ModeSwitch mode={mode} onChange={switchMode} />
+      {mode === "chat" ? (
+        <>
+          <Button asChild className="w-full justify-start" onClick={onNavigate}>
+            <Link href="/chat">
+              <MessageSquarePlus /> {t.newChat}
+            </Link>
+          </Button>
+          <nav className="space-y-0.5">
+            <Link
+              href="/agents"
+              onClick={onNavigate}
+              className={cn("flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent", pathname.startsWith("/agents") && "bg-accent font-medium")}
+            >
+              <Bot className="size-4" /> {t.agents}
+            </Link>
+          </nav>
+        </>
+      ) : (
+        <Button asChild variant={pathname === "/tools" ? "default" : "outline"} className="w-full justify-start" onClick={onNavigate}>
+          <Link href="/tools">
+            <LayoutGrid /> Semua tools & kuota
+          </Link>
+        </Button>
+      )}
 
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.searchChats} className="h-9 pl-8" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={mode === "tools" ? "Cari hasil Tools Pro" : t.searchChats} className="h-9 pl-8" />
       </div>
 
       <DndContext
@@ -479,6 +531,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         }}
       >
       <div className="-mx-1 flex-1 overflow-y-auto px-1">
+        {mode === "tools" && <ToolsMenu pathname={pathname} onNavigate={onNavigate} />}
+        {mode === "chat" && (
         <div className="mb-3">
           <div className="flex items-center justify-between px-2 pb-1">
             <p className="text-xs font-medium text-muted-foreground">{t.projects}</p>
@@ -522,6 +576,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             </button>
           )}
         </div>
+        )}
 
         {pinned.length > 0 && (
           <PinZone highlight={over?.id === PIN_ZONE && Boolean(activeItem) && !isPinned(activeItem!)}>
@@ -551,12 +606,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         )}
 
         <HistoryZone highlight={over?.id === HISTORY_ZONE}>
-          {loaded && !history.length && !pinned.length && <p className="px-2 py-4 text-sm text-muted-foreground">{t.noChats}</p>}
+          {loaded && !history.length && !pinned.length && (
+            <p className="px-2 py-4 text-sm text-muted-foreground">{mode === "tools" ? "Belum ada hasil Tools Pro." : t.noChats}</p>
+          )}
           {/* Label "Riwayat"; saat menggeser (dan belum ada sematan) berubah jadi area sematkan dengan tinggi sama — daftar tidak bergeser. */}
           {activeItem && !pinned.length ? (
             <EmptyPinTarget highlight={over?.id === PIN_ZONE} />
           ) : (
-            history.length > 0 && <p className="flex h-7 items-center px-2 text-xs font-medium text-muted-foreground">Riwayat</p>
+            history.length > 0 && (
+              <p className="flex h-7 items-center px-2 text-xs font-medium text-muted-foreground">{mode === "tools" ? "Riwayat Tools Pro" : "Riwayat"}</p>
+            )
           )}
           <SortableContext items={history.map((c) => itemKey(c.id))} strategy={onlyWhen(Boolean(activeItem && !isPinned(activeItem)))}>
             {history.map((c) => (
@@ -768,15 +827,12 @@ function SortableHistoryRow({ chat, line, render }: { chat: HistoryItem; line: "
   );
 }
 
-const TOOLS_OPEN_KEY = "mt_tools_menu_open";
 
 /** Menu "Tools Pro" yang bisa dibuka-tutup: submenu per kelompok (Market Research, Jualan Online, Iklan). */
 function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
-  const { t, planId, user } = useApp();
+  const { planId, user } = useApp();
   // Paket Free: Tools Pro terkunci (perlu beli add-on/upgrade) → tandai dengan gembok.
   const lockedPlan = planId === "beta" && user.role !== "admin";
-  const inTools = pathname.startsWith("/tools");
-  const [open, setOpen] = useState(inTools);
   // Kelompok role yang terbuka: default kelompok tool yang sedang dibuka.
   const currentGroup = toolInfo(pathname.split("/")[2] ?? "")?.addon;
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(currentGroup ? [currentGroup] : []));
@@ -791,95 +847,79 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
       return next;
     });
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(TOOLS_OPEN_KEY);
-      if (saved !== null) setOpen(saved === "1" || inTools);
-    } catch {
-      /* penyimpanan browser tidak tersedia */
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  useEffect(() => {
-    if (inTools) setOpen(true);
-  }, [inTools]);
-
-  function toggle() {
-    setOpen((v) => {
-      try {
-        localStorage.setItem(TOOLS_OPEN_KEY, v ? "0" : "1");
-      } catch {
-        /* abaikan */
-      }
-      return !v;
-    });
-  }
-
   return (
-    <div>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        className={cn("flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-accent", inTools && !open && "bg-accent font-medium")}
-      >
-        <Wrench className="size-4" /> {t.toolsPro}
-        <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{t.newBadge}</span>
-        <ChevronRight className={cn("size-3.5 text-muted-foreground transition-transform", open && "rotate-90")} />
-      </button>
-      {open && (
-        <div className="mb-1 ml-4 max-h-[50vh] overflow-y-auto border-l pl-1.5">
-          <Link
-            href="/tools"
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground",
-              pathname === "/tools" && "bg-accent font-medium text-foreground",
-            )}
-          >
-            <LayoutGrid className="size-3.5" /> Semua tools & kuota
-          </Link>
-          {MENU_GROUPS.map((g) => {
-            const tools = TOOLS.filter((tool) => tool.addon === g.addon);
-            const groupOpen = openGroups.has(g.addon);
-            return (
-              <div key={g.addon} className="mt-0.5">
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(g.addon)}
-                  aria-expanded={groupOpen}
-                  className="flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80 hover:bg-accent hover:text-foreground"
-                >
-                  <ChevronRight className={cn("size-3 shrink-0 transition-transform", groupOpen && "rotate-90")} />
-                  <span className="truncate">{g.label}</span>
-                  <span className="ml-auto text-[10px] font-normal normal-case">{tools.length}</span>
-                </button>
-                {groupOpen &&
-                  tools.map((tool) => {
-                    const href = `/tools/${tool.id}`;
-                    const active = pathname === href || pathname.startsWith(`${href}/`);
-                    return (
-                      <Link
-                        key={tool.id}
-                        href={href}
-                        onClick={onNavigate}
-                        title={tool.name}
-                        className={cn(
-                          "ml-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground",
-                          active && "bg-accent font-medium text-foreground",
-                        )}
-                      >
-                        <ToolIcon id={tool.id} className="size-3.5 shrink-0" />
-                        <span className="truncate">{tool.menu}</span>
-                        {lockedPlan && <Lock className="ml-auto size-3 shrink-0 opacity-60" aria-label="Terkunci" />}
-                      </Link>
-                    );
-                  })}
+    <div className="mb-3">
+      <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">Tools Pro per role</p>
+      {MENU_GROUPS.map((g) => {
+        const tools = TOOLS.filter((tool) => tool.addon === g.addon);
+        const groupOpen = openGroups.has(g.addon);
+        return (
+          <div key={g.addon}>
+            <button
+              type="button"
+              onClick={() => toggleGroup(g.addon)}
+              aria-expanded={groupOpen}
+              className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-accent"
+            >
+              <ChevronRight className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", groupOpen && "rotate-90")} />
+              <span className="truncate">{g.label}</span>
+              <span className="ml-auto text-[11px] text-muted-foreground">{tools.length}</span>
+            </button>
+            {groupOpen && (
+              <div className="mb-1 ml-3.5 border-l pl-1.5">
+                {tools.map((tool) => {
+                  const href = `/tools/${tool.id}`;
+                  const active = pathname === href || pathname.startsWith(`${href}/`);
+                  return (
+                    <Link
+                      key={tool.id}
+                      href={href}
+                      onClick={onNavigate}
+                      title={tool.name}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground",
+                        active && "bg-accent font-medium text-foreground",
+                      )}
+                    >
+                      <ToolIcon id={tool.id} className="size-3.5 shrink-0" />
+                      <span className="truncate">{tool.menu}</span>
+                      {lockedPlan && <Lock className="ml-auto size-3 shrink-0 opacity-60" aria-label="Terkunci" />}
+                    </Link>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Pilihan mode sidebar ala Claude Code: Chat Markethink atau Tools Pro. */
+function ModeSwitch({ mode, onChange }: { mode: SidebarMode; onChange: (m: SidebarMode) => void }) {
+  const { t } = useApp();
+  const items: { id: SidebarMode; label: string; icon: React.ReactNode }[] = [
+    { id: "chat", label: "Chat", icon: <MessagesSquare className="size-4" /> },
+    { id: "tools", label: t.toolsPro, icon: <Wrench className="size-4" /> },
+  ];
+  return (
+    <div role="tablist" aria-label="Mode" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+      {items.map((it) => (
+        <button
+          key={it.id}
+          type="button"
+          role="tab"
+          aria-selected={mode === it.id}
+          onClick={() => onChange(it.id)}
+          className={cn(
+            "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+            mode === it.id && "bg-background text-foreground shadow-sm",
+          )}
+        >
+          {it.icon} {it.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -1026,6 +1066,11 @@ function ChatItem({
         {chat.toolRun && (
           <span className="flex size-5 shrink-0 items-center justify-center rounded bg-primary/15 text-primary" title={toolInfo(chat.toolRun.tool)?.name}>
             <ToolIcon id={chat.toolRun.tool} className="size-3" />
+          </span>
+        )}
+        {!chat.toolRun && chat.source_run_id && (
+          <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground" title="Diskusi hasil Tools Pro">
+            <MessageSquareText className="size-3" />
           </span>
         )}
         <span className="truncate">{chat.title}</span>

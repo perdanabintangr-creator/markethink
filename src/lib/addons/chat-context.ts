@@ -48,3 +48,55 @@ Bila diskusi menghasilkan ide/arah baru yang mengubah isi hasil tetapi user belu
   }
   return parts.join("\n\n");
 }
+
+const dateWIB = (iso: string) => new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
+
+/**
+ * Untuk chat biasa: daftar hasil Tools Pro milik user (versi terbaru per hasil), supaya AI paham
+ * bila user menyinggung "yang sudah saya buat di Tools Pro" lalu membaca isinya lewat tool `read_tool_result`.
+ */
+export async function toolRunsIndexPrompt(db: SupabaseClient, userId: string) {
+  const { data } = await db
+    .from("tool_runs")
+    .select("id, tool, title, created_at, revision_of")
+    .eq("user_id", userId)
+    .eq("status", "ok")
+    .order("created_at", { ascending: false })
+    .limit(80);
+  if (!data?.length) return "";
+  const seen = new Map<string, { id: string; tool: string; title: string | null; created_at: string; versions: number }>();
+  for (const r of data) {
+    const root = (r.revision_of as string | null) ?? (r.id as string);
+    const cur = seen.get(root);
+    if (cur) cur.versions++;
+    else seen.set(root, { id: r.id as string, tool: r.tool as string, title: r.title as string | null, created_at: r.created_at as string, versions: 1 });
+  }
+  const lines = [...seen.values()].slice(0, 25).map((r) => {
+    const name = toolInfo(r.tool)?.name ?? r.tool;
+    return `- id=${r.id} · "${(r.title ?? name).replace(/"/g, "'")}" · ${name} · ${dateWIB(r.created_at)}${r.versions > 1 ? ` · versi ${r.versions}` : ""}`;
+  });
+  return `HASIL TOOLS PRO MILIK USER
+User juga memakai Markethink Tools Pro (mode terpisah di sidebar). Hasil terbarunya (terbaru di atas):
+${lines.join("\n")}
+Bila user menyinggung hasil yang dibuat di Tools Pro (mis. "yang sudah saya buat di Tools Pro", "persona tadi", "kalender kontenku", menyebut brand/judulnya),
+panggil tool \`read_tool_result\` dengan id yang paling cocok SEBELUM menjawab, lalu jawab berdasarkan isinya (sebut judulnya). Jangan mengarang isi hasil.
+Bila ada beberapa yang mirip, pilih yang terbaru atau tanyakan singkat. Bila user ingin hasilnya diubah/diperbarui, bantu di sini lalu sarankan
+membuka hasil itu dan klik "Bahas di Chat" agar versinya bisa diperbarui otomatis (termasuk PPT/Excel).`;
+}
+
+/** Isi hasil Tools Pro (versi terbaru) milik user — dipanggil AI di chat biasa. */
+export async function readToolResult(db: SupabaseClient, userId: string, runId: string) {
+  const { data: run } = await db.from("tool_runs").select("id, revision_of").eq("id", runId).eq("user_id", userId).maybeSingle();
+  if (!run) return { ok: false as const, error: "Hasil tidak ditemukan. Cek id-nya di daftar hasil Tools Pro." };
+  const latest = await latestRunInChain(db, (run.revision_of as string | null) ?? (run.id as string));
+  if (!latest) return { ok: false as const, error: "Hasil belum selesai atau gagal dibuat." };
+  const name = toolInfo(latest.tool as string)?.name ?? (latest.tool as string);
+  return {
+    ok: true as const,
+    title: (latest.title as string | null) ?? name,
+    tool: name,
+    date: dateWIB(latest.created_at as string),
+    link: `/tools/${latest.tool}/${latest.id}`,
+    content: resultToMarkdown(latest.output, 20_000),
+  };
+}

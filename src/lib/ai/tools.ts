@@ -14,6 +14,7 @@ import {
   type PresentationInput,
 } from "@/lib/pptx";
 import { sanitizeFileName } from "@/lib/files";
+import { readToolResult } from "@/lib/addons/chat-context";
 
 export const IMAGE_CREDIT_COST = 5;
 export const PPTX_CREDIT_COST = 3;
@@ -92,6 +93,14 @@ async function logUsage(
 
 export function createChatTools(ctx: ToolCtx) {
   return {
+    read_tool_result: tool({
+      description:
+        "Baca isi lengkap hasil Markethink Tools Pro milik user (versi terbaru), mis. persona, kalender konten, marketing plan, riset pasar. " +
+        "Pakai id dari daftar HASIL TOOLS PRO MILIK USER di instruksi sistem, setiap kali user menyinggung hasil yang dibuat di Tools Pro.",
+      inputSchema: z.object({ run_id: z.string().uuid().describe("id hasil dari daftar HASIL TOOLS PRO MILIK USER") }),
+      execute: async ({ run_id }) => readToolResult(ctx.admin, ctx.userId, run_id),
+    }),
+
     generate_image: tool({
       description:
         "Buat gambar baru (visual iklan, konten feed/story, mockup produk, ilustrasi, poster, thumbnail) atau edit/variasikan gambar acuan. " +

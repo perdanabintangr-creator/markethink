@@ -1,4 +1,4 @@
-import { toolRunChatPrompt } from "@/lib/addons/chat-context";
+import { toolRunChatPrompt, toolRunsIndexPrompt } from "@/lib/addons/chat-context";
 import { after } from "next/server";
 import {
   consumeStream,
@@ -223,7 +223,10 @@ export async function POST(req: Request) {
         },
       );
       // Chat dari hasil Tools Pro: AI tahu versi terbaru & bisa memicu pembaruan hasil di panel kanan.
-      const runPrompt = existing?.source_run_id ? await toolRunChatPrompt(admin, existing.source_run_id as string) : "";
+      // Chat biasa: AI tahu daftar hasil Tools Pro user & bisa membacanya (tool read_tool_result).
+      const runPrompt = existing?.source_run_id
+        ? await toolRunChatPrompt(admin, existing.source_run_id as string)
+        : await toolRunsIndexPrompt(admin, user.id);
       const system = runPrompt ? `${baseSystem}\n\n${runPrompt}` : baseSystem;
       // Konteks yang berubah tiap pesan ditaruh di pesan user terakhir agar system prompt tetap bisa di-cache.
       const turnContext = buildTurnContext({

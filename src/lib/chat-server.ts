@@ -107,6 +107,8 @@ export function summarizeToolParts(m: MtMessage): MtMessage {
     if (tp.state !== "output-available" || !tp.output?.ok) continue;
     if (tp.type === "tool-generate_image") {
       parts.push({ type: "text", text: `[Kamu sudah membuat gambar — id: ${String(tp.output.attachmentId)}; prompt: ${truncate(String(tp.input?.prompt ?? ""), 300)}]` });
+    } else if (tp.type === "tool-read_tool_result") {
+      parts.push({ type: "text", text: `[Kamu sudah membaca hasil Tools Pro "${String(tp.output.title)}" (id ${String(tp.input?.run_id ?? "")}). Baca lagi bila butuh detailnya.]` });
     } else if (tp.type === "tool-create_presentation") {
       const titles = (tp.output.slideTitles as string[] | undefined) ?? [];
       parts.push({ type: "text", text: `[Kamu sudah membuat file PPT "${String(tp.output.title)}" (${titles.length} slide): ${truncate(titles.join(" | "), 600)}]` });

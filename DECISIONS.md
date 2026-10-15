@@ -113,3 +113,10 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Batas revisi gratis per hasil dinaikkan 3 → 5 (`MAX_REVISIONS` di `src/lib/addons/format.ts`), tidak memotong kuota.
 - Hasil di panel kanan TIDAK berubah otomatis saat user hanya bertanya/diskusi (agar versi & jatah revisi tidak terbuang). Perubahan terjadi bila user memintanya,
   menjawab "ya" atas tawaran AI, atau klik tombol **Perbarui hasil** (di bawah jawaban terakhir) / **Terapkan ke hasil** (jawaban sebelumnya).
+
+## Sidebar dua mode (ala Claude Code) & AI chat paham Tools Pro
+- Sidebar punya pilihan **Chat | Tools Pro**. Mode Chat: chat baru, agents, project, sematan & riwayat chat biasa.
+  Mode Tools Pro: semua tools per role, riwayat hasil Tools Pro + chat "Bahas di Chat". Mode ikut halaman yang dibuka (disimpan di browser).
+- Sematan dipisah per mode tetapi disimpan bersama (menyimpan sematan di satu mode tidak melepas sematan mode lain).
+- Chat biasa: system prompt berisi daftar ±25 hasil Tools Pro terbaru user + tool `read_tool_result` untuk membaca isi versi terbarunya
+  saat user menyinggung hasil Tools Pro. Hasil tetap diubah lewat "Bahas di Chat".
