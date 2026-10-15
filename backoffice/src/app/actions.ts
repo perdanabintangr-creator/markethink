@@ -344,7 +344,7 @@ export async function toggleAgent(agentId: string, active: boolean) {
 
 // ---------------------------------------------------------------- Add-on (Tools Pro)
 
-const ADDON_IDS = ["jualan_kit", "dokter_iklan", "riset_pro"] as const;
+const ADDON_IDS = ["strategi_pro", "riset_pro", "konten_pro", "dokter_iklan", "jualan_kit", "crm_pro", "kolpr_pro", "laporan_pro"] as const;
 
 const addonSaleSchema = z.object({
   user_id: z.string().uuid(),

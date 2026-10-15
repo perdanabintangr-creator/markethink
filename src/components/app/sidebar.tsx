@@ -774,6 +774,19 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
   const { t } = useApp();
   const inTools = pathname.startsWith("/tools");
   const [open, setOpen] = useState(inTools);
+  // Kelompok role yang terbuka: default kelompok tool yang sedang dibuka.
+  const currentGroup = toolInfo(pathname.split("/")[2] ?? "")?.addon;
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(currentGroup ? [currentGroup] : []));
+  useEffect(() => {
+    if (currentGroup) setOpenGroups((s) => (s.has(currentGroup) ? s : new Set(s).add(currentGroup)));
+  }, [currentGroup]);
+  const toggleGroup = (id: string) =>
+    setOpenGroups((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   useEffect(() => {
     try {
@@ -812,7 +825,7 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
         <ChevronRight className={cn("size-3.5 text-muted-foreground transition-transform", open && "rotate-90")} />
       </button>
       {open && (
-        <div className="mb-1 ml-4 max-h-[42vh] overflow-y-auto border-l pl-1.5">
+        <div className="mb-1 ml-4 max-h-[50vh] overflow-y-auto border-l pl-1.5">
           <Link
             href="/tools"
             onClick={onNavigate}
@@ -823,30 +836,44 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
           >
             <LayoutGrid className="size-3.5" /> Semua tools & kuota
           </Link>
-          {MENU_GROUPS.map((g) => (
-            <div key={g.addon} className="mt-1.5">
-              <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">{g.label}</p>
-              {TOOLS.filter((tool) => tool.addon === g.addon).map((tool) => {
-                const href = `/tools/${tool.id}`;
-                const active = pathname === href || pathname.startsWith(`${href}/`);
-                return (
-                  <Link
-                    key={tool.id}
-                    href={href}
-                    onClick={onNavigate}
-                    title={tool.name}
-                    className={cn(
-                      "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground",
-                      active && "bg-accent font-medium text-foreground",
-                    )}
-                  >
-                    <ToolIcon id={tool.id} className="size-3.5 shrink-0" />
-                    <span className="truncate">{tool.menu}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+          {MENU_GROUPS.map((g) => {
+            const tools = TOOLS.filter((tool) => tool.addon === g.addon);
+            const groupOpen = openGroups.has(g.addon);
+            return (
+              <div key={g.addon} className="mt-0.5">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(g.addon)}
+                  aria-expanded={groupOpen}
+                  className="flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80 hover:bg-accent hover:text-foreground"
+                >
+                  <ChevronRight className={cn("size-3 shrink-0 transition-transform", groupOpen && "rotate-90")} />
+                  <span className="truncate">{g.label}</span>
+                  <span className="ml-auto text-[10px] font-normal normal-case">{tools.length}</span>
+                </button>
+                {groupOpen &&
+                  tools.map((tool) => {
+                    const href = `/tools/${tool.id}`;
+                    const active = pathname === href || pathname.startsWith(`${href}/`);
+                    return (
+                      <Link
+                        key={tool.id}
+                        href={href}
+                        onClick={onNavigate}
+                        title={tool.name}
+                        className={cn(
+                          "ml-2 flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground",
+                          active && "bg-accent font-medium text-foreground",
+                        )}
+                      >
+                        <ToolIcon id={tool.id} className="size-3.5 shrink-0" />
+                        <span className="truncate">{tool.menu}</span>
+                      </Link>
+                    );
+                  })}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

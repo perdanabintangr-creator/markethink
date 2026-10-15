@@ -28,12 +28,31 @@ export const COST_CATEGORY: Record<string, string> = {
   "tool:persona": "Tools · Persona konsumen",
   "tool:entry": "Tools · Studi kelayakan",
   "tool:survey": "Tools · Desain survei",
+  "tool:plan": "Tools · Marketing plan",
+  "tool:brand": "Tools · Brand guideline",
+  "tool:campaign": "Tools · Campaign brief",
+  "tool:gtm": "Tools · Peluncuran produk",
+  "tool:calendar": "Tools · Kalender konten",
+  "tool:script": "Tools · Naskah video",
+  "tool:audit": "Tools · Audit akun sosmed",
+  "tool:adcopy": "Tools · Variasi iklan",
+  "tool:promo": "Tools · Kalender promo",
+  "tool:flow": "Tools · Alur follow-up",
+  "tool:loyalty": "Tools · Program loyalty",
+  "tool:kolreport": "Tools · Laporan KOL",
+  "tool:press": "Tools · Siaran pers",
+  "tool:report": "Tools · Laporan bulanan",
 };
 
 export const ADDON_NAME: Record<string, string> = {
-  jualan_kit: "Jualan Online Kit",
-  dokter_iklan: "Dokter Iklan",
+  strategi_pro: "Strategi & Brand",
   riset_pro: "Market Research Pro",
+  konten_pro: "Konten & Sosmed",
+  dokter_iklan: "Iklan & Performance",
+  jualan_kit: "Jualan Online",
+  crm_pro: "CRM & Retensi",
+  kolpr_pro: "KOL & PR",
+  laporan_pro: "Laporan Marketing",
 };
 
 export const FEATURE_NAME: Record<string, string> = {

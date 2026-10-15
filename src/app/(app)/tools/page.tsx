@@ -22,21 +22,29 @@ export default async function ToolsHub() {
         <div>
           <h1 className="text-2xl font-bold sm:text-3xl">Tools Pro</h1>
           <p className="mt-1 text-muted-foreground">
-            Alat siap pakai untuk masalah marketing paling sering — hasilnya halaman visual + file PPT/Excel, bukan sekadar teks chat.
+            Dikelompokkan per peran di tim marketing. Hasilnya setara deliverable konsultan & agency: halaman visual + file PPT/Excel siap presentasi.
           </p>
+          <nav className="mt-4 flex flex-wrap gap-2">
+            {ADDONS.map((a) => (
+              <a key={a.id} href={`#${a.id}`} className="rounded-full border px-3 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground">
+                {a.emoji} {a.menu}
+              </a>
+            ))}
+          </nav>
         </div>
 
         {ADDONS.map((addon) => {
           const st = statuses.find((x) => x.id === addon.id)!;
           const active = st.isAdmin || Boolean(st.paidUntil);
           return (
-            <section key={addon.id} className="rounded-2xl border bg-card p-4 sm:p-6">
+            <section key={addon.id} id={addon.id} className="scroll-mt-4 rounded-2xl border bg-card p-4 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="flex items-center gap-2 text-lg font-semibold">
                     <span aria-hidden>{addon.emoji}</span> {st.name}
                   </h2>
                   <p className="text-sm text-muted-foreground">{addon.tagline}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Untuk: {addon.role}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {rupiah(st.price)}/bulan · {st.quota}× pakai/bulan{st.isPromax ? "" : ` · Promax gratis ${st.promaxQuota}×/bulan`}
                   </p>
