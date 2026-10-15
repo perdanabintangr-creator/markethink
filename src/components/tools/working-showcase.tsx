@@ -4,21 +4,27 @@ import { useEffect, useState } from "react";
 import { Check, Lightbulb } from "lucide-react";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { cn } from "@/lib/utils";
+import { MARKETING_TIPS } from "@/lib/marketing-tips";
 
-const TIPS = [
-  "Orang membeli karena masalahnya selesai, bukan karena fiturnya banyak. Tulis manfaat dulu, fitur belakangan.",
-  "Satu konten = satu pesan. Kalau semua mau disampaikan, tidak ada yang diingat.",
-  "Harga coret paling efektif bila selisihnya terasa nyata dan ada batas waktunya.",
-  "3 detik pertama video menentukan segalanya. Buka dengan masalah, bukan logo.",
-  "Pelanggan lama 5× lebih murah dipertahankan daripada mencari pelanggan baru.",
-  "Testimoni dengan angka (\"omzet naik 2×\") jauh lebih dipercaya daripada \"produknya bagus\".",
-  "Iklan yang menang biasanya bukan yang paling cantik, tapi yang paling jelas tawarannya.",
-  "Follow-up kedua sering menghasilkan lebih banyak closing daripada chat pertama.",
-  "Riset kompetitor terbaik: baca ulasan bintang 2–3 mereka. Di situ celah pasarnya.",
-  "Bundling menaikkan nilai belanja tanpa harus menurunkan harga satuan.",
-  "Brand kuat = konsisten. Warna, nada bicara, dan janji yang sama di semua tempat.",
-  "Angka yang diukur tiap minggu akan membaik. Yang tidak diukur, hanya ditebak.",
-];
+const SEEN_KEY = "mt-tips-seen";
+
+/** Pilih tips berikutnya yang belum pernah tampil (diingat di browser); setelah semua tampil, mulai ulang. */
+function nextTip(exclude?: number) {
+  let seen: number[] = [];
+  try {
+    seen = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]") as number[];
+  } catch {}
+  let pool = MARKETING_TIPS.map((_, i) => i).filter((i) => !seen.includes(i));
+  if (!pool.length) {
+    seen = [];
+    pool = MARKETING_TIPS.map((_, i) => i).filter((i) => i !== exclude);
+  }
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify([...seen, pick]));
+  } catch {}
+  return pick;
+}
 
 /** Kemajuan yang terasa hidup tanpa menampilkan angka: cepat di awal, melambat mendekati 95%. */
 function progressAt(ms: number, typicalSec: number) {
@@ -49,14 +55,14 @@ export function WorkingShowcase({
 }) {
   const [start, setStart] = useState(since ?? 0);
   const [now, setNow] = useState(since ?? 0);
-  const [tip, setTip] = useState(0);
+  const [tip, setTip] = useState(-1);
 
   useEffect(() => {
     if (!since) setStart(Date.now());
     setNow(Date.now());
-    setTip(Math.floor(Math.random() * TIPS.length));
+    setTip(nextTip());
     const t = setInterval(() => setNow(Date.now()), 400);
-    const tt = setInterval(() => setTip((i) => (i + 1) % TIPS.length), 8000);
+    const tt = setInterval(() => setTip((i) => nextTip(i)), 9000);
     return () => {
       clearInterval(t);
       clearInterval(tt);
@@ -114,12 +120,12 @@ export function WorkingShowcase({
         })}
       </ul>
 
-      {!compact && (
+      {!compact && tip >= 0 && (
         <div key={tip} className="mt-rise flex w-full items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-left text-xs">
           <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-primary" />
           <span>
             <span className="font-medium">Sambil menunggu: </span>
-            {TIPS[tip]}
+            {MARKETING_TIPS[tip]}
           </span>
         </div>
       )}
