@@ -22,8 +22,11 @@ import { SizingResult } from "./results/sizing";
 import { PersonaResult } from "./results/persona";
 import { EntryResult } from "./results/entry";
 import { SurveyResult } from "./results/survey";
+import { PRO_VIEWS } from "./results/pro";
 
 export function ResultView({ tool, output, input }: { tool: string; output: unknown; input: Record<string, unknown> }) {
+  const Pro = PRO_VIEWS[tool];
+  if (Pro) return <Pro data={output} input={input} />;
   switch (tool) {
     case "listing":
       return <ListingResult data={output as ListingOutput} />;

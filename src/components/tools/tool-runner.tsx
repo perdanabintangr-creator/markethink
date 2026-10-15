@@ -23,6 +23,9 @@ import {
   WA_GOALS,
 } from "@/lib/addons/schemas";
 import { sampleSize } from "@/lib/addons/sample";
+import { PRO_FORMS } from "@/lib/addons/pro/forms";
+import type { Field as ProField } from "@/lib/addons/pro/fields";
+import { toolInfo } from "@/lib/addons/catalog";
 import { RequestAddonButton } from "./request-addon";
 import type { AddonStatusLite } from "./common";
 
@@ -69,6 +72,17 @@ function collect(tool: string, form: HTMLFormElement, attachmentIds: string[]) {
   const fd = new FormData(form);
   const str = (k: string) => String(fd.get(k) ?? "").trim();
   const all = (k: string) => fd.getAll(k).map(String);
+  const pro = PRO_FORMS[tool];
+  if (pro) {
+    const out: Record<string, unknown> = {};
+    for (const f of pro.fields) {
+      if (f.type === "chips") out[f.name] = all(f.name);
+      else if (f.type === "number") out[f.name] = Number(str(f.name) || f.default);
+      else if (f.type === "files") out[f.name] = attachmentIds;
+      else out[f.name] = str(f.name);
+    }
+    return out;
+  }
   switch (tool) {
     case "listing":
       return {
@@ -121,8 +135,6 @@ function collect(tool: string, form: HTMLFormElement, attachmentIds: string[]) {
   }
   return {};
 }
-
-const RESEARCH_TOOLS = new Set(["competitor", "sizing", "persona", "entry"]);
 
 /** Form survei + pratinjau jumlah responden (dihitung langsung saat isian berubah). */
 function SurveyFields() {
@@ -181,6 +193,56 @@ function SurveyFields() {
   );
 }
 
+/** Satu isian form Tools Pro per role (dari definisi field). */
+function ProFieldInput({ field: f, uploader }: { field: ProField; uploader: React.ReactNode }) {
+  const label = `${f.label}`;
+  const span = f.half ? "" : "sm:col-span-2";
+  switch (f.type) {
+    case "text":
+      return (
+        <Field label={label} hint={f.hint} className={span}>
+          <Input name={f.name} required={f.required} maxLength={f.max} placeholder={f.placeholder} />
+        </Field>
+      );
+    case "textarea":
+      return (
+        <Field label={label} hint={f.hint} className={span}>
+          <Textarea name={f.name} required={f.required} minLength={f.required ? (f.min ?? 3) : undefined} maxLength={f.max} rows={f.rows ?? 3} placeholder={f.placeholder} />
+        </Field>
+      );
+    case "select":
+      return (
+        <Field label={label} hint={f.hint} className={span}>
+          <NativeSelect name={f.name} defaultValue={f.default}>
+            {f.options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+      );
+    case "chips":
+      return (
+        <Field label={label} hint={f.hint} className={span}>
+          <Chips name={f.name} options={f.options} defaults={f.defaults} />
+        </Field>
+      );
+    case "number":
+      return (
+        <Field label={label} hint={f.hint} className={span}>
+          <Input name={f.name} type="number" min={f.min} max={f.max} defaultValue={f.default} />
+        </Field>
+      );
+    case "files":
+      return (
+        <Field label={label} hint={f.hint} className={span}>
+          {uploader}
+        </Field>
+      );
+  }
+}
+
 interface UploadedFile {
   id: string;
   name: string;
@@ -195,7 +257,9 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
-  const steps = STEPS[tool] ?? ["Memproses…"];
+  const pro = PRO_FORMS[tool];
+  const steps = pro?.steps ?? STEPS[tool] ?? ["Memproses…"];
+  const typical = toolInfo(tool)?.seconds ?? 60;
   const canRun = Boolean(status.nextSource);
 
   useEffect(() => {
@@ -204,10 +268,10 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
     const t = setInterval(() => {
       const sec = Math.floor((Date.now() - started) / 1000);
       setElapsed(sec);
-      setStep(Math.min(steps.length - 1, Math.floor(sec / 12)));
+      setStep(Math.min(steps.length - 1, Math.floor(sec / Math.max(8, typical / steps.length))));
     }, 1000);
     return () => clearInterval(t);
-  }, [busy, steps.length]);
+  }, [busy, steps.length, typical]);
 
   async function upload(list: FileList | null) {
     if (!list?.length) return;
@@ -228,6 +292,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
     e.preventDefault();
     if (!canRun) return setBuyOpen(true);
     if (tool === "ads" && !files.length) return toast.error("Upload dulu file laporan iklannya.");
+    if (pro?.fields.some((f) => f.type === "files" && f.required) && !files.length) return toast.error("Upload dulu filenya, ya.");
     const input = collect(tool, e.currentTarget, files.map((f) => f.id));
     setBusy(true);
     setStep(0);
@@ -256,6 +321,52 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
   return (
     <div className="relative">
       <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border bg-card p-4 sm:p-6">
+        {pro && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {pro.fields.map((f) => (
+              <ProFieldInput
+                key={f.name}
+                field={f}
+                uploader={
+                  f.type === "files" ? (
+                    <div
+                      className="rounded-xl border border-dashed p-4 text-center"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        void upload(e.dataTransfer.files);
+                      }}
+                    >
+                      <input ref={fileRef} type="file" hidden multiple accept={f.accept ?? ".csv,.xlsx,.pdf,.png,.jpg,.jpeg,.webp"} onChange={(e) => upload(e.target.files)} />
+                      <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={files.length >= (f.max ?? 5)}>
+                        <Paperclip /> Pilih file
+                      </Button>
+                      <p className="mt-2 text-xs text-muted-foreground">atau seret file ke sini · CSV, Excel, PDF, PNG/JPG</p>
+                      {(files.length > 0 || uploading > 0) && (
+                        <div className="mt-3 flex flex-wrap justify-center gap-2">
+                          {files.map((x) => (
+                            <span key={x.id} className="inline-flex items-center gap-1.5 rounded-lg border bg-background py-1 pl-2 pr-1 text-xs">
+                              <FileText className="size-3.5" /> <span className="max-w-40 truncate">{x.name}</span>
+                              <button type="button" aria-label="Hapus" onClick={() => setFiles((list) => list.filter((y) => y.id !== x.id))}>
+                                <X className="size-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                          {uploading > 0 && (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <Loader2 className="size-3.5 animate-spin" /> Mengunggah…
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : null
+                }
+              />
+            ))}
+          </div>
+        )}
+
         {tool === "listing" && (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -588,7 +699,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
           <div>
             <p className="font-medium">{steps[step]}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {elapsed}s · biasanya 30–{RESEARCH_TOOLS.has(tool) ? "150" : "60"} detik. Jangan tutup halaman ini.
+              {elapsed}s · biasanya {Math.round(typical * 0.5)}–{typical} detik. Jangan tutup halaman ini.
             </p>
           </div>
           <div className="flex gap-1.5">

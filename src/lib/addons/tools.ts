@@ -20,11 +20,11 @@ import {
   liveOutput,
   whatsappInput,
   whatsappOutput,
-  type AiToolId,
   type CompetitorOutput,
 } from "./schemas";
 import { BASE, fmt, padSteps, shortRp, webResearch } from "./helpers";
 import { RESEARCH_RUNNERS } from "./research";
+import { PRO_RUNNERS } from "./pro";
 import { aiObject, clip, fileSlug, makeDeck, makeWorkbook, storeMaybe, storeToolFile, type ToolCtx, type ToolFile } from "./runtime";
 
 export interface ToolResult {
@@ -209,7 +209,7 @@ Aturan:
 // ============================================================ Template WhatsApp
 
 const whatsapp: Runner<typeof whatsappInput> = {
-  addon: "jualan_kit",
+  addon: "crm_pro",
   input: whatsappInput,
   async run(ctx, input) {
     const out = await aiObject(ctx, {
@@ -617,7 +617,7 @@ Susun laporan riset kompetitor dari catatan riset. Aturan:
 // ============================================================ Brief KOL / Affiliate
 
 const kol: Runner<typeof kolInput> = {
-  addon: "riset_pro",
+  addon: "kolpr_pro",
   input: kolInput,
   async run(ctx, input) {
     const out = await aiObject(ctx, {
@@ -740,7 +740,7 @@ function padStats(stats: { value: string; label: string }[]) {
 
 // ============================================================ Registry
 
-export const RUNNERS: { [K in AiToolId]: Runner<z.ZodTypeAny> } = {
+export const RUNNERS: Record<string, Runner<z.ZodTypeAny>> = {
   listing: listing as Runner<z.ZodTypeAny>,
   live: live as Runner<z.ZodTypeAny>,
   whatsapp: whatsapp as Runner<z.ZodTypeAny>,
@@ -748,6 +748,7 @@ export const RUNNERS: { [K in AiToolId]: Runner<z.ZodTypeAny> } = {
   competitor: competitor as Runner<z.ZodTypeAny>,
   kol: kol as Runner<z.ZodTypeAny>,
   ...RESEARCH_RUNNERS,
+  ...PRO_RUNNERS,
 };
 
-export const isAiTool = (id: string): id is AiToolId => id in RUNNERS;
+export const isAiTool = (id: string) => Object.prototype.hasOwnProperty.call(RUNNERS, id);
