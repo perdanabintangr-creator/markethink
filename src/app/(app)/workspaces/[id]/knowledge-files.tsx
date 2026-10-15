@@ -31,7 +31,7 @@ export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; fi
     setUploading(true);
     for (const file of Array.from(list)) {
       const data = await uploadFile<{ chunks: number }>(file, { scope: "workspace", workspaceId });
-      if ("error" in data) toast.error(`${file.name}: ${UPLOAD_ERRORS[data.error] ?? data.message ?? "gagal diproses"}`);
+      if ("error" in data) toast.error(`${file.name}: ${data.message ?? UPLOAD_ERRORS[data.error] ?? "gagal diproses"}`);
       else toast.success(`${file.name} siap dipakai (${data.chunks} bagian)`);
     }
     setUploading(false);

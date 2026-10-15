@@ -83,7 +83,7 @@ export function Composer({
       try {
         const data = await uploadFile<PendingAttachment>(file, { scope: "chat" });
         if ("error" in data) {
-          toast.error(`${file.name}: ${UPLOAD_ERRORS[data.error] ?? "Upload gagal."}`);
+          toast.error(`${file.name}: ${("message" in data && data.message) || UPLOAD_ERRORS[data.error] || "Upload gagal."}`);
           continue;
         }
         setAttachments((a) => [

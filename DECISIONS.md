@@ -93,3 +93,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   membuat chat baru berisi hasil (dikonversi ke Markdown oleh `resultToMarkdown`) sebagai pesan pertama `tool-<runId>`; satu hasil → satu chat
   (`chats.source_run_id`). Pesan hasil itu selalu ikut konteks walau chat panjang. Panel diskusi samping & API-nya dihapus (tabel
   `tool_run_messages` tidak dipakai). "Perbaiki hasil" kini dialog di halaman hasil (gratis 3×).
+- 2026-10-15 — **Kuota penyimpanan per paket** (ACC founder): Free 50 MB, Pro 1 GB (usulan, belum disebut founder), Promax 5 GB, admin tanpa batas.
+  Disimpan di feature_flags `storage.max_mb` (+ `uploads.max_mb` per file, kini benar-benar ditegakkan). Dihitung dari upload user (chat & dokumen
+  project) via `storage_used_bytes()`; file hasil AI tidak dihitung. Dicek saat minta URL upload (`/api/upload/sign`). Meter di Pengaturan user.
+  Foto >1 MB dikompres di browser (maks 2048 px, WebP 85%). Back office: kartu "Kapasitas server" (vs batas gratis Supabase 1 GB file / 500 MB DB,
+  peringatan ≥70%) + pemakai terbesar; kuota per paket bisa diubah di Pengaturan aplikasi. Hapus otomatis file lama BELUM (menunggu ACC).

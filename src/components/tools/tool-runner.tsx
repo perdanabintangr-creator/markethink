@@ -279,7 +279,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
       setUploading((n) => n + 1);
       try {
         const data = await uploadFile<{ id: string; name: string }>(file, { scope: "chat" });
-        if ("error" in data) toast.error(`${file.name}: ${UPLOAD_ERRORS[data.error] ?? "Upload gagal."}`);
+        if ("error" in data) toast.error(`${file.name}: ${("message" in data && data.message) || UPLOAD_ERRORS[data.error] || "Upload gagal."}`);
         else setFiles((f) => [...f, { id: data.id, name: data.name }]);
       } finally {
         setUploading((n) => n - 1);

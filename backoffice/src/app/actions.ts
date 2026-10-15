@@ -255,6 +255,24 @@ export async function updatePlanCredits(planId: string, formData: FormData) {
   revalidatePath("/settings");
 }
 
+/** Kuota penyimpanan total & batas ukuran per file untuk satu paket (feature_flags storage/uploads). */
+export async function updatePlanStorage(planId: string, formData: FormData) {
+  await requireOwner();
+  const total = z.coerce.number().int().min(1).max(1_000_000).safeParse(formData.get("storage_mb"));
+  const perFile = z.coerce.number().int().min(1).max(25).safeParse(formData.get("file_mb"));
+  if (!total.success || !perFile.success) return;
+  await createAdminClient()
+    .from("feature_flags")
+    .upsert(
+      [
+        { plan_id: planId, key: "storage", enabled: true, value: { max_mb: total.data } },
+        { plan_id: planId, key: "uploads", enabled: true, value: { max_mb: perFile.data } },
+      ],
+      { onConflict: "plan_id,key" },
+    );
+  revalidatePath("/settings");
+}
+
 // ---------------------------------------------------------------- Kontrol akun pelanggan (owner)
 
 export async function setUserBan(userId: string, banned: boolean) {

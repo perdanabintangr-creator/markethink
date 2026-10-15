@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { getCreditStatus } from "@/lib/credits";
+import { formatBytes, getStorageStatus } from "@/lib/storage-quota";
 import { ProfileForm } from "./profile-form";
 import { MemoryList } from "./memory-list";
 import { DangerZone } from "./danger-zone";
@@ -9,7 +10,7 @@ export const metadata = { title: "Pengaturan" };
 
 export default async function SettingsPage() {
   const { supabase, user, profile } = await requireUser();
-  const [{ data: memories }, credits, { data: usage }, { data: plan }] = await Promise.all([
+  const [{ data: memories }, credits, { data: usage }, { data: plan }, storage] = await Promise.all([
     supabase
       .from("memories")
       .select("id, content, source, created_at, workspace:workspaces(name)")
@@ -17,7 +18,9 @@ export default async function SettingsPage() {
     getCreditStatus(user.id),
     supabase.from("usage_logs").select("credits").gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
     supabase.from("plans").select("name").eq("id", profile.plan_id).maybeSingle(),
+    getStorageStatus(supabase, profile),
   ]);
+  const storagePct = storage.limitBytes ? Math.min(100, (storage.usedBytes / storage.limitBytes) * 100) : 0;
   const used30 = (usage ?? []).reduce((a, r) => a + ((r.credits as number) ?? 0), 0);
 
   return (
@@ -42,6 +45,31 @@ export default async function SettingsPage() {
               <p className="text-xs text-muted-foreground">Dipakai 30 hari</p>
               <p className="font-semibold">{used30}</p>
             </div>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="font-semibold">Penyimpanan file</h2>
+          <div className="rounded-xl border p-4">
+            <div className="flex items-baseline justify-between gap-2 text-sm">
+              <span>
+                <b>{formatBytes(storage.usedBytes)}</b>
+                <span className="text-muted-foreground"> terpakai{storage.limitBytes ? ` dari ${formatBytes(storage.limitBytes)}` : " · tanpa batas"}</span>
+              </span>
+              {storage.limitBytes && <span className="text-xs text-muted-foreground">{Math.round(storagePct)}%</span>}
+            </div>
+            {storage.limitBytes && (
+              <div className="mt-2 h-2 rounded-full bg-muted">
+                <div
+                  className={`h-2 rounded-full ${storagePct >= 90 ? "bg-red-500" : storagePct >= 70 ? "bg-amber-500" : "bg-primary"}`}
+                  style={{ width: `${Math.max(2, storagePct)}%` }}
+                />
+              </div>
+            )}
+            <p className="mt-2 text-xs text-muted-foreground">
+              Dihitung dari file yang kamu upload di chat & dokumen project (maks {Math.round(storage.fileMaxBytes / 1024 / 1024)} MB per file). File hasil
+              buatan Markethink (PPT, Excel, gambar) tidak dihitung. Foto besar otomatis dikompres saat upload.
+            </p>
           </div>
         </section>
 

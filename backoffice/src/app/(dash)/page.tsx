@@ -39,10 +39,38 @@ function change(now: number, before: number) {
   return `${p >= 0 ? "▲" : "▼"} ${Math.abs(p)}% vs bulan lalu`;
 }
 
+/** Batas paket gratis Supabase (ubah angka ini bila sudah upgrade ke paket berbayar). */
+const SUPABASE_STORAGE_CAP = 1024 * 1024 * 1024;
+const SUPABASE_DB_CAP = 500 * 1024 * 1024;
+const mbText = (b: number) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(2)} GB` : `${(b / 1024 ** 2).toFixed(1)} MB`);
+
+function CapacityCard({ label, used, cap, note }: { label: string; used: number; cap: number; note: string }) {
+  const pct = Math.min(100, (used / cap) * 100);
+  const tone = pct >= 85 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500";
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{pct.toFixed(1)}%</p>
+        </div>
+        <p className="mt-1 text-2xl font-semibold tabular-nums">
+          {mbText(used)} <span className="text-sm font-normal text-muted-foreground">/ {mbText(cap)}</span>
+        </p>
+        <div className="mt-2 h-2 rounded-full bg-muted">
+          <div className={`h-2 rounded-full ${tone}`} style={{ width: `${Math.max(1, pct)}%` }} />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{note}</p>
+        {pct >= 70 && <p className="mt-1 text-xs font-medium text-amber-600">Mendekati batas — saatnya upgrade penyimpanan.</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default async function BackofficeOverview() {
   const { user } = await requireBackoffice();
   const admin = createAdminClient();
-  const [ov, monthly, mix, funnel, recent, addonSum] = await Promise.all([
+  const [ov, monthly, mix, funnel, recent, addonSum, storageOv, storageTop] = await Promise.all([
     admin.rpc("bo_overview").single<Overview>(),
     admin.rpc("bo_monthly", { p_months: 12 }),
     admin.rpc("bo_plan_mix"),
@@ -54,7 +82,11 @@ export default async function BackofficeOverview() {
       .order("paid_at", { ascending: false })
       .limit(6),
     admin.rpc("bo_addon_summary"),
+    admin.rpc("bo_storage_overview").single<{ total_bytes: number; upload_bytes: number; generated_bytes: number; files: number; db_bytes: number }>(),
+    admin.rpc("bo_storage_top", { p_limit: 5 }),
   ]);
+  const st = storageOv.data;
+  const topUsers = ((storageTop.data ?? []) as { user_id: string; email: string | null; plan_id: string; bytes: number }[]).filter((u) => Number(u.bytes) > 0);
   const addons = (addonSum.data ?? []) as {
     addon_id: string;
     name: string;
@@ -161,6 +193,43 @@ export default async function BackofficeOverview() {
           ))}
         </div>
       </section>
+
+      {st && (
+        <section className="space-y-3">
+          <SectionTitle hint="Batas paket gratis Supabase · upgrade saat ±70%">Kapasitas server</SectionTitle>
+          <div className="grid gap-3 md:grid-cols-3">
+            <CapacityCard
+              label="Penyimpanan file"
+              used={Number(st.total_bytes)}
+              cap={SUPABASE_STORAGE_CAP}
+              note={`${num(Number(st.files))} file · upload user ${mbText(Number(st.upload_bytes))} · hasil AI ${mbText(Number(st.generated_bytes))}`}
+            />
+            <CapacityCard label="Database" used={Number(st.db_bytes)} cap={SUPABASE_DB_CAP} note="Chat, hasil tools, data pelanggan" />
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm font-medium">Pemakai penyimpanan terbesar</p>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {topUsers.length ? (
+                    topUsers.map((u) => (
+                      <li key={u.user_id} className="flex justify-between gap-2">
+                        <Link href={`/customers/${u.user_id}`} className="truncate hover:underline">
+                          {u.email ?? u.user_id}
+                        </Link>
+                        <span className="shrink-0 tabular-nums text-muted-foreground">{mbText(Number(u.bytes))}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-muted-foreground">Belum ada upload.</li>
+                  )}
+                </ul>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Kuota per paket diatur di <Link href="/settings" className="underline">Pengaturan aplikasi</Link>.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
 
       <Card>
         <CardHeader className="pb-2">

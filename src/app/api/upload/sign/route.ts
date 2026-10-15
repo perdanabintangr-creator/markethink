@@ -3,7 +3,8 @@ import { z } from "zod";
 import { apiSession, jsonError } from "@/lib/api";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALLOWED_EXTENSIONS, MAX_UPLOAD_BYTES, sanitizeFileName } from "@/lib/files";
+import { ALLOWED_EXTENSIONS, sanitizeFileName } from "@/lib/files";
+import { formatBytes, getStorageStatus } from "@/lib/storage-quota";
 
 const schema = z.object({
   name: z.string().min(1).max(200),
@@ -23,7 +24,16 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "invalid_body");
   const { size, scope, workspaceId } = parsed.data;
-  if (size > MAX_UPLOAD_BYTES) return jsonError(413, "file_too_large", { maxMb: MAX_UPLOAD_BYTES / 1024 / 1024 });
+  const quota = await getStorageStatus(s.supabase, s.profile);
+  if (size > quota.fileMaxBytes) {
+    const maxMb = Math.round(quota.fileMaxBytes / 1024 / 1024);
+    return jsonError(413, "file_too_large", { maxMb, message: `File terlalu besar (maks ${maxMb} MB untuk paket kamu).` });
+  }
+  if (quota.limitBytes !== null && quota.usedBytes + size > quota.limitBytes) {
+    return jsonError(413, "storage_full", {
+      message: `Penyimpanan penuh (${formatBytes(quota.usedBytes)} dari ${formatBytes(quota.limitBytes)}). Hapus chat/file lama di Pengaturan, atau upgrade paket untuk ruang lebih besar.`,
+    });
+  }
   const name = sanitizeFileName(parsed.data.name);
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
   if (!ALLOWED_EXTENSIONS.includes(ext)) return jsonError(415, "unsupported_type");

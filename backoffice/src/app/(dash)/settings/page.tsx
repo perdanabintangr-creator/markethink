@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageTitle } from "@/components/backoffice/stat";
 import { PLAN_NAME } from "@/lib/admin-format";
-import { setAppSetting, updatePlanCredits } from "../../actions";
+import { setAppSetting, updatePlanCredits, updatePlanStorage } from "../../actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pengaturan aplikasi" };
@@ -16,10 +16,13 @@ export default async function AppSettingsPage() {
   const { isOwner } = await requireBackoffice();
   if (!isOwner) redirect("/");
   const admin = createAdminClient();
-  const [{ data: plans }, { data: settings }] = await Promise.all([
+  const [{ data: plans }, { data: settings }, { data: flags }] = await Promise.all([
     admin.from("plans").select("id, name, description, daily_credits, sort_order").order("sort_order"),
     admin.from("app_settings").select("key, value").in("key", ["access_mode", "web_search", "image_gen"]),
+    admin.from("feature_flags").select("plan_id, key, value").in("key", ["storage", "uploads"]),
   ]);
+  const flagMb = (planId: string, key: string) =>
+    Number((flags?.find((f) => f.plan_id === planId && f.key === key)?.value as { max_mb?: number } | null)?.max_mb ?? 0);
   const s = Object.fromEntries((settings ?? []).map((r) => [r.key, r.value]));
   const isPublic = s.access_mode === "public";
   const webSearchOn = s.web_search === true;
@@ -82,6 +85,30 @@ export default async function AppSettingsPage() {
               <div className="flex items-center gap-2">
                 <Input name="daily_credits" defaultValue={p.daily_credits} inputMode="numeric" className="w-28" aria-label={`Kredit harian ${p.name}`} />
                 <span className="text-sm text-muted-foreground">kredit/hari</span>
+                <Button size="sm">Simpan</Button>
+              </div>
+            </form>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Penyimpanan file per paket</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Total ruang untuk file yang di-upload user (chat & dokumen project) dan batas ukuran per file (maks 25 MB). File hasil AI (PPT/Excel/gambar) tidak
+            dihitung. 1 GB = 1024 MB.
+          </p>
+        </CardHeader>
+        <CardContent className="divide-y p-0">
+          {(plans ?? []).map((p) => (
+            <form key={p.id} action={updatePlanStorage.bind(null, p.id)} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+              <p className="font-medium">{PLAN_NAME[p.id] ?? p.name}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input name="storage_mb" defaultValue={flagMb(p.id, "storage") || ""} inputMode="numeric" className="w-28" aria-label={`Total penyimpanan ${p.name}`} />
+                <span className="text-sm text-muted-foreground">MB total</span>
+                <Input name="file_mb" defaultValue={flagMb(p.id, "uploads") || 25} inputMode="numeric" className="w-20" aria-label={`Maks per file ${p.name}`} />
+                <span className="text-sm text-muted-foreground">MB/file</span>
                 <Button size="sm">Simpan</Button>
               </div>
             </form>
