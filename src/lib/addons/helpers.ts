@@ -4,7 +4,7 @@ import { DEFAULT_TOOL_TIER } from "./tool-tier";
 import { SERPER_COST_USD, fetchPageText, formatSources, serperEnabled, serperSearch } from "@/lib/ai/research";
 import { anthropic } from "@ai-sdk/anthropic";
 import { routeTier } from "@/lib/ai/router";
-import { addCost, type ToolCtx } from "./runtime";
+import { addCost, addStepCost, type ToolCtx } from "./runtime";
 
 /**
  * Standar penulisan semua Tools Pro: hasil harus terasa ditulis praktisi senior Indonesia, bukan "terdengar AI".
@@ -95,12 +95,12 @@ export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: 
     maxOutputTokens: opts.maxOutputTokens ?? 6000,
     maxRetries: 1,
   });
-  addCost(ctx, routed.resolved(), research.usage);
+  addCost(ctx, routed.resolved(), research.usage, { stage: "Riset web (pencarian Claude)", text: research.text });
   const searches = Number(
     (research.providerMetadata?.anthropic as { usage?: { server_tool_use?: { web_search_requests?: number } } } | undefined)?.usage
       ?.server_tool_use?.web_search_requests ?? 0,
   );
-  ctx.cost.usd += searches * 0.01;
+  if (searches) addStepCost(ctx, `Pencarian web Claude (${searches}×)`, searches * 0.01);
   const sources = dedupeSources(
     research.sources.filter((s) => s.sourceType === "url").map((s) => ({ title: (s as { title?: string }).title ?? s.url, url: s.url })),
   ).slice(0, 15);
@@ -133,7 +133,7 @@ Balas hanya daftar kata kunci, satu per baris, tanpa nomor dan tanpa penjelasan.
     maxOutputTokens: 400,
     maxRetries: 1,
   });
-  addCost(ctx, qRouted.resolved(), q.usage);
+  addCost(ctx, qRouted.resolved(), q.usage, { stage: "Kata kunci pencarian", text: q.text });
   const queries = [
     ...new Set(
       q.text
@@ -145,7 +145,7 @@ Balas hanya daftar kata kunci, satu per baris, tanpa nomor dan tanpa penjelasan.
   if (!queries.length) throw new Error("kata kunci kosong");
 
   const settled = await Promise.allSettled(queries.map((query) => serperSearch(query, { maxResults: 6 })));
-  ctx.cost.usd += queries.length * SERPER_COST_USD;
+  addStepCost(ctx, `Pencarian Google (Serper ${queries.length}×)`, queries.length * SERPER_COST_USD);
   const seen = new Set<string>();
   const found = settled
     .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
@@ -176,8 +176,10 @@ Hasil pencarian Google sudah tersedia di bawah (cuplikan + isi halaman, bernomor
     prompt: `${opts.prompt}\n\nHasil pencarian:\n${formatSources(found)}`,
     maxOutputTokens: opts.maxOutputTokens ?? 6000,
     maxRetries: 1,
+    // Merangkum fakta dari halaman tidak butuh berpikir panjang → level berpikir rendah (laporan akhir tetap level bawaan).
+    providerOptions: { anthropic: { effort: "low" } },
   });
-  addCost(ctx, routed.resolved(), notes.usage);
+  addCost(ctx, routed.resolved(), notes.usage, { stage: "Temuan riset", text: notes.text });
   if (notes.text.trim()) {
     ctx.researchNotes = notes.text;
     ctx.researchSources = found.map((f) => ({ title: f.title, url: f.url }));

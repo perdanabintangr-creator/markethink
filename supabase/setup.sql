@@ -2257,3 +2257,8 @@ alter table public.agent_runs add column if not exists tier text not null defaul
 -- ===== 20261015000032_tool_run_units.sql =====
 -- Pemakaian kuota per hasil: otak Director memakai 2 kuota, lainnya 1.
 alter table public.tool_runs add column if not exists quota_units integer not null default 1;
+
+
+-- ===== 20261015000033_tool_cost_breakdown.sql =====
+-- Rincian biaya per tahap tiap hasil Tools Pro (kata kunci, pencarian, temuan riset, laporan, perbaikan) — untuk analisa margin.
+alter table public.tool_runs add column if not exists cost_breakdown jsonb not null default '[]'::jsonb;

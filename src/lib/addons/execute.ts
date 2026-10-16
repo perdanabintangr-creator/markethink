@@ -117,7 +117,15 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
     const title = `${result.title}${revision ? " · revisi" : ""}`.slice(0, 200);
     await admin
       .from("tool_runs")
-      .update({ status: "ok", title, output: result.output, files: result.files, cost_usd: ctx.cost.usd, finished_at: new Date().toISOString() })
+      .update({
+        status: "ok",
+        title,
+        output: result.output,
+        files: result.files,
+        cost_usd: ctx.cost.usd,
+        cost_breakdown: ctx.breakdown ?? [],
+        finished_at: new Date().toISOString(),
+      })
       .eq("id", run.id);
     await admin.from("usage_logs").insert({
       user_id: userId,
@@ -132,7 +140,10 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   } catch (err) {
     const msg = (err instanceof Error ? err.message : String(err)).slice(0, 1500);
     console.error(`[tool:${tool}] gagal`, msg);
-    await admin.from("tool_runs").update({ status: "error", error: msg, cost_usd: ctx.cost.usd, finished_at: new Date().toISOString() }).eq("id", run.id);
+    await admin
+      .from("tool_runs")
+      .update({ status: "error", error: msg, cost_usd: ctx.cost.usd, cost_breakdown: ctx.breakdown ?? [], finished_at: new Date().toISOString() })
+      .eq("id", run.id);
     await admin.from("usage_logs").insert({ user_id: userId, tier: `tool:${tool}`, est_cost_usd: ctx.cost.usd, status: "error", error: msg });
     return {
       ok: false,

@@ -164,6 +164,6 @@ Jangan mengulang isi hasil panjang-panjang; rujuk saja. Jangan menulis kata pemb
     maxOutputTokens: 3500,
     maxRetries: 2,
   });
-  addCost(ctx, routed.resolved(), res.usage);
+  addCost(ctx, routed.resolved(), res.usage, { stage: "Ringkasan Agent", text: res.text });
   return res.text.trim();
 }

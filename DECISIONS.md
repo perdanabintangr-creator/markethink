@@ -163,3 +163,11 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   di halaman hasil & panel chat (ikut tercetak di PDF), ikut di konteks "Bahas di Chat"/Agent. Revisi memakai temuan hasil sebelumnya.
 - Excel semua Tools Pro yang melakukan riset web kini punya sheet **"Temuan riset"** (Topik | Temuan | Sumber URL; baris "Belum
   ditemukan" diberi warna). Dibuat dari `ctx.researchNotes` lewat `withNotes()`; revisi memakai temuan & sumber hasil sebelumnya.
+
+## Hemat biaya Tools Pro tanpa menurunkan kualitas laporan (16 Okt 2026)
+- Temuan: ±84% biaya hasil Associate ($1,08) adalah proses berpikir AI (thinking) yang tidak tampil; tulisan terlihat hanya ±Rp1.400.
+  Visual (grafik, PPT, Excel) Rp0 karena dibuat program — tidak ada yang dihemat dengan mengurangi visual.
+- Tahap **Temuan riset** (merangkum fakta dari halaman) memakai level berpikir `low`. Tahap **laporan akhir** tetap level bawaan
+  agar kualitas strategi sama (permintaan founder).
+- Rincian biaya per tahap disimpan di `tool_runs.cost_breakdown` (migrasi 0033): tahap, model, token masuk/keluar, perkiraan token
+  tulisan terlihat (sisa output = berpikir), biaya.

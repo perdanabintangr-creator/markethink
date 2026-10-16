@@ -26,6 +26,24 @@ export interface ToolCtx {
   researchNotes?: string;
   /** Sumber riset (urutan = nomor [n] di catatan riset). */
   researchSources?: { title: string; url: string }[];
+  /** Rincian biaya per tahap (disimpan di tool_runs.cost_breakdown). */
+  breakdown?: CostStep[];
+}
+
+export interface CostStep {
+  stage: string;
+  model: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  /** Perkiraan token tulisan yang terlihat (sisanya dari output = proses berpikir). */
+  text_tokens: number;
+  usd: number;
+}
+
+/** Catat biaya tahap non-AI (mis. pencarian Serper). */
+export function addStepCost(ctx: ToolCtx, stage: string, usd: number) {
+  ctx.cost.usd += usd;
+  (ctx.breakdown ??= []).push({ stage, model: null, input_tokens: 0, output_tokens: 0, text_tokens: 0, usd });
 }
 
 export interface ToolFile {
@@ -62,6 +80,8 @@ export async function aiObject<T extends z.ZodTypeAny>(
     maxOutputTokens?: number;
     /** true bila pemanggil sudah memasukkan blok revisi ke prompt sendiri. */
     revisionHandled?: boolean;
+    /** Nama tahap untuk rincian biaya. */
+    stage?: string;
   },
 ): Promise<z.infer<T>> {
   // Revisi untuk tool yang belum menyisipkan konteks revisi sendiri: tambahkan hasil sebelumnya + koreksi user.
@@ -86,12 +106,13 @@ JSON Schema: ${schemaForPrompt(opts.schema)}`;
   const left = () => deadline - Date.now();
   const signal = () => AbortSignal.timeout(Math.max(15_000, left()));
 
+  const stage = opts.stage ?? "Menyusun laporan";
   const ask = async (system: string, tokens: number, extra?: string) => {
     const base = { model: routed.model, system, maxOutputTokens: tokens, maxRetries: 2, abortSignal: signal() };
     const result = opts.messages
       ? await generateText({ ...base, messages: extra ? [...opts.messages, { role: "user" as const, content: extra }] : opts.messages })
       : await generateText({ ...base, prompt: extra ? `${opts.prompt ?? ""}\n\n${extra}` : (opts.prompt ?? "") });
-    addCost(ctx, routed.resolved(), result.usage);
+    addCost(ctx, routed.resolved(), result.usage, { stage: extra ? `${stage} (ulang: terpotong)` : stage, text: result.text });
     return result;
   };
   const tryParse = (text: string) => {
@@ -132,7 +153,7 @@ balas HANYA JSON valid tanpa teks lain.\nJSON Schema: ${schemaForPrompt(opts.sch
     maxRetries: 1,
     abortSignal: signal(),
   });
-  addCost(ctx, routed.resolved(), fix.usage);
+  addCost(ctx, routed.resolved(), fix.usage, { stage: "Perbaikan format JSON", text: fix.text });
   const fixed = tryParse(fix.text);
   if (fixed.ok) return fixed.data;
   throw new Error(`AI_INVALID_OUTPUT: ${fixed.issues.slice(0, 500)}`);
@@ -142,10 +163,23 @@ export function addCost(
   ctx: ToolCtx,
   candidate: Parameters<typeof estimateCostUsd>[0] | null,
   usage: { inputTokens?: number; outputTokens?: number; cachedInputTokens?: number } | undefined,
+  step?: { stage: string; text?: string },
 ) {
   if (!candidate) return;
   ctx.cost.model = `${candidate.provider}:${candidate.modelId}`;
-  ctx.cost.usd += estimateCostUsd(candidate, usage?.inputTokens ?? 0, usage?.outputTokens ?? 0, { read: usage?.cachedInputTokens ?? 0 });
+  const usd = estimateCostUsd(candidate, usage?.inputTokens ?? 0, usage?.outputTokens ?? 0, { read: usage?.cachedInputTokens ?? 0 });
+  ctx.cost.usd += usd;
+  if (step) {
+    (ctx.breakdown ??= []).push({
+      stage: step.stage,
+      model: ctx.cost.model,
+      input_tokens: usage?.inputTokens ?? 0,
+      output_tokens: usage?.outputTokens ?? 0,
+      // ±3,2 karakter per token untuk teks Indonesia/JSON.
+      text_tokens: Math.round((step.text?.length ?? 0) / 3.2),
+      usd,
+    });
+  }
 }
 
 /** Simpan file hasil tool ke Storage + tabel attachments (diunduh lewat /api/attachments/:id). */
