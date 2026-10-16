@@ -149,7 +149,14 @@ export function imageModelScore(id: string) {
 /** Model gambar hemat untuk paket Free. Override: env OPENROUTER_BUDGET_IMAGE_MODEL (dipisah koma). */
 export function budgetImageModels(): string[] {
   const env = process.env.OPENROUTER_BUDGET_IMAGE_MODEL;
-  return env ? env.split(",").map((s) => s.trim()).filter(Boolean) : ["openai/gpt-image-2", "meta/muse-image"];
+  // Muse: harga tetap ±$0,01, hasil terbukti bagus (uji 16 Okt). GPT Image 2 sebagai cadangan.
+  return env ? env.split(",").map((s) => s.trim()).filter(Boolean) : ["meta/muse-image", "openai/gpt-image-2"];
+}
+
+/** Rasio yang diterima Image API (GPT Image: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9) — 4:5/5:4 dibulatkan ke terdekat. */
+export function imageApiAspect(ratio: string) {
+  const map: Record<string, string> = { "4:5": "3:4", "5:4": "4:3" };
+  return map[ratio] ?? ratio;
 }
 
 /** OpenRouter Image API (POST /images) — untuk model gambar murni seperti GPT Image & Muse. */
@@ -162,7 +169,7 @@ async function viaOpenRouterImages(key: string, model: string, prompt: string, a
       "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://markethink-pi.vercel.app",
       "X-Title": "Markethink",
     },
-    body: JSON.stringify({ model, prompt, aspect_ratio: aspectRatio, n: 1 }),
+    body: JSON.stringify({ model, prompt, aspect_ratio: imageApiAspect(aspectRatio), n: 1 }),
   });
   const body = await res.text();
   if (res.status === 402) throw new Error(`[credits_required] 402 ${body.slice(0, 200)}`);

@@ -22,17 +22,19 @@ function setup(handler: (url: string, body: Record<string, unknown>) => Response
   return calls;
 }
 
-it("paket Free: GPT Image lewat Image API OpenRouter", async () => {
-  const calls = setup((url) =>
-    url.endsWith("/images")
+it("paket Free: Muse lewat Image API OpenRouter (rasio 4:5 dibulatkan ke 3:4)", async () => {
+  let sentRatio = "";
+  const calls = setup((url, body) =>
+    (sentRatio = String(body.aspect_ratio)) && url.endsWith("/images")
       ? new Response(JSON.stringify({ data: [{ b64_json: "iVBORw0KGgo=" }], usage: { cost: 0.007 } }), { status: 200 })
       : new Response("x", { status: 500 }),
   );
   const { generateImage } = await import("@/lib/ai/image");
-  const img = await generateImage("poster kopi", "1:1", [], { budget: true });
-  expect(img).toMatchObject({ model: "openai/gpt-image-2", costUsd: 0.007, mime: "image/png" });
+  const img = await generateImage("poster kopi", "4:5", [], { budget: true });
+  expect(img).toMatchObject({ model: "meta/muse-image", costUsd: 0.007, mime: "image/png" });
   expect(img.notes).toBeUndefined();
-  expect(calls).toEqual(["/images openai/gpt-image-2"]);
+  expect(calls).toEqual(["/images meta/muse-image"]);
+  expect(sentRatio).toBe("3:4");
 });
 
 it("model hemat gagal semua → cadangan Gemini, alasan gagal dicatat", async () => {
@@ -46,10 +48,10 @@ it("model hemat gagal semua → cadangan Gemini, alasan gagal dicatat", async ()
   expect(img.model).toBe("google/gemini-flash-image");
   expect(img.notes).toContain("openai/gpt-image-2 (images): 404 model not found");
   expect(calls).toEqual([
-    "/images openai/gpt-image-2",
-    "/chat/completions openai/gpt-image-2",
     "/images meta/muse-image",
     "/chat/completions meta/muse-image",
+    "/images openai/gpt-image-2",
+    "/chat/completions openai/gpt-image-2",
     "/chat/completions google/gemini-flash-image",
   ]);
 });

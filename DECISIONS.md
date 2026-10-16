@@ -222,7 +222,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - (16 Okt, revisi founder) Riset Web Free **dibuka lagi** (±Rp17/pencarian), batas 5 pencarian/hari kini juga berlaku untuk
   tombol Riset Web. Free memakai Serper (bukan Google Search bawaan Gemini yang kuota gratisnya cepat habis). Migrasi 0037.
 - Free: jawaban maks 2.000 token (±1.500 kata), riwayat yang dibaca AI 10–19 pesan terakhir (`historyStart(total, 10)`).
-- Free: gambar memakai model hemat OpenRouter dulu (`openai/gpt-image-2` → `meta/muse-image`, ±$0,006–0,01) lalu jalur biasa
+- Free: gambar memakai model hemat OpenRouter dulu (`meta/muse-image` ±$0,01 terbukti 16 Okt → `openai/gpt-image-2`; rasio 4:5/5:4 dibulatkan untuk Image API) lalu jalur biasa
   (Gemini Flash Image ±$0,034) bila gagal. Override env `OPENROUTER_BUDGET_IMAGE_MODEL`. Kuota tetap 6 kredit/gambar.
 - Prompt Junior ditambah "standar kualitas": spesifik + asumsi wajar, konteks Indonesia, kerangka marketing, contoh siap pakai,
   data berlabel perkiraan / pakai pencarian, cek mandiri sebelum kirim.
