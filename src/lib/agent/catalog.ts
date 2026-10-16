@@ -31,6 +31,8 @@ export interface AgentRunLite {
   summary: string | null;
   chat_id: string | null;
   created_at: string;
+  /** Otak yang dipakai misi ini (null = Senior). */
+  tier?: "senior" | "associate" | "director" | null;
 }
 
 /** Contoh misi di halaman Agent. */

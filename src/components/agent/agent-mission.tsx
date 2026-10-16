@@ -12,7 +12,7 @@ import { ToolIcon } from "@/components/tools/tool-icon";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
 import { toolInfo } from "@/lib/addons/catalog";
 import { PRO_FORMS } from "@/lib/addons/pro/forms";
-import type { ToolFileLite } from "@/lib/addons/format";
+import { TOOL_CREDIT_ESTIMATE, type ToolFileLite } from "@/lib/addons/format";
 import type { AgentRunLite, AgentStep } from "@/lib/agent/catalog";
 import { emitChatsChanged } from "@/lib/events";
 import { cn } from "@/lib/utils";
@@ -162,7 +162,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
         {notStarted && !busy && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary/5 p-3">
             <p className="text-sm">
-              <span className="font-medium">{active.length} langkah</span> · memakai {active.length} kuota Tools Pro · ±{Math.ceil(totalSeconds / 60)} menit.
+              <span className="font-medium">{active.length} langkah</span> · ±{active.length * (TOOL_CREDIT_ESTIMATE[run.tier ?? "senior"])} kredit · ±{Math.ceil(totalSeconds / 60)} menit.
               <span className="block text-xs text-muted-foreground">Buang langkah yang tidak perlu (✕), lalu jalankan. Biarkan halaman ini terbuka selama Agent bekerja.</span>
             </p>
             <Button onClick={() => void runAll()}>

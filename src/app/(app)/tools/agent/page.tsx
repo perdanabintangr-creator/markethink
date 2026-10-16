@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle2, CircleAlert, Clock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dateID } from "@/lib/addons/format";
-import { quotaByAddon } from "@/lib/agent/server";
+import { agentBudget } from "@/lib/agent/server";
 import { AgentStart } from "@/components/agent/agent-start";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import type { AgentStep } from "@/lib/agent/catalog";
@@ -21,11 +21,11 @@ const HOW = [
 export default async function AgentHome() {
   const { profile } = await requireUser();
   const admin = createAdminClient();
-  const [quota, { data: runs }] = await Promise.all([
-    quotaByAddon(admin, profile),
+  const [{ access, maxSteps }, { data: runs }] = await Promise.all([
+    agentBudget(admin, profile, "senior"),
     admin.from("agent_runs").select("id, title, goal, status, plan, created_at").eq("user_id", profile.id).order("created_at", { ascending: false }).limit(20),
   ]);
-  const locked = !Object.values(quota).some((n) => n > 0);
+  const locked = !access.agent || maxSteps < 1;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -56,9 +56,9 @@ export default async function AgentHome() {
 
         {locked && (
           <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm">
-            🔒 Markethink Agent memakai kuota Tools Pro. Beli add-on atau upgrade ke Pro/Promax untuk memakainya.{" "}
-            <Link href="/tools" className="font-medium text-primary underline">
-              Lihat pilihan
+            🔒 {access.agent ? "Kredit bulan ini tidak cukup untuk menjalankan Agent." : "Markethink Agent tersedia di paket Pro & Promax."}{" "}
+            <Link href="/pricing" className="font-medium text-primary underline">
+              Lihat paket
             </Link>
           </div>
         )}

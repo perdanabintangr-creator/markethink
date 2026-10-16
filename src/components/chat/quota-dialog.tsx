@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Textarea } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useApp } from "@/components/app/app-context";
+import { PLAN_LABEL, type PlanId } from "@/lib/ai/models.config";
 
 export function QuotaDialog({
   open,
@@ -16,28 +14,13 @@ export function QuotaDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  /** Bila diisi: dialog upgrade untuk otak yang terkunci, bukan kuota habis. */
+  /** Bila diisi ("Label|planId"): dialog upgrade untuk otak yang terkunci, bukan kredit habis. */
   lockedTier?: string | null;
-  /** Bila diisi: batas harian paket (mis. 20 chat/hari) tercapai. */
+  /** Bila diisi: batas harian paket Free (mis. 20 chat/hari) tercapai. */
   notice?: string | null;
 }) {
-  const { user } = useApp();
-  const planLabel = lockedTier?.split("|")[1] === "promax" ? "Promax" : "Pro";
-  const [done, setDone] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    setLoading(true);
-    const res = await fetch("/api/waitlist", {
-      method: "POST",
-      body: JSON.stringify({ email: form.get("email"), note: form.get("note") || undefined, planInterest: planLabel.toLowerCase() }),
-    });
-    setLoading(false);
-    if (!res.ok) return toast.error("Gagal mendaftar waitlist.");
-    setDone(true);
-  }
+  const [tierLabel, planId] = lockedTier?.split("|") ?? [];
+  const planLabel = PLAN_LABEL[(planId as PlanId) ?? "pro"] ?? "Pro";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,35 +28,19 @@ export function QuotaDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />{" "}
-            {lockedTier
-              ? `${lockedTier.split("|")[0]} khusus paket ${planLabel}`
-              : notice
-                ? "Batas harian tercapai"
-                : "Kredit hari ini sudah habis"}
+            {lockedTier ? `${tierLabel} mulai paket ${planLabel}` : notice ? "Batas harian tercapai" : "Kredit bulan ini sudah habis"}
           </DialogTitle>
           <DialogDescription>
             {notice
-              ? `${notice} Paket Pro memberi kuota jauh lebih besar — gabung waitlist, kami kabari saat dibuka.`
+              ? `${notice} Paket berbayar tidak punya batas harian — cukup kredit bulanan.`
               : lockedTier
-              ? `Paket Free memakai Markethink Junior. Pro membuka Senior (strategi & campaign) dan Associate (brand strategy & GTM sekelas konsultan). Promax membuka Director — otak paling pintar yang bisa mengerjakan apa pun — plus kredit jauh lebih banyak. Gabung waitlist ${planLabel}, kami kabari saat dibuka.`
-              : "Kredit akan reset otomatis pukul 00.00 WIB. Mau kuota lebih besar? Gabung waitlist Markethink Pro — kami kabari saat sudah tersedia."}
+                ? "Starter membuka Senior (strategi & campaign) + semua Tools Pro. Pro menambah Associate (sekelas konsultan) & Markethink Agent. Promax membuka Director — otak paling cerdas."
+                : "Kredit direset otomatis tiap tanggal 1 pukul 00.00 WIB. Butuh lebih banyak sekarang? Upgrade paket untuk kredit bulanan yang lebih besar."}
           </DialogDescription>
         </DialogHeader>
-        {done ? (
-          <p className="rounded-lg bg-primary/10 p-4 text-sm">Kamu sudah masuk waitlist Pro. Terima kasih! 🙌</p>
-        ) : (
-          <form onSubmit={onSubmit} className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="wl-email">Email</Label>
-              <Input id="wl-email" name="email" type="email" defaultValue={user.email ?? ""} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="wl-note">Fitur yang paling kamu butuhkan (opsional)</Label>
-              <Textarea id="wl-note" name="note" rows={3} maxLength={1000} />
-            </div>
-            <Button className="w-full" disabled={loading}>Gabung waitlist {lockedTier ? planLabel : "Pro"}</Button>
-          </form>
-        )}
+        <Button asChild className="w-full" onClick={() => onOpenChange(false)}>
+          <Link href="/pricing">Lihat paket & harga</Link>
+        </Button>
       </DialogContent>
     </Dialog>
   );

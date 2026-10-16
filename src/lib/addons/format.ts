@@ -34,6 +34,28 @@ export const dateID = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" }) : "-";
 
 /** Ringkasan status kuota add-on dalam satu kalimat. */
+/** Hak pakai Tools Pro (paket all-in-1, memakai kredit bulanan). Aman dikirim ke client. */
+export interface ToolAccessLite {
+  allowed: boolean;
+  agent: boolean;
+  isAdmin: boolean;
+  isFree: boolean;
+  planId: string;
+  remaining: number;
+  monthLimit: number;
+}
+
+/** Perkiraan kredit per hasil Tools Pro per otak (dipotong di awal, lalu disesuaikan ke biaya nyata). 1 kredit ≈ Rp100 modal. */
+export const TOOL_CREDIT_ESTIMATE = { senior: 50, associate: 120, director: 300 } as const;
+/** Revisi tanpa riset ulang: ±60% dari membuat baru. */
+export const revisionEstimate = (tier: keyof typeof TOOL_CREDIT_ESTIMATE) => Math.ceil(TOOL_CREDIT_ESTIMATE[tier] * 0.6);
+
+export function creditText(a: ToolAccessLite) {
+  if (a.isAdmin) return "Admin · tanpa batas";
+  if (!a.allowed) return a.isFree ? "🔒 Terkunci di paket Free" : "🔒 Tidak termasuk paket kamu";
+  return `Memakai kredit · sisa ${a.remaining.toLocaleString("id-ID")} kredit bulan ini`;
+}
+
 export function quotaText(s: AddonStatusLite) {
   if (s.isAdmin) return "Admin · tanpa batas";
   const parts: string[] = [];

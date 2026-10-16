@@ -77,7 +77,7 @@ export async function setupOwner(_prev: ActionState, formData: FormData): Promis
 const saleSchema = z.object({
   user_id: z.string().uuid().optional(),
   email: z.string().trim().toLowerCase().email().optional(),
-  plan_id: z.enum(["pro", "promax"]),
+  plan_id: z.enum(["starter", "pro", "promax"]),
   months: z.coerce.number().int().min(1).max(36),
   amount: z.coerce.number().int().min(0).max(1_000_000_000),
   method: z.enum(PAYMENT_METHODS),
@@ -121,7 +121,7 @@ export async function recordSale(_prev: ActionState, formData: FormData): Promis
 /** Ubah paket tanpa pembayaran (mis. bonus, kompensasi) atau hentikan langganan (ke Free). */
 export async function changePlan(userId: string, formData: FormData) {
   const { user } = await requireBackoffice();
-  const plan = z.enum(["beta", "pro", "promax"]).safeParse(formData.get("plan_id"));
+  const plan = z.enum(["beta", "starter", "pro", "promax"]).safeParse(formData.get("plan_id"));
   if (!plan.success) return;
   const note = String(formData.get("note") ?? "").trim().slice(0, 300) || (plan.data === "beta" ? "Berhenti berlangganan" : "Diubah tim back office");
   await createAdminClient().rpc("bo_set_plan", { p_user: userId, p_plan: plan.data, p_bo_actor: user.id, p_note: note });
@@ -249,9 +249,9 @@ export async function setAppSetting(key: "access_mode" | "web_search" | "image_g
 
 export async function updatePlanCredits(planId: string, formData: FormData) {
   await requireOwner();
-  const credits = z.coerce.number().int().min(0).max(100000).safeParse(formData.get("daily_credits"));
+  const credits = z.coerce.number().int().min(0).max(1_000_000).safeParse(formData.get("monthly_credits"));
   if (!credits.success) return;
-  await createAdminClient().from("plans").update({ daily_credits: credits.data }).eq("id", planId);
+  await createAdminClient().from("plans").update({ monthly_credits: credits.data }).eq("id", planId);
   revalidatePath("/settings");
 }
 
@@ -290,22 +290,22 @@ export async function setBetaAccess(userId: string, access: boolean) {
 export async function setCreditOverride(userId: string, formData: FormData) {
   await requireOwner();
   const raw = String(formData.get("override") ?? "").trim();
-  const value = raw === "" ? null : z.coerce.number().int().min(0).max(100000).safeParse(raw);
+  const value = raw === "" ? null : z.coerce.number().int().min(0).max(1_000_000).safeParse(raw);
   if (value && !value.success) return;
   await createAdminClient()
     .from("profiles")
-    .update({ daily_credit_override: value ? value.data : null })
+    .update({ monthly_credit_override: value ? value.data : null })
     .eq("id", userId);
   refresh(userId);
 }
 
 export async function grantCredits(userId: string, formData: FormData) {
   await requireOwner();
-  const amount = z.coerce.number().int().min(1).max(10000).safeParse(formData.get("amount"));
+  const amount = z.coerce.number().int().min(1).max(100000).safeParse(formData.get("amount"));
   if (!amount.success) return;
   await createAdminClient()
     .from("credit_ledger")
-    .insert({ user_id: userId, delta: amount.data, kind: "refund", reason: "admin_grant_today" });
+    .insert({ user_id: userId, delta: amount.data, kind: "refund", reason: "admin_grant" });
   refresh(userId);
 }
 

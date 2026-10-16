@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Brain, Crown, Lock, Zap } from "lucide-react";
 import { useApp } from "@/components/app/app-context";
+import { TOOL_CREDIT_ESTIMATE } from "@/lib/addons/format";
 import { TOOL_TIERS, TOOL_TIER_INFO, TOOL_TIER_KEY, readToolTierPref, type ToolTier } from "@/lib/addons/tool-tier";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +61,7 @@ export function BrainPicker({
                 role="radio"
                 aria-checked={active}
                 disabled={disabled || locked}
-                title={locked ? (t === "director" ? "Director tersedia di paket Promax" : "Associate tersedia di paket Pro & Promax") : TOOL_TIER_INFO[t].hint}
+                title={locked ? (t === "director" ? "Director tersedia di paket Promax" : "Associate tersedia mulai paket Pro") : TOOL_TIER_INFO[t].hint}
                 onClick={() => onChange(t)}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors",
@@ -71,14 +72,16 @@ export function BrainPicker({
               >
                 {ICON[t]}
                 {TOOL_TIER_INFO[t].label}
-                {t === "director" && <span className="rounded bg-amber-500/15 px-1 text-[10px] text-amber-600 dark:text-amber-400">2× kuota</span>}
+                <span className="rounded bg-foreground/5 px-1 text-[10px] tabular-nums">±{TOOL_CREDIT_ESTIMATE[t]}</span>
                 {locked && <Lock className="size-3" />}
               </button>
             );
           })}
         </div>
       </div>
-      <p className="text-[11px] text-muted-foreground">{TOOL_TIER_INFO[value].hint}</p>
+      <p className="text-[11px] text-muted-foreground">
+        {TOOL_TIER_INFO[value].hint} · Angka = perkiraan kredit per hasil.
+      </p>
     </div>
   );
 }

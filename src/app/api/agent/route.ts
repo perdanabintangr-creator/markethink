@@ -4,9 +4,10 @@ import { apiSession, jsonError } from "@/lib/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { planMission } from "@/lib/agent/brain";
-import { quotaUnits, resolveToolTier } from "@/lib/addons/tool-tier";
+import { resolveToolTier } from "@/lib/addons/tool-tier";
 import { getAllowedTiers } from "@/lib/plan";
-import { agentCtx, logAgentCost, profileLine, quotaByAddon } from "@/lib/agent/server";
+import { agentBudget, agentCtx, logAgentCost, profileLine } from "@/lib/agent/server";
+import { ADDONS } from "@/lib/addons/catalog";
 
 export const maxDuration = 120;
 
@@ -27,12 +28,17 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
   const tier = resolveToolTier(parsed.data.tier, await getAllowedTiers(s.supabase, s.profile));
-  const quota = await quotaByAddon(admin, s.profile);
-  if (!Object.values(quota).some((n) => n > 0)) {
-    return jsonError(402, "agent_locked", {
-      message: "Markethink Agent memakai kuota Tools Pro. Beli add-on atau upgrade paket untuk memakainya.",
+  const { access, perStep, maxSteps } = await agentBudget(admin, s.profile, tier);
+  if (!access.agent) {
+    return jsonError(402, "agent_locked", { message: "Markethink Agent tersedia di paket Pro & Promax. Upgrade paket untuk memakainya." });
+  }
+  if (maxSteps < 1) {
+    return jsonError(402, "credits_low", {
+      message: `Kredit tidak cukup untuk menjalankan Agent (±${perStep} kredit per langkah, sisa ${access.remaining}).`,
     });
   }
+  // Semua Tools Pro tersedia; jumlah langkah dibatasi sisa kredit.
+  const quota = Object.fromEntries(ADDONS.map((a) => [a.id, access.isAdmin ? Infinity : maxSteps])) as Record<string, number>;
 
   const { data: row, error } = await admin
     .from("agent_runs")
@@ -43,13 +49,11 @@ export async function POST(req: Request) {
 
   const ctx = agentCtx(admin, s.user.id, row.id, startedAt, tier);
   try {
-    // Director memakai 2 kuota per langkah → jumlah langkah per grup dihitung dari kuota ÷ 2.
-    const per = quotaUnits(tier);
-    const stepQuota = Object.fromEntries(Object.entries(quota).map(([k, n]) => [k, n === Infinity ? n : Math.floor(n / per)]));
-    const plan = await planMission(ctx, { goal: parsed.data.goal, context: parsed.data.context, profileLine: profileLine(s.profile), quota: stepQuota });
+    const planned = await planMission(ctx, { goal: parsed.data.goal, context: parsed.data.context, profileLine: profileLine(s.profile), quota });
+    const plan = { ...planned, steps: planned.steps.slice(0, maxSteps) };
     if (!plan.steps.length) {
       await admin.from("agent_runs").delete().eq("id", row.id);
-      return jsonError(422, "no_steps", { message: "Kuota Tools Pro yang dibutuhkan misi ini sudah habis. Cek kuota di halaman Tools Pro." });
+      return jsonError(422, "no_steps", { message: "Agent tidak menemukan langkah yang cocok. Coba tulis tujuannya lebih spesifik." });
     }
     await admin.from("agent_runs").update({ title: plan.title.slice(0, 120), plan: plan.steps, summary: null }).eq("id", row.id);
     await logAgentCost(admin, s.user.id, row.id, ctx, 0);

@@ -36,3 +36,9 @@
 1. Founder menyiapkan akun & key (SETUP.md), membuka akses jaringan environment, lalu bilang "lanjut".
 2. Terapkan migrasi ke Supabase (`npm run db:push` atau `supabase/setup.sql`).
 3. Smoke test end-to-end di preview Vercel, perbaiki temuan, lalu laporan final.
+
+## 16 Okt 2026 — Paket all-in-1 kredit bulanan
+- ✅ Migrasi 0034 (plan Starter, `monthly_credits`, saldo bulanan, `settle_credits`) & 0035 (bonus kredit) terpasang di production.
+- ✅ Chat, Tools Pro, Agent memotong kredit sesuai pemakaian nyata. Meter kredit bulanan, halaman `/pricing`, Tools Pro tanpa add-on.
+- ✅ Back office: paket Starter, kredit bulanan per paket & per user.
+- ⏳ Sebelum menagih user: Vercel Pro ($20/bln, Hobby non-komersial) & payment gateway.

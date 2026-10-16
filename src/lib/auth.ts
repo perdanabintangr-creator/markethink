@@ -21,6 +21,7 @@ export interface Profile {
   consent_at: string | null;
   banned: boolean;
   daily_credit_override: number | null;
+  monthly_credit_override: number | null;
   beta_access: boolean;
   created_at: string;
 }

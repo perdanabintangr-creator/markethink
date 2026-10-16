@@ -7,7 +7,7 @@ export const usd = (v: number | string | null | undefined) => `$${Number(v ?? 0)
 export const idr = (usdValue: number | string | null | undefined) => `Rp${nf.format(Math.round(Number(usdValue ?? 0) * USD_IDR))}`;
 export const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)}%` : "–");
 
-export const PLAN_NAME: Record<string, string> = { beta: "Free", pro: "Pro", promax: "Promax" };
+export const PLAN_NAME: Record<string, string> = { beta: "Free", starter: "Starter", pro: "Pro", promax: "Promax" };
 
 export const COST_CATEGORY: Record<string, string> = {
   "chat:junior": "Chat · Junior (Haiku/Gemini)",

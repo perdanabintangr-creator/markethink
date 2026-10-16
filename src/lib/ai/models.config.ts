@@ -9,10 +9,10 @@
  */
 
 export type TierId = "junior" | "senior" | "associate" | "director";
-export type PlanId = "beta" | "pro" | "promax";
+export type PlanId = "beta" | "starter" | "pro" | "promax";
 
 /** Nama paket untuk tampilan (id `beta` = paket Free). */
-export const PLAN_LABEL: Record<PlanId, string> = { beta: "Free", pro: "Pro", promax: "Promax" };
+export const PLAN_LABEL: Record<PlanId, string> = { beta: "Free", starter: "Starter", pro: "Pro", promax: "Promax" };
 export type ProviderId = "anthropic" | "google" | "groq" | "openrouter";
 
 export interface ModelCandidate {
@@ -60,9 +60,10 @@ export const MODEL_PRICING_USD: Record<string, { input: number; output: number; 
   "groq:openai/gpt-oss-120b": { input: 0.15, output: 0.75 },
 };
 
+/** Perkiraan kredit tambahan yang dipotong di awal (lalu disesuaikan ke biaya nyata). 1 kredit ≈ Rp100 modal. */
 export const EXTRA_CREDIT_COST = {
-  research: 2,
-  attachment: 1,
+  research: 3,
+  attachment: 2,
 } as const;
 
 export function parseCandidates(raw: string | undefined, fallback: ModelCandidate[]): ModelCandidate[] {
@@ -129,10 +130,10 @@ export function getTiers(envSource: Record<string, string | undefined> = process
 - Mulai dari tujuan bisnis, lalu susun strategi terstruktur memakai framework yang relevan (STP, AIDA, funnel, SWOT/TOWS).
 - Lengkapi dengan langkah eksekusi, contoh copy nyata, timeline, estimasi budget, dan KPI terukur. Gunakan tabel untuk perbandingan, jadwal, dan anggaran.
 - Tulis asumsi secara eksplisit bila data dari user kurang.`,
-      minPlan: "pro",
+      minPlan: "starter",
       effort: "medium",
       webSearches: 3,
-      creditCost: 2,
+      creditCost: 8,
       maxOutputTokens: 12000,
       temperature: 0.7,
       candidates: parseCandidates(envSource.MODEL_SENIOR, [
@@ -163,7 +164,7 @@ export function getTiers(envSource: Record<string, string | undefined> = process
       minPlan: "pro",
       effort: "high",
       webSearches: 4,
-      creditCost: 5,
+      creditCost: 30,
       maxOutputTokens: 20000,
       temperature: 0.6,
       candidates: parseCandidates(envSource.MODEL_ASSOCIATE, [
@@ -195,7 +196,7 @@ export function getTiers(envSource: Record<string, string | undefined> = process
       minPlan: "promax",
       effort: "high",
       webSearches: 6,
-      creditCost: 10,
+      creditCost: 65,
       maxOutputTokens: 32000,
       temperature: 0.6,
       candidates: parseCandidates(envSource.MODEL_DIRECTOR, [

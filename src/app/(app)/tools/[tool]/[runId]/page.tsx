@@ -91,7 +91,7 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
           <div className="flex items-start gap-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-4 text-sm">
             <CircleAlert className="mt-0.5 size-5 text-destructive" />
             <div>
-              <p className="font-medium">Hasil gagal dibuat — kuota kamu tidak terpotong.</p>
+              <p className="font-medium">Hasil gagal dibuat — kredit kamu dikembalikan penuh.</p>
               <Link href={`/tools/${tool}`} className="mt-1 inline-block text-primary hover:underline">
                 Coba lagi
               </Link>

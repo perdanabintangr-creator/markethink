@@ -1,14 +1,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toolInfo } from "./catalog";
-import { getAddonStatus, pickSource } from "./entitlement";
+import { getToolAccess } from "./access";
+import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/lib/credits";
 import { RUNNERS, isAiTool } from "./tools";
 import type { ToolCtx } from "./runtime";
-import { MAX_REVISIONS } from "./format";
-import { DEFAULT_TOOL_TIER, quotaUnits, type ToolTier } from "./tool-tier";
+import { MAX_REVISIONS, TOOL_CREDIT_ESTIMATE, revisionEstimate } from "./format";
+import { DEFAULT_TOOL_TIER, type ToolTier } from "./tool-tier";
 
 export type ExecResult =
-  | { ok: true; runId: string; title: string; output: unknown }
+  | { ok: true; runId: string; title: string; output: unknown; credits: number }
   | { ok: false; status: number; code: string; message?: string; addon?: string };
 
 interface ExecOpts {
@@ -61,20 +62,20 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   if (!parsed.success) return { ok: false, status: 400, code: "invalid_input", message: parsed.error.issues[0]?.message ?? "Data belum lengkap." };
 
   const useTier = tier ?? DEFAULT_TOOL_TIER;
-  const units = revision ? 1 : quotaUnits(useTier);
-  let source = revision?.source ?? null;
-  if (!revision) {
-    const status = await getAddonStatus(admin, profile, info.addon);
-    if (!status.nextSource) return { ok: false, status: 402, code: "addon_required", addon: info.addon };
-    source = pickSource(status, units);
-    if (!source)
-      return {
-        ok: false,
-        status: 402,
-        code: "quota_short",
-        message: "Otak Director memakai 2 kuota, sisa kuota add-on ini tinggal 1. Pilih otak Senior/Associate atau tambah kuota.",
-      };
-  }
+  // Paket all-in-1: Tools Pro termasuk paket berbayar & memakai kredit bulanan (dipotong perkiraan, lalu disesuaikan ke biaya nyata).
+  const access = await getToolAccess(admin, profile);
+  if (!access.allowed) return { ok: false, status: 402, code: "plan_required", message: "Tools Pro tersedia mulai paket Starter. Upgrade paket untuk memakainya." };
+  const estimate = revision ? revisionEstimate(useTier) : TOOL_CREDIT_ESTIMATE[useTier];
+  const charge = await consumeCredits(userId, estimate, revision ? `tool_revise:${tool}` : `tool:${tool}`, { tier: useTier });
+  if (!charge.ok)
+    return {
+      ok: false,
+      status: 402,
+      code: "credits_low",
+      message: `Kredit tidak cukup: butuh ±${estimate} kredit, sisa ${charge.remaining}. Kredit direset tiap tanggal 1, atau upgrade paket.`,
+    };
+  const source = access.isAdmin ? "admin" : "paid";
+  const units = 1;
 
   const { data: run, error: runErr } = await admin
     .from("tool_runs")
@@ -91,7 +92,10 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
     })
     .select("id")
     .single();
-  if (runErr || !run) return { ok: false, status: 500, code: "run_failed" };
+  if (runErr || !run) {
+    await refundCredits(userId, estimate, `tool_failed:${tool}`);
+    return { ok: false, status: 500, code: "run_failed" };
+  }
 
   const ctx: ToolCtx = {
     admin,
@@ -127,19 +131,24 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
         finished_at: new Date().toISOString(),
       })
       .eq("id", run.id);
+    const credits = creditsForUsd(ctx.cost.usd);
+    await settleCredits(userId, estimate, credits, `tool_settle:${tool}`, { runId: run.id });
     await admin.from("usage_logs").insert({
       user_id: userId,
       tier: `tool:${tool}`,
       provider: ctx.cost.model?.split(":")[0] ?? null,
       model: ctx.cost.model?.split(":").slice(1).join(":") ?? null,
       est_cost_usd: ctx.cost.usd,
+      credits,
       latency_ms: Date.now() - started,
       status: "ok",
     });
-    return { ok: true, runId: run.id, title, output: result.output };
+    return { ok: true, runId: run.id, title, output: result.output, credits };
   } catch (err) {
     const msg = (err instanceof Error ? err.message : String(err)).slice(0, 1500);
     console.error(`[tool:${tool}] gagal`, msg);
+    // Gagal → kredit dikembalikan penuh (biaya AI ditanggung Markethink).
+    await refundCredits(userId, estimate, `tool_failed:${tool}`);
     await admin
       .from("tool_runs")
       .update({ status: "error", error: msg, cost_usd: ctx.cost.usd, cost_breakdown: ctx.breakdown ?? [], finished_at: new Date().toISOString() })

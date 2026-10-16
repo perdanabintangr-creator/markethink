@@ -1,7 +1,10 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/auth";
-import { getAddonStatuses } from "@/lib/addons/entitlement";
+import { getToolAccess } from "@/lib/addons/access";
+import { TOOL_CREDIT_ESTIMATE } from "@/lib/addons/format";
+import { creditsForUsd, settleCredits } from "@/lib/credits";
+import { AGENT_MAX_STEPS } from "./catalog";
 import { roleLabel } from "@/lib/personas";
 import type { ToolCtx } from "@/lib/addons/runtime";
 import type { AgentRunLite } from "./catalog";
@@ -20,10 +23,12 @@ export function profileLine(p: Profile) {
     .join(", ");
 }
 
-/** Sisa kuota per grup add-on (Infinity untuk admin). */
-export async function quotaByAddon(admin: SupabaseClient, profile: Profile) {
-  const statuses = await getAddonStatuses(admin, profile);
-  return Object.fromEntries(statuses.map((s) => [s.id, s.isAdmin ? Infinity : s.nextSource ? s.remaining : 0])) as Record<string, number>;
+/** Hak pakai Agent + perkiraan jumlah langkah yang muat di sisa kredit (paket all-in-1). */
+export async function agentBudget(admin: SupabaseClient, profile: Profile, tier: ToolTier) {
+  const access = await getToolAccess(admin, profile);
+  const perStep = TOOL_CREDIT_ESTIMATE[tier] + 5;
+  const maxSteps = access.isAdmin ? AGENT_MAX_STEPS : Math.min(AGENT_MAX_STEPS, Math.floor(access.remaining / perStep));
+  return { access, perStep, maxSteps };
 }
 
 /** Konteks biaya AI untuk langkah perencanaan/pengisian brief/ringkasan Agent. */
@@ -31,9 +36,10 @@ export function agentCtx(admin: SupabaseClient, userId: string, agentId: string,
   return { admin, userId, runId: agentId, cost: { usd: 0, model: null }, startedAt, tier: tier ?? DEFAULT_TOOL_TIER };
 }
 
-/** Catat biaya AI Agent (di luar biaya tiap tool) ke usage_logs & total misi. */
+/** Catat biaya AI Agent (di luar biaya tiap tool) ke usage_logs & total misi, lalu potong kredit sesuai biaya nyata. */
 export async function logAgentCost(admin: SupabaseClient, userId: string, agentId: string, ctx: ToolCtx, prevCost: number, error?: string) {
   if (!ctx.cost.usd && !error) return;
+  if (ctx.cost.usd > 0) await settleCredits(userId, 0, creditsForUsd(ctx.cost.usd), "agent", { agentId });
   await Promise.all([
     admin.from("usage_logs").insert({
       user_id: userId,

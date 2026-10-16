@@ -17,7 +17,7 @@ const today = () => new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 
  */
 export function SaleForm({ userId, prices, defaultPlan = "pro" }: { userId?: string; prices: Record<string, number>; defaultPlan?: string }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(recordSale, undefined);
-  const [plan, setPlan] = useState(defaultPlan === "promax" ? "promax" : "pro");
+  const [plan, setPlan] = useState(["starter", "pro", "promax"].includes(defaultPlan) ? defaultPlan : "pro");
   const [months, setMonths] = useState(1);
   const [amount, setAmount] = useState(String((prices[plan] ?? 0) * 1));
   const edited = useRef(false);
@@ -51,6 +51,7 @@ export function SaleForm({ userId, prices, defaultPlan = "pro" }: { userId?: str
       <div className="space-y-1.5">
         <Label htmlFor="sale-plan">Paket</Label>
         <NativeSelect id="sale-plan" name="plan_id" value={plan} onChange={(e) => setPlan(e.target.value)}>
+          <option value="starter">Starter</option>
           <option value="pro">Pro</option>
           <option value="promax">Promax</option>
         </NativeSelect>

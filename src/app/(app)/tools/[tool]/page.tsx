@@ -4,12 +4,11 @@ import { ArrowLeft, CheckCircle2, CircleAlert, Clock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { addonInfo, toolInfo } from "@/lib/addons/catalog";
-import { getAddonStatus } from "@/lib/addons/entitlement";
-import { toLite } from "@/lib/addons/status-lite";
-import { dateID, quotaText } from "@/lib/addons/format";
+import { getToolAccess } from "@/lib/addons/access";
+import { creditText, dateID } from "@/lib/addons/format";
+import { toPlanOffer } from "@/lib/plan-offers";
 import { ToolRunner } from "@/components/tools/tool-runner";
 import { Calculators } from "@/components/tools/calculators";
-import { RequestAddonButton } from "@/components/tools/request-addon";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { ToolLocked } from "@/components/tools/tool-locked";
 
@@ -26,13 +25,14 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
   if (!info) notFound();
   const addon = addonInfo(info.addon)!;
   const { supabase, profile } = await requireUser();
-  const status = toLite(await getAddonStatus(createAdminClient(), profile, info.addon));
-  // Terkunci: tidak punya jatah apa pun (mis. paket Free tanpa add-on) → tampilkan pilihan beli add-on / upgrade, bukan form.
-  const locked = !status.hasAccess && !status.nextSource && !status.paidUntil && status.trialRemaining === 0 && status.isFree;
-  const { data: planRows } = locked
-    ? await supabase.from("plans").select("id, name, monthly_price_idr, daily_credits").in("id", ["pro", "promax"]).order("sort_order")
-    : { data: [] };
-  const plans = (planRows ?? []).map((p) => ({ id: p.id as "pro" | "promax", name: p.name as string, price: Number(p.monthly_price_idr), credits: Number(p.daily_credits) }));
+  const access = await getToolAccess(createAdminClient(), profile);
+  // Terkunci (paket Free) → tampilkan pilihan upgrade paket, bukan form. Kalkulator tetap terlihat dengan overlay.
+  const locked = !access.allowed;
+  const { data: planRows } =
+    locked && !info.noQuota
+      ? await supabase.from("plans").select("id, name, monthly_price_idr, monthly_credits").in("id", ["starter", "pro", "promax"]).order("sort_order")
+      : { data: [] };
+  const plans = (planRows ?? []).map(toPlanOffer);
   const { data: runs } = info.noQuota
     ? { data: [] }
     : await supabase
@@ -57,13 +57,10 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
               <h1 className="text-xl font-bold sm:text-2xl">{info.name}</h1>
               <p className="text-sm text-muted-foreground">{info.short}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Bagian dari add-on {addon.emoji} {status.name} · {quotaText(status)}
+                {addon.emoji} {addon.name} · {info.noQuota ? "Tanpa kredit" : creditText(access)}
               </p>
             </div>
           </div>
-          {!status.isAdmin && !status.paidUntil && !locked && (
-            <RequestAddonButton addon={addon.id} name={status.name} price={status.price} quota={status.quota} variant="outline" />
-          )}
         </div>
 
         <div className="flex flex-wrap gap-1.5">
@@ -74,12 +71,12 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
           ))}
         </div>
 
-        {locked ? (
-          <ToolLocked status={status} toolName={info.name} plans={plans} />
-        ) : info.noQuota ? (
-          <Calculators locked={!status.hasAccess} status={status} />
+        {info.noQuota ? (
+          <Calculators locked={locked} />
+        ) : locked ? (
+          <ToolLocked toolName={info.name} plans={plans} />
         ) : (
-          <ToolRunner tool={tool} status={status} />
+          <ToolRunner tool={tool} access={access} />
         )}
 
         {!!runs?.length && (

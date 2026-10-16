@@ -5,11 +5,11 @@ import { addonInfo } from "@/lib/addons/catalog";
 
 const schema = z.object({
   addon: z.string().max(40).optional(),
-  plan: z.enum(["pro", "promax"]).optional(),
+  plan: z.enum(["starter", "pro", "promax"]).optional(),
   note: z.string().max(500).optional(),
 });
 
-/** User minta beli add-on / upgrade paket → masuk daftar "Calon pelanggan" di back office untuk di-follow-up tim. */
+/** User minta upgrade paket (atau add-on lama) → masuk daftar "Calon pelanggan" di back office untuk di-follow-up tim. */
 export async function POST(req: Request) {
   const s = await apiSession();
   if (s.error) return s.error;

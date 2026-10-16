@@ -62,7 +62,7 @@ export default async function LandingPage() {
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--accent),transparent_60%)]" />
         <div className="mx-auto max-w-4xl px-4 pb-16 pt-16 text-center sm:pt-24">
           <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs font-medium">
-            <Sparkles className="size-3.5 text-primary" /> Beta gratis — kuota harian untuk semua user
+            <Sparkles className="size-3.5 text-primary" /> Mulai gratis — upgrade mulai Rp60 ribu/bulan
           </span>
           <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-6xl">
             Otak marketing kamu,{" "}
@@ -125,7 +125,7 @@ export default async function LandingPage() {
                     <li key={s}>✓ {s}</li>
                   ))}
                 </ul>
-                <p className="mt-4 text-xs text-muted-foreground">{t.creditCost} kredit / pesan</p>
+                <p className="mt-4 text-xs text-muted-foreground">±{t.creditCost} kredit / pesan</p>
               </div>
             ))}
           </div>

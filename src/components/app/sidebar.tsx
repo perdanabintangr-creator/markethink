@@ -52,6 +52,7 @@ import {
   Settings,
   Sun,
   Trash2,
+  Zap,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -518,7 +519,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             className={cn("flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent", pathname === "/tools" && "bg-accent font-medium")}
           >
-            <LayoutGrid className="size-4" /> Semua tools & kuota
+            <LayoutGrid className="size-4" /> Semua tools
           </Link>
         </div>
       )}
@@ -697,6 +698,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <DropdownMenuItem asChild>
             <Link href="/settings" onClick={onNavigate}>
               <Settings /> {t.settings}
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/pricing" onClick={onNavigate}>
+              <Zap /> Paket & harga
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />

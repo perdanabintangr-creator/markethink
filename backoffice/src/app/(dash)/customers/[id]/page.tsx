@@ -26,7 +26,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   const [{ data: u }, { data: subs }, { data: changes }, { data: usage }, { data: plans }, { data: addonSubs }, { data: addonRows }, { data: runs }] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, email, full_name, role, plan_id, plan_started_at, banned, beta_access, daily_credit_override, persona_role, industry, experience, goal, onboarded, created_at, last_active_at")
+      .select("id, email, full_name, role, plan_id, plan_started_at, banned, beta_access, monthly_credit_override, persona_role, industry, experience, goal, onboarded, created_at, last_active_at")
       .eq("id", id)
       .maybeSingle(),
     admin
@@ -148,6 +148,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
               <form action={changePlan.bind(null, u.id)} className="flex flex-wrap gap-2">
                 <NativeSelect name="plan_id" defaultValue={u.plan_id} className="w-auto">
                   <option value="beta">Free (berhenti)</option>
+                  <option value="starter">Starter</option>
                   <option value="pro">Pro</option>
                   <option value="promax">Promax</option>
                 </NativeSelect>
@@ -167,15 +168,15 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           </CardHeader>
           <CardContent className="grid gap-4 text-sm md:grid-cols-2 xl:grid-cols-4">
             <form action={setCreditOverride.bind(null, u.id)} className="space-y-1.5">
-              <p className="font-medium">Kuota kredit harian khusus</p>
+              <p className="font-medium">Kredit bulanan khusus</p>
               <div className="flex gap-2">
-                <Input name="override" defaultValue={u.daily_credit_override ?? ""} placeholder="ikut paket" inputMode="numeric" className="w-28" />
+                <Input name="override" defaultValue={u.monthly_credit_override ?? ""} placeholder="ikut paket" inputMode="numeric" className="w-28" />
                 <Button size="sm" variant="outline">Simpan</Button>
               </div>
-              <p className="text-xs text-muted-foreground">Kosongkan = ikut kuota paketnya.</p>
+              <p className="text-xs text-muted-foreground">Kosongkan = ikut kredit bulanan paketnya.</p>
             </form>
             <form action={grantCredits.bind(null, u.id)} className="space-y-1.5">
-              <p className="font-medium">Tambah kredit hari ini</p>
+              <p className="font-medium">Tambah kredit bulan ini</p>
               <div className="flex gap-2">
                 <Input name="amount" placeholder="+10" inputMode="numeric" className="w-24" />
                 <Button size="sm" variant="outline">Beri</Button>

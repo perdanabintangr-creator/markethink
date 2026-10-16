@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { emitChatsChanged } from "@/lib/events";
 import { readToolTierPref } from "@/lib/addons/tool-tier";
+import { revisionEstimate } from "@/lib/addons/format";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
 import { REVISE_STEPS } from "@/components/tools/tool-run-panel";
 
@@ -44,7 +45,7 @@ export function DiscussInChat({ runId }: { runId: string }) {
   );
 }
 
-/** "Perbaiki hasil": buat versi baru sesuai koreksi user (gratis, terbatas per hasil). */
+/** "Perbaiki hasil": buat versi baru sesuai koreksi user (memakai kredit, lebih hemat dari membuat baru; terbatas per hasil). */
 export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; tool: string; revisionsLeft: number }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -73,14 +74,14 @@ export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; to
   return (
     <>
       <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} disabled={revisionsLeft <= 0} className="print:hidden">
-        <Wand2 /> Perbaiki hasil {revisionsLeft > 0 ? `(gratis, sisa ${revisionsLeft}×)` : "(batas tercapai)"}
+        <Wand2 /> Perbaiki hasil {revisionsLeft > 0 ? `(±${revisionEstimate(readToolTierPref())} kredit · sisa ${revisionsLeft}×)` : "(batas tercapai)"}
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Perbaiki hasil</DialogTitle>
             <DialogDescription>
-              Tulis data yang salah atau maksud yang sebenarnya. Hasil baru (termasuk PPT & Excel) dibuat ulang — gratis, tidak memotong kuota.
+              Tulis data yang salah atau maksud yang sebenarnya. Hasil baru (termasuk PPT & Excel) dibuat ulang tanpa riset ulang (±60% kredit membuat baru, disesuaikan ke pemakaian nyata).
               Bingung mana yang perlu dikoreksi? Bahas dulu lewat “Bahas di Chat”.
             </DialogDescription>
           </DialogHeader>

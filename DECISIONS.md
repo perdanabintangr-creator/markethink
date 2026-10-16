@@ -180,3 +180,14 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   lampiran/Riset Web/chat hasil Tools Pro/pesan panjang → Senior; ragu → Senior. Kredit sesuai otak yang dipakai; label tiap
   jawaban menunjukkan otak yang dipakai. Disimpan sebagai `chats.tier = 'auto'`.
 - Rancangan paket (Starter Rp60 rb/250 kredit, Pro Rp200 rb/900, Promax Rp300 rb/1.350, 1 kredit = Rp100 modal) menunggu ACC.
+
+## Paket all-in-1 kredit bulanan (16 Okt 2026, ACC founder "ACC paket")
+- Satu dompet kredit **per bulan** (reset tgl 1, 00.00 WIB) untuk chat, riset, gambar, Tools Pro & Agent. 1 kredit ≈ Rp100 modal AI.
+- Paket: Free 50 kredit · **Starter Rp60 rb / 250** · **Pro Rp200 rb / 900** · **Promax Rp300 rb / 1.350**. Modal maksimal = 50% harga
+  (margin ≥50% walau kredit habis dipakai). Diuji di `tests/credits.test.ts`.
+- Akses: Starter = Junior+Senior + semua Tools Pro; Pro + Associate + Markethink Agent; Promax + Director. Feature flag `tools_pro`, `agent`.
+- Cara potong: perkiraan dulu (`consume_credits`), lalu disesuaikan ke biaya nyata (`settle_credits`, selisih + atau −); gagal = kembali penuh.
+  Perkiraan Tools Pro: Senior 50, Associate 120, Director 300; revisi ±60% (tanpa riset ulang). Agent dibatasi sisa kredit per langkah.
+- Add-on Tools Pro per kelompok dihapus dari aplikasi (tabel `addons` dibiarkan untuk riwayat). Upgrade lewat halaman `/pricing`
+  → permintaan masuk back office "Calon pelanggan".
+- Bonus kredit dari back office (delta +) ikut menambah saldo bulan berjalan (migrasi 0035).

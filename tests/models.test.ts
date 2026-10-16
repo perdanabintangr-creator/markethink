@@ -34,8 +34,8 @@ describe("models.config", () => {
 
   it("biaya kredit menambah riset & lampiran", () => {
     const s = getTier("senior");
-    expect(messageCreditCost(s, { research: false, attachments: 0 })).toBe(2);
-    expect(messageCreditCost(s, { research: true, attachments: 2 })).toBe(6);
+    expect(messageCreditCost(s, { research: false, attachments: 0 })).toBe(8);
+    expect(messageCreditCost(s, { research: true, attachments: 2 })).toBe(15);
   });
 
   it("model :free biayanya nol", () => {

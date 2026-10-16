@@ -53,7 +53,7 @@ export default async function CustomersPage({
 }) {
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().slice(0, 100);
-  const plan = ["beta", "pro", "promax"].includes(sp.plan ?? "") ? sp.plan! : "";
+  const plan = ["beta", "starter", "pro", "promax"].includes(sp.plan ?? "") ? sp.plan! : "";
   const status = sp.status && sp.status in STATUS ? sp.status : "all";
   const sort = sp.sort && sp.sort in SORT ? sp.sort : "newest";
   const page = Math.max(1, Number(sp.page) || 1);
@@ -91,6 +91,7 @@ export default async function CustomersPage({
         <NativeSelect name="plan" defaultValue={plan} className="w-auto">
           <option value="">Semua paket</option>
           <option value="beta">Free</option>
+          <option value="starter">Starter</option>
           <option value="pro">Pro</option>
           <option value="promax">Promax</option>
         </NativeSelect>

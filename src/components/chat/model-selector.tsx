@@ -101,7 +101,7 @@ export function ModelSelector({
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
-              1–2 {lang === "en" ? "cr" : "kredit"}
+              1–8 {lang === "en" ? "cr" : "kredit"}
               <Check className={cn("!size-4 text-primary", !isAuto && "invisible")} />
             </span>
           </DropdownMenuItem>
@@ -128,7 +128,7 @@ export function ModelSelector({
                 <span className="block truncate text-xs text-muted-foreground">{BEST_FOR[t.id]?.[lang] ?? t.tagline[lang]}</span>
               </span>
               <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
-                {t.creditCost} {lang === "en" ? "cr" : "kredit"}
+                ±{t.creditCost} {lang === "en" ? "cr" : "kredit"}
                 <Check className={cn("!size-4 text-primary", !selected && "invisible")} />
               </span>
             </DropdownMenuItem>
@@ -136,8 +136,8 @@ export function ModelSelector({
         })}
         <p className="px-2.5 pt-1.5 pb-1 text-[11px] leading-snug text-muted-foreground">
           {lang === "en"
-            ? "Smarter brains use more credits per message."
-            : "Makin pintar otaknya, makin banyak kredit per pesan."}
+            ? "Credits are charged by actual usage; smarter brains use more."
+            : "Kredit dipotong sesuai pemakaian nyata; makin pintar otaknya, makin banyak."}
         </p>
       </DropdownMenuContent>
     </DropdownMenu>

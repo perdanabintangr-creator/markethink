@@ -16,10 +16,10 @@ import {
 import { sanitizeFileName } from "@/lib/files";
 import { readToolResult } from "@/lib/addons/chat-context";
 
-export const IMAGE_CREDIT_COST = 5;
-export const PPTX_CREDIT_COST = 3;
+export const IMAGE_CREDIT_COST = 6; // ±Rp555 modal per gambar (1 kredit ≈ Rp100)
+export const PPTX_CREDIT_COST = 2;
 /** Kredit tambahan per gambar AI di dalam PPT (cover/slide bergambar). */
-export const DECK_IMAGE_CREDIT_COST = 2;
+export const DECK_IMAGE_CREDIT_COST = 6;
 const DECK_IMAGE_MAX = 6;
 /** Perkiraan biaya per gambar (USD) bila provider tidak melaporkan biaya nyata. */
 const IMAGE_COST_USD = 0.04;

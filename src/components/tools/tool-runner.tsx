@@ -28,8 +28,8 @@ import type { Field as ProField } from "@/lib/addons/pro/fields";
 import { toolInfo } from "@/lib/addons/catalog";
 import { WorkingShowcase } from "./working-showcase";
 import { BrainPicker, useToolTier } from "./brain-picker";
-import { RequestAddonButton } from "./request-addon";
-import type { AddonStatusLite } from "./common";
+import Link from "next/link";
+import { TOOL_CREDIT_ESTIMATE, type ToolAccessLite } from "@/lib/addons/format";
 
 const STEPS: Record<string, string[]> = {
   listing: ["Mempelajari produkmu…", "Mencari kata kunci yang dicari pembeli…", "Menulis judul & deskripsi per platform…", "Menyusun file Excel…"],
@@ -250,18 +250,18 @@ interface UploadedFile {
   name: string;
 }
 
-export function ToolRunner({ tool, status }: { tool: string; status: AddonStatusLite }) {
+export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessLite }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [buyOpen, setBuyOpen] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const pro = PRO_FORMS[tool];
   const steps = pro?.steps ?? STEPS[tool] ?? ["Memproses…"];
   const typical = toolInfo(tool)?.seconds ?? 60;
-  const canRun = Boolean(status.nextSource);
   const brain = useToolTier();
+  const estimate = TOOL_CREDIT_ESTIMATE[brain.tier];
+  const canRun = access.allowed && (access.isAdmin || access.remaining >= estimate);
 
   async function upload(list: FileList | null) {
     if (!list?.length) return;
@@ -280,7 +280,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!canRun) return setBuyOpen(true);
+    if (!canRun) return router.push("/pricing");
     if (tool === "ads" && !files.length) return toast.error("Upload dulu file laporan iklannya.");
     if (pro?.fields.some((f) => f.type === "files" && f.required) && !files.length) return toast.error("Upload dulu filenya, ya.");
     const input = collect(tool, e.currentTarget, files.map((f) => f.id));
@@ -289,7 +289,7 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
       const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify({ ...input, __tier: brain.tier }) });
       const data = await res.json().catch(() => ({}));
       if (res.status === 402) {
-        setBuyOpen(true);
+        toast.error(data.message ?? "Kredit tidak cukup.", { action: { label: "Lihat paket", onClick: () => router.push("/pricing") } });
         return;
       }
       if (!res.ok) {
@@ -665,20 +665,24 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
         <BrainPicker value={brain.tier} onChange={brain.setTier} allowed={brain.allowed} disabled={busy} />
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <p className="text-xs text-muted-foreground">
-            {status.nextSource === "trial"
-              ? "Ini percobaan gratis kamu (1×)."
-              : status.nextSource === "promax"
-                ? `Memakai jatah gratis Promax (sisa ${status.promaxRemaining}).`
-                : status.nextSource === "paid"
-                  ? `Sisa kuota add-on bulan ini: ${status.paidRemaining}.`
-                  : status.nextSource === "admin"
-                    ? "Mode admin (tanpa batas)."
-                    : "Kuota habis — beli add-on untuk lanjut."}{" "}
-            Kuota hanya terpotong bila hasil berhasil dibuat.
+            {access.isAdmin
+              ? "Mode admin (tanpa batas)."
+              : canRun
+                ? `±${estimate} kredit · sisa ${access.remaining.toLocaleString("id-ID")} kredit bulan ini.`
+                : `Butuh ±${estimate} kredit, sisa ${access.remaining.toLocaleString("id-ID")}.`}{" "}
+            Kredit disesuaikan ke pemakaian nyata; gagal = kembali penuh.
           </p>
-          <Button type="submit" disabled={busy || uploading > 0}>
-            {canRun ? <Sparkles /> : <Lock />} {canRun ? "Buat sekarang" : "Beli add-on untuk memakai"}
-          </Button>
+          {canRun ? (
+            <Button type="submit" disabled={busy || uploading > 0}>
+              <Sparkles /> Buat sekarang
+            </Button>
+          ) : (
+            <Button asChild variant="outline">
+              <Link href="/pricing">
+                <Lock /> Kredit kurang — lihat paket
+              </Link>
+            </Button>
+          )}
         </div>
       </form>
 
@@ -689,15 +693,6 @@ export function ToolRunner({ tool, status }: { tool: string; status: AddonStatus
           </div>
         </div>
       )}
-
-      <RequestAddonButton
-        addon={status.id}
-        name={status.name}
-        price={status.price}
-        quota={status.quota}
-        open={buyOpen}
-        onOpenChange={setBuyOpen}
-      />
     </div>
   );
 }

@@ -36,9 +36,11 @@ export default async function SettingsPage() {
               <p className="font-semibold">{plan?.name ?? profile.plan_id}</p>
             </div>
             <div className="rounded-xl border p-3">
-              <p className="text-xs text-muted-foreground">Sisa hari ini</p>
+              <p className="text-xs text-muted-foreground">Sisa kredit bulan ini</p>
               <p className="font-semibold">
-                {credits.remaining}/{credits.dailyLimit}
+                {credits.monthLimit >= 1_000_000
+                  ? "Tanpa batas"
+                  : `${credits.remaining.toLocaleString("id-ID")}/${credits.monthLimit.toLocaleString("id-ID")}`}
               </p>
             </div>
             <div className="rounded-xl border p-3">

@@ -30,7 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         lang: profile.language,
         t: getDict(profile.language),
         workspaces: workspaces ?? [],
-        credits: { dailyLimit: credits.dailyLimit, remaining: credits.remaining },
+        credits: { monthLimit: credits.monthLimit, remaining: credits.remaining },
         allowedTiers,
         planName: plan?.name ?? profile.plan_id,
         planId: profile.plan_id,

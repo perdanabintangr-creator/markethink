@@ -16,7 +16,7 @@ import { google } from "@ai-sdk/google";
 import { getSession, hasAppAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
-import { consumeCredits, refundCredits } from "@/lib/credits";
+import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/lib/credits";
 import { routeTier } from "@/lib/ai/router";
 import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
@@ -176,6 +176,9 @@ export async function POST(req: Request) {
   // `settled` = hasil LLM sudah tercatat (sukses / error). Kalau stream berakhir tanpa itu
   // (error sebelum LLM jalan, timeout, crash), tugas `after()` di bawah me-refund & mencatat error.
   let settled = false;
+  // Kredit nyata (1 kredit ≈ Rp100 modal) setelah biaya AI diketahui; potongan awal `cost` disesuaikan ke angka ini.
+  let actualCredits: number | null = null;
+  let remainingAfter: number | null = null;
   const errors: string[] = [];
   let markDone: () => void = () => {};
   const done = new Promise<void>((resolve) => (markDone = resolve));
@@ -359,6 +362,14 @@ export async function POST(req: Request) {
             0,
           );
           const cacheRead = usage.cachedInputTokens ?? 0;
+          const costUsd =
+            (freeTierModel(used)
+              ? 0
+              : estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0, { read: cacheRead, write: cacheWrite })) +
+            claudeSearches * 0.01 +
+            (serperEnabled() ? apiSearches * SERPER_COST_USD : 0);
+          actualCredits = creditsForUsd(costUsd);
+          remainingAfter = await settleCredits(user.id, cost, actualCredits, "chat_settle", { chatId, tier: tierId });
           await admin.from("usage_logs").insert({
             user_id: user.id,
             chat_id: chatId,
@@ -367,17 +378,12 @@ export async function POST(req: Request) {
             model: used.modelId,
             input_tokens: usage.inputTokens ?? 0,
             output_tokens: usage.outputTokens ?? 0,
-            est_cost_usd:
-              (freeTierModel(used)
-                ? 0
-                : estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0, { read: cacheRead, write: cacheWrite })) +
-              claudeSearches * 0.01 +
-              (serperEnabled() ? apiSearches * SERPER_COST_USD : 0),
+            est_cost_usd: costUsd,
             cache_read_tokens: cacheRead,
             cache_write_tokens: cacheWrite,
             web_searches: searches,
             error: routed.toolFallback() ? `web search dilewati: ${routed.toolFallback()}` : null,
-            credits: cost,
+            credits: actualCredits,
             research,
             attachments: attachCount,
             latency_ms: Date.now() - startedAt,
@@ -414,6 +420,8 @@ export async function POST(req: Request) {
                 model: used ? `${used.provider}:${used.modelId}` : undefined,
                 inputTokens: part.totalUsage.inputTokens,
                 outputTokens: part.totalUsage.outputTokens,
+                ...(actualCredits !== null ? { credits: actualCredits } : {}),
+                ...(remainingAfter !== null ? { remainingCredits: remainingAfter } : {}),
               };
             }
           },
@@ -424,6 +432,11 @@ export async function POST(req: Request) {
       markDone();
       if (outcome.status === "failed") return;
       try {
+        // Label kredit di pesan tersimpan = kredit nyata setelah disesuaikan.
+        const lastMsg = finalMessages[finalMessages.length - 1];
+        if (lastMsg?.role === "assistant" && actualCredits !== null) {
+          lastMsg.metadata = { ...(lastMsg.metadata ?? {}), credits: actualCredits, ...(remainingAfter !== null ? { remainingCredits: remainingAfter } : {}) };
+        }
         await saveMessages(chatId, user.id, finalMessages);
       } catch (err) {
         console.error("[chat] gagal simpan pesan", err);

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { Lock } from "lucide-react";
 import { Input, Label } from "@/components/ui/input";
-import { RequestAddonButton } from "./request-addon";
-import { rupiah, numID, type AddonStatusLite } from "./common";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { rupiah, numID } from "./common";
 
 const n = (v: string) => Number(v.replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
 
@@ -40,8 +41,8 @@ function Card({ title, desc, children }: { title: string; desc: string; children
   );
 }
 
-/** Kalkulator bisnis (tanpa AI, tidak memotong kuota). */
-export function Calculators({ locked, status }: { locked: boolean; status: AddonStatusLite }) {
+/** Kalkulator bisnis (tanpa AI, tidak memotong kredit). */
+export function Calculators({ locked }: { locked: boolean }) {
   // 1) Harga jual dari HPP
   const [hpp, setHpp] = useState("25000");
   const [extra, setExtra] = useState("3000");
@@ -119,8 +120,10 @@ export function Calculators({ locked, status }: { locked: boolean; status: Addon
       {locked && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-background/70 p-6 text-center">
           <Lock className="size-6 text-muted-foreground" />
-          <p className="max-w-sm text-sm">Kalkulator ini bagian dari add-on {status.name}. Aktif untuk pembeli add-on & pengguna Promax.</p>
-          <RequestAddonButton addon={status.id} name={status.name} price={status.price} quota={status.quota} />
+          <p className="max-w-sm text-sm">Kalkulator tersedia mulai paket Starter (tidak memotong kredit).</p>
+          <Button asChild>
+            <Link href="/pricing">Lihat paket</Link>
+          </Button>
         </div>
       )}
     </div>
