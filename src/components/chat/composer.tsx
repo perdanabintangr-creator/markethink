@@ -2,7 +2,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowUp, CornerDownRight, FileText, Globe, Image as ImageIcon, Loader2, Paperclip, Square, X } from "lucide-react";
+import { ArrowUp, CornerDownRight, FileText, Globe, Image as ImageIcon, Loader2, Lock, Paperclip, Square, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app/app-context";
 import { UsageRing } from "@/components/app/usage-ring";
@@ -46,7 +47,8 @@ export function Composer({
   prefill?: { text: string; key: number } | null;
   autoFocus?: boolean;
 }) {
-  const { t } = useApp();
+  const { t, researchAllowed } = useApp();
+  const router = useRouter();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [uploading, setUploading] = useState(0);
@@ -189,14 +191,23 @@ export function Composer({
         </Button>
         {brainSlot}
         <button
-          onClick={() => onResearchChange(!research)}
+          onClick={() =>
+            researchAllowed
+              ? onResearchChange(!research)
+              : toast("Riset Web tersedia mulai paket Starter", {
+                  description: "Cari data & tren terbaru dari Google lengkap dengan sumbernya.",
+                  action: { label: "Lihat paket", onClick: () => router.push("/pricing") },
+                })
+          }
           className={cn(
             "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
-            research ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent",
+            research && researchAllowed ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent",
           )}
-          aria-pressed={research}
+          aria-pressed={research && researchAllowed}
+          title={researchAllowed ? undefined : "Tersedia mulai paket Starter"}
         >
           <Globe className="size-3.5" /> {t.research}
+          {!researchAllowed && <Lock className="size-3" />}
         </button>
         <div className="flex-1" />
         <UsageRing />

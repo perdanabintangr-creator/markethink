@@ -213,3 +213,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Lupa password diperbaiki: penyebab dari log — link reset (PKCE) hanya jalan di browser yang sama; founder membuka di HP → gagal.
   Sekarang lewat `/api/auth/forgot` dengan link tanpa PKCE (token di `#`), bisa dibuka di perangkat mana pun. Bila Resend
   terpasang, email dikirim sendiri (tanpa batas email bawaan Supabase ±2/jam).
+
+## Free tanpa Riset Web (16 Okt 2026, permintaan founder)
+- Flag `research` & `web_search` paket Free dimatikan (migrasi 0036). Server mengabaikan Riset Web & tidak memberi alat
+  pencarian (Serper/Claude/Gemini) bila paket tidak membuka `research`; tombol Riset Web tampil terkunci + ajakan Starter.
+- AI paket Free diberi tahu pencarian web tidak tersedia: jawab dari pengetahuan, label "perkiraan" untuk data terbaru,
+  jangan mengarang sumber. Baca tautan & file tetap tersedia (gratis dibuka, hanya token).

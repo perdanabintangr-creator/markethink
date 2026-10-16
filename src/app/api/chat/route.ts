@@ -75,7 +75,7 @@ export async function POST(req: Request) {
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json(400, { error: "invalid_body" });
-  const { id: chatId, tier: tierChoice, research, agentId } = parsed.data;
+  const { id: chatId, tier: tierChoice, agentId } = parsed.data;
   const messages = parsed.data.messages as MtMessage[];
   const last = messages[messages.length - 1];
   if (last?.role !== "user") return json(400, { error: "last_message_must_be_user" });
@@ -85,11 +85,14 @@ export async function POST(req: Request) {
   const [allowedTiers, { data: settings }, { data: planFlags }, dailyLimits] = await Promise.all([
     getAllowedTiers(supabase, profile),
     supabase.from("app_settings").select("key, value").in("key", ["web_search", "image_gen"]),
-    supabase.from("feature_flags").select("key, enabled").eq("plan_id", profile.plan_id).in("key", ["image_gen", "free_models"]),
+    supabase.from("feature_flags").select("key, enabled").eq("plan_id", profile.plan_id).in("key", ["image_gen", "free_models", "research"]),
     getDailyLimits(supabase, profile),
   ]);
   const planFlag = (key: string) => planFlags?.some((f) => f.key === key && f.enabled) ?? false;
   const imageFlag = { enabled: planFlag("image_gen") };
+  // Riset Web (pencarian Google: Serper/Claude/Gemini) hanya untuk paket yang membukanya — Free tidak (hemat biaya).
+  const researchAllowed = profile.role === "admin" || planFlag("research");
+  const research = parsed.data.research && researchAllowed;
   // Paket Free: model gratis (Gemini) dulu, Claude sebagai cadangan. Admin selalu Claude.
   const preferFree = profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
   const setting = (key: string) => settings?.find((r) => r.key === key)?.value === true;
@@ -261,7 +264,7 @@ export async function POST(req: Request) {
         },
         {
           tierInstructions: tier.skillPrompt,
-          capabilities: capabilitiesPrompt(imageBlockedReason),
+          capabilities: capabilitiesPrompt(imageBlockedReason, { webSearch: researchAllowed }),
           agentInstructions: agent?.instructions ?? null,
           project: wsCtx.name,
         },
@@ -301,12 +304,12 @@ export async function POST(req: Request) {
       // Pencarian web Claude (berbayar) — paket Free dibatasi per hari; Google Search (gratis) untuk Gemini.
       const paidSearchCapped = Boolean(await dailyLimitReached(dailyLimits, user.id, "search"));
       // Serper terpasang → AI mencari lewat Serper (10× lebih murah dari pencarian bawaan Claude, bisa dipakai semua model).
-      const serperOn = webSearchEnabled && tier.webSearches > 0 && serperEnabled() && !paidSearchCapped && !preferFree;
+      const serperOn = researchAllowed && webSearchEnabled && tier.webSearches > 0 && serperEnabled() && !paidSearchCapped && !preferFree;
       const webSearchOn =
-        !serperOn && webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY) && !paidSearchCapped;
+        !serperOn && researchAllowed && webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY) && !paidSearchCapped;
       const maxSearches = research ? tier.webSearches + 2 : tier.webSearches;
       let nextSourceId = sources.length;
-      const googleSearchOn = webSearchEnabled && preferFree;
+      const googleSearchOn = researchAllowed && webSearchEnabled && preferFree;
       const routed = routeTier(tierId, { needsVision: hasImages, preferFree });
 
       const result = streamText({

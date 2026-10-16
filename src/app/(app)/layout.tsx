@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app/app-shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, profile } = await requireUser();
-  const [{ data: workspaces }, credits, allowedTiers, { data: plan }, { data: freeFlag }] = await Promise.all([
+  const [{ data: workspaces }, credits, allowedTiers, { data: plan }, { data: flags }] = await Promise.all([
     supabase
       .from("workspaces")
       .select("id, name")
@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getCreditStatus(user.id),
     getAllowedTiers(supabase, profile),
     supabase.from("plans").select("name").eq("id", profile.plan_id).maybeSingle(),
-    supabase.from("feature_flags").select("enabled").eq("plan_id", profile.plan_id).eq("key", "free_models").maybeSingle(),
+    supabase.from("feature_flags").select("key, enabled").eq("plan_id", profile.plan_id).in("key", ["free_models", "research"]),
   ]);
   return (
     <AppShell
@@ -34,7 +34,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         allowedTiers,
         planName: plan?.name ?? profile.plan_id,
         planId: profile.plan_id,
-        freeModels: profile.role !== "admin" && Boolean(freeFlag?.enabled),
+        freeModels: profile.role !== "admin" && Boolean(flags?.find((f) => f.key === "free_models")?.enabled),
+        researchAllowed: profile.role === "admin" || Boolean(flags?.find((f) => f.key === "research")?.enabled),
       }}
     >
       {children}

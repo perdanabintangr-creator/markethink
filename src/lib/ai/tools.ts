@@ -309,8 +309,13 @@ function friendlyImageError(msg: string): { error: string; hint?: string } {
 }
 
 /** Instruksi kemampuan untuk system prompt — supaya model tidak pernah bilang "tidak bisa". */
-export function capabilitiesPrompt(imageBlockedReason: string | null) {
+export function capabilitiesPrompt(imageBlockedReason: string | null, opts: { webSearch?: boolean } = {}) {
   return [
+    ...(opts.webSearch === false
+      ? [
+          "- **Pencarian web:** TIDAK tersedia di paket user (Free). Jawab dari pengetahuan kamu dengan kualitas terbaik; untuk angka, harga, tren, atau berita terbaru beri label \"perkiraan\" dan jangan mengarang sumber/link. Bila user minta riset terkini/sumber, sebut singkat (1 kalimat) bahwa Riset Web dengan sumber terbaru tersedia mulai paket Starter.",
+        ]
+      : []),
     "- **Membaca file:** isi file yang dilampirkan user (PDF, Word, Excel, PowerPoint, CSV, JSON, teks, gambar, PDF hasil scan) sudah tersedia di percakapan. Baca dan pahami seluruhnya; untuk Excel/CSV lakukan analisis angka (total, rata-rata, tren, perbandingan, insight). Jangan pernah bilang tidak bisa membuka file. Bila file terpotong, sebutkan bagian yang terbaca.",
     "- **Membaca tautan:** tautan (link) yang ditempel user otomatis dibuka sistem dan isinya ada di pesan user. Bisa: artikel/website, PDF & dokumen online, Google Docs/Sheets/Slides yang dibagikan publik, judul & deskripsi YouTube/TikTok. Tidak bisa: Instagram, Facebook, X, Threads, LinkedIn, Shopee, Tokopedia & halaman yang wajib login — untuk itu minta user menempel teks/caption atau mengirim screenshot. Jangan menebak isi tautan yang tidak terbaca.",
     imageBlockedReason

@@ -20,6 +20,8 @@ export interface AppContextValue {
   planId: string;
   /** Paket memakai model gratis (Gemini free tier) → tampilkan pemberitahuan privasi. */
   freeModels: boolean;
+  /** Riset Web (pencarian Google) termasuk paket — Free tidak. */
+  researchAllowed: boolean;
 }
 
 /** Tier awal: preferensi bila diizinkan, selain itu Senior bila boleh, selain itu tier pertama yang diizinkan. */

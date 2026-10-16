@@ -2390,3 +2390,8 @@ $$;
 
 revoke all on function public.consume_credits(uuid, integer, text, jsonb) from public, anon, authenticated;
 grant execute on function public.consume_credits(uuid, integer, text, jsonb) to service_role;
+
+
+-- ===== 20261016000036_free_no_research.sql =====
+-- Paket Free: Riset Web (pencarian Google) dimatikan untuk menekan biaya. Baca tautan & upload file tetap ada.
+update public.feature_flags set enabled = false where plan_id = 'beta' and key in ('research', 'web_search');
