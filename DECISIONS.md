@@ -266,3 +266,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## PPT Promax gaya sinematik (2026-10-16)
 - Promax (& admin) memakai `deckStyle = "cinematic"` (referensi founder: Demokrat Digital Arena): latar navy-hitam, foto AI gelap sebagai latar penuh slide isi, panel transparan berbingkai aksen, grid halus + glow, foto 16:9.
 - Pro tetap gaya konsultan standar (6 foto) — di bawah Promax. Starter 1 foto cover, Free tanpa foto.
+- (16 Okt, founder) **Laba rugi per akun** di back office (`/profit`, menu Keuangan): pendapatan akun (paket + add-on, diakui
+  proporsional per hari masa aktif, hanya sampai hari ini) − biaya AI nyata (`usage_logs`). Status: Rugi / Untung tipis (<30%) /
+  Untung / Sangat untung (≥70%). **Pengaman laba**: biaya AI maks akun = jatah kredit × Rp100, jadi paket aman selama
+  kredit/bln ≤ harga × 70% ÷ Rp100 (tabel per paket + biaya nyata per kredit). Kebocoran per akun ditandai "Perlu tindakan":
+  paket berbayar tanpa/lewat pembayaran, kuota khusus di atas batas aman, bonus kredit, biaya > pendapatan. Akun admin/tim
+  dipisah. RPC `bo_account_pnl` (migrasi 0040, hanya service_role).
