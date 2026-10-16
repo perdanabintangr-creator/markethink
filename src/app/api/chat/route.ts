@@ -64,6 +64,8 @@ const genId = createIdGenerator({ prefix: "msg", size: 16 });
 /** Paket Free: batas panjang jawaban (±1.500 kata) & jumlah pesan riwayat yang dibaca AI. */
 const FREE_MAX_OUTPUT_TOKENS = 2_000;
 const FREE_HISTORY_WINDOW = 10;
+/** Ruang jawaban minimal untuk membuat PPT (semua slide dikirim dalam satu panggilan tool). */
+const DECK_MIN_OUTPUT_TOKENS = 16_000;
 
 /** Gemini memakai free tier (tanpa billing) kecuali env GOOGLE_BILLING_ENABLED diisi → biaya Rp0. */
 const freeTierModel = (c: { provider: string }) => c.provider === "google" && !process.env.GOOGLE_BILLING_ENABLED;
@@ -98,9 +100,10 @@ export async function POST(req: Request) {
   const researchAllowed = profile.role === "admin" || planFlag("research");
   const research = parsed.data.research && researchAllowed;
   // Paket Free: model gratis (Gemini) dulu, Claude sebagai cadangan. Admin selalu Claude.
+  const deckRequest = isDeckRequest(lastText);
   // PPT tidak memakai Gemini gratis: model itu sering berhenti tanpa hasil saat menyusun file presentasi besar (uji 16 Okt).
   const preferFree =
-    profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY) && !isDeckRequest(lastText);
+    profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY) && !deckRequest;
   // Paket Free: jawaban lebih ringkas, riwayat lebih pendek, gambar model hemat (menekan modal, kualitas tetap terjaga).
   const isFreePlan = profile.role !== "admin" && profile.plan_id === "beta";
   const setting = (key: string) => settings?.find((r) => r.key === key)?.value === true;
@@ -338,7 +341,12 @@ export async function POST(req: Request) {
           ),
         ],
         // Batas Free hanya untuk jawaban teks; menyusun file PPT butuh ruang lebih (isi semua slide dalam satu panggilan tool).
-        maxOutputTokens: isFreePlan && !isDeckRequest(lastText) ? Math.min(tier.maxOutputTokens, FREE_MAX_OUTPUT_TOKENS) : tier.maxOutputTokens,
+        // PPT: minimal 16 rb token (proses berpikir + isi semua slide) — 8 rb pernah habis sebelum file jadi (finish=length).
+        maxOutputTokens: deckRequest
+          ? Math.max(tier.maxOutputTokens, DECK_MIN_OUTPUT_TOKENS)
+          : isFreePlan
+            ? Math.min(tier.maxOutputTokens, FREE_MAX_OUTPUT_TOKENS)
+            : tier.maxOutputTokens,
         temperature: tier.temperature,
         maxRetries: 0,
         providerOptions: { anthropic: { effort: tier.effort, cacheControl: { type: "ephemeral" } } },
