@@ -232,3 +232,5 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   berbayar = Gemini Flash Image.
 - (16 Okt, founder) **Semua paket** memakai Meta Muse untuk gambar baru (chat & foto AI di PPT), ±$0,01/gambar; batas & potongan
   kuota tidak berubah (6 kredit/gambar, Free 2/hari). Edit dari foto/gambar acuan tetap Gemini (Muse belum menerima gambar acuan).
+- (16 Okt, founder) **Visual bertingkat**: foto AI per PPT Free 0 · Starter 1 (cover) · Pro 6 · Promax 8 (`DECK_IMAGE_MAX_BY_PLAN`);
+  Pro & Promax gambar baru + foto PPT diberi arahan visual premium (`PREMIUM_ART_DIRECTION`). Model tetap Muse untuk semua.

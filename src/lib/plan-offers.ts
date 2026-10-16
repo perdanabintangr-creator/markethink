@@ -12,8 +12,8 @@ export interface PlanOffer {
 /** Keunggulan tiap paket (selaras dengan feature flag di database). */
 export const PLAN_FEATURES: Record<string, string[]> = {
   beta: ["Chat AI otak Junior", "Riset web, baca file & link", "Penyimpanan 50 MB"],
-  starter: ["Chat otak Junior & Senior", "Semua Tools Pro (otak Senior)", "Riset web mendalam, gambar, PPT", "Penyimpanan 1 GB"],
-  pro: ["Semua di Starter", "Otak Associate (lebih tajam)", "Markethink Agent (kerja otomatis)", "Penyimpanan 5 GB"],
+  starter: ["Chat otak Junior & Senior", "Semua Tools Pro (otak Senior)", "Riset web, gambar AI, PPT (foto cover)", "Penyimpanan 1 GB"],
+  pro: ["Semua di Starter", "Otak Associate (lebih tajam)", "Markethink Agent (kerja otomatis)", "Visual premium: PPT penuh foto AI", "Penyimpanan 5 GB"],
   promax: ["Semua di Pro", "Otak Director (paling cerdas)", "Kuota terbesar", "Penyimpanan 10 GB"],
 };
 
