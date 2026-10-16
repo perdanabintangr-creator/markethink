@@ -136,7 +136,7 @@ export function createChatTools(ctx: ToolCtx) {
         const imageLimit = await ctx.dailyLimit?.("image");
         if (imageLimit) return { ok: false, error: imageLimit, hint: "Jangan coba lagi hari ini; tawarkan prompt gambar siap pakai." };
         const credit = await consumeCredits(ctx.userId, IMAGE_CREDIT_COST, "image", { chatId: ctx.chatId });
-        if (!credit.ok) return { ok: false, error: `Kredit tidak cukup untuk membuat gambar (butuh ${IMAGE_CREDIT_COST}, sisa ${credit.remaining}).` };
+        if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat gambar. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
         try {
           const refs = await loadReferences(ctx, reference_ids ?? []);
           const img = await generateImage(prompt, aspect_ratio, refs);
@@ -174,7 +174,7 @@ export function createChatTools(ctx: ToolCtx) {
         const pptxLimit = await ctx.dailyLimit?.("pptx");
         if (pptxLimit) return { ok: false, error: pptxLimit };
         const credit = await consumeCredits(ctx.userId, PPTX_CREDIT_COST, "presentation", { chatId: ctx.chatId });
-        if (!credit.ok) return { ok: false, error: `Kredit tidak cukup untuk membuat PPT (butuh ${PPTX_CREDIT_COST}, sisa ${credit.remaining}).` };
+        if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat PPT. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
         try {
           const images = await makeDeckImages(ctx, input);
           const bytes = await buildPresentation(input, images);
