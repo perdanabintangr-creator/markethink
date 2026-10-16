@@ -20,9 +20,11 @@ import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/l
 import { routeTier } from "@/lib/ai/router";
 import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
+import { clampToSchema } from "@/lib/schema-clamp";
+import { presentationSchema } from "@/lib/pptx";
 import { extractLinks, linkContext, linkHistoryText, readLink, toLinkPart, type LinkRead } from "@/lib/ai/links";
 import { estimateCostUsd, getTier, messageCreditCost, type TierId } from "@/lib/ai/models.config";
-import { autoTier, isImageRequest, resolveTier } from "@/lib/ai/auto-tier";
+import { autoTier, isDeckRequest, isImageRequest, resolveTier } from "@/lib/ai/auto-tier";
 import {
   attachmentIds,
   extractMemories,
@@ -36,7 +38,7 @@ import {
   summarizeToolParts,
   withCacheBreakpoints,
 } from "@/lib/chat-server";
-import { capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
+import { deckImageMaxFor, premiumVisualsFor, capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
 import { imageGenerationEnabled } from "@/lib/ai/image";
 import type { MtMessage } from "@/lib/types";
 import { truncate } from "@/lib/utils";
@@ -60,10 +62,13 @@ const json = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 const genId = createIdGenerator({ prefix: "msg", size: 16 });
+const PRESENTATION_JSON_SCHEMA = z.toJSONSchema(presentationSchema) as Parameters<typeof clampToSchema>[1];
 
 /** Paket Free: batas panjang jawaban (±1.500 kata) & jumlah pesan riwayat yang dibaca AI. */
 const FREE_MAX_OUTPUT_TOKENS = 2_000;
 const FREE_HISTORY_WINDOW = 10;
+/** Ruang jawaban minimal untuk membuat PPT (semua slide dikirim dalam satu panggilan tool). */
+const DECK_MIN_OUTPUT_TOKENS = 16_000;
 
 /** Gemini memakai free tier (tanpa billing) kecuali env GOOGLE_BILLING_ENABLED diisi → biaya Rp0. */
 const freeTierModel = (c: { provider: string }) => c.provider === "google" && !process.env.GOOGLE_BILLING_ENABLED;
@@ -98,7 +103,10 @@ export async function POST(req: Request) {
   const researchAllowed = profile.role === "admin" || planFlag("research");
   const research = parsed.data.research && researchAllowed;
   // Paket Free: model gratis (Gemini) dulu, Claude sebagai cadangan. Admin selalu Claude.
-  const preferFree = profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+  const deckRequest = isDeckRequest(lastText);
+  // PPT tidak memakai Gemini gratis: model itu sering berhenti tanpa hasil saat menyusun file presentasi besar (uji 16 Okt).
+  const preferFree =
+    profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY) && !deckRequest;
   // Paket Free: jawaban lebih ringkas, riwayat lebih pendek, gambar model hemat (menekan modal, kualitas tetap terjaga).
   const isFreePlan = profile.role !== "admin" && profile.plan_id === "beta";
   const setting = (key: string) => settings?.find((r) => r.key === key)?.value === true;
@@ -161,21 +169,34 @@ export async function POST(req: Request) {
       agent_id: chatAgentId,
       tier: tierChoice,
       title: truncate(lastText || "Chat baru", 60),
+      generating_at: new Date().toISOString(),
+      stop_requested_at: null,
     });
     if (error) {
       // Workspace bukan milik user / tidak valid → ulang tanpa workspace.
       workspaceId = null;
       const retry = await supabase
         .from("chats")
-        .insert({ id: chatId, user_id: user.id, agent_id: chatAgentId, tier: tierChoice, title: truncate(lastText || "Chat baru", 60) });
+        .insert({
+          id: chatId,
+          user_id: user.id,
+          agent_id: chatAgentId,
+          tier: tierChoice,
+          title: truncate(lastText || "Chat baru", 60),
+          generating_at: new Date().toISOString(),
+      stop_requested_at: null,
+        });
       if (retry.error) {
         await refundCredits(user.id, cost, "chat_create_failed");
         return json(400, { error: "chat_create_failed" });
       }
     }
   } else {
-    await supabase.from("chats").update({ tier: tierChoice }).eq("id", chatId);
+    await supabase.from("chats").update({ tier: tierChoice, generating_at: new Date().toISOString(), stop_requested_at: null }).eq("id", chatId);
   }
+
+  // Simpan pesan user sejak awal: bila user pindah chat lalu membukanya lagi, pertanyaannya terlihat & jawabannya ditunggu.
+  await saveMessages(chatId, user.id, messages).catch((err) => console.error("[chat] simpan awal gagal", err));
 
   const startedAt = Date.now();
   const admin = createAdminClient();
@@ -249,7 +270,7 @@ export async function POST(req: Request) {
         apiSearches++;
         writer.write({ type: "data-status", data: { state: "searching", label: "Mencari di web…" }, transient: true });
         try {
-          sources = await webSearch(lastText, { signal: req.signal });
+          sources = await webSearch(lastText);
           for (const s of sources) {
             writer.write({ type: "source-url", sourceId: String(s.id), url: s.url, title: s.title });
           }
@@ -323,7 +344,17 @@ export async function POST(req: Request) {
       const googleSearchOn = !serperOn && researchAllowed && webSearchEnabled && preferFree && !paidSearchCapped;
       const routed = routeTier(tierId, { needsVision: hasImages, preferFree });
 
+      // Tombol Stop: /api/chat/stop mengisi chats.stop_requested_at → AI di server dihentikan (dicek tiap 1,5 detik).
+      const stopCtrl = new AbortController();
+      const stopWatch = setInterval(async () => {
+        if (Date.now() - startedAt > 300_000) return clearInterval(stopWatch);
+        const { data } = await admin.from("chats").select("stop_requested_at").eq("id", chatId).maybeSingle();
+        if (data?.stop_requested_at) stopCtrl.abort();
+      }, 1500);
+      const endStopWatch = () => clearInterval(stopWatch);
+
       const result = streamText({
+        abortSignal: stopCtrl.signal,
         model: routed.model,
         // Prompt caching Claude: system prompt (stabil) + riwayat chat dibaca dari cache dengan ± 10% harga input.
         messages: [
@@ -335,7 +366,13 @@ export async function POST(req: Request) {
             }),
           ),
         ],
-        maxOutputTokens: isFreePlan ? Math.min(tier.maxOutputTokens, FREE_MAX_OUTPUT_TOKENS) : tier.maxOutputTokens,
+        // Batas Free hanya untuk jawaban teks; menyusun file PPT butuh ruang lebih (isi semua slide dalam satu panggilan tool).
+        // PPT: minimal 16 rb token (proses berpikir + isi semua slide) — 8 rb pernah habis sebelum file jadi (finish=length).
+        maxOutputTokens: deckRequest
+          ? Math.max(tier.maxOutputTokens, DECK_MIN_OUTPUT_TOKENS)
+          : isFreePlan
+            ? Math.min(tier.maxOutputTokens, FREE_MAX_OUTPUT_TOKENS)
+            : tier.maxOutputTokens,
         temperature: tier.temperature,
         maxRetries: 0,
         providerOptions: { anthropic: { effort: tier.effort, cacheControl: { type: "ephemeral" } } },
@@ -347,7 +384,9 @@ export async function POST(req: Request) {
             imageBlockedReason,
             dailyLimit: (kind) => dailyLimitReached(dailyLimits, user.id, kind),
             // Foto AI di PPT hanya untuk paket tanpa batas harian gambar (Pro/Promax/admin).
-            deckImages: !imageBlockedReason && dailyLimits.image === undefined,
+            // Visual bertingkat: foto AI di PPT Free 0, Starter 1 (cover), Pro 6, Promax 8; Pro & Promax arahan visual premium.
+            deckImageMax: imageBlockedReason ? 0 : deckImageMaxFor(profile.plan_id, profile.role === "admin"),
+            premiumVisuals: premiumVisualsFor(profile.plan_id, profile.role === "admin"),
             // Semua paket: gambar baru memakai Muse (±$0,01). Edit dari foto/gambar acuan tetap Gemini.
             budgetImages: true,
           }),
@@ -363,7 +402,7 @@ export async function POST(req: Request) {
                     apiSearches++;
                     writer.write({ type: "data-status", data: { state: "searching", label: `Mencari di web: ${truncate(query, 60)}` }, transient: true });
                     try {
-                      const found = await webSearch(query, { maxResults: 6, signal: req.signal });
+                      const found = await webSearch(query, { maxResults: 6 });
                       // Baca isi 3 halaman teratas (gratis) agar jawaban tidak hanya dari cuplikan Google.
                       const readable = found.filter((f) => !/instagram|tiktok|facebook|youtube|lemon8|shopee|tokopedia/i.test(f.url)).slice(0, 3);
                       const pages = await Promise.allSettled(readable.map((f) => fetchPageText(f.url, { maxChars: 2500, timeoutMs: 6000 })));
@@ -393,11 +432,53 @@ export async function POST(req: Request) {
             : {}),
           ...(googleSearchOn ? { google_search: google.tools.googleSearch({}) } : {}),
         },
+        // Isi PPT melebihi batas skema (sering pada otak Director yang sangat detail) → dirapikan, bukan gagal lalu mengulang.
+        experimental_repairToolCall: async ({ toolCall }) => {
+          if (toolCall.toolName !== "create_presentation") return null;
+          try {
+            const fixed = clampToSchema(JSON.parse(toolCall.input), PRESENTATION_JSON_SCHEMA);
+            if (!fixed || !presentationSchema.safeParse(fixed).success) return null;
+            return { ...toolCall, input: JSON.stringify(fixed) };
+          } catch {
+            return null;
+          }
+        },
         // Beberapa langkah: model memanggil tool (gambar/PPT) lalu menjelaskan hasilnya.
         stopWhen: stepCountIs(5),
-        abortSignal: req.signal,
-        onFinish: async ({ totalUsage: usage, steps }) => {
+        // Tanpa abortSignal: jawaban tetap diselesaikan & disimpan walau user pindah chat / menutup tab (seperti ChatGPT).
+        onAbort: async ({ steps }) => {
+          // Dihentikan user: kuota disesuaikan ke pemakaian sejauh ini.
+          endStopWatch();
           settled = true;
+          const used = routed.resolved() ?? routed.candidates[0];
+          const inTok = steps.reduce((a, s) => a + (s.usage.inputTokens ?? 0), 0);
+          const outTok = steps.reduce((a, s) => a + (s.usage.outputTokens ?? 0), 0);
+          const costUsd = freeTierModel(used) ? 0 : estimateCostUsd(used, inTok, outTok);
+          actualCredits = inTok || outTok ? creditsForUsd(costUsd) : 0;
+          remainingAfter = await settleCredits(user.id, cost, actualCredits, "chat_stopped", { chatId, tier: tierId });
+          await admin.from("usage_logs").insert({
+            user_id: user.id,
+            chat_id: chatId,
+            tier: tierId,
+            provider: used.provider,
+            model: used.modelId,
+            input_tokens: inTok,
+            output_tokens: outTok,
+            est_cost_usd: costUsd,
+            credits: actualCredits,
+            research,
+            status: "ok",
+            error: "dihentikan user (Stop)",
+            latency_ms: Date.now() - startedAt,
+          });
+        },
+        onFinish: async ({ totalUsage: usage, steps, text }) => {
+          endStopWatch();
+          settled = true;
+          // Jawaban kosong (tanpa teks & tanpa hasil tool yang berhasil) → kuota dikembalikan penuh.
+          const produced =
+            text.trim().length > 0 ||
+            steps.some((s) => s.text.trim().length > 0 || s.toolResults.some((r) => (r?.output as { ok?: boolean } | undefined)?.ok));
           const used = routed.resolved() ?? routed.candidates[0];
           const claudeSearches = steps.reduce((sum, step) => {
             const raw = step.providerMetadata?.anthropic?.usage as { server_tool_use?: { web_search_requests?: number } } | undefined;
@@ -415,7 +496,7 @@ export async function POST(req: Request) {
               : estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0, { read: cacheRead, write: cacheWrite })) +
             claudeSearches * 0.01 +
             (serperEnabled() ? apiSearches * SERPER_COST_USD : 0);
-          actualCredits = creditsForUsd(costUsd);
+          actualCredits = produced ? creditsForUsd(costUsd) : 0;
           remainingAfter = await settleCredits(user.id, cost, actualCredits, "chat_settle", { chatId, tier: tierId });
           await admin.from("usage_logs").insert({
             user_id: user.id,
@@ -429,7 +510,12 @@ export async function POST(req: Request) {
             cache_read_tokens: cacheRead,
             cache_write_tokens: cacheWrite,
             web_searches: searches,
-            error: routed.toolFallback() ? `web search dilewati: ${routed.toolFallback()}` : null,
+            status: produced ? "ok" : "error",
+            error: !produced
+              ? `jawaban kosong (model berhenti tanpa hasil): finish=${steps.at(-1)?.finishReason ?? "?"}`
+              : routed.toolFallback()
+                ? `web search dilewati: ${routed.toolFallback()}`
+                : null,
             credits: actualCredits,
             research,
             attachments: attachCount,
@@ -437,6 +523,7 @@ export async function POST(req: Request) {
           });
         },
         onError: async ({ error }) => {
+          endStopWatch();
           settled = true;
           console.error("[chat] stream error", error);
           await refundOnce();
@@ -475,7 +562,11 @@ export async function POST(req: Request) {
     },
     onFinish: async ({ messages: finalMessages, outcome }) => {
       markDone();
-      if (outcome.status === "failed") return;
+      const clearGenerating = () => admin.from("chats").update({ generating_at: null }).eq("id", chatId);
+      if (outcome.status === "failed") {
+        await clearGenerating();
+        return;
+      }
       try {
         // Label kredit di pesan tersimpan = kredit nyata setelah disesuaikan.
         const lastMsg = finalMessages[finalMessages.length - 1];
@@ -486,12 +577,14 @@ export async function POST(req: Request) {
       } catch (err) {
         console.error("[chat] gagal simpan pesan", err);
       }
+      await clearGenerating();
     },
   });
 
   // Tugas latar: judul & memory (tidak memblokir respons).
   after(async () => {
     await Promise.race([done, new Promise((r) => setTimeout(r, 280_000))]);
+    await admin.from("chats").update({ generating_at: null }).eq("id", chatId);
     if (!settled) {
       await refundOnce();
       await admin.from("usage_logs").insert({

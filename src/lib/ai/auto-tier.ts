@@ -53,3 +53,8 @@ export function isImageRequest(text: string): boolean {
   if (!t || t.length > 700) return false;
   return IMAGE_ASK.test(t) && !NOT_IMAGE_ONLY.test(t);
 }
+
+/** Permintaan PPT/presentasi — butuh model yang andal menyusun file besar (Gemini gratis sering berhenti tanpa hasil). */
+export function isDeckRequest(text: string): boolean {
+  return /\b(ppt|pptx|power ?point|presentasi|slide|slides|deck|pitch ?deck)\b/i.test(text);
+}

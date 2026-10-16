@@ -232,9 +232,39 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   berbayar = Gemini Flash Image.
 - (16 Okt, founder) **Semua paket** memakai Meta Muse untuk gambar baru (chat & foto AI di PPT), ±$0,01/gambar; batas & potongan
   kuota tidak berubah (6 kredit/gambar, Free 2/hari). Edit dari foto/gambar acuan tetap Gemini (Muse belum menerima gambar acuan).
+- (16 Okt, founder) **Visual bertingkat**: foto AI per PPT Free 0 · Starter 1 (cover) · Pro 6 · Promax 8 (`DECK_IMAGE_MAX_BY_PLAN`);
+  Pro & Promax gambar baru + foto PPT diberi arahan visual premium (`PREMIUM_ART_DIRECTION`). Model tetap Muse untuk semua.
+- (16 Okt) Bug Free + PPT: Gemini gratis riset web lalu berhenti tanpa hasil (langkah ke-2 kosong). Permintaan PPT kini
+  memakai Claude Haiku (bukan Gemini gratis), modal ±Rp50/PPT, dan tidak kena batas 2.000 token jawaban Free
+  (isi semua slide dikirim dalam satu panggilan tool; batas itu memotong file PPT sebelum jadi). Jawaban kosong → kuota dikembalikan penuh, dicatat
+  `status=error` "jawaban kosong", dan chat menampilkan pemberitahuan kirim ulang.
+- (16 Okt, founder) PPT di chat punya tombol **"Lihat"** (semua paket): pratinjau semua slide di browser dari isi deck
+  (input tool) + tema yang sama dengan file (`src/lib/deck-theme.ts`), foto AI disimpan sebagai file untuk pratinjau
+  (`previewImages`). Pustaka `pptx-preview` dicoba tapi tidak bisa membaca file buatan pptxgenjs (0 slide) → tidak dipakai.
+- (16 Okt, founder) PPT tanpa foto (Free, Starter selain cover, atau foto gagal): `fitDeckToImages` mengubah layout foto
+  (image_text → bullets, product → cards, gallery → cards dari caption) & membuang kotak foto — file .pptx dan pratinjau sama-sama
+  tanpa kotak foto kosong. Pratinjau slide teks dirapikan (poin bernomor dalam kartu, konten di tengah).
+
+## Chat tetap dijawab saat user pindah chat (16 Okt 2026, permintaan founder)
+- `/api/chat` tidak membatalkan AI saat koneksi browser putus (pindah chat), tapi tombol Stop kini benar-benar menghentikan
+  AI: `/api/chat/stop` mengisi `chats.stop_requested_at` (migrasi 0039), server mengecek tiap 1,5 dtk lalu abort; kuota
+  disesuaikan ke token yang sudah terpakai (`onAbort`). Stream tetap dikonsumsi
+  sampai selesai (`consumeSseStream`) lalu disimpan. Konsekuensi: tombol Stop hanya menghentikan tampilan, jawaban tetap
+  diselesaikan & ditagih di server.
+- Kolom `chats.generating_at` (migrasi 0038) diisi saat mulai, dihapus setelah simpan; dianggap kedaluwarsa setelah 5 menit.
+  Sidebar menampilkan ikon loading & memuat ulang tiap 4 dtk selama ada chat yang dijawab; chat yang dibuka saat masih
+  dijawab menampilkan "Markethink masih menyusun jawaban…" dan memuat jawabannya otomatis (`GET /api/chats/[id]`).
+
+## PPT standar konsultan & agency (16 Okt 2026, founder)
+- Fix otak Director: isi PPT yang melebihi batas skema (judul/poin/tabel kepanjangan) dirapikan otomatis lewat
+  `experimental_repairToolCall` + `clampToSchema` (dari JSON Schema zod) — sebelumnya gagal validasi lalu AI mengulang
+  (tampil "Gagal membuat presentasi"). Percobaan gagal yang kemudian berhasil tidak ditampilkan lagi.
+- Gaya konsultan: action title (judul = kesimpulan), Executive Summary di slide 2, maks 1 slide bullets, utamakan visual data.
+  Field baru per slide: `takeaway` (kotak "SO WHAT" di bawah) & `source` (sumber data). Garis tipis di bawah judul, kartu &
+  timeline lebih padat. Pratinjau "Lihat" ikut menampilkan so-what & sumber. Diverifikasi via render LibreOffice.
 - (16 Okt, founder) **Laba rugi per akun** di back office (`/profit`, menu Keuangan): pendapatan akun (paket + add-on, diakui
   proporsional per hari masa aktif, hanya sampai hari ini) − biaya AI nyata (`usage_logs`). Status: Rugi / Untung tipis (<30%) /
   Untung / Sangat untung (≥70%). **Pengaman laba**: biaya AI maks akun = jatah kredit × Rp100, jadi paket aman selama
   kredit/bln ≤ harga × 70% ÷ Rp100 (tabel per paket + biaya nyata per kredit). Kebocoran per akun ditandai "Perlu tindakan":
   paket berbayar tanpa/lewat pembayaran, kuota khusus di atas batas aman, bonus kredit, biaya > pendapatan. Akun admin/tim
-  dipisah. RPC `bo_account_pnl` (migrasi 0038, hanya service_role).
+  dipisah. RPC `bo_account_pnl` (migrasi 0040, hanya service_role).

@@ -65,3 +65,11 @@ describe("Permintaan gambar → otak Junior (semua paket)", () => {
       expect(isImageRequest(t), t).toBe(false);
   });
 });
+
+describe("Permintaan PPT tidak memakai Gemini gratis", () => {
+  it("deteksi PPT", async () => {
+    const { isDeckRequest } = await import("@/lib/ai/auto-tier");
+    for (const t of ["Buatkan PPT pitch deck untuk investor", "bikin presentasi 10 slide", "buat powerpoint laporan"]) expect(isDeckRequest(t), t).toBe(true);
+    for (const t of ["buatkan caption", "strategi launching kopi", "deckorasi toko"]) expect(isDeckRequest(t), t).toBe(false);
+  });
+});

@@ -102,3 +102,13 @@ describe("jendela riwayat chat", () => {
     expect(historyStart(60)).toBe(20);
   });
 });
+
+describe("penanda chat sedang dijawab", () => {
+  it("aktif < 5 menit, kedaluwarsa setelahnya", async () => {
+    const { isGenerating } = await import("@/lib/types");
+    const now = Date.parse("2026-10-16T10:00:00Z");
+    expect(isGenerating(null, now)).toBe(false);
+    expect(isGenerating("2026-10-16T09:58:00Z", now)).toBe(true);
+    expect(isGenerating("2026-10-16T09:54:00Z", now)).toBe(false);
+  });
+});

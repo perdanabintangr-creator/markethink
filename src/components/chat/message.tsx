@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { isTransparent, textBlocks } from "@/lib/message-text";
 import { parseQuotedMessage } from "@/lib/quote";
 import { Markdown } from "./markdown";
+import { DeckPreviewButton, type DeckInput } from "./deck-preview";
 import { SelectionAsk } from "./selection-ask";
 
 const TIER_LABEL = Object.fromEntries(getTiers({}).map((t) => [t.id, t.label]));
@@ -46,6 +47,7 @@ interface ToolPart {
   type: string;
   toolCallId?: string;
   state?: "input-streaming" | "input-available" | "output-available" | "output-error";
+  input?: unknown;
   output?: Record<string, unknown> & { ok?: boolean; error?: string };
 }
 
@@ -122,7 +124,15 @@ export function ChatMessage({
     .filter((s, i, all) => all.findIndex((x) => x.url === s.url) === i);
   const files = message.parts.filter((p): p is FileUIPart => p.type === "file");
   const links = message.parts.flatMap((p) => (p.type === "data-link" ? [p.data as LinkPart] : []));
-  const blocks = assistantBlocks(message);
+  // Percobaan PPT yang gagal lalu berhasil diulang AI tidak perlu ditampilkan sebagai error.
+  const allBlocks = assistantBlocks(message);
+  const lastDeckOk = allBlocks.findLastIndex(
+    (b) => b.kind === "tool" && b.part.type === "tool-create_presentation" && b.part.state === "output-available" && b.part.output?.ok,
+  );
+  const blocks = allBlocks.filter(
+    (b, i) =>
+      !(i < lastDeckOk && b.kind === "tool" && b.part.type === "tool-create_presentation" && (b.part.state === "output-error" || b.part.output?.ok === false)),
+  );
   const lastPart = message.parts[message.parts.length - 1];
   const searching = lastPart?.type === "tool-web_search" || (message.parts.some((p) => p.type === "tool-web_search") && !text);
 
@@ -193,6 +203,12 @@ export function ChatMessage({
   }
 
   const showActions = !(isLast && isStreaming) && text;
+  // Jawaban selesai tapi kosong (model berhenti tanpa hasil) → beri tahu user, kuota sudah dikembalikan server.
+  const emptyDone =
+    message.role === "assistant" &&
+    !(isLast && isStreaming) &&
+    !text &&
+    !message.parts.some((p) => p.type.startsWith("tool-") && (p as { state?: string }).state === "output-available" && (p as { output?: { ok?: boolean } }).output?.ok);
   return (
     <div className="group space-y-2">
       {links.length > 0 && (
@@ -230,6 +246,12 @@ export function ChatMessage({
       {(statusLabel || searching) && isLast && isStreaming && !text && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> {searching ? t.searching : statusLabel}
+        </p>
+      )}
+
+      {emptyDone && (
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+          Maaf, jawaban gagal dibuat dan kuota kamu sudah dikembalikan. Kirim ulang pesannya, ya.
         </p>
       )}
 
@@ -437,11 +459,20 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
             PowerPoint · {Number(part.output.slideCount)} {t.slides}
           </p>
         </div>
-        <Button asChild size="sm">
-          <a href={`${String(part.output.url)}?download=1`}>
-            <Download /> {t.downloadPptx}
-          </a>
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          {part.input ? (
+            <DeckPreviewButton
+              deck={part.input as DeckInput}
+              images={part.output.previewImages as Record<string, string> | undefined}
+              downloadUrl={`${String(part.output.url)}?download=1`}
+            />
+          ) : null}
+          <Button asChild size="sm">
+            <a href={`${String(part.output.url)}?download=1`}>
+              <Download /> {t.downloadPptx}
+            </a>
+          </Button>
+        </div>
       </div>
       <ol className="max-h-56 space-y-1 overflow-y-auto px-4 py-3 text-xs text-muted-foreground">
         {titles.map((title, i) => (

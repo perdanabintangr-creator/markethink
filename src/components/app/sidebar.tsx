@@ -67,7 +67,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CHATS_CHANGED, emitChatsChanged } from "@/lib/events";
-import type { ChatSummary, ToolRunSummary, WorkspaceSummary } from "@/lib/types";
+import { isGenerating, type ChatSummary, type ToolRunSummary, type WorkspaceSummary } from "@/lib/types";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { MENU_GROUPS, TOOLS, toolInfo } from "@/lib/addons/catalog";
 
@@ -157,6 +157,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     window.addEventListener(CHATS_CHANGED, load);
     return () => window.removeEventListener(CHATS_CHANGED, load);
   }, [load]);
+
+  // Ada chat yang sedang dijawab AI → perbarui riwayat berkala sampai selesai (ikon loading hilang sendiri).
+  const anyGenerating = chats.some((c) => isGenerating(c.generating_at));
+  useEffect(() => {
+    if (!anyGenerating) return;
+    const timer = setInterval(() => void load(), 4000);
+    return () => clearInterval(timer);
+  }, [anyGenerating, load]);
 
   const q = query.trim().toLowerCase();
   const matching = useMemo(() => (q ? chats.filter((c) => c.title.toLowerCase().includes(q)) : chats), [chats, q]);
@@ -1088,6 +1096,9 @@ function ChatItem({
           </span>
         )}
         <span className="truncate">{chat.title}</span>
+        {isGenerating(chat.generating_at) && (
+          <Loader2 className="ml-auto size-3.5 shrink-0 animate-spin text-primary" aria-label="Sedang dijawab" />
+        )}
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

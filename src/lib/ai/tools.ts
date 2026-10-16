@@ -1,3 +1,4 @@
+import { fitDeckToImages } from "@/lib/deck-fit";
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
@@ -20,7 +21,13 @@ export const IMAGE_CREDIT_COST = 6; // ±Rp555 modal per gambar (1 kredit ≈ Rp
 export const PPTX_CREDIT_COST = 2;
 /** Kredit tambahan per gambar AI di dalam PPT (cover/slide bergambar). */
 export const DECK_IMAGE_CREDIT_COST = 6;
-const DECK_IMAGE_MAX = 6;
+/** Maks foto AI per PPT per paket: visual paling megah di Pro & Promax, Starter hanya cover, Free tanpa foto AI. */
+export const DECK_IMAGE_MAX_BY_PLAN: Record<string, number> = { beta: 0, starter: 1, pro: 6, promax: 8 };
+export const deckImageMaxFor = (planId: string, isAdmin: boolean) => (isAdmin ? 8 : (DECK_IMAGE_MAX_BY_PLAN[planId] ?? 0));
+/** Pro & Promax: arahan visual premium untuk gambar baru. */
+export const premiumVisualsFor = (planId: string, isAdmin: boolean) => isAdmin || planId === "pro" || planId === "promax";
+const PREMIUM_ART_DIRECTION =
+  "Execute at premium creative-agency quality: refined composition, rich detail, polished lighting and color grading, faithful to the requested style.";
 /** Perkiraan biaya per gambar (USD) bila provider tidak melaporkan biaya nyata. */
 const IMAGE_COST_USD = 0.04;
 
@@ -39,6 +46,8 @@ export type PresentationToolOutput =
       fileName: string;
       theme?: string;
       images?: number;
+      /** URL foto per slide ("cover", indeks slide, atau "i-gk" galeri) untuk pratinjau di browser. */
+      previewImages?: Record<string, string>;
     }
   | { ok: false; error: string };
 
@@ -50,8 +59,10 @@ interface ToolCtx {
   imageBlockedReason: string | null;
   /** Cek batas harian paket (mis. Free: 2 gambar, 1 PPT per hari). null = boleh. */
   dailyLimit?: (kind: "image" | "pptx") => Promise<string | null>;
-  /** Boleh membuat gambar AI untuk cover/slide PPT (paket berbayar). */
-  deckImages?: boolean;
+  /** Maks foto AI untuk cover/slide PPT (0 = tanpa foto AI). */
+  deckImageMax?: number;
+  /** Pro & Promax: gambar baru diberi arahan visual premium. */
+  premiumVisuals?: boolean;
   /** Pakai model gambar hemat (Muse) dulu untuk gambar baru — kini semua paket. */
   budgetImages?: boolean;
 }
@@ -141,7 +152,8 @@ export function createChatTools(ctx: ToolCtx) {
         if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat gambar. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
         try {
           const refs = await loadReferences(ctx, reference_ids ?? []);
-          const img = await generateImage(prompt, aspect_ratio, refs, { budget: ctx.budgetImages });
+          const finalPrompt = ctx.premiumVisuals && !refs.length ? `${prompt}\n\n${PREMIUM_ART_DIRECTION}` : prompt;
+          const img = await generateImage(finalPrompt, aspect_ratio, refs, { budget: ctx.budgetImages });
           const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
           const saved = await storeFile(ctx, "images", `markethink-${Date.now()}.${ext}`, img.mime, img.bytes, `Gambar AI: ${prompt}`);
           await logUsage(ctx, { tier: "image", provider: img.provider, model: img.model, credits: IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD, note: img.notes });
@@ -159,6 +171,11 @@ export function createChatTools(ctx: ToolCtx) {
       description:
         "Buat file presentasi PowerPoint (.pptx) berdesain profesional yang siap dipresentasikan — pitch deck, proposal sponsor, laporan kampanye, " +
         "strategi marketing, ringkasan dokumen/riset (seperti NotebookLM). Gunakan setiap kali user meminta PPT/slide/deck/presentasi.\n" +
+        "STANDAR KONSULTAN & AGENCY (wajib): judul slide = ACTION TITLE — kalimat kesimpulan ≤ 12 kata yang langsung menyatakan insight " +
+        "(mis. 'Margin 45% membuat balik modal di bulan ke-4', BUKAN 'Unit Economics'); kicker berisi nama bab. Slide ke-2 = Executive Summary " +
+        "(3–4 cards/stats berisi pesan inti seluruh deck). Satu pesan per slide; utamakan visual data (stats, chart, table, timeline, comparison) " +
+        "dibanding daftar poin — maks 1 slide bullets di seluruh deck. Isi `takeaway` (so-what/rekomendasi tegas) pada slide data, analisis & " +
+        "strategi; isi `source` bila memakai angka dari riset/luar. Angka konsisten antar slide (total, persen, periode). Bahasa tajam & ringkas.\n" +
         "ATURAN DESAIN (wajib): (1) Alur cerita kuat: pembuka → masalah/peluang → insight → strategi → eksekusi → angka/KPI → penutup/CTA. " +
         "(2) Variasikan layout — jangan dua slide berturut-turut memakai layout yang sama; pakai agenda di awal, section untuk tiap bab besar, " +
         "cards untuk pilar/fitur (dengan ikon relevan), stats untuk angka kunci, chart bila ada data angka, timeline untuk jadwal/tahapan, " +
@@ -179,7 +196,9 @@ export function createChatTools(ctx: ToolCtx) {
         if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat PPT. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
         try {
           const images = await makeDeckImages(ctx, input);
-          const bytes = await buildPresentation(input, images);
+          // Slide yang tidak mendapat foto (sesuai paket / gagal dibuat) → layout teks rapi, tanpa kotak foto kosong.
+          const deck = fitDeckToImages(input, (key) => Boolean(images[key]));
+          const bytes = await buildPresentation(deck, images);
           const fileName = `${sanitizeFileName(input.title).slice(0, 60) || "presentasi"}.pptx`;
           const saved = await storeFile(
             ctx,
@@ -187,10 +206,11 @@ export function createChatTools(ctx: ToolCtx) {
             fileName,
             "application/vnd.openxmlformats-officedocument.presentationml.presentation",
             bytes,
-            presentationOutline(input),
+            presentationOutline(deck),
           );
           await logUsage(ctx, { tier: "pptx", credits: PPTX_CREDIT_COST, cost: 0 });
           const imageCount = Object.keys(images).length;
+          const previewImages = await deckPreviewUrls(ctx, deck, images);
           return {
             ok: true,
             attachmentId: saved.id,
@@ -201,6 +221,7 @@ export function createChatTools(ctx: ToolCtx) {
             fileName,
             theme: input.theme,
             images: imageCount,
+            previewImages,
           };
         } catch (err) {
           console.error("[pptx] gagal", err);
@@ -214,10 +235,36 @@ export function createChatTools(ctx: ToolCtx) {
 
 /**
  * Siapkan visual deck: foto milik user (attachment, gratis) + gambar AI untuk cover/produk/slide bergambar
- * (paralel, maks DECK_IMAGE_MAX, hanya paket berbayar). Gambar yang gagal dilewati — slide tetap jadi.
+ * (paralel, maks sesuai paket — lihat DECK_IMAGE_MAX_BY_PLAN). Gambar yang gagal dilewati — slide tetap jadi.
  */
+/** Simpan foto AI deck sebagai file agar pratinjau slide di chat bisa menampilkannya (foto user memakai file aslinya). */
+async function deckPreviewUrls(ctx: ToolCtx, input: PresentationInput, images: DeckImages): Promise<Record<string, string>> {
+  const owned = new Map(
+    deckImageRequests(input, 0)
+      .filter((r) => r.imageId)
+      .map((r) => [r.key, r.imageId!]),
+  );
+  const out: Record<string, string> = {};
+  await Promise.all(
+    Object.entries(images).map(async ([key, img]) => {
+      try {
+        const ownedId = owned.get(key);
+        if (ownedId) out[key] = `/api/attachments/${ownedId}`;
+        else {
+          const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
+          const saved = await storeFile(ctx, "images", `slide-${key}.${ext}`, img.mime, Uint8Array.from(Buffer.from(img.data, "base64")), null);
+          out[key] = saved.url;
+        }
+      } catch (err) {
+        console.warn("[pptx] simpan pratinjau gagal", errText(err));
+      }
+    }),
+  );
+  return out;
+}
+
 async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<DeckImages> {
-  const reqs = deckImageRequests(input, ctx.deckImages ? DECK_IMAGE_MAX : 0);
+  const reqs = deckImageRequests(input, ctx.deckImageMax ?? 0);
   if (!reqs.length) return {};
   const images: DeckImages = {};
 
@@ -245,7 +292,7 @@ async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<D
 
   // 2) Gambar AI.
   const toGenerate = reqs.filter((r) => !r.imageId && r.prompt);
-  if (!toGenerate.length || !ctx.deckImages) return images;
+  if (!toGenerate.length || !ctx.deckImageMax) return images;
   const credit = await consumeCredits(ctx.userId, toGenerate.length * DECK_IMAGE_CREDIT_COST, "deck_images", { chatId: ctx.chatId });
   if (!credit.ok) return images;
   const results = await Promise.all(
@@ -255,7 +302,12 @@ async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<D
         : "Professional, high-quality editorial photo for a marketing presentation, cinematic lighting, clean composition.";
       try {
         const img = await Promise.race([
-          generateImage(`${style} ${r.prompt}. No text, no words, no letters, no logos, no watermark.`, r.aspect, [], { budget: true }),
+          generateImage(
+            `${style} ${r.prompt}. No text, no words, no letters, no logos, no watermark.${ctx.premiumVisuals ? ` ${PREMIUM_ART_DIRECTION}` : ""}`,
+            r.aspect,
+            [],
+            { budget: true },
+          ),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout gambar deck")), 80_000)),
         ]);
         const size = imageSize(img.bytes);
