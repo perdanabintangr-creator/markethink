@@ -36,6 +36,23 @@ describe("pembuat PPT", () => {
     }
   });
 
+  it("gaya sinematik (Promax): file valid dengan foto latar penuh di slide isi", async () => {
+    const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+    const img = { data: png, mime: "image/png", width: 1, height: 1 };
+    const bytes = await buildPresentation(input, { cover: img, "2": img, "5": img }, "cinematic");
+    expect([...bytes.slice(0, 2)]).toEqual([0x50, 0x4b]);
+    const text = await extractText(PPTX, bytes);
+    for (const s of ["Strategi Ramadan Glowa", "Review pelanggan", "Launch"]) expect(text).toContain(s);
+  });
+
+  it("gaya sinematik: slide data meminta foto latar 16:9", () => {
+    const deck = { ...input, slides: input.slides.map((s) => ({ ...s, image_prompt: "stage" })) };
+    const reqs = deckImageRequests(deck, 20, "cinematic");
+    expect(reqs.find((r) => r.key === "5")?.aspect).toBe("16:9"); // timeline
+    expect(reqs.find((r) => r.key === "2")?.aspect).toBe("16:9"); // cards
+    expect(deckImageRequests(deck, 20).find((r) => r.key === "5")).toBeUndefined(); // standar: timeline tanpa foto
+  });
+
   it("permintaan gambar deck: cover + slide bergambar", () => {
     expect(deckImageRequests(input).map((r) => r.key)).toEqual(["cover", "1"]);
   });

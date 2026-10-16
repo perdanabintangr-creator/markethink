@@ -465,6 +465,7 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
               deck={part.input as DeckInput}
               images={part.output.previewImages as Record<string, string> | undefined}
               downloadUrl={`${String(part.output.url)}?download=1`}
+              style={part.output.style === "cinematic" ? "cinematic" : undefined}
             />
           ) : null}
           <Button asChild size="sm">

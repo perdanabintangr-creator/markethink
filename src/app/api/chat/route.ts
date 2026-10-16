@@ -38,7 +38,7 @@ import {
   summarizeToolParts,
   withCacheBreakpoints,
 } from "@/lib/chat-server";
-import { deckImageMaxFor, premiumVisualsFor, capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
+import { deckImageMaxFor, deckStyleFor, premiumVisualsFor, capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
 import { imageGenerationEnabled } from "@/lib/ai/image";
 import type { MtMessage } from "@/lib/types";
 import { truncate } from "@/lib/utils";
@@ -387,6 +387,7 @@ export async function POST(req: Request) {
             // Visual bertingkat: foto AI di PPT Free 0, Starter 1 (cover), Pro 6, Promax 8; Pro & Promax arahan visual premium.
             deckImageMax: imageBlockedReason ? 0 : deckImageMaxFor(profile.plan_id, profile.role === "admin"),
             premiumVisuals: premiumVisualsFor(profile.plan_id, profile.role === "admin"),
+            deckStyle: deckStyleFor(profile.plan_id, profile.role === "admin"),
             // Semua paket: gambar baru memakai Muse (±$0,01). Edit dari foto/gambar acuan tetap Gemini.
             budgetImages: true,
           }),

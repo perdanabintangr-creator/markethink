@@ -262,3 +262,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Gaya konsultan: action title (judul = kesimpulan), Executive Summary di slide 2, maks 1 slide bullets, utamakan visual data.
   Field baru per slide: `takeaway` (kotak "SO WHAT" di bawah) & `source` (sumber data). Garis tipis di bawah judul, kartu &
   timeline lebih padat. Pratinjau "Lihat" ikut menampilkan so-what & sumber. Diverifikasi via render LibreOffice.
+
+## PPT Promax gaya sinematik (2026-10-16)
+- Promax (& admin) memakai `deckStyle = "cinematic"` (referensi founder: Demokrat Digital Arena): latar navy-hitam, foto AI gelap sebagai latar penuh slide isi, panel transparan berbingkai aksen, grid halus + glow, foto 16:9.
+- Pro tetap gaya konsultan standar (6 foto) — di bawah Promax. Starter 1 foto cover, Free tanpa foto.

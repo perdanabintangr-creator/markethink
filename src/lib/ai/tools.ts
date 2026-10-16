@@ -12,6 +12,7 @@ import {
   presentationOutline,
   presentationSchema,
   type DeckImages,
+  type DeckStyle,
   type PresentationInput,
 } from "@/lib/pptx";
 import { sanitizeFileName } from "@/lib/files";
@@ -26,6 +27,11 @@ export const DECK_IMAGE_MAX_BY_PLAN: Record<string, number> = { beta: 0, starter
 export const deckImageMaxFor = (planId: string, isAdmin: boolean) => (isAdmin ? 8 : (DECK_IMAGE_MAX_BY_PLAN[planId] ?? 0));
 /** Pro & Promax: arahan visual premium untuk gambar baru. */
 export const premiumVisualsFor = (planId: string, isAdmin: boolean) => isAdmin || planId === "pro" || planId === "promax";
+/** Promax: gaya deck sinematik (latar foto gelap penuh, panel transparan, grid & glow) — tingkat visual tertinggi. */
+export const deckStyleFor = (planId: string, isAdmin: boolean): DeckStyle => (isAdmin || planId === "promax" ? "cinematic" : "standard");
+const CINEMATIC_ART_DIRECTION =
+  "Dark cinematic mood: deep navy and black tones, dramatic low-key lighting with cool blue/cyan accents and soft light beams, " +
+  "atmospheric depth, wide composition with calm negative space so overlaid text stays readable.";
 const PREMIUM_ART_DIRECTION =
   "Execute at premium creative-agency quality: refined composition, rich detail, polished lighting and color grading, faithful to the requested style.";
 /** Perkiraan biaya per gambar (USD) bila provider tidak melaporkan biaya nyata. */
@@ -46,6 +52,7 @@ export type PresentationToolOutput =
       fileName: string;
       theme?: string;
       images?: number;
+      style?: DeckStyle;
       /** URL foto per slide ("cover", indeks slide, atau "i-gk" galeri) untuk pratinjau di browser. */
       previewImages?: Record<string, string>;
     }
@@ -63,6 +70,8 @@ interface ToolCtx {
   deckImageMax?: number;
   /** Pro & Promax: gambar baru diberi arahan visual premium. */
   premiumVisuals?: boolean;
+  /** Gaya deck sesuai paket (Promax = sinematik). */
+  deckStyle?: DeckStyle;
   /** Pakai model gambar hemat (Muse) dulu untuk gambar baru — kini semua paket. */
   budgetImages?: boolean;
 }
@@ -187,7 +196,12 @@ export function createChatTools(ctx: ToolCtx) {
         "contoh konten/lokasi). Bila user melampirkan foto (produk/brand/lokasi), PAKAI fotonya lewat image_id / cover_image_id / gallery.image_id. " +
         "Prompt gambar dalam bahasa Inggris, spesifik ke brand/produk/suasana Indonesia bila relevan, tanpa teks. (6) Pilih theme sesuai brand/industri; isi " +
         "brand_color bila warna brand diketahui. (7) Tulis speaker notes yang membantu presenter. " +
-        "Bila user melampirkan dokumen, dasarkan isi slide pada dokumen itu.",
+        "Bila user melampirkan dokumen, dasarkan isi slide pada dokumen itu." +
+        (ctx.deckStyle === "cinematic"
+          ? "\nGAYA SINEMATIK (paket ini): deck tampil gelap & megah dengan foto sebagai latar penuh tiap slide. Beri image_prompt pada sebagian " +
+            "besar slide isi (± 7 slide paling penting: cards, stats, timeline, comparison, section, closing) — adegan nyata yang relevan " +
+            "(panggung, tim, kota, produk, pelanggan), suasana gelap dramatis, tanpa teks. Pilih theme midnight/ocean/luxe kecuali brand meminta lain."
+          : ""),
       inputSchema: presentationSchema,
       execute: async (input): Promise<PresentationToolOutput> => {
         const pptxLimit = await ctx.dailyLimit?.("pptx");
@@ -198,7 +212,8 @@ export function createChatTools(ctx: ToolCtx) {
           const images = await makeDeckImages(ctx, input);
           // Slide yang tidak mendapat foto (sesuai paket / gagal dibuat) → layout teks rapi, tanpa kotak foto kosong.
           const deck = fitDeckToImages(input, (key) => Boolean(images[key]));
-          const bytes = await buildPresentation(deck, images);
+          const style = ctx.deckStyle ?? "standard";
+          const bytes = await buildPresentation(deck, images, style);
           const fileName = `${sanitizeFileName(input.title).slice(0, 60) || "presentasi"}.pptx`;
           const saved = await storeFile(
             ctx,
@@ -221,6 +236,7 @@ export function createChatTools(ctx: ToolCtx) {
             fileName,
             theme: input.theme,
             images: imageCount,
+            style,
             previewImages,
           };
         } catch (err) {
@@ -264,7 +280,8 @@ async function deckPreviewUrls(ctx: ToolCtx, input: PresentationInput, images: D
 }
 
 async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<DeckImages> {
-  const reqs = deckImageRequests(input, ctx.deckImageMax ?? 0);
+  const cinematic = ctx.deckStyle === "cinematic";
+  const reqs = deckImageRequests(input, ctx.deckImageMax ?? 0, ctx.deckStyle);
   if (!reqs.length) return {};
   const images: DeckImages = {};
 
@@ -299,7 +316,9 @@ async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<D
     toGenerate.map(async (r) => {
       const style = r.product
         ? "Premium studio product photography, product centered and fully visible, soft shadow, clean seamless background, commercial advertising quality."
-        : "Professional, high-quality editorial photo for a marketing presentation, cinematic lighting, clean composition.";
+        : cinematic && r.key !== "cover" && r.aspect === "16:9"
+          ? `Wide cinematic background photo for a dark presentation slide. ${CINEMATIC_ART_DIRECTION}`
+          : `Professional, high-quality editorial photo for a marketing presentation, cinematic lighting, clean composition.${cinematic ? ` ${CINEMATIC_ART_DIRECTION}` : ""}`;
       try {
         const img = await Promise.race([
           generateImage(
