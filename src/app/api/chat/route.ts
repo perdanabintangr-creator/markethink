@@ -20,6 +20,7 @@ import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/l
 import { routeTier } from "@/lib/ai/router";
 import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
+import { extractLinks, linkContext, linkHistoryText, readLink, toLinkPart, type LinkRead } from "@/lib/ai/links";
 import { estimateCostUsd, getTier, messageCreditCost, type TierId } from "@/lib/ai/models.config";
 import { autoTier, resolveTier } from "@/lib/ai/auto-tier";
 import {
@@ -203,6 +204,22 @@ export async function POST(req: Request) {
         loadWorkspaceContext(supabase, workspaceId, lastText),
       ]);
 
+      // Tautan yang ditempel user: dibaca server (gratis), isinya jadi konteks jawaban & tersimpan ringkas di pesan jawaban.
+      const linkUrls = extractLinks(lastText);
+      let links: LinkRead[] = [];
+      if (linkUrls.length) {
+        const hosts = [...new Set(linkUrls.map((u) => new URL(u).hostname.replace(/^www\./, "")))].join(", ");
+        writer.write({ type: "data-status", data: { state: "reading", label: `Membaca tautan: ${truncate(hosts, 60)}…` }, transient: true });
+        links = await Promise.all(linkUrls.map(readLink));
+        for (const l of links) writer.write({ type: "data-link", data: toLinkPart(l) });
+        const okCount = links.filter((l) => l.ok).length;
+        writer.write({
+          type: "data-status",
+          data: { state: "done", label: okCount ? `${okCount} tautan terbaca` : "Tautan tidak bisa dibaca" },
+          transient: true,
+        });
+      }
+
       let sources: Source[] = [];
       // Riset Web: API pencarian sendiri (Serper ±$1/1.000 → Tavily) sebelum AI menjawab.
       const useTavily = research && searchApiEnabled();
@@ -250,6 +267,7 @@ export async function POST(req: Request) {
       // Konteks yang berubah tiap pesan ditaruh di pesan user terakhir agar system prompt tetap bisa di-cache.
       const turnContext = buildTurnContext({
         knowledge: wsCtx.knowledge,
+        links: links.length ? linkContext(links) : null,
         research: sources.length
             ? formatSources(sources)
             : useTavily
@@ -288,7 +306,12 @@ export async function POST(req: Request) {
         // Prompt caching Claude: system prompt (stabil) + riwayat chat dibaca dari cache dengan ± 10% harga input.
         messages: [
           { role: "system", content: system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-          ...withCacheBreakpoints(convertToModelMessages(resolved)),
+          ...withCacheBreakpoints(
+            convertToModelMessages(resolved, {
+              // Tautan yang sudah dibaca di jawaban sebelumnya ikut di riwayat (versi ringkas).
+              convertDataPart: (part) => (part.type === "data-link" ? { type: "text", text: linkHistoryText(part.data as Parameters<typeof linkHistoryText>[0]) } : undefined),
+            }),
+          ),
         ],
         maxOutputTokens: tier.maxOutputTokens,
         temperature: tier.temperature,

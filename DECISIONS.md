@@ -194,3 +194,13 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - (16 Okt, permintaan founder) Angka kredit **tidak ditampilkan** ke user mana pun: pemakaian tampil sebagai persen kuota bulanan
   (lingkaran di kolom chat → klik untuk detail, seperti Claude). Halaman paket menyebut besar kuota relatif ("3,6× kuota Starter").
   Pemberitahuan "diproses Google Gemini" di bawah chat dihapus; keterangan tetap ada di Kebijakan Privasi.
+
+## Baca tautan di chat — Tahap 1 (16 Okt 2026, ACC founder)
+- Tautan di pesan user (maks 3) dibuka server sendiri (gratis, tanpa API): web/artikel, PDF & Office online, Google Docs/Sheets/Slides
+  publik (via tautan ekspor), YouTube & TikTok (judul/keterangan via oEmbed). Ditolak dengan alasan jelas: IG, FB, X, Threads,
+  LinkedIn, Pinterest, Lemon8, Shopee, Tokopedia, Lazada, Blibli, Bukalapak.
+- Keamanan: hanya http(s) port 80/443, DNS dicek di setiap pengalihan (tolak IP privat/metadata), maks 8 MB, 9 detik.
+  Isi tautan dibungkus `untrusted_data` (data, bukan perintah).
+- Biaya = token AI membaca isi (maks 12 rb karakter/tautan di pesan saat ini; 4 rb karakter tersimpan sebagai `data-link`
+  di jawaban & ikut riwayat). Kredit tetap disesuaikan ke biaya nyata.
+- Tahap 2 (scraper berbayar untuk IG/TikTok/marketplace) belum — perlu laporan biaya & ACC.

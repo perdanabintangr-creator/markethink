@@ -19,6 +19,8 @@ import {
   ThumbsUp,
   Wand2,
   FolderOpen,
+  Link2,
+  Link2Off,
 } from "lucide-react";
 import type { FileUIPart, SourceUrlUIPart } from "ai";
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,7 @@ import { Textarea } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useApp } from "@/components/app/app-context";
 import { getTiers } from "@/lib/ai/models.config";
-import type { MtMessage } from "@/lib/types";
+import type { LinkPart, MtMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { isTransparent, textBlocks } from "@/lib/message-text";
 import { parseQuotedMessage } from "@/lib/quote";
@@ -119,6 +121,7 @@ export function ChatMessage({
     .filter((p): p is SourceUrlUIPart => p.type === "source-url")
     .filter((s, i, all) => all.findIndex((x) => x.url === s.url) === i);
   const files = message.parts.filter((p): p is FileUIPart => p.type === "file");
+  const links = message.parts.flatMap((p) => (p.type === "data-link" ? [p.data as LinkPart] : []));
   const blocks = assistantBlocks(message);
   const lastPart = message.parts[message.parts.length - 1];
   const searching = lastPart?.type === "tool-web_search" || (message.parts.some((p) => p.type === "tool-web_search") && !text);
@@ -192,6 +195,13 @@ export function ChatMessage({
   const showActions = !(isLast && isStreaming) && text;
   return (
     <div className="group space-y-2">
+      {links.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {links.map((l) => (
+            <LinkChip key={l.url} link={l} />
+          ))}
+        </div>
+      )}
       {sources.length > 0 && (
         <div className="space-y-1.5">
           <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -511,6 +521,27 @@ function ReadResultChip({ part }: { part: ToolPart }) {
       <FolderOpen className="size-3.5 shrink-0 text-primary" />
       <span className="truncate">
         Membaca hasil Tools Pro: <span className="font-medium text-foreground">{out.title}</span>
+      </span>
+    </a>
+  );
+}
+
+/** Penanda tautan yang dibaca AI (atau alasan bila tidak bisa dibaca). */
+function LinkChip({ link }: { link: LinkPart }) {
+  const cls = "not-prose inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs";
+  return (
+    <a
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      title={link.note ?? link.title ?? link.url}
+      className={cn(cls, link.ok ? "bg-muted/50 text-muted-foreground hover:bg-accent hover:text-foreground" : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400")}
+    >
+      {link.ok ? <Link2 className="size-3.5 shrink-0 text-primary" /> : <Link2Off className="size-3.5 shrink-0" />}
+      <span className="truncate">
+        {link.ok ? "Membaca tautan: " : "Tidak terbaca: "}
+        <span className="font-medium">{link.title ? `${link.title.slice(0, 60)} · ${link.host}` : link.host}</span>
+        {!link.ok && link.note ? ` — ${link.note}` : ""}
       </span>
     </a>
   );

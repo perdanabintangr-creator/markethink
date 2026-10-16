@@ -11,8 +11,20 @@ export interface MessageMeta {
   outputTokens?: number;
 }
 
+/** Tautan yang ditempel user & dibaca server (disimpan di pesan jawaban; isi dipotong agar riwayat hemat). */
+export interface LinkPart {
+  url: string;
+  host: string;
+  ok: boolean;
+  kind: "web" | "pdf" | "document" | "google" | "video" | "blocked" | "private" | "error";
+  title: string | null;
+  note: string | null;
+  text: string;
+}
+
 export type DataParts = {
   status: { state: "searching" | "reading" | "done"; label: string };
+  link: LinkPart;
 };
 
 export type MtMessage = UIMessage<MessageMeta, DataParts>;
