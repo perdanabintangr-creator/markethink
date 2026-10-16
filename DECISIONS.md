@@ -232,3 +232,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   berbayar = Gemini Flash Image.
 - (16 Okt, founder) **Semua paket** memakai Meta Muse untuk gambar baru (chat & foto AI di PPT), ±$0,01/gambar; batas & potongan
   kuota tidak berubah (6 kredit/gambar, Free 2/hari). Edit dari foto/gambar acuan tetap Gemini (Muse belum menerima gambar acuan).
+- (16 Okt, founder) **Laba rugi per akun** di back office (`/profit`, menu Keuangan): pendapatan akun (paket + add-on, diakui
+  proporsional per hari masa aktif, hanya sampai hari ini) − biaya AI nyata (`usage_logs`). Status: Rugi / Untung tipis (<30%) /
+  Untung / Sangat untung (≥70%). **Pengaman laba**: biaya AI maks akun = jatah kredit × Rp100, jadi paket aman selama
+  kredit/bln ≤ harga × 70% ÷ Rp100 (tabel per paket + biaya nyata per kredit). Kebocoran per akun ditandai "Perlu tindakan":
+  paket berbayar tanpa/lewat pembayaran, kuota khusus di atas batas aman, bonus kredit, biaya > pendapatan. Akun admin/tim
+  dipisah. RPC `bo_account_pnl` (migrasi 0038, hanya service_role).

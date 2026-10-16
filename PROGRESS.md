@@ -42,3 +42,6 @@
 - ✅ Chat, Tools Pro, Agent memotong kredit sesuai pemakaian nyata. Meter kredit bulanan, halaman `/pricing`, Tools Pro tanpa add-on.
 - ✅ Back office: paket Starter, kredit bulanan per paket & per user.
 - ⏳ Sebelum menagih user: Vercel Pro ($20/bln, Hobby non-komersial) & payment gateway.
+
+## 16 Okt 2026 — Laba rugi per akun
+- ✅ Migrasi 0038 `bo_account_pnl` terpasang di production; halaman back office `/profit` + pengaman laba per paket.

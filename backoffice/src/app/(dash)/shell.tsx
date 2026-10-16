@@ -19,6 +19,7 @@ import {
   Menu,
   PlusCircle,
   Receipt,
+  Scale,
   Search,
   Settings2,
   Tag,
@@ -86,7 +87,10 @@ function menu(c: ShellCounts): Group[] {
     },
     {
       title: "Keuangan",
-      items: [{ href: "/costs", label: "Biaya AI & margin", icon: Wallet }],
+      items: [
+        { href: "/profit", label: "Laba rugi per akun", icon: Scale },
+        { href: "/costs", label: "Biaya AI & margin", icon: Wallet },
+      ],
     },
     {
       title: "Aplikasi AI",
