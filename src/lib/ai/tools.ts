@@ -52,7 +52,7 @@ interface ToolCtx {
   dailyLimit?: (kind: "image" | "pptx") => Promise<string | null>;
   /** Boleh membuat gambar AI untuk cover/slide PPT (paket berbayar). */
   deckImages?: boolean;
-  /** Paket Free: pakai model gambar hemat dulu. */
+  /** Pakai model gambar hemat (Muse) dulu untuk gambar baru — kini semua paket. */
   budgetImages?: boolean;
 }
 
@@ -255,7 +255,7 @@ async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<D
         : "Professional, high-quality editorial photo for a marketing presentation, cinematic lighting, clean composition.";
       try {
         const img = await Promise.race([
-          generateImage(`${style} ${r.prompt}. No text, no words, no letters, no logos, no watermark.`, r.aspect),
+          generateImage(`${style} ${r.prompt}. No text, no words, no letters, no logos, no watermark.`, r.aspect, [], { budget: true }),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout gambar deck")), 80_000)),
         ]);
         const size = imageSize(img.bytes);

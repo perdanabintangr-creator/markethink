@@ -230,3 +230,5 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   apa pun otak yang dipilih — hasil gambar ditentukan model gambar; tes: Senior +Rp640/gambar di chat baru tanpa beda kualitas.
   Campuran (strategi/PPT/caption/prompt + gambar) tetap memakai otak pilihan. Model gambar tetap dibedakan: Free = Muse,
   berbayar = Gemini Flash Image.
+- (16 Okt, founder) **Semua paket** memakai Meta Muse untuk gambar baru (chat & foto AI di PPT), ±$0,01/gambar; batas & potongan
+  kuota tidak berubah (6 kredit/gambar, Free 2/hari). Edit dari foto/gambar acuan tetap Gemini (Muse belum menerima gambar acuan).

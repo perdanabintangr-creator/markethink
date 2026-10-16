@@ -348,7 +348,8 @@ export async function POST(req: Request) {
             dailyLimit: (kind) => dailyLimitReached(dailyLimits, user.id, kind),
             // Foto AI di PPT hanya untuk paket tanpa batas harian gambar (Pro/Promax/admin).
             deckImages: !imageBlockedReason && dailyLimits.image === undefined,
-            budgetImages: isFreePlan,
+            // Semua paket: gambar baru memakai Muse (±$0,01). Edit dari foto/gambar acuan tetap Gemini.
+            budgetImages: true,
           }),
           ...(serperOn
             ? {

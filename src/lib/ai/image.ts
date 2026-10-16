@@ -70,7 +70,7 @@ export async function generateImage(
   const { openrouter, google, imagen } = keys();
   if (!openrouter && !google && !imagen) throw new Error("Belum ada API key pembuat gambar (OPENROUTER_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY)");
   const errors: string[] = [];
-  // Paket Free: model gambar hemat di OpenRouter dulu (saldo yang sama, ±$0,006–0,01/gambar vs ±$0,034). Gagal → jalur biasa.
+  // Model gambar hemat di OpenRouter dulu (semua paket) (saldo yang sama, ±$0,006–0,01/gambar vs ±$0,034). Gagal → jalur biasa.
   if (opts.budget && openrouter && !references.length) {
     for (const model of budgetImageModels()) {
       try {
