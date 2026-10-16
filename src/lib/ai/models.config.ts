@@ -112,7 +112,7 @@ Standar kualitas (jawaban harus terasa dari marketer berpengalaman, bukan templa
       effort: "low",
       webSearches: 1,
       creditCost: 1,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
       temperature: 0.8,
       candidates: parseCandidates(envSource.MODEL_JUNIOR, [
         { provider: "anthropic", modelId: "claude-haiku-5-5" },

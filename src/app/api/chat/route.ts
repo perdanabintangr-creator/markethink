@@ -271,7 +271,9 @@ export async function POST(req: Request) {
           memories: (memories ?? []).map((m) => m.content as string),
         },
         {
-          tierInstructions: tier.skillPrompt,
+          tierInstructions: isFreePlan
+            ? `${tier.skillPrompt}\n- Batas panjang jawaban di paket ini ±1.200 kata. Untuk permintaan besar (strategi lengkap, rencana berbulan-bulan), kerjakan inti paling penting secara utuh sampai selesai — jangan sampai terpotong — lalu tawarkan lanjut ke bagian berikutnya.`
+            : tier.skillPrompt,
           capabilities: capabilitiesPrompt(imageBlockedReason, { webSearch: researchAllowed }),
           agentInstructions: agent?.instructions ?? null,
           project: wsCtx.name,
