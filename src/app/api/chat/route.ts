@@ -170,6 +170,7 @@ export async function POST(req: Request) {
       tier: tierChoice,
       title: truncate(lastText || "Chat baru", 60),
       generating_at: new Date().toISOString(),
+      stop_requested_at: null,
     });
     if (error) {
       // Workspace bukan milik user / tidak valid → ulang tanpa workspace.
@@ -183,6 +184,7 @@ export async function POST(req: Request) {
           tier: tierChoice,
           title: truncate(lastText || "Chat baru", 60),
           generating_at: new Date().toISOString(),
+      stop_requested_at: null,
         });
       if (retry.error) {
         await refundCredits(user.id, cost, "chat_create_failed");
@@ -190,7 +192,7 @@ export async function POST(req: Request) {
       }
     }
   } else {
-    await supabase.from("chats").update({ tier: tierChoice, generating_at: new Date().toISOString() }).eq("id", chatId);
+    await supabase.from("chats").update({ tier: tierChoice, generating_at: new Date().toISOString(), stop_requested_at: null }).eq("id", chatId);
   }
 
   // Simpan pesan user sejak awal: bila user pindah chat lalu membukanya lagi, pertanyaannya terlihat & jawabannya ditunggu.
@@ -342,7 +344,17 @@ export async function POST(req: Request) {
       const googleSearchOn = !serperOn && researchAllowed && webSearchEnabled && preferFree && !paidSearchCapped;
       const routed = routeTier(tierId, { needsVision: hasImages, preferFree });
 
+      // Tombol Stop: /api/chat/stop mengisi chats.stop_requested_at → AI di server dihentikan (dicek tiap 1,5 detik).
+      const stopCtrl = new AbortController();
+      const stopWatch = setInterval(async () => {
+        if (Date.now() - startedAt > 300_000) return clearInterval(stopWatch);
+        const { data } = await admin.from("chats").select("stop_requested_at").eq("id", chatId).maybeSingle();
+        if (data?.stop_requested_at) stopCtrl.abort();
+      }, 1500);
+      const endStopWatch = () => clearInterval(stopWatch);
+
       const result = streamText({
+        abortSignal: stopCtrl.signal,
         model: routed.model,
         // Prompt caching Claude: system prompt (stabil) + riwayat chat dibaca dari cache dengan ± 10% harga input.
         messages: [
@@ -434,7 +446,34 @@ export async function POST(req: Request) {
         // Beberapa langkah: model memanggil tool (gambar/PPT) lalu menjelaskan hasilnya.
         stopWhen: stepCountIs(5),
         // Tanpa abortSignal: jawaban tetap diselesaikan & disimpan walau user pindah chat / menutup tab (seperti ChatGPT).
+        onAbort: async ({ steps }) => {
+          // Dihentikan user: kuota disesuaikan ke pemakaian sejauh ini.
+          endStopWatch();
+          settled = true;
+          const used = routed.resolved() ?? routed.candidates[0];
+          const inTok = steps.reduce((a, s) => a + (s.usage.inputTokens ?? 0), 0);
+          const outTok = steps.reduce((a, s) => a + (s.usage.outputTokens ?? 0), 0);
+          const costUsd = freeTierModel(used) ? 0 : estimateCostUsd(used, inTok, outTok);
+          actualCredits = inTok || outTok ? creditsForUsd(costUsd) : 0;
+          remainingAfter = await settleCredits(user.id, cost, actualCredits, "chat_stopped", { chatId, tier: tierId });
+          await admin.from("usage_logs").insert({
+            user_id: user.id,
+            chat_id: chatId,
+            tier: tierId,
+            provider: used.provider,
+            model: used.modelId,
+            input_tokens: inTok,
+            output_tokens: outTok,
+            est_cost_usd: costUsd,
+            credits: actualCredits,
+            research,
+            status: "ok",
+            error: "dihentikan user (Stop)",
+            latency_ms: Date.now() - startedAt,
+          });
+        },
         onFinish: async ({ totalUsage: usage, steps, text }) => {
+          endStopWatch();
           settled = true;
           // Jawaban kosong (tanpa teks & tanpa hasil tool yang berhasil) → kuota dikembalikan penuh.
           const produced =
@@ -484,6 +523,7 @@ export async function POST(req: Request) {
           });
         },
         onError: async ({ error }) => {
+          endStopWatch();
           settled = true;
           console.error("[chat] stream error", error);
           await refundOnce();

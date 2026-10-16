@@ -2405,3 +2405,8 @@ update public.feature_flags set enabled = true where plan_id = 'beta' and key in
 -- ===== 20261016000038_chat_generating.sql =====
 -- Penanda chat yang sedang dijawab AI (untuk ikon loading di riwayat & melanjutkan jawaban saat user pindah chat).
 alter table public.chats add column if not exists generating_at timestamptz;
+
+
+-- ===== 20261016000039_chat_stop.sql =====
+-- Tombol Stop: penanda permintaan berhenti; jawaban yang sedang dibuat di server dihentikan bila penanda ini diisi.
+alter table public.chats add column if not exists stop_requested_at timestamptz;

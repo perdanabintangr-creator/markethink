@@ -210,6 +210,16 @@ export function ChatView({
 
   const busy = status === "submitted" || status === "streaming";
 
+  // Stop: hentikan tampilan sekaligus minta server menghentikan AI (kuota hanya untuk yang sudah dibuat).
+  const stopAll = useCallback(() => {
+    void stop();
+    setRemoteWaiting(false);
+    setStatusLabel(null);
+    void fetch("/api/chat/stop", { method: "POST", body: JSON.stringify({ id: chatId }) })
+      .catch(() => {})
+      .finally(() => emitChatsChanged());
+  }, [stop, chatId]);
+
   // Riwayat sidebar langsung memuat chat ini (dengan ikon loading) begitu AI mulai menjawab.
   useEffect(() => {
     if (status === "streaming") emitChatsChanged();
@@ -335,8 +345,8 @@ export function ChatView({
         setPrefill(null);
         send(text, files);
       }}
-      onStop={stop}
-      busy={busy}
+      onStop={stopAll}
+      busy={busy || remoteWaiting}
       research={research}
       onResearchChange={setResearch}
       brainSlot={<ModelSelector compact tiers={tiers} value={tier} onChange={setTier} onLocked={onLockedTier} />}

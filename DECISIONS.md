@@ -246,7 +246,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   tanpa kotak foto kosong. Pratinjau slide teks dirapikan (poin bernomor dalam kartu, konten di tengah).
 
 ## Chat tetap dijawab saat user pindah chat (16 Okt 2026, permintaan founder)
-- `/api/chat` tidak lagi membatalkan AI saat koneksi browser putus (tanpa `abortSignal: req.signal`); stream tetap dikonsumsi
+- `/api/chat` tidak membatalkan AI saat koneksi browser putus (pindah chat), tapi tombol Stop kini benar-benar menghentikan
+  AI: `/api/chat/stop` mengisi `chats.stop_requested_at` (migrasi 0039), server mengecek tiap 1,5 dtk lalu abort; kuota
+  disesuaikan ke token yang sudah terpakai (`onAbort`). Stream tetap dikonsumsi
   sampai selesai (`consumeSseStream`) lalu disimpan. Konsekuensi: tombol Stop hanya menghentikan tampilan, jawaban tetap
   diselesaikan & ditagih di server.
 - Kolom `chats.generating_at` (migrasi 0038) diisi saat mulai, dihapus setelah simpan; dianggap kedaluwarsa setelah 5 menit.
