@@ -80,12 +80,14 @@ User juga memakai Markethink Tools Pro (mode terpisah di sidebar). Hasil terbaru
 ${lines.join("\n")}
 Bila user menyinggung hasil yang dibuat di Tools Pro (mis. "yang sudah saya buat di Tools Pro", "persona tadi", "kalender kontenku", menyebut brand/judulnya),
 panggil tool \`read_tool_result\` dengan id yang paling cocok SEBELUM menjawab, lalu jawab berdasarkan isinya (sebut judulnya). Jangan mengarang isi hasil.
+Hemat: baca MAKSIMAL 3 hasil yang paling relevan dengan permintaan (bukan semua hasil brand itu). Versi ringkas biasanya cukup;
+pakai lengkap=true hanya bila butuh detail yang tidak ada di versi ringkas.
 Bila ada beberapa yang mirip, pilih yang terbaru atau tanyakan singkat. Bila user ingin hasilnya diubah/diperbarui, bantu di sini lalu sarankan
 membuka hasil itu dan klik "Bahas di Chat" agar versinya bisa diperbarui otomatis (termasuk PPT/Excel).`;
 }
 
 /** Isi hasil Tools Pro (versi terbaru) milik user — dipanggil AI di chat biasa. */
-export async function readToolResult(db: SupabaseClient, userId: string, runId: string) {
+export async function readToolResult(db: SupabaseClient, userId: string, runId: string, maxChars = 7_000) {
   const { data: run } = await db.from("tool_runs").select("id, revision_of").eq("id", runId).eq("user_id", userId).maybeSingle();
   if (!run) return { ok: false as const, error: "Hasil tidak ditemukan. Cek id-nya di daftar hasil Tools Pro." };
   const latest = await latestRunInChain(db, (run.revision_of as string | null) ?? (run.id as string));
@@ -97,6 +99,6 @@ export async function readToolResult(db: SupabaseClient, userId: string, runId: 
     tool: name,
     date: dateWIB(latest.created_at as string),
     link: `/tools/${latest.tool}/${latest.id}`,
-    content: resultToMarkdown(latest.output, 20_000),
+    content: resultToMarkdown(latest.output, maxChars),
   };
 }

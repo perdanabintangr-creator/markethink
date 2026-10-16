@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain, Check, ChevronDown, Lock } from "lucide-react";
+import { Brain, Check, ChevronDown, Lock, Wand2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PLAN_LABEL, type PlanId, type TierId } from "@/lib/ai/models.config";
+import type { TierChoice } from "@/lib/ai/auto-tier";
 import { useApp } from "@/components/app/app-context";
 import { cn } from "@/lib/utils";
 
@@ -56,14 +57,17 @@ export function ModelSelector({
   compact,
 }: {
   tiers: TierOption[];
-  value: TierId;
-  onChange: (t: TierId) => void;
+  value: TierChoice;
+  onChange: (t: TierChoice) => void;
   onLocked: (t: TierOption) => void;
   /** Versi kecil untuk toolbar composer. */
   compact?: boolean;
 }) {
   const { lang, allowedTiers } = useApp();
+  const isAuto = value === "auto";
+  const autoOk = allowedTiers.includes("junior") && allowedTiers.includes("senior");
   const current = tiers.find((t) => t.id === value) ?? tiers[0];
+  const autoLabel = lang === "en" ? "Auto" : "Otomatis";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -72,18 +76,36 @@ export function ModelSelector({
             className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 text-xs font-medium text-primary hover:bg-primary/15"
             aria-label="Pilih otak"
           >
-            <Brain className="size-3.5" /> {current.label.replace("Markethink ", "")}
+            {isAuto ? <Wand2 className="size-3.5" /> : <Brain className="size-3.5" />} {isAuto ? autoLabel : current.label.replace("Markethink ", "")}
             <ChevronDown className="size-3.5" />
           </button>
         ) : (
           <button className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold hover:bg-accent">
-            {current.label}
+            {isAuto ? `Markethink ${autoLabel}` : current.label}
             <ChevronDown className="size-4 text-muted-foreground" />
           </button>
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-80 max-w-[calc(100vw-1.5rem)] p-1.5">
         <DropdownMenuLabel className="px-2 pt-1 pb-2">{lang === "en" ? "Choose your marketing brain" : "Pilih otak marketing"}</DropdownMenuLabel>
+        {autoOk && (
+          <DropdownMenuItem onClick={() => onChange("auto")} className={cn("gap-3 rounded-lg px-2.5 py-2.5", isAuto && "bg-accent")}>
+            <Wand2 className="!size-4 text-primary" />
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5 text-sm font-medium">
+                {autoLabel}
+                <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">{lang === "en" ? "Recommended" : "Disarankan"}</span>
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                {lang === "en" ? "Junior for light tasks, Senior for strategy" : "Junior untuk hal ringan, Senior untuk strategi"}
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
+              1–2 {lang === "en" ? "cr" : "kredit"}
+              <Check className={cn("!size-4 text-primary", !isAuto && "invisible")} />
+            </span>
+          </DropdownMenuItem>
+        )}
         {tiers.map((t, i) => {
           const locked = !allowedTiers.includes(t.id);
           const selected = t.id === value && !locked;

@@ -20,7 +20,8 @@ import { consumeCredits, refundCredits } from "@/lib/credits";
 import { routeTier } from "@/lib/ai/router";
 import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
-import { estimateCostUsd, getTier, messageCreditCost } from "@/lib/ai/models.config";
+import { estimateCostUsd, getTier, messageCreditCost, type TierId } from "@/lib/ai/models.config";
+import { autoTier, resolveTier } from "@/lib/ai/auto-tier";
 import {
   attachmentIds,
   extractMemories,
@@ -32,6 +33,7 @@ import {
   saveMessages,
   scopeMemories,
   summarizeToolParts,
+  withCacheBreakpoints,
 } from "@/lib/chat-server";
 import { capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
 import { imageGenerationEnabled } from "@/lib/ai/image";
@@ -47,7 +49,7 @@ export const maxDuration = 300;
 const bodySchema = z.object({
   id: z.string().uuid(),
   messages: z.array(z.any()).min(1).max(200),
-  tier: z.enum(["junior", "senior", "associate", "director"]).default("senior"),
+  tier: z.enum(["auto", "junior", "senior", "associate", "director"]).default("senior"),
   research: z.boolean().default(false),
   workspaceId: z.string().uuid().nullish(),
   agentId: z.string().uuid().nullish(),
@@ -72,7 +74,7 @@ export async function POST(req: Request) {
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json(400, { error: "invalid_body" });
-  const { id: chatId, tier: tierId, research, agentId } = parsed.data;
+  const { id: chatId, tier: tierChoice, research, agentId } = parsed.data;
   const messages = parsed.data.messages as MtMessage[];
   const last = messages[messages.length - 1];
   if (last?.role !== "user") return json(400, { error: "last_message_must_be_user" });
@@ -98,6 +100,16 @@ export async function POST(req: Request) {
       : profile.role !== "admin" && !imageFlag?.enabled
         ? "membuat gambar hanya tersedia di paket Pro & Promax"
         : null;
+  // Otak Otomatis: pesan ringan → Junior, pekerjaan strategi/dokumen/riset → Senior (sesuai tier yang dibuka paket).
+  let toolChat = false;
+  if (tierChoice === "auto") {
+    const { data: src } = await supabase.from("chats").select("source_run_id, source_agent_id").eq("id", chatId).maybeSingle();
+    toolChat = Boolean(src?.source_run_id || src?.source_agent_id);
+  }
+  const tierId: TierId =
+    tierChoice === "auto"
+      ? resolveTier("auto", allowedTiers, () => autoTier(lastText, { attachments: attachmentIds(last).length, research, toolChat }))
+      : tierChoice;
   if (!allowedTiers.includes(tierId)) {
     return json(403, { error: "tier_locked", allowed: allowedTiers });
   }
@@ -135,7 +147,7 @@ export async function POST(req: Request) {
       user_id: user.id,
       workspace_id: workspaceId,
       agent_id: chatAgentId,
-      tier: tierId,
+      tier: tierChoice,
       title: truncate(lastText || "Chat baru", 60),
     });
     if (error) {
@@ -143,14 +155,14 @@ export async function POST(req: Request) {
       workspaceId = null;
       const retry = await supabase
         .from("chats")
-        .insert({ id: chatId, user_id: user.id, agent_id: chatAgentId, tier: tierId, title: truncate(lastText || "Chat baru", 60) });
+        .insert({ id: chatId, user_id: user.id, agent_id: chatAgentId, tier: tierChoice, title: truncate(lastText || "Chat baru", 60) });
       if (retry.error) {
         await refundCredits(user.id, cost, "chat_create_failed");
         return json(400, { error: "chat_create_failed" });
       }
     }
   } else {
-    await supabase.from("chats").update({ tier: tierId }).eq("id", chatId);
+    await supabase.from("chats").update({ tier: tierChoice }).eq("id", chatId);
   }
 
   const startedAt = Date.now();
@@ -273,7 +285,7 @@ export async function POST(req: Request) {
         // Prompt caching Claude: system prompt (stabil) + riwayat chat dibaca dari cache dengan ± 10% harga input.
         messages: [
           { role: "system", content: system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-          ...convertToModelMessages(resolved),
+          ...withCacheBreakpoints(convertToModelMessages(resolved)),
         ],
         maxOutputTokens: tier.maxOutputTokens,
         temperature: tier.temperature,

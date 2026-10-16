@@ -36,7 +36,7 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
       key={id}
       chatId={id}
       initialMessages={messages}
-      initialTier={isTier(chat.tier) ? chat.tier : "senior"}
+      initialTier={chat.tier === "auto" || isTier(chat.tier) ? chat.tier : "auto"}
       initialWorkspaceId={chat.workspace_id}
       isNew={false}
       tiers={publicTiers()}

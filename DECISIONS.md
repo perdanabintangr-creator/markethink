@@ -171,3 +171,12 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   agar kualitas strategi sama (permintaan founder).
 - Rincian biaya per tahap disimpan di `tool_runs.cost_breakdown` (migrasi 0033): tahap, model, token masuk/keluar, perkiraan token
   tulisan terlihat (sisa output = berpikir), biaya.
+
+## Rapikan pemborosan biaya chat (16 Okt 2026, ACC founder) — harga paket belum diubah
+- **Cache riwayat chat**: penanda cache di pesan asisten terakhir (stabil di giliran berikutnya) + pesan user terakhir
+  (`withCacheBreakpoints`). Sebelumnya chat Senior membaca ±12 rb token riwayat dengan harga penuh tiap pesan.
+- **Baca hasil Tools Pro**: maks 3 hasil per pesan (`MAX_TOOL_READS`), versi ringkas 7 rb karakter; `lengkap=true` 20 rb.
+- **Otak Otomatis** (default chat baru & chat lama tanpa pilihan): heuristik `autoTier` — ringan → Junior; strategi/dokumen/
+  lampiran/Riset Web/chat hasil Tools Pro/pesan panjang → Senior; ragu → Senior. Kredit sesuai otak yang dipakai; label tiap
+  jawaban menunjukkan otak yang dipakai. Disimpan sebagai `chats.tier = 'auto'`.
+- Rancangan paket (Starter Rp60 rb/250 kredit, Pro Rp200 rb/900, Promax Rp300 rb/1.350, 1 kredit = Rp100 modal) menunggu ACC.

@@ -15,14 +15,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { pickTier, useApp } from "@/components/app/app-context";
+import { pickTier, pickTierChoice, useApp } from "@/components/app/app-context";
+import type { TierChoice } from "@/lib/ai/auto-tier";
 import { CanvasPanel } from "@/components/canvas/canvas-panel";
 import { ToolRunPanel } from "@/components/tools/tool-run-panel";
 import { UPDATE_RESULT_BLOCK } from "@/lib/addons/format";
 import { readToolTierPref } from "@/lib/addons/tool-tier";
 import { emitChatsChanged, emitCredits } from "@/lib/events";
 import { track } from "@/lib/analytics";
-import type { TierId } from "@/lib/ai/models.config";
 import { ATTACHMENT_URL_PREFIX, PENDING_KEY, type MtMessage, type PendingAgentRun } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ChatMessage, messageToText } from "./message";
@@ -48,7 +48,8 @@ export function ChatView({
 }: {
   chatId: string;
   initialMessages: MtMessage[];
-  initialTier: TierId;
+  /** Pilihan otak tersimpan ("auto" = Otak Otomatis). */
+  initialTier: string;
   initialWorkspaceId: string | null;
   isNew: boolean;
   tiers: TierOption[];
@@ -59,7 +60,7 @@ export function ChatView({
   toolRun?: { rootId: string; tool: string } | null;
 }) {
   const { t, lang, user, workspaces, allowedTiers, freeModels } = useApp();
-  const [tier, setTier] = useState<TierId>(() => pickTier(initialTier, allowedTiers));
+  const [tier, setTier] = useState<TierChoice>(() => pickTierChoice(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
   const [quote, setQuote] = useState<string | null>(null);
@@ -194,7 +195,7 @@ export function ChatView({
       } else if (code === "rate_limited") toast.error("Terlalu banyak permintaan. Tunggu sebentar ya.");
       else if (code === "tier_locked") {
         setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
-        setTier(pickTier(null, allowedTiers));
+        setTier(pickTierChoice(null, allowedTiers));
         setLimitNotice(null);
         setLockedTier("Otak ini|pro");
         setQuotaOpen(true);

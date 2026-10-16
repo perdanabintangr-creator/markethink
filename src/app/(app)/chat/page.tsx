@@ -11,7 +11,7 @@ export default async function NewChatPage({ searchParams }: { searchParams: Prom
       key={id}
       chatId={id}
       initialMessages={[]}
-      initialTier="senior"
+      initialTier="auto"
       initialWorkspaceId={workspace && /^[0-9a-f-]{36}$/i.test(workspace) ? workspace : null}
       isNew
       tiers={publicTiers()}

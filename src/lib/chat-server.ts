@@ -257,3 +257,14 @@ Balas HANYA JSON array berisi 0-3 string singkat (maks 120 karakter), contoh: ["
     console.warn("[memory] gagal", err);
   }
 }
+
+/**
+ * Prompt caching riwayat chat: tandai pesan asisten terakhir (isinya stabil di giliran berikutnya) dan pesan user terakhir.
+ * Riwayat yang sudah pernah dibaca dibayar ±10% harga input; langkah tool berikutnya dalam satu jawaban juga membaca dari cache.
+ */
+export function withCacheBreakpoints<T extends { role: string; providerOptions?: Record<string, unknown> }>(msgs: T[]): T[] {
+  const mark = (m: T): T => ({ ...m, providerOptions: { ...(m.providerOptions ?? {}), anthropic: { cacheControl: { type: "ephemeral" } } } });
+  const lastUser = msgs.map((m) => m.role).lastIndexOf("user");
+  const lastAssistant = msgs.slice(0, lastUser === -1 ? msgs.length : lastUser).map((m) => m.role).lastIndexOf("assistant");
+  return msgs.map((m, i) => (i === lastUser || i === lastAssistant ? mark(m) : m));
+}

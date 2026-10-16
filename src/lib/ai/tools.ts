@@ -91,14 +91,27 @@ async function logUsage(
   });
 }
 
+/** Maksimal hasil Tools Pro yang dibaca AI per pesan (hemat biaya; versi ringkas biasanya cukup). */
+export const MAX_TOOL_READS = 3;
+
 export function createChatTools(ctx: ToolCtx) {
+  const read = new Set<string>();
   return {
     read_tool_result: tool({
       description:
-        "Baca isi lengkap hasil Markethink Tools Pro milik user (versi terbaru), mis. persona, kalender konten, marketing plan, riset pasar. " +
-        "Pakai id dari daftar HASIL TOOLS PRO MILIK USER di instruksi sistem, setiap kali user menyinggung hasil yang dibuat di Tools Pro.",
-      inputSchema: z.object({ run_id: z.string().uuid().describe("id hasil dari daftar HASIL TOOLS PRO MILIK USER") }),
-      execute: async ({ run_id }) => readToolResult(ctx.admin, ctx.userId, run_id),
+        "Baca hasil Markethink Tools Pro milik user (versi terbaru), mis. persona, kalender konten, marketing plan, riset pasar. " +
+        "Pakai id dari daftar HASIL TOOLS PRO MILIK USER di instruksi sistem, setiap kali user menyinggung hasil yang dibuat di Tools Pro. " +
+        `Maksimal ${MAX_TOOL_READS} hasil per pesan — pilih yang paling relevan. Default versi ringkas; lengkap=true bila butuh detail (mis. temuan riset).`,
+      inputSchema: z.object({
+        run_id: z.string().uuid().describe("id hasil dari daftar HASIL TOOLS PRO MILIK USER"),
+        lengkap: z.boolean().optional().describe("true = versi lengkap (lebih panjang). Default ringkas."),
+      }),
+      execute: async ({ run_id, lengkap }) => {
+        if (!read.has(run_id) && read.size >= MAX_TOOL_READS)
+          return { ok: false as const, error: `Batas ${MAX_TOOL_READS} hasil per pesan tercapai. Jawab dari hasil yang sudah dibaca.` };
+        read.add(run_id);
+        return readToolResult(ctx.admin, ctx.userId, run_id, lengkap ? 20_000 : 7_000);
+      },
     }),
 
     generate_image: tool({

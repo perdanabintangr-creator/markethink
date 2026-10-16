@@ -4,6 +4,7 @@ import { createContext, useContext } from "react";
 import type { Dict, Lang } from "@/lib/i18n/dict";
 import type { WorkspaceSummary } from "@/lib/types";
 import type { TierId } from "@/lib/ai/models.config";
+import type { TierChoice } from "@/lib/ai/auto-tier";
 
 export interface AppContextValue {
   user: { id: string; email: string | null; name: string | null; avatar: string | null; role: "user" | "admin" };
@@ -25,6 +26,13 @@ export function pickTier(preferred: TierId | null | undefined, allowed: TierId[]
   if (preferred && allowed.includes(preferred)) return preferred;
   if (allowed.includes("senior")) return "senior";
   return allowed[0] ?? "junior";
+}
+
+/** Pilihan otak di chat: bawaannya Otak Otomatis bila paket membuka Junior & Senior. */
+export function pickTierChoice(preferred: string | null | undefined, allowed: TierId[]): TierChoice {
+  const autoOk = allowed.includes("junior") && allowed.includes("senior");
+  if (preferred === "auto" || !preferred) return autoOk ? "auto" : pickTier(null, allowed);
+  return pickTier(preferred as TierId, allowed);
 }
 
 const Ctx = createContext<AppContextValue | null>(null);
