@@ -184,6 +184,7 @@ export async function POST(req: Request) {
   let markDone: () => void = () => {};
   const done = new Promise<void>((resolve) => (markDone = resolve));
 
+  const responseId = genId();
   const stream = createUIMessageStream<MtMessage>({
     originalMessages: messages,
     generateId: genId,
@@ -193,6 +194,13 @@ export async function POST(req: Request) {
       return "Maaf, otak marketing sedang sibuk. Kreditmu sudah dikembalikan — coba lagi sebentar lagi.";
     },
     execute: async ({ writer }) => {
+      // Satu "start" dengan ID tetap di awal: status/sumber/tautan ditulis sebelum jawaban AI, dan kalau ID berganti
+      // di tengah jalan, layar chat menampilkan jawaban dobel (mis. kotak "Sumber" dua kali).
+      writer.write({
+        type: "start",
+        messageId: responseId,
+        messageMetadata: { tier: tierId, createdAt: Date.now(), credits: cost, remainingCredits: credit.remaining },
+      });
       // --- konteks: agent, workspace, memory, riset ---
       const [{ data: agent }, { data: memories }, wsCtx] = await Promise.all([
         chatAgentId
@@ -433,10 +441,8 @@ export async function POST(req: Request) {
         result.toUIMessageStream<MtMessage>({
           sendReasoning: false,
           sendSources: true,
+          sendStart: false,
           messageMetadata: ({ part }) => {
-            if (part.type === "start") {
-              return { tier: tierId, createdAt: Date.now(), credits: cost, remainingCredits: credit.remaining };
-            }
             if (part.type === "finish") {
               const used = routed.resolved();
               return {
