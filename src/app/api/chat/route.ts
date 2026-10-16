@@ -20,6 +20,8 @@ import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/l
 import { routeTier } from "@/lib/ai/router";
 import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
+import { clampToSchema } from "@/lib/schema-clamp";
+import { presentationSchema } from "@/lib/pptx";
 import { extractLinks, linkContext, linkHistoryText, readLink, toLinkPart, type LinkRead } from "@/lib/ai/links";
 import { estimateCostUsd, getTier, messageCreditCost, type TierId } from "@/lib/ai/models.config";
 import { autoTier, isDeckRequest, isImageRequest, resolveTier } from "@/lib/ai/auto-tier";
@@ -60,6 +62,7 @@ const json = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 const genId = createIdGenerator({ prefix: "msg", size: 16 });
+const PRESENTATION_JSON_SCHEMA = z.toJSONSchema(presentationSchema) as Parameters<typeof clampToSchema>[1];
 
 /** Paket Free: batas panjang jawaban (±1.500 kata) & jumlah pesan riwayat yang dibaca AI. */
 const FREE_MAX_OUTPUT_TOKENS = 2_000;
@@ -416,6 +419,17 @@ export async function POST(req: Request) {
               }
             : {}),
           ...(googleSearchOn ? { google_search: google.tools.googleSearch({}) } : {}),
+        },
+        // Isi PPT melebihi batas skema (sering pada otak Director yang sangat detail) → dirapikan, bukan gagal lalu mengulang.
+        experimental_repairToolCall: async ({ toolCall }) => {
+          if (toolCall.toolName !== "create_presentation") return null;
+          try {
+            const fixed = clampToSchema(JSON.parse(toolCall.input), PRESENTATION_JSON_SCHEMA);
+            if (!fixed || !presentationSchema.safeParse(fixed).success) return null;
+            return { ...toolCall, input: JSON.stringify(fixed) };
+          } catch {
+            return null;
+          }
         },
         // Beberapa langkah: model memanggil tool (gambar/PPT) lalu menjelaskan hasilnya.
         stopWhen: stepCountIs(5),

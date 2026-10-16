@@ -124,7 +124,15 @@ export function ChatMessage({
     .filter((s, i, all) => all.findIndex((x) => x.url === s.url) === i);
   const files = message.parts.filter((p): p is FileUIPart => p.type === "file");
   const links = message.parts.flatMap((p) => (p.type === "data-link" ? [p.data as LinkPart] : []));
-  const blocks = assistantBlocks(message);
+  // Percobaan PPT yang gagal lalu berhasil diulang AI tidak perlu ditampilkan sebagai error.
+  const allBlocks = assistantBlocks(message);
+  const lastDeckOk = allBlocks.findLastIndex(
+    (b) => b.kind === "tool" && b.part.type === "tool-create_presentation" && b.part.state === "output-available" && b.part.output?.ok,
+  );
+  const blocks = allBlocks.filter(
+    (b, i) =>
+      !(i < lastDeckOk && b.kind === "tool" && b.part.type === "tool-create_presentation" && (b.part.state === "output-error" || b.part.output?.ok === false)),
+  );
   const lastPart = message.parts[message.parts.length - 1];
   const searching = lastPart?.type === "tool-web_search" || (message.parts.some((p) => p.type === "tool-web_search") && !text);
 
