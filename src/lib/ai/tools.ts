@@ -14,7 +14,7 @@ import {
   type DeckImages,
   type PresentationInput,
 } from "@/lib/pptx";
-import { buildScene, signatureImageRequests, type SignatureImageRequest } from "@/lib/deck/engine";
+import { buildScene, imageStylePrompt, signatureImageRequests, type SignatureImageRequest } from "@/lib/deck/engine";
 import { renderScenePdf, renderScenePptx } from "@/lib/deck/render";
 import { sanitizeFileName } from "@/lib/files";
 import { readToolResult } from "@/lib/addons/chat-context";
@@ -355,14 +355,20 @@ async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<D
 // ---------------------------------------------------------------------------
 
 const SIGNATURE_GUIDE =
-  "\nGAYA SIGNATURE (paket ini — kualitas tertinggi, setara deck agency): WAJIB isi `design`. (a) Pilih `design.mood` yang paling cocok dengan tema & " +
-  "audiens (font & bentuk kotak mengikuti mood). (b) Tentukan `design.kv` = satu dunia visual yang konsisten (setting, tokoh, pakaian, pencahayaan, " +
-  "color grade) — semua foto dibuat dari KV ini sehingga tokoh & suasananya sama di tiap slide. (c) `design.palette` diturunkan dari KV " +
-  "(bg gelap untuk event malam/teknologi, terang untuk F&B/beauty, dsb.), kontras teks tinggi. (d) Isi `design.cover_kicker`, `design.tagline`, " +
-  "`design.presenter` bila relevan. (e) Beri image_prompt pada ± 7 slide terpenting (cards, timeline, section, stats, comparison, closing): " +
-  "tulis ADEGAN-nya saja (siapa melakukan apa, di mana) — gaya & komposisi diatur otomatis. Untuk cards berisi 2 kartu, gambarkan dua subjek " +
-  "kiri-kanan (mis. 'a gamer on the left, a video creator on the right'). (f) Teks sangat ringkas: kicker 2–4 kata, judul ≤ 7 kata yang kuat " +
-  "(boleh bahasa Inggris untuk event/brand modern), isi kartu 2–3 kalimat pendek (tiap kalimat jadi satu baris), takeaway 1 kalimat pernyataan.";
+  "\nGAYA SIGNATURE (paket ini — kualitas tertinggi, setara deck agency): WAJIB isi `design`, dan desainnya HARUS mengikuti permintaan & " +
+  "dunia user, bukan gaya default. (a) Baca kata gaya dari user lebih dulu (lucu/imut/gemas, elegan, mewah, minimalis, retro, sporty, " +
+  "garang, natural, dsb.) lalu topik/industri, kemudian pilih `design.mood` yang paling sesuai — contoh: 'lucu'/anak/snack manis → playful; " +
+  "otomotif/balap/bengkel/olahraga → sport; F&B/kopi/restoran → warm; skincare/wedding → beauty; properti/fashion premium → editorial; " +
+  "budaya/pariwisata → heritage; B2B/keuangan → corporate; gaming/teknologi/event malam → tech. JANGAN memakai tech/gelap untuk tema yang " +
+  "bukan teknologi/malam. (b) `design.image_style` mengikuti user: 'lucu'/maskot/anak → 3d atau flat; selain itu photo kecuali diminta lain. " +
+  "(c) `design.kv` = satu dunia visual konsisten berisi ELEMEN KHAS topik (mis. otomotif: mobil/motor, aspal, garasi, garis kecepatan; " +
+  "F&B: makanan/minuman, bahan, meja, uap, cahaya hangat; lucu: karakter/maskot imut, warna pastel) — semua gambar dibuat dari KV ini " +
+  "sehingga tokoh & suasananya sama. (d) `design.palette` dari KV & brand: terang & ceria untuk lucu/F&B/beauty, gelap hanya bila temanya " +
+  "malam/teknologi/premium gelap; kontras teks tinggi. (e) Isi `design.cover_kicker`, `design.tagline`, `design.presenter` bila relevan. " +
+  "(f) Beri image_prompt pada ± 7 slide terpenting (cards, section, stats, closing, quote, image_text; untuk mood tech/sport/bold/modern " +
+  "juga timeline & comparison): tulis ADEGAN-nya saja dengan elemen khas topik (siapa/apa, melakukan apa, di mana) — gaya & komposisi " +
+  "diatur otomatis. Untuk cards 2 kartu pada mood tech/sport/bold/modern, gambarkan dua subjek kiri-kanan. (g) Teks sangat ringkas: " +
+  "kicker 2–4 kata, judul ≤ 7 kata yang kuat & sesuai nada user (lucu → ringan & playful), isi kartu 2–3 kalimat pendek, takeaway 1 kalimat.";
 
 /** KV dulu (jadi acuan), lalu foto slide lain dibuat dari KV agar tokoh, tempat & warna konsisten. */
 async function makeSignatureImages(ctx: ToolCtx, input: PresentationInput, reqs: SignatureImageRequest[]): Promise<DeckImages> {
@@ -373,16 +379,17 @@ async function makeSignatureImages(ctx: ToolCtx, input: PresentationInput, reqs:
   const credit = await consumeCredits(ctx.userId, toGenerate.length * DECK_IMAGE_CREDIT_COST, "deck_images", { chatId: ctx.chatId });
   if (!credit.ok) return images;
   const world = input.design?.kv?.trim();
+  const look = imageStylePrompt(input);
   const NO_TEXT = "No text, no words, no letters, no logos, no watermark.";
   let failed = 0;
   const run = async (r: SignatureImageRequest, refs: { mime: string; data: string }[]) => {
     const prompt = refs.length
-      ? `Create a new photo in exactly the same visual world as the reference image: same setting style, same characters' look and wardrobe if people appear, ` +
+      ? `Create a new image in exactly the same visual world and art style as the reference image: same setting style, same characters' look and wardrobe if people appear, ` +
         `same color palette, lighting and color grade. Scene: ${r.prompt}. ${r.composition} ${world ? `World: ${world}. ` : ""}` +
-        `Photorealistic, premium campaign quality. ${NO_TEXT}`
+        `${look} ${NO_TEXT}`
       : r.product
-        ? `Premium studio product photography: ${r.prompt}. ${r.composition} ${world ? `Mood: ${world}. ` : ""}${NO_TEXT}`
-        : `${world ? `${world}. ` : ""}${r.prompt}. ${r.composition} Premium campaign key visual, photorealistic, cinematic lighting and color grade, rich detail. ${NO_TEXT}`;
+        ? `Premium product shot: ${r.prompt}. ${r.composition} ${world ? `Mood: ${world}. ` : ""}${look} ${NO_TEXT}`
+        : `${world ? `${world}. ` : ""}${r.prompt}. ${r.composition} Premium campaign key visual. ${look} ${NO_TEXT}`;
     try {
       const img = await Promise.race([
         generateImage(prompt, r.aspect, refs, { budget: !refs.length && r.key !== "cover" }),

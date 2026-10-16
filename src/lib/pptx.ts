@@ -4,7 +4,7 @@ import PptxGenJS from "pptxgenjs";
 import { z } from "zod";
 import { PPTX_ICONS, PPTX_ICON_NAMES, type PptxIcon } from "./pptx-icons";
 import { HERO_OVERLAY_PNG } from "./pptx-overlay";
-import { MOOD_IDS, moodGuide } from "./deck/moods";
+import { IMAGE_STYLES, MOOD_IDS, moodGuide } from "./deck/moods";
 
 // ---------------------------------------------------------------------------
 // Skema isi presentasi (diisi oleh AI lewat tool create_presentation)
@@ -144,6 +144,10 @@ export const presentationSchema = z.object({
       kv: short(500).describe(
         "Key visual (bahasa Inggris): dunia visual deck yang konsisten — lokasi/setting, tokoh (usia, gaya, pakaian), pencahayaan, palet warna & color grade. Dipakai untuk SEMUA foto",
       ),
+      image_style: z
+        .enum(IMAGE_STYLES)
+        .optional()
+        .describe("Gaya gambar: photo (foto nyata), 3d (ilustrasi 3D lucu/imut), flat (ilustrasi vektor ceria), watercolor (cat air lembut). Ikuti permintaan user (mis. 'lucu' → 3d/flat)"),
       cover_kicker: short(70).optional().describe("Label kecil di atas judul cover, mis. 'ESPORTS TOURNAMENT · AI VIDEO COMPETITION'"),
       tagline: short(80).optional().describe("Tagline pendek di cover, mis. 'Play the Game. Create the Future.'"),
       presenter: short(60).optional().describe("Mis. 'Presented by Partai Demokrat'"),

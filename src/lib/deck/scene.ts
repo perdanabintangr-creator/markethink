@@ -16,7 +16,8 @@ export interface Box {
 }
 
 export type SceneItem =
-  | ({ t: "rect" | "ellipse"; fill?: string; fo?: number; line?: string; lo?: number; lw?: number; r?: number } & Box)
+  /** rot = putaran (derajat) searah jarum jam terhadap titik tengah. */
+  | ({ t: "rect" | "ellipse"; fill?: string; fo?: number; line?: string; lo?: number; lw?: number; r?: number; rot?: number } & Box)
   | { t: "line"; x1: number; y1: number; x2: number; y2: number; color: string; o?: number; lw: number }
   | ({ t: "img"; key: string; fit?: "cover" | "contain" } & Box)
   /** Gradasi transparan satu warna: opasitas `from` di awal → `to` di akhir, mengikuti arah `dir`. */

@@ -4,7 +4,7 @@ import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import { resolveDeckTheme } from "@/lib/deck-theme";
 import type { PresentationInput, SlideInput } from "@/lib/pptx";
-import { DECK_MOODS, type DeckMood, type MoodId } from "./moods";
+import { DECK_MOODS, IMAGE_STYLE_PROMPT, type DeckMood, type ImageStyle, type MoodId } from "./moods";
 import { SCENE_H, SCENE_W, type FontRole, type Scene, type SceneFont, type SceneItem, type SceneSlide } from "./scene";
 
 /**
@@ -154,6 +154,12 @@ export function resolvePalette(input: Pick<PresentationInput, "theme" | "brand_c
   return { bg, surface, text, muted, accent, accent2, dark, onAccent: relLum(accent) > 0.4 ? "111111" : "FFFFFF" };
 }
 
+/** Arahan gaya gambar deck (foto / ilustrasi 3D lucu / flat / cat air). */
+export function imageStylePrompt(input: Pick<PresentationInput, "theme" | "design">) {
+  const style = (input.design?.image_style as ImageStyle | undefined) ?? moodOf(input).imageStyle;
+  return IMAGE_STYLE_PROMPT[style] ?? IMAGE_STYLE_PROMPT.photo;
+}
+
 const THEME_MOOD: Record<string, MoodId> = { midnight: "modern", clean: "minimal", sunset: "warm", forest: "warm", ocean: "modern", luxe: "editorial", coral: "playful", corporate: "corporate" };
 export const moodOf = (input: Pick<PresentationInput, "theme" | "design">): DeckMood =>
   DECK_MOODS[(input.design?.mood as MoodId) ?? THEME_MOOD[input.theme ?? ""] ?? "modern"] ?? DECK_MOODS.modern;
@@ -176,7 +182,13 @@ const FULL = "Wide cinematic establishing shot; key subject in the upper-middle 
 const HALF = "Vertical composition, subject centered with breathing room, rich atmosphere.";
 const PRIORITY: SlideInput["layout"][] = ["cards", "timeline", "section", "stats", "closing", "image_text", "product", "comparison", "quote", "gallery", "agenda", "bullets"];
 
-function slidePhoto(s: SlideInput): { aspect: string; composition: string } | null {
+const SIDE = "Vertical composition, main subject centered and fully in frame, clean uncluttered background.";
+
+function slidePhoto(s: SlideInput, treatment: DeckMood["treatment"]): { aspect: string; composition: string } | null {
+  if (treatment !== "stage") {
+    if (s.layout === "product") return { aspect: "1:1", composition: "Product centered and fully visible." };
+    return SPLIT_LAYOUTS.has(s.layout) ? { aspect: "3:4", composition: SIDE } : null;
+  }
   switch (s.layout) {
     case "cards":
       return (s.cards?.length ?? 0) === 2
@@ -203,9 +215,14 @@ function slidePhoto(s: SlideInput): { aspect: string; composition: string } | nu
 
 export function signatureImageRequests(input: PresentationInput, maxGenerated = 8): SignatureImageRequest[] {
   const all: (SignatureImageRequest & { rank: number })[] = [];
-  const coverComp = "Hero key visual: main subject(s) in the right half of the frame; the left 45% is calm, darker negative space for the title.";
-  if (input.cover_image_id) all.push({ key: "cover", aspect: "16:9", imageId: input.cover_image_id, composition: coverComp, rank: -1 });
-  else all.push({ key: "cover", aspect: "16:9", prompt: input.cover_image_prompt || input.title, composition: coverComp, rank: -1 });
+  const treatment = moodOf(input).treatment;
+  const coverAspect = treatment === "stage" ? "16:9" : "3:4";
+  const coverComp =
+    treatment === "stage"
+      ? "Hero key visual: main subject(s) in the right half of the frame; the left 45% is calm, darker negative space for the title."
+      : "Hero key visual, vertical composition, main subject centered and fully in frame, clean uncluttered background.";
+  if (input.cover_image_id) all.push({ key: "cover", aspect: coverAspect, imageId: input.cover_image_id, composition: coverComp, rank: -1 });
+  else all.push({ key: "cover", aspect: coverAspect, prompt: input.cover_image_prompt || input.title, composition: coverComp, rank: -1 });
   input.slides.forEach((s, i) => {
     const rank = (PRIORITY.indexOf(s.layout) + 1 || 20) + i / 100;
     if (s.layout === "gallery") {
@@ -216,7 +233,7 @@ export function signatureImageRequests(input: PresentationInput, maxGenerated = 
       });
       return;
     }
-    const photo = slidePhoto(s);
+    const photo = slidePhoto(s, treatment);
     if (!photo) return;
     if (s.image_id) all.push({ key: String(i), ...photo, imageId: s.image_id, rank, product: s.layout === "product" });
     else if (s.image_prompt) all.push({ key: String(i), ...photo, prompt: s.image_prompt, rank, product: s.layout === "product" });
@@ -252,14 +269,21 @@ type Dims = Record<string, { width: number; height: number }>;
 
 class Composer {
   items: SceneItem[] = [];
+  /** Area isi (inci) — menyempit bila foto ditaruh di bingkai/separuh slide. */
+  ax = M;
+  aw = W - 2 * M;
+  /** Foto yang sudah dipakai sebagai panel samping (tidak dipakai lagi oleh layout). */
+  hidden = new Set<string>();
   constructor(
     readonly pal: Pal,
     readonly mood: DeckMood,
     readonly fonts: Record<FontRole, FkFont>,
     readonly images: Dims,
+    /** Nomor slide — untuk variasi ornamen. */
+    readonly seed = 0,
   ) {}
 
-  has = (key: string) => Boolean(this.images[key]);
+  has = (key: string) => Boolean(this.images[key]) && !this.hidden.has(key);
 
   measure(str: string | undefined, role: FontRole, w: number, o: TextOpts) {
     const fk = this.fonts[role];
@@ -297,7 +321,7 @@ class Composer {
     return h;
   }
 
-  rect(x: number, y: number, w: number, h: number, p: { fill?: string; fo?: number; line?: string; lo?: number; lw?: number; r?: number } = {}) {
+  rect(x: number, y: number, w: number, h: number, p: { fill?: string; fo?: number; line?: string; lo?: number; lw?: number; r?: number; rot?: number } = {}) {
     this.items.push({ t: "rect", x, y, w, h, ...p });
   }
   ellipse(x: number, y: number, w: number, h: number, p: { fill?: string; fo?: number; line?: string; lo?: number; lw?: number } = {}) {
@@ -325,20 +349,136 @@ class Composer {
   stage(key: string, dim = 0.3) {
     if (!this.img(key, 0, 0, W, H)) return false;
     this.rect(0, 0, W, H, { fill: this.pal.bg, fo: this.pal.dark ? dim : dim * 0.75 });
+    // Aksen khas mood tetap terlihat di atas foto (garis balap / blok warna di tepi kanan).
+    if (this.mood.decor === "speed")
+      [0, 0.3].forEach((dx, k) => this.rect(W - 0.9 + dx, -1.2, k ? 0.07 : 0.16, H + 2.4, { fill: k ? this.pal.accent2 : this.pal.accent, fo: k ? 0.7 : 0.85, rot: 24 }));
+    else if (this.mood.decor === "blocks") this.rect(W - 0.32, 0, 0.32, H, { fill: this.pal.accent });
     return true;
   }
 
-  /** Dekorasi halus saat tanpa foto: cahaya & cincin warna aksen. */
+  /** Ornamen khas mood (di belakang isi). cx/cy/r = posisi saran untuk ornamen bulat. */
   ambient(cx = W - 2.4, cy = H * 0.62, r = 2.6) {
-    const { accent, accent2 } = this.pal;
-    this.ellipse(cx - r * 1.3, cy - r * 1.3, r * 2.6, r * 2.6, { fill: accent, fo: this.pal.dark ? 0.07 : 0.05 });
-    this.ellipse(cx - r, cy - r, r * 2, r * 2, { line: accent, lo: 0.16, lw: 0.75 });
-    this.ellipse(cx - r * 0.62, cy - r * 0.62, r * 1.24, r * 1.24, { line: accent2, lo: 0.22, lw: 0.75 });
+    const { accent, accent2, dark, text } = this.pal;
+    const rnd = (k: number) => {
+      const v = Math.sin((this.seed + 1) * 12.9898 + k * 78.233) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    // Slide dengan foto samping: ornamen tepi sudah digambar sebelum foto; ornamen besar tidak dipakai.
+    if (this.hidden.has("__decor")) return;
+    switch (this.mood.decor) {
+      case "glow":
+        this.ellipse(cx - r * 1.3, cy - r * 1.3, r * 2.6, r * 2.6, { fill: accent, fo: dark ? 0.07 : 0.05 });
+        this.ellipse(cx - r, cy - r, r * 2, r * 2, { line: accent, lo: 0.16, lw: 0.75 });
+        this.ellipse(cx - r * 0.62, cy - r * 0.62, r * 1.24, r * 1.24, { line: accent2, lo: 0.22, lw: 0.75 });
+        return;
+      case "confetti": {
+        // Bulatan & "stiker" warna-warni di sudut — ceria tapi tidak mengganggu teks.
+        const spots = [
+          { x: W - 0.95, y: 0.55, d: 0.75, c: accent, o: 0.9 },
+          { x: W - 1.85, y: 0.35, d: 0.28, c: accent2, o: 0.9 },
+          { x: W - 0.5, y: 1.75, d: 0.36, c: accent2, o: 0.55 },
+          { x: 0.25, y: H - 0.9, d: 0.55, c: accent2, o: 0.8 },
+          { x: 0.95, y: H - 0.42, d: 0.22, c: accent, o: 0.7 },
+          { x: W - 1.2, y: H - 0.85, d: 0.5, c: accent, o: 0.35 },
+        ];
+        spots.forEach((p, k) => {
+          const j = (rnd(k) - 0.5) * 0.3;
+          this.ellipse(p.x + j, p.y - j, p.d, p.d, { fill: p.c, fo: p.o });
+        });
+        this.rect(W - 2.0, H - 0.75, 0.4, 0.4, { fill: accent2, fo: 0.85, r: 0.1, rot: 15 + rnd(9) * 30 });
+        this.rect(0.45, 0.42, 0.3, 0.3, { fill: accent, fo: 0.6, r: 0.08, rot: -20 + rnd(7) * 20 });
+        return;
+      }
+      case "speed": {
+        // Garis balap miring di sisi kanan.
+        const base = W - 2.6 + rnd(1) * 0.6;
+        [0, 0.42, 0.7].forEach((dx, k) =>
+          this.rect(base + dx, -1.2, [0.26, 0.12, 0.05][k], H + 2.4, { fill: k === 1 ? accent2 : accent, fo: [0.9, 0.55, 0.35][k], rot: 24 }),
+        );
+        return;
+      }
+      case "organic":
+        this.ellipse(cx - r * 0.9, cy - r * 0.9, r * 1.8, r * 1.8, { fill: accent2, fo: dark ? 0.14 : 0.12 });
+        this.ellipse(-1.1, -1.3, 2.6, 2.6, { fill: accent, fo: 0.1 });
+        this.ellipse(cx - r * 0.55, cy - r * 0.55, r * 1.1, r * 1.1, { line: accent, lo: 0.35, lw: 1 });
+        return;
+      case "arch":
+        this.ellipse(cx - r, cy - r, r * 2, r * 2, { fill: accent, fo: 0.08 });
+        this.rect(W - 2.9, 0.75, 2.1, H - 1.3, { line: accent, lo: 0.35, lw: 0.75, r: 1.05 });
+        return;
+      case "rules":
+        this.line(M, 0.38, W - M, 0.38, accent, 1.25, 0.9);
+        this.line(M, H - 0.32, W - M, H - 0.32, text, 0.5, 0.18);
+        return;
+      case "ornament":
+        this.rect(0.24, 0.24, W - 0.48, H - 0.48, { line: accent, lo: 0.65, lw: 0.75 });
+        this.rect(0.32, 0.32, W - 0.64, H - 0.64, { line: accent, lo: 0.3, lw: 0.5 });
+        for (const [x, y] of [[W / 2, 0.28], [W / 2, H - 0.28]]) this.rect(x - 0.07, y - 0.07, 0.14, 0.14, { fill: accent, rot: 45 });
+        return;
+      case "blocks":
+        this.rect(W - 0.32, 0, 0.32, H, { fill: accent });
+        this.rect(W - 0.75, H - 0.9, 0.3, 0.3, { fill: accent2 });
+        return;
+      default:
+        return;
+    }
+  }
+
+  /** Label kecil di atas judul sesuai mood: teks berspasi, pil berwarna, atau batang aksen. */
+  kicker(str: string | undefined, x: number, y: number, w: number, size = 9.5) {
+    if (!str) return 0;
+    const style = this.mood.kicker;
+    if (style === "pill") {
+      const m = this.measure(str, "strong", w - 0.4, { size, ls: 1.2, upper: true, maxLines: 1, min: 7.5 });
+      const tw = Math.min(w, (Math.max(...m.lines.map((l) => textWidthPt(this.fonts.strong, l, m.size, m.ls))) + 0.1) / 72 + 0.36);
+      const h = (m.size * 1.2) / 72 + 0.16;
+      this.rect(x, y, tw, h, { fill: this.pal.accent, r: h / 2 });
+      this.text(str, "strong", x + 0.18, y + 0.08, tw - 0.3, { size: m.size, ls: 1.2, upper: true, maxLines: 1, color: this.pal.onAccent, lh: 1.2 });
+      return h;
+    }
+    if (style === "bar") {
+      const h = this.text(str, "strong", x + 0.42, y, w - 0.42, { size, ls: 2, upper: true, color: this.pal.accent2, maxLines: 1, min: 8 });
+      this.rect(x, y + h / 2 - 0.035, 0.3, 0.07, { fill: this.pal.accent });
+      return h;
+    }
+    return this.text(str, "strong", x, y, w, { size, ls: 2.6, upper: true, color: this.pal.accent2, maxLines: 1, min: 8 });
+  }
+
+  /** Foto di samping (bingkai kartu / separuh slide), lalu area isi pindah ke sisi lain. */
+  photoPanel(key: string, side: "left" | "right") {
+    if (!this.has(key)) return false;
+    const { pal, mood } = this;
+    if (mood.treatment === "bleed") {
+      const pw = W * 0.44;
+      const x = side === "right" ? W - pw : 0;
+      this.img(key, x, 0, pw, H);
+      this.line(side === "right" ? x : pw, 0, side === "right" ? x : pw, H, pal.accent, 2.5);
+      this.ax = side === "right" ? M : pw + 0.6;
+      this.aw = side === "right" ? W - pw - M - 0.55 : W - M - this.ax;
+    } else {
+      const fw = W * 0.4;
+      const fh = H - 1.0;
+      const x = side === "right" ? W - fw - 0.55 : 0.55;
+      const y = 0.5;
+      const r = mood.radius ? Math.max(0.2, mood.radius * 1.3) : 0;
+      // Bentuk latar khas mood di belakang bingkai.
+      if (mood.decor === "confetti") this.rect(x + 0.18, y + 0.12, fw, fh, { fill: pal.accent2, fo: 0.9, r, rot: side === "right" ? 4 : -4 });
+      else if (mood.decor === "organic") this.ellipse(x + fw - 1.6, y + fh - 2.2, 2.8, 2.8, { fill: pal.accent, fo: 0.85 });
+      else if (mood.decor === "arch") this.rect(x - 0.22, y - 0.22, fw + 0.44, fh + 0.44, { line: pal.accent, lo: 0.5, lw: 0.75, r: r + 0.2 });
+      const inset = mood.treatment === "frame" && mood.decor !== "none" ? Math.max(0.12, r * 0.35) : 0;
+      if (inset) this.rect(x, y, fw, fh, { fill: pal.dark ? mix(pal.surface, pal.text, 0.06) : "FFFFFF", r });
+      this.img(key, x + inset, y + inset, fw - inset * 2, fh - inset * 2);
+      if (!inset) this.rect(x, y, fw, fh, { line: pal.text, lo: 0.12, lw: 0.75 });
+      this.ax = side === "right" ? M : x + fw + 0.6;
+      this.aw = side === "right" ? x - M - 0.5 : W - M - this.ax;
+    }
+    this.hidden.add(key);
+    return true;
   }
 
   header(s: Pick<SlideInput, "kicker" | "title" | "subtitle">, x: number, y: number, w: number, o: { size?: number; maxLines?: number; rule?: boolean; sub?: boolean } = {}) {
     let cy = y;
-    if (s.kicker) cy += this.text(s.kicker, "strong", x, cy, w, { size: 9.5, ls: 2.6, upper: true, color: this.pal.accent2, maxLines: 1, min: 8 }) + 0.1;
+    if (s.kicker) cy += this.kicker(s.kicker, x, cy, w) + 0.12;
     cy += this.text(s.title, "head", x, cy, w, { size: o.size ?? 40, min: 24, maxLines: o.maxLines ?? 2, lh: 1.08, ls: this.mood.headTracking, upper: this.headUpper }) + 0.14;
     if (s.subtitle && o.sub !== false) cy += this.text(s.subtitle, "body", x, cy, w, { size: 13, min: 11, maxLines: 2, lh: 1.35, color: this.pal.muted }) + 0.1;
     if (o.rule ?? ["outline", "rule"].includes(this.mood.panel)) {
@@ -434,8 +574,8 @@ class Composer {
   }
 
   /** Grid kotak (maks 3 kolom per baris bila > 4 kotak). */
-  grid(n: number, x: number, y: number, w: number, h: number, gap = 0.2) {
-    const cols = n <= 4 ? n : 3;
+  grid(n: number, x: number, y: number, w: number, h: number, gap = 0.2, maxCols = w < 8 ? 2 : 4) {
+    const cols = n <= maxCols ? n : Math.min(3, maxCols);
     const rows = Math.ceil(n / cols);
     const cw = (w - gap * (cols - 1)) / cols;
     const ch = (h - gap * (rows - 1)) / rows;
@@ -475,34 +615,37 @@ function cover(c: Composer, input: PresentationInput) {
     c.rect(0, 0, W, H, { fill: c.pal.bg, fo: c.pal.dark ? 0.18 : 0.1 });
     c.grad(0, 0, W * 0.72, H, "right", 0.95, 0);
     c.grad(0, H * 0.55, W, H * 0.45, "down", 0, 0.85);
+    if (c.mood.decor === "speed" || c.mood.decor === "blocks") c.ambient(W - 3, H / 2, 3);
   } else c.ambient(W - 3, H / 2, 3);
-  const x = M + 0.3;
-  const w = has ? 6.4 : 8.6;
+  const x = c.ax + 0.3;
+  const w = has ? 6.4 : Math.min(8.6, c.aw - 0.3);
   const upper = c.mood.upper || ["tech", "sport", "bold", "heritage"].includes(c.mood.id);
   const d = input.design;
   const blocks = [
-    { str: d?.cover_kicker, role: "strong" as const, o: { size: 10, ls: 3, upper: true, color: c.pal.accent2, maxLines: 1, min: 8 }, gap: 0.16 },
     { str: input.title, role: "head" as const, o: { size: 56, min: 32, maxLines: 3, lh: 1.0, upper, ls: c.mood.headTracking }, gap: 0.2 },
     { str: d?.tagline, role: "strong" as const, o: { size: 17, min: 13, maxLines: 2, lh: 1.2, color: c.pal.accent2 }, gap: 0.16 },
     { str: input.subtitle, role: "body" as const, o: { size: 12, min: 10, maxLines: 3, lh: 1.45, color: c.pal.muted }, gap: 0 },
   ].filter((b) => b.str);
-  const total = blocks.reduce((sum, b) => sum + c.measure(b.str, b.role, w, b.o).h + b.gap, 0);
+  const kh = d?.cover_kicker ? 0.42 : 0;
+  const total = kh + blocks.reduce((sum, b) => sum + c.measure(b.str, b.role, w, b.o).h + b.gap, 0);
   let y = Math.max(0.8, (H - total) / 2 - 0.15);
   const start = y;
+  if (kh) y += c.kicker(d?.cover_kicker, x, y, w, 10) + 0.2;
   for (const b of blocks) y += c.text(b.str, b.role, x, y, w, b.o) + b.gap;
-  c.line(M, start, M, y, c.pal.accent, 2);
+  if (c.mood.kicker !== "pill") c.line(c.ax, start, c.ax, y, c.pal.accent, 2);
   if (d?.presenter) c.text(d.presenter, "strong", x, H - 0.85, w, { size: 8.5, ls: 2.4, upper: true, color: c.pal.muted, maxLines: 1 });
 }
 
 function section(c: Composer, s: SlideInput, i: number, no: number) {
   if (c.stage(String(i), 0.2)) c.grad(0, 0, W * 0.68, H, "right", 0.95, 0);
   else c.ambient(W - 2.6, H / 2, 2.8);
-  const x = M;
+  const x = c.ax;
+  const w = Math.min(7, c.aw);
   let y = 1.7;
   y += c.text(String(no).padStart(2, "0"), "head", x, y, 4, { size: 92, color: c.pal.accent, lh: 1, ls: c.mood.headTracking }) + 0.2;
-  if (s.kicker) y += c.text(s.kicker, "strong", x, y, 7, { size: 10, ls: 2.6, upper: true, color: c.pal.accent2, maxLines: 1 }) + 0.1;
-  y += c.text(s.title, "head", x, y, 7, { size: 42, min: 28, maxLines: 3, lh: 1.05, upper: c.headUpper, ls: c.mood.headTracking }) + 0.16;
-  c.text(s.subtitle, "body", x, y, 6.4, { size: 14, min: 11, maxLines: 3, lh: 1.4, color: c.pal.muted });
+  if (s.kicker) y += c.kicker(s.kicker, x, y, w, 10) + 0.12;
+  y += c.text(s.title, "head", x, y, w, { size: 42, min: 28, maxLines: 3, lh: 1.05, upper: c.headUpper, ls: c.mood.headTracking }) + 0.16;
+  c.text(s.subtitle, "body", x, y, Math.min(6.4, c.aw), { size: 14, min: 11, maxLines: 3, lh: 1.4, color: c.pal.muted });
 }
 
 function cards(c: Composer, s: SlideInput, i: number) {
@@ -531,13 +674,13 @@ function cards(c: Composer, s: SlideInput, i: number) {
     c.grad(0, 0, W, 3, "down", 0.9, 0);
     c.grad(0, H * 0.3, W, H * 0.7, "down", 0, 0.94);
   } else c.ambient();
-  const hb = c.header(s, M, TOP, photo ? W * 0.7 : W - 2 * M, { rule: !photo && undefined });
-  const stmt = s.takeaway ? c.measure(s.takeaway, "strong", W - 2 * M - 0.6, { size: 14.5, maxLines: 2, lh: 1.25 }).h + 0.4 + 0.22 : 0;
-  const rows = list.length > 4 ? 2 : 1;
+  const hb = c.header(s, c.ax, TOP, photo ? W * 0.7 : c.aw, { rule: !photo && undefined });
+  const stmt = s.takeaway ? c.measure(s.takeaway, "strong", c.aw - 0.6, { size: 14.5, maxLines: 2, lh: 1.25 }).h + 0.4 + 0.22 : 0;
+  const rows = list.length > (c.aw < 8 ? 2 : 4) ? 2 : 1;
   const top = Math.max(hb + 0.3, photo ? (rows > 1 ? 2.9 : 3.65) : hb + 0.3);
-  const boxes = c.grid(list.length, M, top, W - 2 * M, Math.min(rows > 1 ? 3.4 : 2.6, limit - stmt - top));
+  const boxes = c.grid(list.length, c.ax, top, c.aw, Math.min(rows > 1 ? 3.6 : 2.6, limit - stmt - top));
   boxes.forEach((b, k) => c.panelBody(b.x, b.y, b.w, b.h, { heading: list[k].title, body: list[k].text, index: photo ? undefined : String(k + 1).padStart(2, "0") }));
-  if (s.takeaway) c.statement(s.takeaway, M, limit, W - 2 * M);
+  if (s.takeaway) c.statement(s.takeaway, c.ax, limit, c.aw);
 }
 
 function stats(c: Composer, s: SlideInput, i: number) {
@@ -547,21 +690,23 @@ function stats(c: Composer, s: SlideInput, i: number) {
     c.rect(0, 0, W * 0.42, H, { fill: c.pal.bg, fo: 0.12 });
     c.grad(W * 0.42 - 1.8, 0, 1.8, H, "right", 0, 1);
   } else c.ambient(W - 1.6, H - 1.2, 2.2);
-  const x0 = photo ? W * 0.42 + 0.4 : M;
-  const w = W - x0 - M;
+  const x0 = photo ? W * 0.42 + 0.4 : c.ax;
+  const w = photo ? W - x0 - M : c.aw;
   const limit = limitOf(s);
   const hb = c.header(s, x0, TOP + (photo ? 0.35 : 0), w);
   const stmt = s.takeaway ? c.measure(s.takeaway, "strong", w - 0.6, { size: 14.5, maxLines: 2, lh: 1.25 }).h + 0.62 : 0;
-  const boxH = photo ? 1.75 : 2.3;
+  const cols = w < 5 ? 2 : 4;
+  const rows = Math.ceil(list.length / Math.min(cols, list.length));
+  const boxH = (photo || w < 8 ? 1.6 : 2.3) * rows + 0.18 * (rows - 1);
   const y = hb + (photo ? 0.3 : 0.45);
-  const boxes = c.grid(list.length, x0, y, w, boxH, 0.18);
+  const boxes = c.grid(list.length, x0, y, w, boxH, 0.18, cols);
   boxes.forEach((b, k) => {
     const st = list[k];
     const p = c.panel(b.x, b.y, b.w, b.h);
     let cy = b.y + 0.2;
     const ix = b.x + Math.max(p.padX, 0.2);
     const iw = b.w - Math.max(p.padX, 0.2) * 2;
-    cy += c.text(st.value, "head", ix, cy, iw, { size: photo ? 30 : 46, min: 18, maxLines: 1, color: c.pal.accent, lh: 1.05, ls: c.mood.headTracking }) + 0.08;
+    cy += c.text(st.value, "head", ix, cy, iw, { size: photo || w < 8 ? 30 : 46, min: 18, maxLines: 1, color: c.pal.accent, lh: 1.05, ls: c.mood.headTracking }) + 0.08;
     cy += c.text(st.label, "strong", ix, cy, iw, { size: 10.5, min: 8.5, maxLines: 2, color: p.ink, lh: 1.25 }) + 0.04;
     if (st.note) c.text(st.note, "body", ix, cy, iw, { size: 8.5, min: 7.5, maxLines: 2, color: p.sub, lh: 1.3, h: Math.max(0.2, b.y + b.h - cy - 0.12) });
   });
@@ -643,28 +788,29 @@ function list(c: Composer, s: SlideInput, i: number, agenda: boolean) {
     c.rect(W * 0.62, 0, W * 0.38, H, { fill: c.pal.bg, fo: 0.12 });
     c.grad(W * 0.62, 0, 1.8, H, "right", 1, 0);
   } else c.ambient(W - 2.7, H * 0.48, 2.1);
-  const w = W * 0.62 - M - 0.35;
+  const X = c.ax;
+  const w = photo ? W * 0.62 - M - 0.35 : c.aw < W - 2 * M ? c.aw : W * 0.62 - M - 0.35;
   const limit = limitOf(s);
-  const hb = c.header(s, M, TOP, w);
+  const hb = c.header(s, X, TOP, w);
   const stmt = s.takeaway ? c.measure(s.takeaway, "strong", W - 2 * M - 0.6, { size: 14.5, maxLines: 2, lh: 1.25 }).h + 0.62 : 0;
   const top = hb + 0.3;
   const rowH = Math.min(0.95, (limit - stmt - top) / Math.max(1, items.length));
-  const termW = 3.0;
+  const termW = w < 7 ? 2.4 : 3.0;
   items.forEach((b, k) => {
     const y = top + k * rowH;
-    c.rect(M, y + 0.06, 0.05, rowH - 0.26, { fill: c.pal.accent });
+    c.rect(X, y + 0.06, 0.05, rowH - 0.26, { fill: c.pal.accent });
     if (agenda) {
-      c.text(String(k + 1).padStart(2, "0"), "head", M + 0.28, y, 0.9, { size: 20, color: c.pal.accent, maxLines: 1, lh: 1.1 });
-      c.text(b, "head", M + 1.1, y + 0.02, w - 1.1, { size: 17, min: 12, maxLines: 2, lh: 1.15, h: rowH - 0.18, upper: c.headUpper });
+      c.text(String(k + 1).padStart(2, "0"), "head", X + 0.28, y, 0.9, { size: 20, color: c.pal.accent, maxLines: 1, lh: 1.1 });
+      c.text(b, "head", X + 1.1, y + 0.02, w - 1.1, { size: 17, min: 12, maxLines: 2, lh: 1.15, h: rowH - 0.18, upper: c.headUpper });
       return;
     }
     const m = TERM.exec(b);
     if (m) {
-      c.text(m[1], "head", M + 0.28, y, termW - 0.3, { size: 17, min: 12, maxLines: 2, lh: 1.1, upper: c.mood.upper || c.mood.panel === "outline", ls: c.mood.headTracking });
-      c.text(m[2], "body", M + termW + 0.2, y + 0.02, w - termW - 0.2, { size: 10.5, min: 8.5, lh: 1.4, color: c.pal.muted, h: rowH - 0.2 });
-    } else c.text(b, "body", M + 0.28, y + 0.02, w - 0.28, { size: 13, min: 9.5, lh: 1.35, h: rowH - 0.2, o: 0.95 });
+      c.text(m[1], "head", X + 0.28, y, termW - 0.3, { size: 17, min: 12, maxLines: 2, lh: 1.1, upper: c.mood.upper || c.mood.panel === "outline", ls: c.mood.headTracking });
+      c.text(m[2], "body", X + termW + 0.2, y + 0.02, w - termW - 0.2, { size: 10.5, min: 8.5, lh: 1.4, color: c.pal.muted, h: rowH - 0.2 });
+    } else c.text(b, "body", X + 0.28, y + 0.02, w - 0.28, { size: 13, min: 9.5, lh: 1.35, h: rowH - 0.2, o: 0.95 });
   });
-  if (s.takeaway) c.statement(s.takeaway, M, limit, photo ? w : W - 2 * M);
+  if (s.takeaway) c.statement(s.takeaway, X, limit, photo || c.aw < W - 2 * M ? w : W - 2 * M);
 }
 
 function chart(c: Composer, s: SlideInput) {
@@ -778,9 +924,9 @@ function quote(c: Composer, s: SlideInput, i: number) {
   if (c.stage(String(i), 0.4)) c.grad(0, 0, W * 0.8, H, "right", 0.92, 0);
   else c.ambient(W - 2.2, H / 2, 2.6);
   let y = 1.25;
-  y += c.text("“", "head", M, y, 2, { size: 110, color: c.pal.accent, lh: 0.9, o: 0.9 }) - 0.3;
-  y += c.text(s.quote ?? s.title, "head", M, y, 8.6, { size: 30, min: 18, maxLines: 5, lh: 1.22, upper: false }) + 0.3;
-  if (s.attribution) c.text(`— ${s.attribution}`, "strong", M, y, 8, { size: 10.5, ls: 2, upper: true, color: c.pal.accent2, maxLines: 1 });
+  y += c.text("“", "head", c.ax, y, 2, { size: 110, color: c.pal.accent, lh: 0.9, o: 0.9 }) - 0.3;
+  y += c.text(s.quote ?? s.title, "head", c.ax, y, Math.min(8.6, c.aw), { size: 30, min: 18, maxLines: 6, lh: 1.22, upper: false }) + 0.3;
+  if (s.attribution) c.text(`— ${s.attribution}`, "strong", c.ax, y, Math.min(8, c.aw), { size: 10.5, ls: 2, upper: true, color: c.pal.accent2, maxLines: 1 });
 }
 
 function closing(c: Composer, s: SlideInput, i: number, presenter?: string) {
@@ -789,24 +935,26 @@ function closing(c: Composer, s: SlideInput, i: number, presenter?: string) {
     c.grad(0, H * 0.25, W, H * 0.75, "down", 0, 0.95);
     c.grad(0, 0, W, 1.6, "down", 0.6, 0);
   } else c.ambient(W - 2.6, H * 0.45, 2.8);
-  const w = W - 2 * M;
+  const X = c.ax;
+  const w = c.aw;
   const chips = (s.bullets ?? []).slice(0, 5);
   const titleO: TextOpts = { size: 40, min: 26, maxLines: 2, lh: 1.08, upper: c.headUpper, ls: c.mood.headTracking };
   const subO: TextOpts = { size: 14, min: 11, maxLines: 2, lh: 1.4, color: c.pal.muted };
-  const th = c.measure(s.title, "head", w * 0.8, titleO).h;
-  const sh = s.subtitle ? c.measure(s.subtitle, "body", w * 0.75, subO).h + 0.12 : 0;
-  const chipH = chips.length ? 0.95 : 0;
+  const th = c.measure(s.title, "head", w * (w < 8 ? 1 : 0.8), titleO).h;
+  const sh = s.subtitle ? c.measure(s.subtitle, "body", w * (w < 8 ? 1 : 0.75), subO).h + 0.12 : 0;
+  const chipH = chips.length ? 0.95 + (w < 8 && chips.length > 2 ? 0.85 * Math.ceil(chips.length / 2 - 1) : 0) : 0;
   const kh = s.kicker ? 0.32 : 0;
   let y = (photo ? H - 0.95 - (presenter ? 0.25 : 0) : (H + kh + th + sh + chipH) / 2) - (kh + th + 0.18 + sh + chipH);
-  if (s.kicker) y += c.text(s.kicker, "strong", M, y, w, { size: 10, ls: 2.6, upper: true, color: c.pal.accent2, maxLines: 1 }) + 0.12;
-  y += c.text(s.title, "head", M, y, w * 0.8, titleO) + 0.18;
-  if (s.subtitle) y += c.text(s.subtitle, "body", M, y, w * 0.75, subO) + 0.12;
+  if (s.kicker) y += c.kicker(s.kicker, X, y, w, 10) + 0.14;
+  y += c.text(s.title, "head", X, y, w * (w < 8 ? 1 : 0.8), titleO) + 0.18;
+  if (s.subtitle) y += c.text(s.subtitle, "body", X, y, w * (w < 8 ? 1 : 0.75), subO) + 0.12;
   if (chips.length) {
     const gap = 0.16;
-    const cw = Math.min(3.2, (w - gap * (chips.length - 1)) / chips.length);
-    chips.forEach((b, k) => c.panelBody(M + k * (cw + gap), y + 0.1, cw, 0.75, { body: b }));
+    const perRow = w < 8 ? 2 : chips.length;
+    const cw = Math.min(3.2, (w - gap * (perRow - 1)) / perRow);
+    chips.forEach((b, k) => c.panelBody(X + (k % perRow) * (cw + gap), y + 0.1 + Math.floor(k / perRow) * 0.85, cw, 0.72, { body: b }));
   }
-  if (presenter) c.text(presenter, "strong", M, H - 0.55, w, { size: 8.5, ls: 2.4, upper: true, color: c.pal.muted, maxLines: 1 });
+  if (presenter) c.text(presenter, "strong", X, H - 0.55, w, { size: 8.5, ls: 2.4, upper: true, color: c.pal.muted, maxLines: 1 });
 }
 
 function imageText(c: Composer, s: SlideInput, i: number) {
@@ -815,8 +963,8 @@ function imageText(c: Composer, s: SlideInput, i: number) {
     c.rect(0, 0, W * 0.45, H, { fill: c.pal.bg, fo: 0.1 });
     c.grad(W * 0.45 - 1.6, 0, 1.6, H, "right", 0, 1);
   }
-  const x0 = photo ? W * 0.45 + 0.45 : M;
-  const w = W - x0 - M;
+  const x0 = photo ? W * 0.45 + 0.45 : c.ax;
+  const w = photo ? W - x0 - M : c.aw;
   const limit = limitOf(s);
   const hb = c.header(s, x0, TOP + 0.3, w);
   const stmt = s.takeaway ? c.measure(s.takeaway, "strong", w - 0.6, { size: 14.5, maxLines: 2, lh: 1.25 }).h + 0.62 : 0;
@@ -857,6 +1005,9 @@ function gallery(c: Composer, s: SlideInput, i: number) {
   });
 }
 
+/** Layout yang bisa memakai foto samping (bingkai / separuh slide). */
+const SPLIT_LAYOUTS = new Set<SlideInput["layout"]>(["section", "cards", "stats", "agenda", "bullets", "quote", "closing", "image_text"]);
+
 export interface SceneOptions {
   /** Ukuran asli foto yang tersedia (key "cover", indeks slide, "i-gk"). */
   images: Dims;
@@ -873,13 +1024,18 @@ export function buildScene(input: PresentationInput, opts: SceneOptions): Scene 
     strong: loadDeckFont(mood.strong.file).fk,
   };
   const slides: SceneSlide[] = [];
-  const make = (fn: (c: Composer) => void, s?: SlideInput) => {
-    const c = new Composer(pal, mood, fk, opts.images);
+  const make = (fn: (c: Composer) => void, s?: SlideInput, key?: string) => {
+    const c = new Composer(pal, mood, fk, opts.images, slides.length);
+    // Mood berbingkai/separuh: foto jadi panel samping (kiri-kanan bergantian), isi menyesuaikan area sisanya.
+    if (key && mood.treatment !== "stage" && (!s || SPLIT_LAYOUTS.has(s.layout))) {
+      if (["confetti", "rules", "ornament"].includes(mood.decor)) c.ambient();
+      if (c.photoPanel(key, key === "cover" || slides.length % 2 ? "right" : "left")) c.hidden.add("__decor");
+    }
     fn(c);
     if (s?.source) c.footnote(`Sumber: ${s.source}`);
     slides.push({ bg: pal.bg, items: c.items, notes: s?.notes });
   };
-  make((c) => cover(c, input));
+  make((c) => cover(c, input), undefined, "cover");
   let sectionNo = 0;
   input.slides.forEach((s, i) => {
     make((c) => {
@@ -913,7 +1069,7 @@ export function buildScene(input: PresentationInput, opts: SceneOptions): Scene 
         default:
           return list(c, s, i, false);
       }
-    }, s);
+    }, s, String(i));
   });
   return { v: 1, w: W, h: H, mood: mood.id, fonts: fontsMeta, slides };
 }

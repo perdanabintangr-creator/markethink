@@ -135,6 +135,7 @@ function Item({ it, scene, images }: { it: SceneItem; scene: Scene; images?: Rec
             background: it.fill ? rgba(it.fill, it.fo ?? 1) : undefined,
             border: it.line ? `${pt(it.lw ?? 0.75)} solid ${rgba(it.line, it.lo ?? 1)}` : undefined,
             borderRadius: it.t === "ellipse" ? "50%" : it.r ? cq(it.r) : undefined,
+            transform: it.rot ? `rotate(${it.rot}deg)` : undefined,
           }}
         />
       );

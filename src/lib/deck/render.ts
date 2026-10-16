@@ -1,7 +1,7 @@
 import "server-only";
 import { deflateSync } from "node:zlib";
 import PptxGenJS from "pptxgenjs";
-import { PDFDocument, clip, endPath, popGraphicsState, pushGraphicsState, rectangle, rgb, setCharacterSpacing, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
+import { PDFDocument, clip, degrees, endPath, popGraphicsState, pushGraphicsState, rectangle, rgb, setCharacterSpacing, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { DeckImages } from "@/lib/pptx";
 import { baselineOffset, loadDeckFont } from "./engine";
@@ -99,6 +99,7 @@ function drawPptx(pptx: PptxGenJS, slide: PptxGenJS.Slide, it: SceneItem, scene:
         w: it.w,
         h: it.h,
         rectRadius: it.r,
+        rotate: it.rot,
         fill: it.fill ? { color: it.fill, transparency: alpha(it.fo) } : { type: "none" },
         line: it.line ? { color: it.line, transparency: alpha(it.lo), width: it.lw ?? 0.75 } : { type: "none" },
       });
@@ -169,9 +170,13 @@ function drawPptx(pptx: PptxGenJS, slide: PptxGenJS.Slide, it: SceneItem, scene:
 
 const hexRgb = (hex: string) => rgb(parseInt(hex.slice(0, 2), 16) / 255, parseInt(hex.slice(2, 4), 16) / 255, parseInt(hex.slice(4, 6), 16) / 255);
 
-function roundRectPath(w: number, h: number, r: number) {
+/** Path kotak (sudut membulat bila r > 0); ox/oy = geser titik asal (untuk kotak yang diputar di titik tengahnya). */
+function roundRectPath(w: number, h: number, r: number, ox = 0, oy = 0) {
   const k = Math.min(r, w / 2, h / 2);
-  return `M ${k} 0 H ${w - k} Q ${w} 0 ${w} ${k} V ${h - k} Q ${w} ${h} ${w - k} ${h} H ${k} Q 0 ${h} 0 ${h - k} V ${k} Q 0 0 ${k} 0 Z`;
+  const X = (v: number) => v + ox;
+  const Y = (v: number) => v + oy;
+  if (!k) return `M ${X(0)} ${Y(0)} H ${X(w)} V ${Y(h)} H ${X(0)} Z`;
+  return `M ${X(k)} ${Y(0)} H ${X(w - k)} Q ${X(w)} ${Y(0)} ${X(w)} ${Y(k)} V ${Y(h - k)} Q ${X(w)} ${Y(h)} ${X(w - k)} ${Y(h)} H ${X(k)} Q ${X(0)} ${Y(h)} ${X(0)} ${Y(h - k)} V ${Y(k)} Q ${X(0)} ${Y(0)} ${X(k)} ${Y(0)} Z`;
 }
 
 export async function renderScenePdf(scene: Scene, images: DeckImages, title: string): Promise<Uint8Array> {
@@ -248,7 +253,14 @@ function drawPdf(page: PDFPage, it: SceneItem, PH: number, fonts: Record<FontRol
         borderWidth: it.line ? (it.lw ?? 0.75) : 0,
       };
       if (!it.fill && !it.line) return;
-      if (it.r) page.drawSvgPath(roundRectPath(it.w * 72, it.h * 72, it.r * 72), { x: it.x * 72, y: PH - it.y * 72, ...style });
+      if (it.rot)
+        page.drawSvgPath(roundRectPath(it.w * 72, it.h * 72, (it.r ?? 0) * 72, (-it.w * 72) / 2, (-it.h * 72) / 2), {
+          x: (it.x + it.w / 2) * 72,
+          y: PH - (it.y + it.h / 2) * 72,
+          rotate: degrees(-it.rot),
+          ...style,
+        });
+      else if (it.r) page.drawSvgPath(roundRectPath(it.w * 72, it.h * 72, it.r * 72), { x: it.x * 72, y: PH - it.y * 72, ...style });
       else page.drawRectangle({ x: it.x * 72, y: PH - (it.y + it.h) * 72, width: it.w * 72, height: it.h * 72, ...style });
       return;
     }

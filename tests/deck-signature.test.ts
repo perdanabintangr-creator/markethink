@@ -68,3 +68,15 @@ describe("deck Signature (Promax)", () => {
     expect(reqs[1].composition).toMatch(/left half/);
   });
 });
+
+describe("Signature mengikuti mood", () => {
+  it("mood berbingkai (lucu): foto jadi panel samping & isi pindah ke sisi lain", () => {
+    const cute = { ...deck, design: { ...deck.design!, mood: "playful" as const, image_style: "3d" as const } };
+    const reqs = signatureImageRequests(cute, 8);
+    expect(reqs.find((r) => r.key === "cover")?.aspect).toBe("3:4");
+    expect(reqs.some((r) => r.key === "2")).toBe(false); // timeline tanpa foto di mood berbingkai
+    const scene = buildScene(cute, { images: { cover: img, "0": img } });
+    const title = scene.slides[1].items.find((it) => it.t === "text" && it.font === "head");
+    expect(title && title.t === "text" && title.x + title.w).toBeLessThan(SCENE_W * 0.62);
+  });
+});

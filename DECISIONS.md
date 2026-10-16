@@ -287,3 +287,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   timeline di atas foto, kotak bergaris tipis, kotak pernyataan di bawah. Teks diukur dengan metrik font asli (tidak meluber).
 - Satu "Scene" (`src/lib/deck`) → PPTX (bisa diedit), PDF (font tertanam, persis), pratinjau browser (persis). Pro ke bawah tetap
   mesin lama (`src/lib/pptx.ts`). Gaya navy "cinematic" sebelumnya dihapus.
+- (16 Okt, revisi founder) Signature wajib mengikuti permintaan user: kata gaya ("lucu", "elegan", dst.) → mood & `design.image_style`
+  (photo / 3d lucu / flat / watercolor); elemen khas topik masuk KV. Tiap mood punya perlakuan foto sendiri: stage (foto panggung penuh —
+  tech/sport/bold/modern), frame (foto di kartu/bingkai — playful/warm/beauty/minimal), bleed (foto tegas separuh slide —
+  editorial/corporate/heritage); ornamen khas (confetti, garis balap, bentuk organik, lengkung, garis editorial, bingkai ornamen, blok);
+  gaya label (teks berspasi / pil / batang).
