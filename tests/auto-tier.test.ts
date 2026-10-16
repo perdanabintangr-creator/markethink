@@ -38,3 +38,30 @@ describe("cache riwayat chat", () => {
     expect(out.map((m) => Boolean(m.providerOptions))).toEqual([false, false, false, true, true]);
   });
 });
+
+describe("Permintaan gambar → otak Junior (semua paket)", () => {
+  it("murni gambar / edit gambar", async () => {
+    const { isImageRequest } = await import("@/lib/ai/auto-tier");
+    for (const t of [
+      "Buatkan foto lifestyle: dua pekerja kantoran Indonesia tertawa memegang es kopi SEGERRRRR di trotoar Sudirman, format 4:5",
+      "bikinin poster promo beli 2 gratis 1",
+      "Ganti warna gerobaknya jadi kuning di gambar tadi",
+      "tolong buatkan desain banner grand opening",
+      "Gambar gerobak kopi listrik dengan crew-nya",
+      "generate an image of iced coffee",
+    ])
+      expect(isImageRequest(t), t).toBe(true);
+  });
+  it("bukan permintaan gambar murni", async () => {
+    const { isImageRequest } = await import("@/lib/ai/auto-tier");
+    for (const t of [
+      "Buatkan strategi launching lengkap + gambar poster",
+      "buatkan PPT presentasi dengan foto produk",
+      "buatkan caption untuk foto ini",
+      "buatkan prompt gambar untuk Midjourney",
+      "apa tren desain kemasan 2026?",
+      "halo",
+    ])
+      expect(isImageRequest(t), t).toBe(false);
+  });
+});

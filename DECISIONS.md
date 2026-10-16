@@ -226,3 +226,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   (Gemini Flash Image ±$0,034) bila gagal. Override env `OPENROUTER_BUDGET_IMAGE_MODEL`. Kuota tetap 6 kredit/gambar.
 - Prompt Junior ditambah "standar kualitas": spesifik + asumsi wajar, konteks Indonesia, kerangka marketing, contoh siap pakai,
   data berlabel perkiraan / pakai pencarian, cek mandiri sebelum kirim.
+- (16 Okt, founder) Permintaan **murni membuat/mengedit gambar** di semua paket memakai otak **Junior** (`isImageRequest`),
+  apa pun otak yang dipilih — hasil gambar ditentukan model gambar; tes: Senior +Rp640/gambar di chat baru tanpa beda kualitas.
+  Campuran (strategi/PPT/caption/prompt + gambar) tetap memakai otak pilihan. Model gambar tetap dibedakan: Free = Muse,
+  berbayar = Gemini Flash Image.

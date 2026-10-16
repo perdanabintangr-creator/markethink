@@ -22,7 +22,7 @@ import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
 import { extractLinks, linkContext, linkHistoryText, readLink, toLinkPart, type LinkRead } from "@/lib/ai/links";
 import { estimateCostUsd, getTier, messageCreditCost, type TierId } from "@/lib/ai/models.config";
-import { autoTier, resolveTier } from "@/lib/ai/auto-tier";
+import { autoTier, isImageRequest, resolveTier } from "@/lib/ai/auto-tier";
 import {
   attachmentIds,
   extractMemories,
@@ -116,13 +116,15 @@ export async function POST(req: Request) {
     const { data: src } = await supabase.from("chats").select("source_run_id, source_agent_id").eq("id", chatId).maybeSingle();
     toolChat = Boolean(src?.source_run_id || src?.source_agent_id);
   }
-  const tierId: TierId =
+  const chosenTier: TierId =
     tierChoice === "auto"
       ? resolveTier("auto", allowedTiers, () => autoTier(lastText, { attachments: attachmentIds(last).length, research, toolChat }))
       : tierChoice;
-  if (!allowedTiers.includes(tierId)) {
+  if (!allowedTiers.includes(chosenTier)) {
     return json(403, { error: "tier_locked", allowed: allowedTiers });
   }
+  // Membuat/mengedit gambar: semua paket memakai otak Junior (hasil gambar sama, modal chat jauh lebih rendah).
+  const tierId: TierId = allowedTiers.includes("junior") && !toolChat && isImageRequest(lastText) ? "junior" : chosenTier;
 
   if (!env.supabaseServiceKey) {
     console.error("[chat] SUPABASE_SERVICE_ROLE_KEY belum diisi");

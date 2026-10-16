@@ -34,3 +34,22 @@ export function resolveTier(choice: TierChoice, allowed: readonly TierId[], pick
   if (allowed.includes("senior")) return "senior";
   return allowed[0] ?? "junior";
 }
+
+const IMAGE_NOUN = "(gambar|foto|poster|banner|flyer|pamflet|feed|ilustrasi|desain|visual|logo|mockup|thumbnail|background|latar|image|picture|photo)";
+const IMAGE_ASK = new RegExp(
+  `(\\b(buat(kan|in)?|bikin(in|kan)?|generate|ciptakan|desain(kan)?|gambar(kan)?|edit|ubah|ganti|tambah(kan)?|hapus|ganti|jadikan|perbaiki|revisi|create|make|draw)\\b[^.\\n]{0,80}\\b${IMAGE_NOUN}\\b)|^\\s*${IMAGE_NOUN}\\b`,
+  "i",
+);
+/** Pekerjaan teks yang butuh otak lebih pintar walau ada kata "gambar" (mis. "strategi + gambar"). */
+const NOT_IMAGE_ONLY =
+  /(strategi|strategy|analisis|analisa|rencana|campaign plan|kampanye|riset|research|ppt|presentasi|slide|deck|caption|copywriting|artikel|kalender|laporan|budget|anggaran|kpi|proposal|prompt)/i;
+
+/**
+ * Permintaan murni membuat/mengedit gambar → cukup otak Junior (kualitas gambar ditentukan model gambar, bukan otak chat).
+ * Hemat ±Rp600 per gambar dibanding Senior pada chat baru.
+ */
+export function isImageRequest(text: string): boolean {
+  const t = text.trim();
+  if (!t || t.length > 700) return false;
+  return IMAGE_ASK.test(t) && !NOT_IMAGE_ONLY.test(t);
+}
