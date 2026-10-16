@@ -337,7 +337,8 @@ export async function POST(req: Request) {
             }),
           ),
         ],
-        maxOutputTokens: isFreePlan ? Math.min(tier.maxOutputTokens, FREE_MAX_OUTPUT_TOKENS) : tier.maxOutputTokens,
+        // Batas Free hanya untuk jawaban teks; menyusun file PPT butuh ruang lebih (isi semua slide dalam satu panggilan tool).
+        maxOutputTokens: isFreePlan && !isDeckRequest(lastText) ? Math.min(tier.maxOutputTokens, FREE_MAX_OUTPUT_TOKENS) : tier.maxOutputTokens,
         temperature: tier.temperature,
         maxRetries: 0,
         providerOptions: { anthropic: { effort: tier.effort, cacheControl: { type: "ephemeral" } } },

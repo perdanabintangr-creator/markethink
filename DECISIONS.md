@@ -235,5 +235,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - (16 Okt, founder) **Visual bertingkat**: foto AI per PPT Free 0 · Starter 1 (cover) · Pro 6 · Promax 8 (`DECK_IMAGE_MAX_BY_PLAN`);
   Pro & Promax gambar baru + foto PPT diberi arahan visual premium (`PREMIUM_ART_DIRECTION`). Model tetap Muse untuk semua.
 - (16 Okt) Bug Free + PPT: Gemini gratis riset web lalu berhenti tanpa hasil (langkah ke-2 kosong). Permintaan PPT kini
-  memakai Claude Haiku (bukan Gemini gratis), modal ±Rp50/PPT. Jawaban kosong → kuota dikembalikan penuh, dicatat
+  memakai Claude Haiku (bukan Gemini gratis), modal ±Rp50/PPT, dan tidak kena batas 2.000 token jawaban Free
+  (isi semua slide dikirim dalam satu panggilan tool; batas itu memotong file PPT sebelum jadi). Jawaban kosong → kuota dikembalikan penuh, dicatat
   `status=error` "jawaban kosong", dan chat menampilkan pemberitahuan kirim ulang.
