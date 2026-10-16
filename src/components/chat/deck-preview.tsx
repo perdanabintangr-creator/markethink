@@ -23,6 +23,8 @@ interface Slide {
   quote?: string;
   attribution?: string;
   gallery?: { caption?: string }[];
+  takeaway?: string;
+  source?: string;
 }
 export interface DeckInput {
   title?: string;
@@ -69,6 +71,7 @@ export function DeckPreviewButton({
             {slides.map((s, i) => (
               <SlideFrame key={i} t={t} n={i + 2}>
                 <SlideBody s={s} t={t} image={images?.[String(i)]} gallery={[0, 1, 2].map((k) => images?.[`${i}-g${k}`])} />
+                <SoWhat s={s} t={t} />
               </SlideFrame>
             ))}
           </div>
@@ -479,6 +482,34 @@ function ChartSlide({ s, t }: { s: Slide; t: DeckTheme }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Kotak "so what" & sumber data (sama seperti di file .pptx). */
+function SoWhat({ s, t }: { s: Slide; t: DeckTheme }) {
+  const fullSlide = ["section", "quote", "image_text", "closing", "agenda"].includes(s.layout ?? "");
+  if (fullSlide || (!s.takeaway && !s.source)) return null;
+  return (
+    <div className="absolute inset-x-[4.5%] bottom-[7%] space-y-[0.5cqw]">
+      {s.takeaway && (
+        <div
+          className="flex items-center gap-[1cqw] rounded-md py-[1cqw] pl-[1.6cqw] pr-[1cqw]"
+          style={{ background: `${hex(t.accent)}1f`, borderLeft: `0.6cqw solid ${hex(t.accent)}` }}
+        >
+          <span className="font-bold tracking-wider" style={{ color: hex(t.accent), fontSize: "1.1cqw" }}>
+            SO WHAT
+          </span>
+          <span className="font-semibold" style={{ fontSize: "1.5cqw" }}>
+            {s.takeaway}
+          </span>
+        </div>
+      )}
+      {s.source && (
+        <p className="italic" style={{ color: hex(t.muted), fontSize: "1cqw" }}>
+          Sumber: {s.source}
+        </p>
+      )}
     </div>
   );
 }

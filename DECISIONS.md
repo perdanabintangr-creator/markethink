@@ -252,3 +252,11 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Kolom `chats.generating_at` (migrasi 0038) diisi saat mulai, dihapus setelah simpan; dianggap kedaluwarsa setelah 5 menit.
   Sidebar menampilkan ikon loading & memuat ulang tiap 4 dtk selama ada chat yang dijawab; chat yang dibuka saat masih
   dijawab menampilkan "Markethink masih menyusun jawaban…" dan memuat jawabannya otomatis (`GET /api/chats/[id]`).
+
+## PPT standar konsultan & agency (16 Okt 2026, founder)
+- Fix otak Director: isi PPT yang melebihi batas skema (judul/poin/tabel kepanjangan) dirapikan otomatis lewat
+  `experimental_repairToolCall` + `clampToSchema` (dari JSON Schema zod) — sebelumnya gagal validasi lalu AI mengulang
+  (tampil "Gagal membuat presentasi"). Percobaan gagal yang kemudian berhasil tidak ditampilkan lagi.
+- Gaya konsultan: action title (judul = kesimpulan), Executive Summary di slide 2, maks 1 slide bullets, utamakan visual data.
+  Field baru per slide: `takeaway` (kotak "SO WHAT" di bawah) & `source` (sumber data). Garis tipis di bawah judul, kartu &
+  timeline lebih padat. Pratinjau "Lihat" ikut menampilkan so-what & sumber. Diverifikasi via render LibreOffice.

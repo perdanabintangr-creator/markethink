@@ -100,6 +100,10 @@ export const slideSchema = z.object({
     .max(3)
     .optional()
     .describe("Untuk layout gallery: 2-3 gambar (image_id foto user atau image_prompt) + caption"),
+  takeaway: short(160)
+    .optional()
+    .describe("'So what' slide: 1 kalimat implikasi/rekomendasi tegas (mis. 'Fokus 3 titik kantor dulu: 70% penjualan datang dari jam 11–14'). Isi untuk slide data, analisis & strategi"),
+  source: short(120).optional().describe("Sumber angka/data di slide (mis. 'BPS 2025; survei internal Sep 2026'). Wajib bila slide memuat statistik eksternal"),
   notes: short(1500).optional().describe("Catatan pembicara (speaker notes) yang membantu presenter"),
 });
 
@@ -161,6 +165,8 @@ interface Ctx {
   deckTitle: string;
   total: number;
   images: DeckImages;
+  /** Ruang bawah tambahan untuk kotak "so what" & sumber data di slide isi. */
+  bottom: number;
 }
 
 /** Perkirakan ukuran font agar teks muat di kotak (tanpa bergantung pada auto-fit PowerPoint). */
@@ -199,7 +205,31 @@ function header(c: Ctx, slide: Slide, s: { kicker?: string; title: string; subti
     slide.addText(s.subtitle, { x: M, y: y + 0.05, w, h: 0.55, fontFace: BODY, fontSize: fit(s.subtitle, 17, w, 0.55, 12), color: c.t.muted, valign: "top", margin: 0 });
     y += 0.65;
   }
+  // Garis tipis di bawah judul — struktur rapi ala deck konsultan.
+  slide.addShape(c.pptx.ShapeType.line, { x: M, y: y + 0.08, w, h: 0, line: { color: c.t.surface2, width: 1 } });
   return y + 0.3;
+}
+
+/** Kotak "so what": satu kalimat implikasi/rekomendasi di bawah slide (ciri deck konsultan). */
+function takeawayBar(c: Ctx, slide: Slide, text: string) {
+  const y = H - 1.5;
+  const h = 0.66;
+  slide.addShape(c.pptx.ShapeType.roundRect, {
+    x: M, y, w: W - 2 * M, h, rectRadius: 0.1, fill: { color: c.t.accent, transparency: 88 }, line: { color: c.t.accent, transparency: 70, width: 0.75 },
+  });
+  slide.addShape(c.pptx.ShapeType.rect, { x: M, y, w: 0.09, h, fill: { color: c.t.accent }, line: { color: c.t.accent } });
+  slide.addText(
+    [
+      { text: "SO WHAT  ", options: { bold: true, color: c.t.accent, fontSize: 11, charSpacing: 2 } },
+      { text, options: { bold: true, color: c.t.text, fontSize: fit(text, 16, W - 2 * M - 2.0, h, 11) } },
+    ],
+    { x: M + 0.3, y, w: W - 2 * M - 0.5, h, fontFace: BODY, valign: "middle", margin: 0 },
+  );
+}
+
+/** Sumber data kecil di kiri bawah, di atas footer. */
+function sourceNote(c: Ctx, slide: Slide, text: string) {
+  slide.addText(`Sumber: ${text}`, { x: M, y: H - 0.82, w: W - 2 * M - 1.6, h: 0.24, fontFace: BODY, fontSize: 9, italic: true, color: c.t.muted, margin: 0 });
 }
 
 function footer(c: Ctx, slide: Slide, page: number, x0 = M, showPage = true) {
@@ -296,7 +326,7 @@ function agenda(c: Ctx, slide: Slide, s: SlideInput, top: number) {
   const cols = items.length > 4 ? 2 : 1;
   const colW = (W - 2 * M - (cols - 1) * 0.6) / cols;
   const perCol = Math.ceil(items.length / cols);
-  const rowH = Math.min(1.05, (H - top - 0.9) / perCol);
+  const rowH = Math.min(1.05, (H - top - 0.9 - c.bottom) / perCol);
   items.forEach((item, i) => {
     const col = Math.floor(i / perCol);
     const row = i % perCol;
@@ -326,12 +356,12 @@ function section(c: Ctx, s: SlideInput, idx: number, sectionNo: number) {
 
 function bullets(c: Ctx, slide: Slide, s: SlideInput, top: number, idx: number) {
   const items = (s.bullets ?? []).slice(0, 6);
-  const hasImg = coverImage(c, slide, String(idx), W * 0.6, top - 0.1, W * 0.4 - M, H - top - 0.75);
+  const hasImg = coverImage(c, slide, String(idx), W * 0.6, top - 0.1, W * 0.4 - M, H - top - 0.75 - c.bottom);
   const areaW = hasImg ? W * 0.6 - M - 0.4 : W - 2 * M;
   const cols = !hasImg && items.length > 4 ? 2 : 1;
   const colW = (areaW - (cols - 1) * 0.5) / cols;
   const perCol = Math.ceil(items.length / cols);
-  const rowH = Math.min(1.2, (H - top - 0.8) / Math.max(perCol, 1));
+  const rowH = Math.min(1.2, (H - top - 0.8 - c.bottom) / Math.max(perCol, 1));
   items.forEach((b, i) => {
     const col = Math.floor(i / perCol);
     const row = i % perCol;
@@ -355,14 +385,14 @@ function cards(c: Ctx, slide: Slide, s: SlideInput, top: number, idx = -1) {
   const list = (s.cards ?? []).slice(0, 6);
   const n = list.length;
   // Dengan visual: foto di kiri, kartu 2 kolom di kanan.
-  const withImg = coverImage(c, slide, String(idx), M, top, 4.0, H - top - 0.8);
+  const withImg = coverImage(c, slide, String(idx), M, top, 4.0, H - top - 0.8 - c.bottom);
   const left = withImg ? M + 4.3 : M;
   const areaW = W - M - left;
   const cols = withImg ? (n <= 2 ? 1 : 2) : n <= 3 ? n : n === 4 ? 4 : 3;
   const rows = Math.ceil(n / cols);
   const gap = 0.3;
   const cw = (areaW - (cols - 1) * gap) / cols;
-  const ch = Math.min(rows === 1 ? 3.8 : 9, (H - top - 0.8 - (rows - 1) * gap) / rows);
+  const ch = Math.min(rows === 1 ? 3.0 : 9, (H - top - 0.8 - c.bottom - (rows - 1) * gap) / rows);
   list.forEach((card, i) => {
     const x = left + (i % cols) * (cw + gap);
     const y = top + Math.floor(i / cols) * (ch + gap);
@@ -396,7 +426,7 @@ function stats(c: Ctx, slide: Slide, s: SlideInput, top: number, idx = -1) {
     const gap = 0.3;
     const cw = (areaW - (cols - 1) * gap) / cols;
     const rows = Math.ceil(list.length / cols);
-    const ch = Math.min(2.4, (H - top - 0.8 - (rows - 1) * gap) / rows);
+    const ch = Math.min(2.4, (H - top - 0.8 - c.bottom - (rows - 1) * gap) / rows);
     list.forEach((st, i) => {
       const x = M + (i % cols) * (cw + gap);
       const y = top + Math.floor(i / cols) * (ch + gap);
@@ -410,7 +440,7 @@ function stats(c: Ctx, slide: Slide, s: SlideInput, top: number, idx = -1) {
   const takeaway = s.bullets?.length ? s.bullets.slice(0, 2) : [];
   const gap = 0.3;
   const cw = (W - 2 * M - (list.length - 1) * gap) / list.length;
-  const ch = takeaway.length ? 2.6 : Math.min(3.4, H - top - 0.9);
+  const ch = takeaway.length ? 2.6 : Math.min(3.4, H - top - 0.9 - c.bottom);
   list.forEach((st, i) => {
     const x = M + i * (cw + gap);
     const color = i % 2 ? c.t.accent2 : c.t.accent;
@@ -422,7 +452,7 @@ function stats(c: Ctx, slide: Slide, s: SlideInput, top: number, idx = -1) {
   });
   if (takeaway.length) {
     const y = top + ch + 0.35;
-    const h = H - y - 0.8;
+    const h = H - y - 0.8 - c.bottom;
     slide.addShape(c.pptx.ShapeType.roundRect, { x: M, y, w: W - 2 * M, h, rectRadius: 0.12, fill: { color: c.t.accent, transparency: c.t.dark ? 70 : 88 }, line: { color: c.t.accent, transparency: 100 } });
     iconTile(c, slide, "lightbulb", M + 0.3, y + (h - 0.55) / 2, 0.55);
     slide.addText(takeaway.join("\n"), { x: M + 1.1, y, w: W - 2 * M - 1.4, h, fontFace: BODY, fontSize: fit(takeaway.join("\n"), 19, W - 2 * M - 1.4, h - 0.2, 12), color: c.t.text, valign: "middle", margin: 0 });
@@ -434,7 +464,7 @@ function chart(c: Ctx, slide: Slide, s: SlideInput, top: number) {
   if (!ch) return bullets(c, slide, s, top, -1);
   const insights = (s.bullets ?? []).slice(0, 4);
   const cw = insights.length ? W * 0.6 - M : W - 2 * M;
-  const h = H - top - 0.75;
+  const h = H - top - 0.75 - c.bottom;
   const colors = [c.t.accent, c.t.accent2, c.t.muted, "F59E0B", "10B981", "EF4444"];
   const pie = ch.type === "pie" || ch.type === "doughnut";
   const series = (pie ? ch.series.slice(0, 1) : ch.series).map((se) => ({
@@ -501,7 +531,7 @@ function timeline(c: Ctx, slide: Slide, s: SlideInput, top: number) {
     const x = M + i * colW + 0.12;
     const w = colW - 0.24;
     const cardY = lineY + 0.75;
-    const cardH = Math.min(3.0, H - cardY - 0.8);
+    const cardH = Math.min(2.3, H - cardY - 0.8 - c.bottom);
     slide.addShape(c.pptx.ShapeType.roundRect, { x, y: cardY, w, h: cardH, rectRadius: 0.12, fill: { color: c.t.surface }, line: { color: c.t.surface2, width: 0.75 } });
     slide.addText(st.title, { x: x + 0.2, y: cardY + 0.2, w: w - 0.4, h: 0.7, fontFace: HEAD, fontSize: fit(st.title, 19, w - 0.4, 0.7, 12), bold: true, color: c.t.text, valign: "top", margin: 0 });
     slide.addText(st.text, { x: x + 0.2, y: cardY + 0.9, w: w - 0.4, h: cardH - 1.1, fontFace: BODY, fontSize: fit(st.text, 15.5, w - 0.4, cardH - 1.1, 10), color: c.t.muted, valign: "top", margin: 0 });
@@ -513,7 +543,7 @@ function comparison(c: Ctx, slide: Slide, s: SlideInput, top: number) {
   const gap = 0.35;
   const cw = (W - 2 * M - gap) / 2;
   const maxItems = Math.max(...cols.map((col) => Math.min(col.bullets.length, 5)), 1);
-  const h = Math.min(H - top - 0.8, 1.5 + maxItems * 0.95);
+  const h = Math.min(H - top - 0.8 - c.bottom, 1.5 + maxItems * 0.95);
   cols.slice(0, 2).forEach((col, i) => {
     const x = M + i * (cw + gap);
     const hl = i === 1;
@@ -552,7 +582,7 @@ function table(c: Ctx, slide: Slide, s: SlideInput, top: number) {
     x: M, y: top, w, colW: Array(cols).fill(w / cols),
     fontFace: BODY, valign: "middle", margin: [8, 12, 8, 12],
     border: { type: "solid", color: c.t.surface2, pt: 0.75 },
-    rowH: Math.min(0.78, (H - top - 0.9) / (rows.length || 1)),
+    rowH: Math.min(0.78, (H - top - 0.9 - c.bottom) / (rows.length || 1)),
   });
 }
 
@@ -606,7 +636,7 @@ function imageText(c: Ctx, s: SlideInput, idx: number) {
 function product(c: Ctx, slide: Slide, s: SlideInput, top: number, idx: number) {
   // Panel visual produk di kiri (foto utuh), keunggulan di kanan.
   const panelW = W * 0.47 - M;
-  const h = H - top - 0.8;
+  const h = H - top - 0.8 - c.bottom;
   slide.addShape(c.pptx.ShapeType.roundRect, { x: M, y: top, w: panelW, h, rectRadius: 0.16, fill: { color: c.t.surface }, line: { color: c.t.surface2, width: 0.75 } });
   slide.addShape(c.pptx.ShapeType.ellipse, { x: M + panelW * 0.15, y: top + h * 0.12, w: panelW * 0.7, h: panelW * 0.7, fill: { color: c.t.accent, transparency: c.t.dark ? 80 : 88 }, line: { color: c.t.accent, transparency: 100 } });
   if (!containImage(c, slide, String(idx), M + 0.25, top + 0.25, panelW - 0.5, h - 0.5)) {
@@ -632,7 +662,7 @@ function gallery(c: Ctx, slide: Slide, s: SlideInput, top: number, idx: number) 
   const n = Math.max(items.length, 1);
   const gap = 0.3;
   const cw = (W - 2 * M - (n - 1) * gap) / n;
-  const ih = H - top - 1.55;
+  const ih = H - top - 1.55 - c.bottom;
   items.forEach((g, k) => {
     const x = M + k * (cw + gap);
     if (!coverImage(c, slide, `${idx}-g${k}`, x, top, cw, ih)) {
@@ -682,7 +712,7 @@ export async function buildPresentation(input: PresentationInput, images: DeckIm
   pptx.title = input.title;
   pptx.company = "Markethink";
   pptx.author = "Markethink AI";
-  const c: Ctx = { pptx, t: resolveTheme(input), deckTitle: input.title, total: input.slides.length + 1, images };
+  const c: Ctx = { pptx, t: resolveTheme(input), deckTitle: input.title, total: input.slides.length + 1, images, bottom: 0 };
 
   cover(c, input);
   let sectionNo = 0;
@@ -696,6 +726,9 @@ export async function buildPresentation(input: PresentationInput, images: DeckIm
     else {
       slide = pptx.addSlide();
       bg(slide, c.t.bg);
+      // Gaya konsultan: kotak "so what" (takeaway) & sumber data di bawah, isi slide menyesuaikan ruangnya.
+      const takeaway = s.layout !== "agenda" ? s.takeaway?.trim() : undefined;
+      c.bottom = (takeaway ? 0.78 : 0) + (s.source && !takeaway ? 0.22 : 0);
       const top = header(c, slide, s);
       if (s.layout === "agenda") agenda(c, slide, s, top);
       else if (s.layout === "cards" && s.cards?.length) cards(c, slide, s, top, i);
@@ -707,6 +740,9 @@ export async function buildPresentation(input: PresentationInput, images: DeckIm
       else if (s.layout === "comparison" && s.columns?.length) comparison(c, slide, s, top);
       else if (s.layout === "table" && s.table) table(c, slide, s, top);
       else bullets(c, slide, s, top, i);
+      if (takeaway) takeawayBar(c, slide, takeaway);
+      if (s.source) sourceNote(c, slide, s.source);
+      c.bottom = 0;
     }
     // Foto penuh tinggi di sisi kanan (stats/quote bergambar) → nomor halaman disembunyikan agar tidak menimpa foto.
     const rightPhoto = (s.layout === "stats" || s.layout === "quote") && hasImage(c, String(i));

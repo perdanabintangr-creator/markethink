@@ -171,6 +171,11 @@ export function createChatTools(ctx: ToolCtx) {
       description:
         "Buat file presentasi PowerPoint (.pptx) berdesain profesional yang siap dipresentasikan — pitch deck, proposal sponsor, laporan kampanye, " +
         "strategi marketing, ringkasan dokumen/riset (seperti NotebookLM). Gunakan setiap kali user meminta PPT/slide/deck/presentasi.\n" +
+        "STANDAR KONSULTAN & AGENCY (wajib): judul slide = ACTION TITLE — kalimat kesimpulan ≤ 12 kata yang langsung menyatakan insight " +
+        "(mis. 'Margin 45% membuat balik modal di bulan ke-4', BUKAN 'Unit Economics'); kicker berisi nama bab. Slide ke-2 = Executive Summary " +
+        "(3–4 cards/stats berisi pesan inti seluruh deck). Satu pesan per slide; utamakan visual data (stats, chart, table, timeline, comparison) " +
+        "dibanding daftar poin — maks 1 slide bullets di seluruh deck. Isi `takeaway` (so-what/rekomendasi tegas) pada slide data, analisis & " +
+        "strategi; isi `source` bila memakai angka dari riset/luar. Angka konsisten antar slide (total, persen, periode). Bahasa tajam & ringkas.\n" +
         "ATURAN DESAIN (wajib): (1) Alur cerita kuat: pembuka → masalah/peluang → insight → strategi → eksekusi → angka/KPI → penutup/CTA. " +
         "(2) Variasikan layout — jangan dua slide berturut-turut memakai layout yang sama; pakai agenda di awal, section untuk tiap bab besar, " +
         "cards untuk pilar/fitur (dengan ikon relevan), stats untuk angka kunci, chart bila ada data angka, timeline untuk jadwal/tahapan, " +
