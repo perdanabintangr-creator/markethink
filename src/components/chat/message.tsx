@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { isTransparent, textBlocks } from "@/lib/message-text";
 import { parseQuotedMessage } from "@/lib/quote";
 import { Markdown } from "./markdown";
+import { DeckPreviewButton, type DeckInput } from "./deck-preview";
 import { SelectionAsk } from "./selection-ask";
 
 const TIER_LABEL = Object.fromEntries(getTiers({}).map((t) => [t.id, t.label]));
@@ -46,6 +47,7 @@ interface ToolPart {
   type: string;
   toolCallId?: string;
   state?: "input-streaming" | "input-available" | "output-available" | "output-error";
+  input?: unknown;
   output?: Record<string, unknown> & { ok?: boolean; error?: string };
 }
 
@@ -449,11 +451,20 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
             PowerPoint · {Number(part.output.slideCount)} {t.slides}
           </p>
         </div>
-        <Button asChild size="sm">
-          <a href={`${String(part.output.url)}?download=1`}>
-            <Download /> {t.downloadPptx}
-          </a>
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          {part.input ? (
+            <DeckPreviewButton
+              deck={part.input as DeckInput}
+              images={part.output.previewImages as Record<string, string> | undefined}
+              downloadUrl={`${String(part.output.url)}?download=1`}
+            />
+          ) : null}
+          <Button asChild size="sm">
+            <a href={`${String(part.output.url)}?download=1`}>
+              <Download /> {t.downloadPptx}
+            </a>
+          </Button>
+        </div>
       </div>
       <ol className="max-h-56 space-y-1 overflow-y-auto px-4 py-3 text-xs text-muted-foreground">
         {titles.map((title, i) => (

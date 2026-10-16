@@ -45,6 +45,8 @@ export type PresentationToolOutput =
       fileName: string;
       theme?: string;
       images?: number;
+      /** URL foto per slide ("cover", indeks slide, atau "i-gk" galeri) untuk pratinjau di browser. */
+      previewImages?: Record<string, string>;
     }
   | { ok: false; error: string };
 
@@ -200,6 +202,7 @@ export function createChatTools(ctx: ToolCtx) {
           );
           await logUsage(ctx, { tier: "pptx", credits: PPTX_CREDIT_COST, cost: 0 });
           const imageCount = Object.keys(images).length;
+          const previewImages = await deckPreviewUrls(ctx, input, images);
           return {
             ok: true,
             attachmentId: saved.id,
@@ -210,6 +213,7 @@ export function createChatTools(ctx: ToolCtx) {
             fileName,
             theme: input.theme,
             images: imageCount,
+            previewImages,
           };
         } catch (err) {
           console.error("[pptx] gagal", err);
@@ -225,6 +229,32 @@ export function createChatTools(ctx: ToolCtx) {
  * Siapkan visual deck: foto milik user (attachment, gratis) + gambar AI untuk cover/produk/slide bergambar
  * (paralel, maks sesuai paket — lihat DECK_IMAGE_MAX_BY_PLAN). Gambar yang gagal dilewati — slide tetap jadi.
  */
+/** Simpan foto AI deck sebagai file agar pratinjau slide di chat bisa menampilkannya (foto user memakai file aslinya). */
+async function deckPreviewUrls(ctx: ToolCtx, input: PresentationInput, images: DeckImages): Promise<Record<string, string>> {
+  const owned = new Map(
+    deckImageRequests(input, 0)
+      .filter((r) => r.imageId)
+      .map((r) => [r.key, r.imageId!]),
+  );
+  const out: Record<string, string> = {};
+  await Promise.all(
+    Object.entries(images).map(async ([key, img]) => {
+      try {
+        const ownedId = owned.get(key);
+        if (ownedId) out[key] = `/api/attachments/${ownedId}`;
+        else {
+          const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
+          const saved = await storeFile(ctx, "images", `slide-${key}.${ext}`, img.mime, Uint8Array.from(Buffer.from(img.data, "base64")), null);
+          out[key] = saved.url;
+        }
+      } catch (err) {
+        console.warn("[pptx] simpan pratinjau gagal", errText(err));
+      }
+    }),
+  );
+  return out;
+}
+
 async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<DeckImages> {
   const reqs = deckImageRequests(input, ctx.deckImageMax ?? 0);
   if (!reqs.length) return {};

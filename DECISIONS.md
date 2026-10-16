@@ -238,3 +238,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   memakai Claude Haiku (bukan Gemini gratis), modal ±Rp50/PPT, dan tidak kena batas 2.000 token jawaban Free
   (isi semua slide dikirim dalam satu panggilan tool; batas itu memotong file PPT sebelum jadi). Jawaban kosong → kuota dikembalikan penuh, dicatat
   `status=error` "jawaban kosong", dan chat menampilkan pemberitahuan kirim ulang.
+- (16 Okt, founder) PPT di chat punya tombol **"Lihat"** (semua paket): pratinjau semua slide di browser dari isi deck
+  (input tool) + tema yang sama dengan file (`src/lib/deck-theme.ts`), foto AI disimpan sebagai file untuk pratinjau
+  (`previewImages`). Pustaka `pptx-preview` dicoba tapi tidak bisa membaca file buatan pptxgenjs (0 slide) → tidak dipakai.
