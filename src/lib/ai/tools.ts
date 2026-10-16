@@ -12,9 +12,10 @@ import {
   presentationOutline,
   presentationSchema,
   type DeckImages,
-  type DeckStyle,
   type PresentationInput,
 } from "@/lib/pptx";
+import { buildScene, signatureImageRequests, type SignatureImageRequest } from "@/lib/deck/engine";
+import { renderScenePdf, renderScenePptx } from "@/lib/deck/render";
 import { sanitizeFileName } from "@/lib/files";
 import { readToolResult } from "@/lib/addons/chat-context";
 
@@ -27,12 +28,9 @@ export const DECK_IMAGE_MAX_BY_PLAN: Record<string, number> = { beta: 0, starter
 export const deckImageMaxFor = (planId: string, isAdmin: boolean) => (isAdmin ? 8 : (DECK_IMAGE_MAX_BY_PLAN[planId] ?? 0));
 /** Pro & Promax: arahan visual premium untuk gambar baru. */
 export const premiumVisualsFor = (planId: string, isAdmin: boolean) => isAdmin || planId === "pro" || planId === "promax";
-/** Promax: gaya deck sinematik (latar foto gelap penuh, panel transparan, grid & glow) — tingkat visual tertinggi. */
-// Dinonaktifkan (16 Okt, founder): latar navy seragam bukan yang diminta — Promax menunggu "art director" per tema.
-export const deckStyleFor = (planId: string, isAdmin: boolean): DeckStyle => (isAdmin && planId === "__off__" ? "cinematic" : "standard");
-const CINEMATIC_ART_DIRECTION =
-  "Dark cinematic mood: deep navy and black tones, dramatic low-key lighting with cool blue/cyan accents and soft light beams, " +
-  "atmospheric depth, wide composition with calm negative space so overlaid text stays readable.";
+/** "signature" (Promax & admin): AI Art Director — font, palet & tata letak mengikuti tema, foto KV konsisten, hasil PPT + PDF. */
+export type DeckStyle = "standard" | "signature";
+export const deckStyleFor = (planId: string, isAdmin: boolean): DeckStyle => (isAdmin || planId === "promax" ? "signature" : "standard");
 const PREMIUM_ART_DIRECTION =
   "Execute at premium creative-agency quality: refined composition, rich detail, polished lighting and color grading, faithful to the requested style.";
 /** Perkiraan biaya per gambar (USD) bila provider tidak melaporkan biaya nyata. */
@@ -54,6 +52,9 @@ export type PresentationToolOutput =
       theme?: string;
       images?: number;
       style?: DeckStyle;
+      /** Signature: PDF (font asli tertanam) & tata letak untuk pratinjau persis. */
+      pdfUrl?: string;
+      sceneUrl?: string;
       /** URL foto per slide ("cover", indeks slide, atau "i-gk" galeri) untuk pratinjau di browser. */
       previewImages?: Record<string, string>;
     }
@@ -198,11 +199,7 @@ export function createChatTools(ctx: ToolCtx) {
         "Prompt gambar dalam bahasa Inggris, spesifik ke brand/produk/suasana Indonesia bila relevan, tanpa teks. (6) Pilih theme sesuai brand/industri; isi " +
         "brand_color bila warna brand diketahui. (7) Tulis speaker notes yang membantu presenter. " +
         "Bila user melampirkan dokumen, dasarkan isi slide pada dokumen itu." +
-        (ctx.deckStyle === "cinematic"
-          ? "\nGAYA SINEMATIK (paket ini): deck tampil gelap & megah dengan foto sebagai latar penuh tiap slide. Beri image_prompt pada sebagian " +
-            "besar slide isi (± 7 slide paling penting: cards, stats, timeline, comparison, section, closing) — adegan nyata yang relevan " +
-            "(panggung, tim, kota, produk, pelanggan), suasana gelap dramatis, tanpa teks. Pilih theme midnight/ocean/luxe kecuali brand meminta lain."
-          : ""),
+        (ctx.deckStyle === "signature" ? SIGNATURE_GUIDE : ""),
       inputSchema: presentationSchema,
       execute: async (input): Promise<PresentationToolOutput> => {
         const pptxLimit = await ctx.dailyLimit?.("pptx");
@@ -210,11 +207,12 @@ export function createChatTools(ctx: ToolCtx) {
         const credit = await consumeCredits(ctx.userId, PPTX_CREDIT_COST, "presentation", { chatId: ctx.chatId });
         if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat PPT. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
         try {
+          const style = ctx.deckStyle ?? "standard";
+          if (style === "signature") return await signatureDeck(ctx, input);
           const images = await makeDeckImages(ctx, input);
           // Slide yang tidak mendapat foto (sesuai paket / gagal dibuat) → layout teks rapi, tanpa kotak foto kosong.
           const deck = fitDeckToImages(input, (key) => Boolean(images[key]));
-          const style = ctx.deckStyle ?? "standard";
-          const bytes = await buildPresentation(deck, images, style);
+          const bytes = await buildPresentation(deck, images);
           const fileName = `${sanitizeFileName(input.title).slice(0, 60) || "presentasi"}.pptx`;
           const saved = await storeFile(
             ctx,
@@ -255,9 +253,14 @@ export function createChatTools(ctx: ToolCtx) {
  * (paralel, maks sesuai paket — lihat DECK_IMAGE_MAX_BY_PLAN). Gambar yang gagal dilewati — slide tetap jadi.
  */
 /** Simpan foto AI deck sebagai file agar pratinjau slide di chat bisa menampilkannya (foto user memakai file aslinya). */
-async function deckPreviewUrls(ctx: ToolCtx, input: PresentationInput, images: DeckImages): Promise<Record<string, string>> {
+async function deckPreviewUrls(
+  ctx: ToolCtx,
+  input: PresentationInput,
+  images: DeckImages,
+  reqs: { key: string; imageId?: string }[] = deckImageRequests(input, 0),
+): Promise<Record<string, string>> {
   const owned = new Map(
-    deckImageRequests(input, 0)
+    reqs
       .filter((r) => r.imageId)
       .map((r) => [r.key, r.imageId!]),
   );
@@ -280,33 +283,36 @@ async function deckPreviewUrls(ctx: ToolCtx, input: PresentationInput, images: D
   return out;
 }
 
+/** Muat foto milik user (attachment) yang dipakai di deck. */
+async function loadOwnedImages(ctx: ToolCtx, reqs: { key: string; imageId?: string }[], images: DeckImages) {
+  const owned = reqs.filter((r) => r.imageId && /^[0-9a-f-]{36}$/i.test(r.imageId));
+  if (!owned.length) return;
+  const { data: rows } = await ctx.admin
+    .from("attachments")
+    .select("id, mime, storage_path")
+    .eq("user_id", ctx.userId)
+    .in("id", [...new Set(owned.map((r) => r.imageId!))]);
+  const byId = new Map((rows ?? []).filter((r) => String(r.mime).startsWith("image/")).map((r) => [r.id as string, r]));
+  await Promise.all(
+    owned.map(async (r) => {
+      const row = byId.get(r.imageId!);
+      if (!row) return;
+      const { data } = await ctx.admin.storage.from("uploads").download(row.storage_path as string);
+      if (!data) return;
+      const bytes = new Uint8Array(await data.arrayBuffer());
+      const size = imageSize(bytes);
+      if (size) images[r.key] = { data: Buffer.from(bytes).toString("base64"), mime: row.mime as string, ...size };
+    }),
+  );
+}
+
 async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<DeckImages> {
-  const cinematic = ctx.deckStyle === "cinematic";
-  const reqs = deckImageRequests(input, ctx.deckImageMax ?? 0, ctx.deckStyle);
+  const reqs = deckImageRequests(input, ctx.deckImageMax ?? 0);
   if (!reqs.length) return {};
   const images: DeckImages = {};
 
   // 1) Foto milik user (mis. foto produk asli yang dilampirkan di chat).
-  const owned = reqs.filter((r) => r.imageId && /^[0-9a-f-]{36}$/i.test(r.imageId));
-  if (owned.length) {
-    const { data: rows } = await ctx.admin
-      .from("attachments")
-      .select("id, mime, storage_path")
-      .eq("user_id", ctx.userId)
-      .in("id", [...new Set(owned.map((r) => r.imageId!))]);
-    const byId = new Map((rows ?? []).filter((r) => String(r.mime).startsWith("image/")).map((r) => [r.id as string, r]));
-    await Promise.all(
-      owned.map(async (r) => {
-        const row = byId.get(r.imageId!);
-        if (!row) return;
-        const { data } = await ctx.admin.storage.from("uploads").download(row.storage_path as string);
-        if (!data) return;
-        const bytes = new Uint8Array(await data.arrayBuffer());
-        const size = imageSize(bytes);
-        if (size) images[r.key] = { data: Buffer.from(bytes).toString("base64"), mime: row.mime as string, ...size };
-      }),
-    );
-  }
+  await loadOwnedImages(ctx, reqs, images);
 
   // 2) Gambar AI.
   const toGenerate = reqs.filter((r) => !r.imageId && r.prompt);
@@ -317,9 +323,7 @@ async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<D
     toGenerate.map(async (r) => {
       const style = r.product
         ? "Premium studio product photography, product centered and fully visible, soft shadow, clean seamless background, commercial advertising quality."
-        : cinematic && r.key !== "cover" && r.aspect === "16:9"
-          ? `Wide cinematic background photo for a dark presentation slide. ${CINEMATIC_ART_DIRECTION}`
-          : `Professional, high-quality editorial photo for a marketing presentation, cinematic lighting, clean composition.${cinematic ? ` ${CINEMATIC_ART_DIRECTION}` : ""}`;
+        : "Professional, high-quality editorial photo for a marketing presentation, cinematic lighting, clean composition.";
       try {
         const img = await Promise.race([
           generateImage(
@@ -344,6 +348,98 @@ async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<D
   const failed = results.filter((ok) => !ok).length;
   if (failed) await refundCredits(ctx.userId, failed * DECK_IMAGE_CREDIT_COST, "deck_images_failed");
   return images;
+}
+
+// ---------------------------------------------------------------------------
+// Deck Signature (Promax): AI Art Director
+// ---------------------------------------------------------------------------
+
+const SIGNATURE_GUIDE =
+  "\nGAYA SIGNATURE (paket ini — kualitas tertinggi, setara deck agency): WAJIB isi `design`. (a) Pilih `design.mood` yang paling cocok dengan tema & " +
+  "audiens (font & bentuk kotak mengikuti mood). (b) Tentukan `design.kv` = satu dunia visual yang konsisten (setting, tokoh, pakaian, pencahayaan, " +
+  "color grade) — semua foto dibuat dari KV ini sehingga tokoh & suasananya sama di tiap slide. (c) `design.palette` diturunkan dari KV " +
+  "(bg gelap untuk event malam/teknologi, terang untuk F&B/beauty, dsb.), kontras teks tinggi. (d) Isi `design.cover_kicker`, `design.tagline`, " +
+  "`design.presenter` bila relevan. (e) Beri image_prompt pada ± 7 slide terpenting (cards, timeline, section, stats, comparison, closing): " +
+  "tulis ADEGAN-nya saja (siapa melakukan apa, di mana) — gaya & komposisi diatur otomatis. Untuk cards berisi 2 kartu, gambarkan dua subjek " +
+  "kiri-kanan (mis. 'a gamer on the left, a video creator on the right'). (f) Teks sangat ringkas: kicker 2–4 kata, judul ≤ 7 kata yang kuat " +
+  "(boleh bahasa Inggris untuk event/brand modern), isi kartu 2–3 kalimat pendek (tiap kalimat jadi satu baris), takeaway 1 kalimat pernyataan.";
+
+/** KV dulu (jadi acuan), lalu foto slide lain dibuat dari KV agar tokoh, tempat & warna konsisten. */
+async function makeSignatureImages(ctx: ToolCtx, input: PresentationInput, reqs: SignatureImageRequest[]): Promise<DeckImages> {
+  const images: DeckImages = {};
+  await loadOwnedImages(ctx, reqs, images);
+  const toGenerate = reqs.filter((r) => !r.imageId && r.prompt);
+  if (!toGenerate.length || !ctx.deckImageMax) return images;
+  const credit = await consumeCredits(ctx.userId, toGenerate.length * DECK_IMAGE_CREDIT_COST, "deck_images", { chatId: ctx.chatId });
+  if (!credit.ok) return images;
+  const world = input.design?.kv?.trim();
+  const NO_TEXT = "No text, no words, no letters, no logos, no watermark.";
+  let failed = 0;
+  const run = async (r: SignatureImageRequest, refs: { mime: string; data: string }[]) => {
+    const prompt = refs.length
+      ? `Create a new photo in exactly the same visual world as the reference image: same setting style, same characters' look and wardrobe if people appear, ` +
+        `same color palette, lighting and color grade. Scene: ${r.prompt}. ${r.composition} ${world ? `World: ${world}. ` : ""}` +
+        `Photorealistic, premium campaign quality. ${NO_TEXT}`
+      : r.product
+        ? `Premium studio product photography: ${r.prompt}. ${r.composition} ${world ? `Mood: ${world}. ` : ""}${NO_TEXT}`
+        : `${world ? `${world}. ` : ""}${r.prompt}. ${r.composition} Premium campaign key visual, photorealistic, cinematic lighting and color grade, rich detail. ${NO_TEXT}`;
+    try {
+      const img = await Promise.race([
+        generateImage(prompt, r.aspect, refs, { budget: !refs.length && r.key !== "cover" }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout gambar deck")), 90_000)),
+      ]);
+      const size = imageSize(img.bytes);
+      if (!size) throw new Error("format gambar tidak dikenal");
+      images[r.key] = { data: Buffer.from(img.bytes).toString("base64"), mime: img.mime, ...size };
+      await logUsage(ctx, { tier: "deck_image", provider: img.provider, model: img.model, credits: DECK_IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD, note: img.notes });
+    } catch (err) {
+      failed++;
+      console.warn("[deck-signature] gambar gagal", r.key, errText(err));
+    }
+  };
+  // 1) Key visual (cover) — foto user untuk cover juga bisa jadi acuan.
+  const kvReq = toGenerate.find((r) => r.key === "cover");
+  if (kvReq) await run(kvReq, []);
+  const kv = images.cover;
+  const refs = kv ? [{ mime: kv.mime, data: kv.data }] : [];
+  // 2) Foto slide lain paralel, mengacu ke KV (foto produk tanpa acuan agar produknya tetap bersih).
+  await Promise.all(toGenerate.filter((r) => r !== kvReq).map((r) => run(r, r.product ? [] : refs)));
+  if (failed) await refundCredits(ctx.userId, failed * DECK_IMAGE_CREDIT_COST, "deck_images_failed");
+  return images;
+}
+
+async function signatureDeck(ctx: ToolCtx, input: PresentationInput): Promise<PresentationToolOutput> {
+  const reqs = signatureImageRequests(input, ctx.deckImageMax ?? 0);
+  const images = await makeSignatureImages(ctx, input, reqs);
+  // Slide produk/galeri/gambar+teks yang tidak mendapat foto → versi teks rapi.
+  const deck = fitDeckToImages(input, (key) => Boolean(images[key]));
+  const dims = Object.fromEntries(Object.entries(images).map(([k, v]) => [k, { width: v.width, height: v.height }]));
+  const scene = buildScene(deck, { images: dims });
+  const base = sanitizeFileName(input.title).slice(0, 60) || "presentasi";
+  const [pptxBytes, pdfBytes] = await Promise.all([renderScenePptx(scene, images, input.title), renderScenePdf(scene, images, input.title)]);
+  const outline = presentationOutline(deck);
+  const [saved, pdf, sceneFile, previewImages] = await Promise.all([
+    storeFile(ctx, "presentations", `${base}.pptx`, "application/vnd.openxmlformats-officedocument.presentationml.presentation", pptxBytes, outline),
+    storeFile(ctx, "presentations", `${base}.pdf`, "application/pdf", pdfBytes, null),
+    storeFile(ctx, "presentations", `${base}.scene.json`, "application/json", new TextEncoder().encode(JSON.stringify(scene)), null),
+    deckPreviewUrls(ctx, deck, images, reqs),
+  ]);
+  await logUsage(ctx, { tier: "pptx", credits: PPTX_CREDIT_COST, cost: 0, note: `signature:${scene.mood}` });
+  return {
+    ok: true,
+    attachmentId: saved.id,
+    url: saved.url,
+    title: input.title,
+    slideCount: input.slides.length + 1,
+    slideTitles: [input.title, ...input.slides.map((s) => s.title)],
+    fileName: `${base}.pptx`,
+    theme: input.theme,
+    images: Object.keys(images).length,
+    style: "signature",
+    pdfUrl: pdf.url,
+    sceneUrl: sceneFile.url,
+    previewImages,
+  };
 }
 
 async function loadReferences(ctx: ToolCtx, ids: string[]) {

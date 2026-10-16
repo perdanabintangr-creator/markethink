@@ -1,9 +1,10 @@
 import "server-only";
-import { cinematicTheme, resolveDeckTheme, type DeckStyle, type DeckTheme } from "./deck-theme";
+import { resolveDeckTheme, type DeckTheme } from "./deck-theme";
 import PptxGenJS from "pptxgenjs";
 import { z } from "zod";
 import { PPTX_ICONS, PPTX_ICON_NAMES, type PptxIcon } from "./pptx-icons";
 import { HERO_OVERLAY_PNG } from "./pptx-overlay";
+import { MOOD_IDS, moodGuide } from "./deck/moods";
 
 // ---------------------------------------------------------------------------
 // Skema isi presentasi (diisi oleh AI lewat tool create_presentation)
@@ -132,6 +133,23 @@ export const presentationSchema = z.object({
     .default("hero")
     .describe("hero = foto penuh satu slide dengan judul di atasnya (paling memukau); split = foto di separuh kanan"),
   slides: z.array(slideSchema).min(3).max(20).describe("Isi slide setelah cover (cover dibuat otomatis)"),
+  design: z
+    .object({
+      mood: z.enum(MOOD_IDS).describe(`Gaya desain (font & bentuk) yang paling cocok dengan tema/judul: ${moodGuide()}`),
+      palette: z
+        .object({ bg: short(9), surface: short(9), text: short(9), muted: short(9), accent: short(9), accent2: short(9) })
+        .partial()
+        .optional()
+        .describe("Palet hex (#RRGGBB) yang diturunkan dari key visual: bg latar, surface kotak, text, muted teks sekunder, accent & accent2 sorotan"),
+      kv: short(500).describe(
+        "Key visual (bahasa Inggris): dunia visual deck yang konsisten — lokasi/setting, tokoh (usia, gaya, pakaian), pencahayaan, palet warna & color grade. Dipakai untuk SEMUA foto",
+      ),
+      cover_kicker: short(70).optional().describe("Label kecil di atas judul cover, mis. 'ESPORTS TOURNAMENT · AI VIDEO COMPETITION'"),
+      tagline: short(80).optional().describe("Tagline pendek di cover, mis. 'Play the Game. Create the Future.'"),
+      presenter: short(60).optional().describe("Mis. 'Presented by Partai Demokrat'"),
+    })
+    .optional()
+    .describe("Art direction deck Signature (hanya bila diminta di instruksi tool)"),
 });
 
 export type PresentationInput = z.infer<typeof presentationSchema>;
@@ -167,39 +185,6 @@ interface Ctx {
   images: DeckImages;
   /** Ruang bawah tambahan untuk kotak "so what" & sumber data di slide isi. */
   bottom: number;
-  /** Gaya "cinematic" (Promax): latar gelap, foto sinematik full-bleed di belakang isi, panel transparan berbingkai. */
-  cine: boolean;
-}
-
-export type { DeckStyle };
-
-/** Latar slide sinematik: foto full-bleed digelapkan bila ada, selain itu latar gelap + grid halus + cahaya lembut. */
-function cineBackdrop(c: Ctx, slide: Slide, key: string) {
-  bg(slide, c.t.bg);
-  if (coverImage(c, slide, key, 0, 0, W, H)) {
-    slide.addShape(c.pptx.ShapeType.rect, { x: 0, y: 0, w: W, h: H, fill: { color: c.t.bg, transparency: 28 }, line: { color: c.t.bg, transparency: 100 } });
-    slide.addImage({ data: `image/png;base64,${HERO_OVERLAY_PNG}`, x: 0, y: 0, w: W, h: H });
-    return;
-  }
-  for (let x = 0.6; x < W; x += 0.62) {
-    slide.addShape(c.pptx.ShapeType.line, { x, y: 0, w: 0, h: H, line: { color: c.t.surface2, width: 0.5, transparency: 70 } });
-  }
-  for (let y = 0.6; y < H; y += 0.62) {
-    slide.addShape(c.pptx.ShapeType.line, { x: 0, y, w: W, h: 0, line: { color: c.t.surface2, width: 0.5, transparency: 70 } });
-  }
-  slide.addShape(c.pptx.ShapeType.ellipse, { x: W * 0.35, y: H * 0.45, w: W * 0.6, h: H * 0.9, fill: { color: c.t.accent, transparency: 90 }, line: { color: c.t.accent, transparency: 100 } });
-}
-
-/** Panel transparan berbingkai tipis (ciri gaya sinematik): kotak berwarna "surface" otomatis dibuat tembus pandang. */
-function cinePanels(c: Ctx, slide: Slide) {
-  const orig = slide.addShape.bind(slide);
-  slide.addShape = ((type: Parameters<Slide["addShape"]>[0], opts: Parameters<Slide["addShape"]>[1]) => {
-    const fill = opts?.fill as { color?: string; transparency?: number } | undefined;
-    if (fill?.color === c.t.surface && fill.transparency === undefined) {
-      return orig(type, { ...opts, fill: { ...fill, transparency: 22 }, line: { color: c.t.accent, transparency: 55, width: 0.75 } });
-    }
-    return orig(type, opts);
-  }) as Slide["addShape"];
 }
 
 /** Perkirakan ukuran font agar teks muat di kotak (tanpa bergantung pada auto-fit PowerPoint). */
@@ -739,15 +724,13 @@ function closing(c: Ctx, s: SlideInput, idx = -1) {
 // ---------------------------------------------------------------------------
 
 /** Bangun file .pptx 16:9 dari outline terstruktur buatan AI. */
-export async function buildPresentation(input: PresentationInput, images: DeckImages = {}, style: DeckStyle = "standard"): Promise<Uint8Array> {
+export async function buildPresentation(input: PresentationInput, images: DeckImages = {}): Promise<Uint8Array> {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
   pptx.title = input.title;
   pptx.company = "Markethink";
   pptx.author = "Markethink AI";
-  const cine = style === "cinematic";
-  const base = resolveTheme(input);
-  const c: Ctx = { pptx, t: cine ? cinematicTheme(base) : base, deckTitle: input.title, total: input.slides.length + 1, images, bottom: 0, cine };
+  const c: Ctx = { pptx, t: resolveTheme(input), deckTitle: input.title, total: input.slides.length + 1, images, bottom: 0 };
 
   cover(c, input);
   let sectionNo = 0;
@@ -761,27 +744,20 @@ export async function buildPresentation(input: PresentationInput, images: DeckIm
     else {
       slide = pptx.addSlide();
       bg(slide, c.t.bg);
-      // Sinematik: foto slide jadi latar penuh (bukan di samping), panel transparan di atasnya.
-      const own = c.cine && !["product", "gallery"].includes(s.layout);
-      if (own) {
-        cineBackdrop(c, slide, String(i));
-        cinePanels(c, slide);
-      }
-      const imgIdx = own ? -1 : i;
       // Gaya konsultan: kotak "so what" (takeaway) & sumber data di bawah, isi slide menyesuaikan ruangnya.
       const takeaway = s.layout !== "agenda" ? s.takeaway?.trim() : undefined;
       c.bottom = (takeaway ? 0.78 : 0) + (s.source && !takeaway ? 0.22 : 0);
       const top = header(c, slide, s);
       if (s.layout === "agenda") agenda(c, slide, s, top);
-      else if (s.layout === "cards" && s.cards?.length) cards(c, slide, s, top, imgIdx);
-      else if (s.layout === "stats" && s.stats?.length) stats(c, slide, s, top, imgIdx);
-      else if (s.layout === "product") product(c, slide, s, top, imgIdx);
-      else if (s.layout === "gallery" && s.gallery?.length) gallery(c, slide, s, top, imgIdx);
+      else if (s.layout === "cards" && s.cards?.length) cards(c, slide, s, top, i);
+      else if (s.layout === "stats" && s.stats?.length) stats(c, slide, s, top, i);
+      else if (s.layout === "product") product(c, slide, s, top, i);
+      else if (s.layout === "gallery" && s.gallery?.length) gallery(c, slide, s, top, i);
       else if (s.layout === "chart") chart(c, slide, s, top);
       else if (s.layout === "timeline" && s.steps?.length) timeline(c, slide, s, top);
       else if (s.layout === "comparison" && s.columns?.length) comparison(c, slide, s, top);
       else if (s.layout === "table" && s.table) table(c, slide, s, top);
-      else bullets(c, slide, s, top, imgIdx);
+      else bullets(c, slide, s, top, i);
       if (takeaway) takeawayBar(c, slide, takeaway);
       if (s.source) sourceNote(c, slide, s.source);
       c.bottom = 0;
@@ -825,7 +801,7 @@ const IMAGE_PRIORITY: SlideInput["layout"][] = ["product", "image_text", "sectio
  * Semua visual yang dibutuhkan deck: cover + slide bergambar + galeri. Foto milik user (imageId) selalu dipakai;
  * gambar AI (prompt) dibatasi `maxGenerated` dan diprioritaskan cover → produk → image_text → section → …
  */
-export function deckImageRequests(input: PresentationInput, maxGenerated = 6, style: DeckStyle = "standard"): DeckImageRequest[] {
+export function deckImageRequests(input: PresentationInput, maxGenerated = 6): DeckImageRequest[] {
   const all: (DeckImageRequest & { rank: number })[] = [];
   const coverAspect = input.cover_style === "split" ? "4:5" : "16:9";
   if (input.cover_image_id) all.push({ key: "cover", aspect: coverAspect, imageId: input.cover_image_id, rank: -1 });
@@ -840,9 +816,7 @@ export function deckImageRequests(input: PresentationInput, maxGenerated = 6, st
       });
       return;
     }
-    // Sinematik: slide isi memakai foto sebagai latar penuh 16:9.
-    const aspect =
-      style === "cinematic" && !["image_text", "product", "gallery", "section", "quote"].includes(s.layout) ? "16:9" : IMAGE_ASPECT[s.layout];
+    const aspect = IMAGE_ASPECT[s.layout];
     if (!aspect) return;
     if (s.image_id) all.push({ key: String(i), aspect, imageId: s.image_id, rank, product: s.layout === "product" });
     else if (s.image_prompt) all.push({ key: String(i), aspect, prompt: s.image_prompt, rank, product: s.layout === "product" });

@@ -34,6 +34,7 @@ import { isTransparent, textBlocks } from "@/lib/message-text";
 import { parseQuotedMessage } from "@/lib/quote";
 import { Markdown } from "./markdown";
 import { DeckPreviewButton, type DeckInput } from "./deck-preview";
+import { ScenePreviewButton } from "./scene-preview";
 import { SelectionAsk } from "./selection-ask";
 
 const TIER_LABEL = Object.fromEntries(getTiers({}).map((t) => [t.id, t.label]));
@@ -426,47 +427,65 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
   const titles = (part.output.slideTitles as string[] | undefined) ?? [];
   const theme = DECK_THEMES[String(part.output.theme ?? "")] ?? DECK_THEMES.midnight;
   const images = Number(part.output.images ?? 0);
+  // Signature: cover memakai foto KV asli.
+  const cover = part.output.sceneUrl ? (part.output.previewImages as Record<string, string> | undefined)?.cover : undefined;
   return (
     <div className="max-w-xl overflow-hidden rounded-xl border bg-card">
       {/* Pratinjau cover sesuai tema deck */}
       <div className="relative aspect-[16/6] overflow-hidden px-6 py-5" style={{ background: theme.bg }}>
-        <div
-          className="absolute -right-10 -top-16 size-48 rounded-full opacity-25"
-          style={{ background: theme.accent }}
-          aria-hidden
-        />
-        <div
-          className="absolute -bottom-20 right-16 size-40 rounded-full opacity-20"
-          style={{ background: theme.accent2 }}
-          aria-hidden
-        />
+        {cover ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- file pribadi via /api/attachments */}
+            <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" aria-hidden />
+          </>
+        ) : (
+          <>
+            <div className="absolute -right-10 -top-16 size-48 rounded-full opacity-25" style={{ background: theme.accent }} aria-hidden />
+            <div className="absolute -bottom-20 right-16 size-40 rounded-full opacity-20" style={{ background: theme.accent2 }} aria-hidden />
+          </>
+        )}
         <div className="relative h-1.5 w-10 rounded-full" style={{ background: theme.accent }} />
-        <p className="relative mt-3 line-clamp-2 max-w-[75%] text-lg font-bold leading-snug" style={{ color: theme.text }}>
+        <p className="relative mt-3 line-clamp-2 max-w-[75%] text-lg font-bold leading-snug" style={{ color: cover ? "#fff" : theme.text }}>
           {String(part.output.title)}
         </p>
-        <p className="relative mt-1 text-[11px]" style={{ color: theme.muted }}>
+        <p className="relative mt-1 text-[11px]" style={{ color: cover ? "rgba(255,255,255,.75)" : theme.muted }}>
           {Number(part.output.slideCount)} {t.slides}
           {images > 0 ? ` · ${images} foto AI` : ""}
         </p>
       </div>
-      <div className="flex items-center gap-3 border-b bg-gradient-to-r from-primary/15 to-transparent px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 border-b bg-gradient-to-r from-primary/15 to-transparent px-4 py-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Presentation className="size-5" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{String(part.output.title)}</p>
           <p className="text-xs text-muted-foreground">
-            PowerPoint · {Number(part.output.slideCount)} {t.slides}
+            {part.output.pdfUrl ? "Signature · PPT + PDF" : "PowerPoint"} · {Number(part.output.slideCount)} {t.slides}
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
-          {part.input ? (
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {part.output.sceneUrl ? (
+            <ScenePreviewButton
+              sceneUrl={String(part.output.sceneUrl)}
+              images={part.output.previewImages as Record<string, string> | undefined}
+              pdfUrl={part.output.pdfUrl ? String(part.output.pdfUrl) : undefined}
+              pptxUrl={String(part.output.url)}
+              title={String(part.output.title)}
+            />
+          ) : part.input ? (
             <DeckPreviewButton
               deck={part.input as DeckInput}
               images={part.output.previewImages as Record<string, string> | undefined}
               downloadUrl={`${String(part.output.url)}?download=1`}
-              style={part.output.style === "cinematic" ? "cinematic" : undefined}
             />
+          ) : null}
+          {part.output.pdfUrl ? (
+            <Button asChild size="sm" variant="outline">
+              <a href={`${String(part.output.pdfUrl)}?download=1`}>
+                <FileText /> PDF
+              </a>
+            </Button>
           ) : null}
           <Button asChild size="sm">
             <a href={`${String(part.output.url)}?download=1`}>

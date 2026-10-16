@@ -34,30 +34,3 @@ function luminance(hex: string) {
   const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
-
-/** "cinematic" (Promax): latar gelap, foto sinematik full-bleed di belakang isi, panel transparan berbingkai. */
-export type DeckStyle = "standard" | "cinematic";
-
-function mixHex(a: string, b: string, t: number) {
-  const pa = [0, 2, 4].map((i) => parseInt(a.slice(i, i + 2), 16));
-  const pb = [0, 2, 4].map((i) => parseInt(b.slice(i, i + 2), 16));
-  return pa.map((v, i) => Math.round(v * (1 - t) + pb[i] * t).toString(16).padStart(2, "0")).join("").toUpperCase();
-}
-
-/** Tema gelap sinematik dari warna brand: latar hitam-navy bernuansa warna brand, aksen dicerahkan agar menyala. */
-export function cinematicTheme(t: DeckTheme): DeckTheme {
-  const bright = (c: string) => (luminance(c) < 0.38 ? mixHex(c, "FFFFFF", 0.35) : c);
-  const accent = bright(t.accent);
-  const base = "04070F";
-  return {
-    dark: true,
-    bg: mixHex(base, t.accent, 0.1),
-    surface: mixHex(base, t.accent, 0.17),
-    surface2: mixHex(base, accent, 0.4),
-    text: "FFFFFF",
-    muted: "AEBBD8",
-    accent,
-    accent2: bright(t.accent2),
-    onAccent: luminance(accent) > 0.55 ? "0B1020" : "FFFFFF",
-  };
-}

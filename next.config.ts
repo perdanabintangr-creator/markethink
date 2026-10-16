@@ -4,9 +4,9 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig: NextConfig = {
   // Penanda versi deploy: tab lama diberi tahu bila ada versi baru (lihat UpdateNotifier).
   env: { NEXT_PUBLIC_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA ?? "dev" },
-  // prompts/system.md dibaca saat runtime oleh route chat.
+  // prompts/system.md & font deck Signature (PDF/ukur teks) dibaca saat runtime oleh route chat.
   outputFileTracingIncludes: {
-    "/api/chat": ["./prompts/**/*"],
+    "/api/chat": ["./prompts/**/*", "./public/fonts/deck/**/*"],
   },
   serverExternalPackages: ["unpdf", "mammoth", "exceljs", "pptxgenjs", "jszip"],
   experimental: {

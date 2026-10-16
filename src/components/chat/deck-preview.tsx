@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Download, Eye, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { cinematicTheme, resolveDeckTheme, type DeckStyle, type DeckTheme } from "@/lib/deck-theme";
+import { resolveDeckTheme, type DeckTheme } from "@/lib/deck-theme";
 import { fitDeckToImages } from "@/lib/deck-fit";
 
 /** Bentuk isi deck dari input tool create_presentation (longgar — data lama bisa tidak lengkap). */
@@ -40,17 +40,13 @@ export function DeckPreviewButton({
   deck,
   images,
   downloadUrl,
-  style,
 }: {
   deck: DeckInput;
   images?: Record<string, string>;
   downloadUrl: string;
-  style?: DeckStyle;
 }) {
   const [open, setOpen] = useState(false);
-  const cine = style === "cinematic";
-  const base = resolveDeckTheme({ theme: deck.theme, brand_color: deck.brand_color });
-  const t = cine ? cinematicTheme(base) : base;
+  const t = resolveDeckTheme({ theme: deck.theme, brand_color: deck.brand_color });
   // Sama seperti file: slide tanpa foto (sesuai paket) memakai layout teks. Deck lama (tanpa data foto) apa adanya.
   const slides = images
     ? fitDeckToImages({ ...deck, slides: deck.slides ?? [] }, (k) => Boolean(images[k])).slides
@@ -70,22 +66,14 @@ export function DeckPreviewButton({
           </DialogHeader>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-muted/40 p-3 sm:p-4">
             <SlideFrame t={t} n={1}>
-              {cine ? <CineCover deck={deck} t={t} image={images?.cover} /> : <Cover deck={deck} t={t} image={images?.cover} />}
+              <Cover deck={deck} t={t} image={images?.cover} />
             </SlideFrame>
-            {slides.map((s, i) => {
-              const image = images?.[String(i)];
-              // Sinematik (sama seperti file): foto jadi latar penuh slide isi, panel transparan di atasnya.
-              const backdrop = cine && !CINE_OWN_LAYOUTS.includes(s.layout ?? "");
-              return (
-                <SlideFrame key={i} t={t} n={i + 2}>
-                  {backdrop && <CineBackdrop t={t} image={image} />}
-                  <div className="relative h-full">
-                    <SlideBody s={s} t={t} cine={cine} image={backdrop ? undefined : image} gallery={[0, 1, 2].map((k) => images?.[`${i}-g${k}`])} />
-                  </div>
-                  <SoWhat s={s} t={t} />
-                </SlideFrame>
-              );
-            })}
+            {slides.map((s, i) => (
+              <SlideFrame key={i} t={t} n={i + 2}>
+                <SlideBody s={s} t={t} image={images?.[String(i)]} gallery={[0, 1, 2].map((k) => images?.[`${i}-g${k}`])} />
+                <SoWhat s={s} t={t} />
+              </SlideFrame>
+            ))}
           </div>
           <div className="flex justify-end gap-2 border-t px-4 py-3">
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
@@ -190,52 +178,9 @@ function Cover({ deck, t, image }: { deck: DeckInput; t: DeckTheme; image?: stri
   );
 }
 
-/** Layout yang tetap memakai susunan foto sendiri di gaya sinematik. */
-const CINE_OWN_LAYOUTS = ["section", "quote", "image_text", "closing", "product", "gallery"];
-
-/** Latar sinematik: foto digelapkan, atau grid halus + cahaya aksen bila tanpa foto. */
-function CineBackdrop({ t, image }: { t: DeckTheme; image?: string }) {
-  if (image)
-    return (
-      <div className="absolute inset-0">
-        <Photo src={image} t={t} />
-        <div className="absolute inset-0" style={{ background: `linear-gradient(90deg, ${hex(t.bg)}f2 0%, ${hex(t.bg)}c7 55%, ${hex(t.bg)}99 100%)` }} />
-      </div>
-    );
-  const line = `${hex(t.surface2)}4d`;
-  return (
-    <div
-      className="absolute inset-0"
-      style={{
-        backgroundImage: `linear-gradient(${line} 1px, transparent 1px), linear-gradient(90deg, ${line} 1px, transparent 1px)`,
-        backgroundSize: "6.2% 11%",
-      }}
-    >
-      <span className="absolute -bottom-[30%] right-[5%] size-[60%] rounded-full blur-3xl" style={{ background: `${hex(t.accent)}26` }} />
-    </div>
-  );
-}
-
-function CineCover({ deck, t, image }: { deck: DeckInput; t: DeckTheme; image?: string }) {
-  return (
-    <div className="relative h-full">
-      <CineBackdrop t={t} image={image} />
-      <div className="relative flex h-full max-w-[62%] flex-col justify-center gap-[1.5cqw] p-[5%]">
-        <span className="rounded-full" style={{ width: "6cqw", height: "0.6cqw", background: hex(t.accent) }} />
-        <p className="font-bold leading-tight" style={{ fontSize: "4.4cqw" }}>
-          {deck.title}
-        </p>
-        {deck.subtitle && <p style={{ color: hex(t.muted), fontSize: "1.9cqw" }}>{deck.subtitle}</p>}
-      </div>
-    </div>
-  );
-}
-
-function SlideBody({ s, t, cine, image, gallery }: { s: Slide; t: DeckTheme; cine?: boolean; image?: string; gallery: (string | undefined)[] }) {
+function SlideBody({ s, t, image, gallery }: { s: Slide; t: DeckTheme; image?: string; gallery: (string | undefined)[] }) {
   const pad = "p-[4.5%]";
-  const card: React.CSSProperties = cine
-    ? { background: `${hex(t.surface)}c7`, border: `1px solid ${hex(t.accent)}73`, backdropFilter: "blur(2px)" }
-    : { background: hex(t.surface) };
+  const card = { background: hex(t.surface) };
   switch (s.layout) {
     case "section":
       return (

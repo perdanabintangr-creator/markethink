@@ -275,3 +275,15 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   kredit/bln ≤ harga × 70% ÷ Rp100 (tabel per paket + biaya nyata per kredit). Kebocoran per akun ditandai "Perlu tindakan":
   paket berbayar tanpa/lewat pembayaran, kuota khusus di atas batas aman, bonus kredit, biaya > pendapatan. Akun admin/tim
   dipisah. RPC `bo_account_pnl` (migrasi 0040, hanya service_role).
+
+## PPT Promax "Signature" — AI Art Director (16 Okt 2026, founder ACC)
+- Bukan template warna: AI memilih `design.mood` sesuai tema (11 mood: tech, editorial, corporate, bold, warm, beauty, playful,
+  sport, minimal, heritage, modern) → pasangan font Google (OFL, `public/fonts/deck`), bentuk kotak (outline/solid/glass/rule),
+  palet dari KV (kontras dijaga otomatis), plus `design.kv` (dunia visual), cover kicker, tagline, presenter.
+- Foto konsisten: KV (cover) dibuat dulu, foto slide lain dibuat dengan KV sebagai acuan (Gemini) → tokoh/suasana sama.
+  Tiap layout memberi arahan komposisi (mis. 2 kartu = subjek kiri-kanan; timeline = subjek di atas, bawah lega).
+  Modal ±Rp4.500/deck (maks 8 foto). Kredit foto tetap DECK_IMAGE_CREDIT_COST per foto, gagal → refund.
+- Tata letak terinspirasi deck referensi (Demokrat Digital Arena): kicker berspasi, judul besar, duo-split dengan garis cahaya,
+  timeline di atas foto, kotak bergaris tipis, kotak pernyataan di bawah. Teks diukur dengan metrik font asli (tidak meluber).
+- Satu "Scene" (`src/lib/deck`) → PPTX (bisa diedit), PDF (font tertanam, persis), pratinjau browser (persis). Pro ke bawah tetap
+  mesin lama (`src/lib/pptx.ts`). Gaya navy "cinematic" sebelumnya dihapus.
