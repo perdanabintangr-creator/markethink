@@ -1,3 +1,4 @@
+import { fitDeckToImages } from "@/lib/deck-fit";
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
@@ -190,7 +191,9 @@ export function createChatTools(ctx: ToolCtx) {
         if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat PPT. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
         try {
           const images = await makeDeckImages(ctx, input);
-          const bytes = await buildPresentation(input, images);
+          // Slide yang tidak mendapat foto (sesuai paket / gagal dibuat) → layout teks rapi, tanpa kotak foto kosong.
+          const deck = fitDeckToImages(input, (key) => Boolean(images[key]));
+          const bytes = await buildPresentation(deck, images);
           const fileName = `${sanitizeFileName(input.title).slice(0, 60) || "presentasi"}.pptx`;
           const saved = await storeFile(
             ctx,
@@ -198,11 +201,11 @@ export function createChatTools(ctx: ToolCtx) {
             fileName,
             "application/vnd.openxmlformats-officedocument.presentationml.presentation",
             bytes,
-            presentationOutline(input),
+            presentationOutline(deck),
           );
           await logUsage(ctx, { tier: "pptx", credits: PPTX_CREDIT_COST, cost: 0 });
           const imageCount = Object.keys(images).length;
-          const previewImages = await deckPreviewUrls(ctx, input, images);
+          const previewImages = await deckPreviewUrls(ctx, deck, images);
           return {
             ok: true,
             attachmentId: saved.id,

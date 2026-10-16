@@ -241,3 +241,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - (16 Okt, founder) PPT di chat punya tombol **"Lihat"** (semua paket): pratinjau semua slide di browser dari isi deck
   (input tool) + tema yang sama dengan file (`src/lib/deck-theme.ts`), foto AI disimpan sebagai file untuk pratinjau
   (`previewImages`). Pustaka `pptx-preview` dicoba tapi tidak bisa membaca file buatan pptxgenjs (0 slide) → tidak dipakai.
+- (16 Okt, founder) PPT tanpa foto (Free, Starter selain cover, atau foto gagal): `fitDeckToImages` mengubah layout foto
+  (image_text → bullets, product → cards, gallery → cards dari caption) & membuang kotak foto — file .pptx dan pratinjau sama-sama
+  tanpa kotak foto kosong. Pratinjau slide teks dirapikan (poin bernomor dalam kartu, konten di tengah).

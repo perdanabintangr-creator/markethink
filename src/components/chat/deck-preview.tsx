@@ -5,6 +5,7 @@ import { Download, Eye, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { resolveDeckTheme, type DeckTheme } from "@/lib/deck-theme";
+import { fitDeckToImages } from "@/lib/deck-fit";
 
 /** Bentuk isi deck dari input tool create_presentation (longgar — data lama bisa tidak lengkap). */
 interface Slide {
@@ -28,6 +29,7 @@ export interface DeckInput {
   subtitle?: string;
   theme?: string;
   brand_color?: string;
+  cover_image_prompt?: string;
   slides?: Slide[];
 }
 
@@ -43,7 +45,10 @@ export function DeckPreviewButton({
 }) {
   const [open, setOpen] = useState(false);
   const t = resolveDeckTheme({ theme: deck.theme, brand_color: deck.brand_color });
-  const slides = deck.slides ?? [];
+  // Sama seperti file: slide tanpa foto (sesuai paket) memakai layout teks. Deck lama (tanpa data foto) apa adanya.
+  const slides = images
+    ? fitDeckToImages({ ...deck, slides: deck.slides ?? [] }, (k) => Boolean(images[k])).slides
+    : (deck.slides ?? []);
   return (
     <>
       <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
@@ -216,7 +221,7 @@ function SlideBody({ s, t, image, gallery }: { s: Slide; t: DeckTheme; image?: s
               <Photo src={image} t={t} />
             </div>
           )}
-          <div className="flex flex-1 flex-col gap-[2cqw]">
+          <div className="flex flex-1 flex-col justify-center gap-[2cqw]">
             <Title s={s} t={t} />
             <div className={`grid gap-[1.2cqw] ${(s.cards?.length ?? 0) > 3 || s.layout === "product" ? "grid-cols-2" : "grid-cols-3"}`}>
               {(s.cards ?? []).map((c, i) => (
@@ -378,20 +383,43 @@ function SlideBody({ s, t, image, gallery }: { s: Slide; t: DeckTheme; image?: s
           )}
         </div>
       );
-    default:
-      return (
-        <div className="flex h-full">
-          <div className={`flex flex-1 flex-col gap-[2.2cqw] ${pad}`}>
-            <Title s={s} t={t} />
-            <Bullets items={s.bullets} t={t} />
-          </div>
-          {image && (
+    default: {
+      const items = s.bullets ?? [];
+      if (image)
+        return (
+          <div className="flex h-full">
+            <div className={`flex flex-1 flex-col gap-[2.2cqw] ${pad}`}>
+              <Title s={s} t={t} />
+              <Bullets items={items} t={t} />
+            </div>
             <div className="w-[38%]">
               <Photo src={image} t={t} />
             </div>
-          )}
+          </div>
+        );
+      // Tanpa foto: judul + garis aksen, poin dalam kartu bernomor (1 kolom bila ≤3 poin, 2 kolom bila lebih).
+      return (
+        <div className={`flex h-full flex-col justify-center gap-[2.2cqw] ${pad}`}>
+          <div>
+            <Title s={s} t={t} />
+            <span className="mt-[1.2cqw] block rounded-full" style={{ width: "6cqw", height: "0.5cqw", background: hex(t.accent) }} />
+          </div>
+          <div className={`grid gap-[1.1cqw] ${items.length > 3 ? "grid-cols-2" : "grid-cols-1"}`}>
+            {items.map((b, i) => (
+              <div key={i} className="flex items-start gap-[1.2cqw] rounded-md p-[1.3cqw]" style={card}>
+                <span
+                  className="flex shrink-0 items-center justify-center rounded-full font-bold"
+                  style={{ width: "2.6cqw", height: "2.6cqw", background: hex(t.accent), color: hex(t.onAccent), fontSize: "1.3cqw" }}
+                >
+                  {i + 1}
+                </span>
+                <span>{b}</span>
+              </div>
+            ))}
+          </div>
         </div>
       );
+    }
   }
 }
 
