@@ -191,3 +191,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Add-on Tools Pro per kelompok dihapus dari aplikasi (tabel `addons` dibiarkan untuk riwayat). Upgrade lewat halaman `/pricing`
   → permintaan masuk back office "Calon pelanggan".
 - Bonus kredit dari back office (delta +) ikut menambah saldo bulan berjalan (migrasi 0035).
+- (16 Okt, permintaan founder) Angka kredit **tidak ditampilkan** ke user mana pun: pemakaian tampil sebagai persen kuota bulanan
+  (lingkaran di kolom chat → klik untuk detail, seperti Claude). Halaman paket menyebut besar kuota relatif ("3,6× kuota Starter").
+  Pemberitahuan "diproses Google Gemini" di bawah chat dihapus; keterangan tetap ada di Kebijakan Privasi.

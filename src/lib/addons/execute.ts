@@ -72,7 +72,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
       ok: false,
       status: 402,
       code: "credits_low",
-      message: `Kredit tidak cukup: butuh ±${estimate} kredit, sisa ${charge.remaining}. Kredit direset tiap tanggal 1, atau upgrade paket.`,
+      message: "Sisa kuota bulan ini tidak cukup untuk hasil ini. Kuota direset tiap tanggal 1, atau upgrade paket untuk kuota lebih besar.",
     };
   const source = access.isAdmin ? "admin" : "paid";
   const units = 1;
@@ -163,7 +163,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
         : msg === "FILE_NOT_FOUND"
           ? "File laporan tidak ditemukan. Upload ulang filenya."
           : msg === "FILE_UNREADABLE"
-            ? "Isi file tidak terbaca. Upload export Excel/CSV, atau screenshot/PDF tabel yang jelas. Kuota tidak terpotong."
+            ? "Isi file tidak terbaca. Upload export Excel/CSV, atau screenshot/PDF tabel yang jelas. Kuota tidak terpakai."
             : "Maaf, tool sedang bermasalah. Kuota kamu tidak terpotong — coba lagi sebentar lagi.",
     };
   }

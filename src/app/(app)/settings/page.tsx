@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { getCreditStatus } from "@/lib/credits";
+import { UNLIMITED_CREDITS, quotaLeftPct } from "@/lib/addons/format";
 import { formatBytes, getStorageStatus } from "@/lib/storage-quota";
 import { ProfileForm } from "./profile-form";
 import { MemoryList } from "./memory-list";
@@ -10,18 +11,16 @@ export const metadata = { title: "Pengaturan" };
 
 export default async function SettingsPage() {
   const { supabase, user, profile } = await requireUser();
-  const [{ data: memories }, credits, { data: usage }, { data: plan }, storage] = await Promise.all([
+  const [{ data: memories }, credits, { data: plan }, storage] = await Promise.all([
     supabase
       .from("memories")
       .select("id, content, source, created_at, workspace:workspaces(name)")
       .order("created_at", { ascending: false }),
     getCreditStatus(user.id),
-    supabase.from("usage_logs").select("credits").gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
     supabase.from("plans").select("name").eq("id", profile.plan_id).maybeSingle(),
     getStorageStatus(supabase, profile),
   ]);
   const storagePct = storage.limitBytes ? Math.min(100, (storage.usedBytes / storage.limitBytes) * 100) : 0;
-  const used30 = (usage ?? []).reduce((a, r) => a + ((r.credits as number) ?? 0), 0);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -29,23 +28,17 @@ export default async function SettingsPage() {
         <h1 className="text-2xl font-bold">Pengaturan</h1>
 
         <section className="space-y-3">
-          <h2 className="font-semibold">Paket & kredit</h2>
-          <div className="grid grid-cols-3 gap-3 text-center">
+          <h2 className="font-semibold">Paket & pemakaian</h2>
+          <div className="grid grid-cols-2 gap-3 text-center">
             <div className="rounded-xl border p-3">
               <p className="text-xs text-muted-foreground">Paket</p>
               <p className="font-semibold">{plan?.name ?? profile.plan_id}</p>
             </div>
             <div className="rounded-xl border p-3">
-              <p className="text-xs text-muted-foreground">Sisa kredit bulan ini</p>
+              <p className="text-xs text-muted-foreground">Kuota bulan ini</p>
               <p className="font-semibold">
-                {credits.monthLimit >= 1_000_000
-                  ? "Tanpa batas"
-                  : `${credits.remaining.toLocaleString("id-ID")}/${credits.monthLimit.toLocaleString("id-ID")}`}
+                {credits.monthLimit >= UNLIMITED_CREDITS ? "Tanpa batas" : `${quotaLeftPct(credits.remaining, credits.monthLimit)}% tersisa`}
               </p>
-            </div>
-            <div className="rounded-xl border p-3">
-              <p className="text-xs text-muted-foreground">Dipakai 30 hari</p>
-              <p className="font-semibold">{used30}</p>
             </div>
           </div>
         </section>

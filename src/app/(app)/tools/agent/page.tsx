@@ -56,7 +56,7 @@ export default async function AgentHome() {
 
         {locked && (
           <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm">
-            🔒 {access.agent ? "Kredit bulan ini tidak cukup untuk menjalankan Agent." : "Markethink Agent tersedia di paket Pro & Promax."}{" "}
+            🔒 {access.agent ? "Sisa kuota bulan ini tidak cukup untuk menjalankan Agent." : "Markethink Agent tersedia di paket Pro & Promax."}{" "}
             <Link href="/pricing" className="font-medium text-primary underline">
               Lihat paket
             </Link>

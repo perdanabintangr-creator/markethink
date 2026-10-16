@@ -9,10 +9,11 @@ import { Textarea } from "@/components/ui/input";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
 import { BrainPicker, useToolTier } from "@/components/tools/brain-picker";
 import { AGENT_EXAMPLES } from "@/lib/agent/catalog";
-import { TOOL_CREDIT_ESTIMATE } from "@/lib/addons/format";
+import { TOOL_CREDIT_ESTIMATE, quotaShare } from "@/lib/addons/format";
+import { useApp } from "@/components/app/app-context";
 import { cn } from "@/lib/utils";
 
-const PLAN_STEPS = ["Memahami tujuanmu", "Memetakan pekerjaan tim marketing", "Memilih Tools Pro yang dibutuhkan", "Mengatur urutan kerja", "Mengecek kredit"];
+const PLAN_STEPS = ["Memahami tujuanmu", "Memetakan pekerjaan tim marketing", "Memilih Tools Pro yang dibutuhkan", "Mengatur urutan kerja", "Mengecek kuota"];
 
 /** Form misi Agent: satu tujuan (+ info bisnis opsional) → rencana langkah. */
 export function AgentStart({ locked }: { locked: boolean }) {
@@ -22,6 +23,7 @@ export function AgentStart({ locked }: { locked: boolean }) {
   const [showContext, setShowContext] = useState(false);
   const [busy, setBusy] = useState(false);
   const brain = useToolTier();
+  const { credits } = useApp();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,7 +94,7 @@ export function AgentStart({ locked }: { locked: boolean }) {
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
         <p className="text-xs text-muted-foreground">
-          Agent menyusun rencana dulu — kamu bisa cek & buang langkah sebelum dijalankan. Setiap langkah memakai ±{TOOL_CREDIT_ESTIMATE[brain.tier]} kredit (disesuaikan ke pemakaian nyata).
+          Agent menyusun rencana dulu — kamu bisa cek & buang langkah sebelum dijalankan. Setiap langkah memakai {quotaShare(TOOL_CREDIT_ESTIMATE[brain.tier], credits.monthLimit) ?? "sebagian"} kuota bulanan.
         </p>
         <Button type="submit" disabled={locked || busy}>
           <Sparkles /> Susun rencana

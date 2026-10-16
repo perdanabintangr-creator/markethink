@@ -14,7 +14,7 @@ export const PLAN_FEATURES: Record<string, string[]> = {
   beta: ["Chat AI otak Junior", "Riset web & upload file", "Penyimpanan 50 MB"],
   starter: ["Chat otak Junior & Senior", "Semua Tools Pro (otak Senior)", "Riset web mendalam, gambar, PPT", "Penyimpanan 1 GB"],
   pro: ["Semua di Starter", "Otak Associate (lebih tajam)", "Markethink Agent (kerja otomatis)", "Penyimpanan 5 GB"],
-  promax: ["Semua di Pro", "Otak Director (paling cerdas)", "Kredit terbanyak", "Penyimpanan 10 GB"],
+  promax: ["Semua di Pro", "Otak Director (paling cerdas)", "Kuota terbesar", "Penyimpanan 10 GB"],
 };
 
 /** Paket yang direkomendasikan di halaman harga. */

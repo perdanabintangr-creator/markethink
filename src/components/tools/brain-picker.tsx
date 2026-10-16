@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Brain, Crown, Lock, Zap } from "lucide-react";
 import { useApp } from "@/components/app/app-context";
-import { TOOL_CREDIT_ESTIMATE } from "@/lib/addons/format";
 import { TOOL_TIERS, TOOL_TIER_INFO, TOOL_TIER_KEY, readToolTierPref, type ToolTier } from "@/lib/addons/tool-tier";
 import { cn } from "@/lib/utils";
 
@@ -72,7 +71,6 @@ export function BrainPicker({
               >
                 {ICON[t]}
                 {TOOL_TIER_INFO[t].label}
-                <span className="rounded bg-foreground/5 px-1 text-[10px] tabular-nums">±{TOOL_CREDIT_ESTIMATE[t]}</span>
                 {locked && <Lock className="size-3" />}
               </button>
             );
@@ -80,7 +78,7 @@ export function BrainPicker({
         </div>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        {TOOL_TIER_INFO[value].hint} · Angka = perkiraan kredit per hasil.
+        {TOOL_TIER_INFO[value].hint}
       </p>
     </div>
   );

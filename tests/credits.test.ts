@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
 const { creditsForUsd, IDR_PER_CREDIT, IDR_PER_USD } = await import("@/lib/credits");
-const { TOOL_CREDIT_ESTIMATE, revisionEstimate, creditText } = await import("@/lib/addons/format");
+const { TOOL_CREDIT_ESTIMATE, revisionEstimate, creditText, quotaLeftPct, quotaShare } = await import("@/lib/addons/format");
 const { PLAN_FEATURES, toPlanOffer } = await import("@/lib/plan-offers");
 
 describe("Kredit bulanan (1 kredit ≈ Rp100 modal AI)", () => {
@@ -27,9 +27,19 @@ describe("Kredit bulanan (1 kredit ≈ Rp100 modal AI)", () => {
 
   it("teks status kredit", () => {
     const base = { allowed: true, agent: false, isAdmin: false, isFree: false, planId: "starter", remaining: 1234, monthLimit: 250 };
-    expect(creditText(base)).toContain("1.234");
+    expect(creditText({ ...base, remaining: 125 })).toContain("50%");
+    expect(creditText(base)).toContain("100%");
     expect(creditText({ ...base, isAdmin: true })).toContain("tanpa batas");
     expect(creditText({ ...base, allowed: false, isFree: true })).toContain("Free");
+  });
+
+  it("kuota ditampilkan sebagai persen, tanpa angka kredit", () => {
+    expect(quotaLeftPct(0, 250)).toBe(0);
+    expect(quotaLeftPct(500, 250)).toBe(100);
+    expect(quotaLeftPct(5, 1_000_000)).toBe(100);
+    expect(quotaShare(50, 250)).toBe("±20%");
+    expect(quotaShare(1, 1350)).toBe("<1%");
+    expect(quotaShare(50, 1_000_000)).toBeNull();
   });
 
   it("penawaran paket dari baris DB", () => {

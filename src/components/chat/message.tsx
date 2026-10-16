@@ -264,7 +264,6 @@ export function ChatMessage({
           {message.metadata?.tier && (
             <span className="ml-auto text-[11px]">
               {TIER_LABEL[message.metadata.tier]}
-              {message.metadata.credits ? ` · ${message.metadata.credits} ${t.credits}` : ""}
             </span>
           )}
         </div>

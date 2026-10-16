@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ADDONS, TOOLS } from "@/lib/addons/catalog";
 import { getToolAccess } from "@/lib/addons/access";
-import { TOOL_CREDIT_ESTIMATE, creditText } from "@/lib/addons/format";
+import { creditText } from "@/lib/addons/format";
 import { ToolIcon } from "@/components/tools/tool-icon";
 
 export const metadata = { title: "Tools Pro" };
@@ -28,13 +28,13 @@ export default async function ToolsHub() {
               <span>
                 <span className="font-medium">{creditText(access)}</span>
                 <span className="block text-xs text-muted-foreground">
-                  Semua tools memakai kredit bulanan paket kamu: ±{TOOL_CREDIT_ESTIMATE.senior} kredit per hasil (otak Senior), disesuaikan ke pemakaian nyata.
+                  Semua tools memakai kuota bulanan paket kamu. Kalau hasil gagal dibuat, kuota kembali penuh.
                 </span>
               </span>
             </p>
             {!access.isAdmin && (
               <Link href="/pricing" className="text-sm font-medium text-primary hover:underline">
-                {access.allowed ? "Tambah kredit / upgrade" : "Buka Tools Pro"} →
+                {access.allowed ? "Tambah kuota / upgrade" : "Buka Tools Pro"} →
               </Link>
             )}
           </div>

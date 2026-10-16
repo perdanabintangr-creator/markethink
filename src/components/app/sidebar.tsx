@@ -122,7 +122,6 @@ function swallowNextClick() {
 const itemHref = (c: HistoryItem) => (c.toolRun ? `/tools/${c.toolRun.tool}/${c.id}` : `/chat/${c.id}`);
 import { cn } from "@/lib/utils";
 import { useApp } from "./app-context";
-import { CreditMeter } from "./credit-meter";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t, user, lang, workspaces } = useApp();
@@ -674,8 +673,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         )}
       </DragOverlay>
       </DndContext>
-
-      <CreditMeter />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

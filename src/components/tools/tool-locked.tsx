@@ -16,7 +16,7 @@ export function ToolLocked({ toolName, plans }: { toolName: string; plans: PlanO
           <h2 className="text-lg font-semibold">{toolName} tersedia mulai paket Starter</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Tools Pro menghasilkan dokumen setara konsultan & agency (halaman visual + PPT/Excel). Semua paket berbayar sudah termasuk Tools Pro —
-            pemakaiannya memotong kredit bulanan.
+            pemakaiannya memakai kuota bulanan paket.
           </p>
         </div>
       </div>

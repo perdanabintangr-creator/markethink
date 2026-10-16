@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ArrowUp, CornerDownRight, FileText, Globe, Image as ImageIcon, Loader2, Paperclip, Square, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app/app-context";
+import { UsageRing } from "@/components/app/usage-ring";
 import { cn } from "@/lib/utils";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 import { buildQuotedMessage } from "@/lib/quote";
@@ -198,6 +199,7 @@ export function Composer({
           <Globe className="size-3.5" /> {t.research}
         </button>
         <div className="flex-1" />
+        <UsageRing />
         {busy ? (
           <Button size="icon" variant="secondary" onClick={onStop} aria-label={t.stop} className="rounded-full">
             <Square className="fill-current" />

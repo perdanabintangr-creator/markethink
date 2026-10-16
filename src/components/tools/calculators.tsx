@@ -41,7 +41,7 @@ function Card({ title, desc, children }: { title: string; desc: string; children
   );
 }
 
-/** Kalkulator bisnis (tanpa AI, tidak memotong kredit). */
+/** Kalkulator bisnis (tanpa AI, tidak memakai kuota). */
 export function Calculators({ locked }: { locked: boolean }) {
   // 1) Harga jual dari HPP
   const [hpp, setHpp] = useState("25000");
@@ -120,7 +120,7 @@ export function Calculators({ locked }: { locked: boolean }) {
       {locked && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-background/70 p-6 text-center">
           <Lock className="size-6 text-muted-foreground" />
-          <p className="max-w-sm text-sm">Kalkulator tersedia mulai paket Starter (tidak memotong kredit).</p>
+          <p className="max-w-sm text-sm">Kalkulator tersedia mulai paket Starter (tidak memakai kuota).</p>
           <Button asChild>
             <Link href="/pricing">Lihat paket</Link>
           </Button>

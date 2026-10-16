@@ -28,13 +28,13 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
   const tier = resolveToolTier(parsed.data.tier, await getAllowedTiers(s.supabase, s.profile));
-  const { access, perStep, maxSteps } = await agentBudget(admin, s.profile, tier);
+  const { access, maxSteps } = await agentBudget(admin, s.profile, tier);
   if (!access.agent) {
     return jsonError(402, "agent_locked", { message: "Markethink Agent tersedia di paket Pro & Promax. Upgrade paket untuk memakainya." });
   }
   if (maxSteps < 1) {
     return jsonError(402, "credits_low", {
-      message: `Kredit tidak cukup untuk menjalankan Agent (±${perStep} kredit per langkah, sisa ${access.remaining}).`,
+      message: "Sisa kuota bulan ini tidak cukup untuk menjalankan Agent. Kuota direset tiap tanggal 1, atau upgrade paket.",
     });
   }
   // Semua Tools Pro tersedia; jumlah langkah dibatasi sisa kredit.

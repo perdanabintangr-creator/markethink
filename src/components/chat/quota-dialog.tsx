@@ -28,14 +28,14 @@ export function QuotaDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />{" "}
-            {lockedTier ? `${tierLabel} mulai paket ${planLabel}` : notice ? "Batas harian tercapai" : "Kredit bulan ini sudah habis"}
+            {lockedTier ? `${tierLabel} mulai paket ${planLabel}` : notice ? "Batas harian tercapai" : "Kuota bulan ini sudah habis"}
           </DialogTitle>
           <DialogDescription>
             {notice
-              ? `${notice} Paket berbayar tidak punya batas harian — cukup kredit bulanan.`
+              ? `${notice} Paket berbayar tidak punya batas harian — cukup kuota bulanan.`
               : lockedTier
                 ? "Starter membuka Senior (strategi & campaign) + semua Tools Pro. Pro menambah Associate (sekelas konsultan) & Markethink Agent. Promax membuka Director — otak paling cerdas."
-                : "Kredit direset otomatis tiap tanggal 1 pukul 00.00 WIB. Butuh lebih banyak sekarang? Upgrade paket untuk kredit bulanan yang lebih besar."}
+                : "Kuota direset otomatis tiap tanggal 1 pukul 00.00 WIB. Butuh lebih banyak sekarang? Upgrade paket untuk kuota bulanan yang lebih besar."}
           </DialogDescription>
         </DialogHeader>
         <Button asChild className="w-full" onClick={() => onOpenChange(false)}>

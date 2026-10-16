@@ -29,7 +29,7 @@ import { toolInfo } from "@/lib/addons/catalog";
 import { WorkingShowcase } from "./working-showcase";
 import { BrainPicker, useToolTier } from "./brain-picker";
 import Link from "next/link";
-import { TOOL_CREDIT_ESTIMATE, type ToolAccessLite } from "@/lib/addons/format";
+import { TOOL_CREDIT_ESTIMATE, quotaShare, type ToolAccessLite } from "@/lib/addons/format";
 
 const STEPS: Record<string, string[]> = {
   listing: ["Mempelajari produkmu…", "Mencari kata kunci yang dicari pembeli…", "Menulis judul & deskripsi per platform…", "Menyusun file Excel…"],
@@ -289,7 +289,7 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
       const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify({ ...input, __tier: brain.tier }) });
       const data = await res.json().catch(() => ({}));
       if (res.status === 402) {
-        toast.error(data.message ?? "Kredit tidak cukup.", { action: { label: "Lihat paket", onClick: () => router.push("/pricing") } });
+        toast.error(data.message ?? "Kuota tidak cukup.", { action: { label: "Lihat paket", onClick: () => router.push("/pricing") } });
         return;
       }
       if (!res.ok) {
@@ -668,9 +668,9 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
             {access.isAdmin
               ? "Mode admin (tanpa batas)."
               : canRun
-                ? `±${estimate} kredit · sisa ${access.remaining.toLocaleString("id-ID")} kredit bulan ini.`
-                : `Butuh ±${estimate} kredit, sisa ${access.remaining.toLocaleString("id-ID")}.`}{" "}
-            Kredit disesuaikan ke pemakaian nyata; gagal = kembali penuh.
+                ? `Memakai ${quotaShare(estimate, access.monthLimit) ?? "sebagian"} kuota bulanan kamu.`
+                : "Sisa kuota bulan ini tidak cukup untuk hasil ini."}{" "}
+            Kalau gagal, kuota kembali penuh.
           </p>
           {canRun ? (
             <Button type="submit" disabled={busy || uploading > 0}>
@@ -679,7 +679,7 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
           ) : (
             <Button asChild variant="outline">
               <Link href="/pricing">
-                <Lock /> Kredit kurang — lihat paket
+                <Lock /> Kuota kurang — lihat paket
               </Link>
             </Button>
           )}

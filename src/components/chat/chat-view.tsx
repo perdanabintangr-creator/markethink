@@ -59,7 +59,7 @@ export function ChatView({
   /** Chat dari "Bahas di Chat": hasil Tools Pro tampil di panel kanan & bisa diperbarui lewat percakapan. */
   toolRun?: { rootId: string; tool: string } | null;
 }) {
-  const { t, lang, user, workspaces, allowedTiers, freeModels } = useApp();
+  const { t, lang, user, workspaces, allowedTiers } = useApp();
   const [tier, setTier] = useState<TierChoice>(() => pickTierChoice(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
@@ -313,7 +313,7 @@ export function ChatView({
       autoFocus={extra.autoFocus}
     />
   );
-  const disclaimer = <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{freeModels ? t.disclaimerFree : t.disclaimer}</p>;
+  const disclaimer = <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{t.disclaimer}</p>;
 
   return (
     <div className="flex h-full">

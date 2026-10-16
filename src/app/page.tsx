@@ -125,7 +125,6 @@ export default async function LandingPage() {
                     <li key={s}>✓ {s}</li>
                   ))}
                 </ul>
-                <p className="mt-4 text-xs text-muted-foreground">±{t.creditCost} kredit / pesan</p>
               </div>
             ))}
           </div>

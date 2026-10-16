@@ -57,7 +57,7 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
               <h1 className="text-xl font-bold sm:text-2xl">{info.name}</h1>
               <p className="text-sm text-muted-foreground">{info.short}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {addon.emoji} {addon.name} · {info.noQuota ? "Tanpa kredit" : creditText(access)}
+                {addon.emoji} {addon.name} · {info.noQuota ? "Tidak memakai kuota" : creditText(access)}
               </p>
             </div>
           </div>
