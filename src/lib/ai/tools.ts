@@ -78,7 +78,7 @@ async function storeFile(ctx: ToolCtx, kind: "images" | "presentations", name: s
 
 async function logUsage(
   ctx: ToolCtx,
-  row: { tier: string; provider?: string; model?: string; credits: number; cost: number; error?: string },
+  row: { tier: string; provider?: string; model?: string; credits: number; cost: number; error?: string; note?: string },
 ) {
   await ctx.admin.from("usage_logs").insert({
     user_id: ctx.userId,
@@ -89,7 +89,7 @@ async function logUsage(
     est_cost_usd: row.cost,
     credits: row.credits,
     status: row.error ? "error" : "ok",
-    error: row.error ?? null,
+    error: row.error ?? row.note ?? null,
   });
 }
 
@@ -144,7 +144,7 @@ export function createChatTools(ctx: ToolCtx) {
           const img = await generateImage(prompt, aspect_ratio, refs, { budget: ctx.budgetImages });
           const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
           const saved = await storeFile(ctx, "images", `markethink-${Date.now()}.${ext}`, img.mime, img.bytes, `Gambar AI: ${prompt}`);
-          await logUsage(ctx, { tier: "image", provider: img.provider, model: img.model, credits: IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD });
+          await logUsage(ctx, { tier: "image", provider: img.provider, model: img.model, credits: IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD, note: img.notes });
           return { ok: true, attachmentId: saved.id, url: saved.url, prompt, aspectRatio: aspect_ratio };
         } catch (err) {
           console.error("[image] gagal", err);

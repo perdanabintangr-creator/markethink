@@ -14,6 +14,8 @@ export interface GeneratedImage {
   caption: string | null;
   /** Biaya nyata dari provider (USD) bila dilaporkan. */
   costUsd?: number;
+  /** Catatan diagnosa (mis. model hemat gagal lalu memakai cadangan) — disimpan di usage_logs. */
+  notes?: string;
 }
 
 type Reference = { mime: string; data: string };
@@ -70,30 +72,38 @@ export async function generateImage(
   const errors: string[] = [];
   // Paket Free: model gambar hemat di OpenRouter dulu (saldo yang sama, ±$0,006–0,01/gambar vs ±$0,034). Gagal → jalur biasa.
   if (opts.budget && openrouter && !references.length) {
-    try {
-      return await viaOpenRouter(openrouter, prompt, aspectRatio, [], budgetImageModels());
-    } catch (err) {
-      errors.push(`openrouter-hemat: ${err instanceof Error ? err.message : String(err)}`);
+    for (const model of budgetImageModels()) {
+      try {
+        // Model gambar murni (OpenAI/Meta/FLUX) memakai Image API OpenRouter; cadangan: chat completions.
+        const img = await viaOpenRouterImages(openrouter, model, prompt, aspectRatio).catch(async (err) => {
+          errors.push(`${model} (images): ${err instanceof Error ? err.message : String(err)}`);
+          return viaOpenRouter(openrouter, prompt, aspectRatio, [], [model]);
+        });
+        return errors.length ? { ...img, notes: errors.join(" || ").slice(0, 900) } : img;
+      } catch (err) {
+        errors.push(`${model}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
+  const withNotes = (img: GeneratedImage): GeneratedImage => (errors.length ? { ...img, notes: errors.join(" || ").slice(0, 900) } : img);
   // Gambar baru (tanpa acuan) → Imagen 4 Fast lebih murah. Edit/variasi gambar butuh Gemini (Imagen tidak menerima gambar acuan).
   if (imagen && !references.length) {
     try {
-      return await viaImagen(imagen, prompt, aspectRatio);
+      return withNotes(await viaImagen(imagen, prompt, aspectRatio));
     } catch (err) {
       errors.push(`imagen: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   if (openrouter) {
     try {
-      return await viaOpenRouter(openrouter, prompt, aspectRatio, references);
+      return withNotes(await viaOpenRouter(openrouter, prompt, aspectRatio, references));
     } catch (err) {
       errors.push(`openrouter: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   if (google) {
     try {
-      return await viaGoogle(google, prompt, aspectRatio, references);
+      return withNotes(await viaGoogle(google, prompt, aspectRatio, references));
     } catch (err) {
       errors.push(`google: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -140,6 +150,40 @@ export function imageModelScore(id: string) {
 export function budgetImageModels(): string[] {
   const env = process.env.OPENROUTER_BUDGET_IMAGE_MODEL;
   return env ? env.split(",").map((s) => s.trim()).filter(Boolean) : ["openai/gpt-image-2", "meta/muse-image"];
+}
+
+/** OpenRouter Image API (POST /images) — untuk model gambar murni seperti GPT Image & Muse. */
+async function viaOpenRouterImages(key: string, model: string, prompt: string, aspectRatio: string): Promise<GeneratedImage> {
+  const res = await fetch(`${OPENROUTER_API}/images`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://markethink-pi.vercel.app",
+      "X-Title": "Markethink",
+    },
+    body: JSON.stringify({ model, prompt, aspect_ratio: aspectRatio, n: 1 }),
+  });
+  const body = await res.text();
+  if (res.status === 402) throw new Error(`[credits_required] 402 ${body.slice(0, 200)}`);
+  if (!res.ok) throw new Error(`${res.status} ${body.slice(0, 250)}`);
+  const data = JSON.parse(body) as {
+    data?: { b64_json?: string; url?: string; mime_type?: string }[];
+    images?: { b64_json?: string; url?: string; image_url?: { url?: string } }[];
+    usage?: { cost?: number };
+  };
+  const item = data.data?.[0] ?? data.images?.[0];
+  const b64 = item?.b64_json;
+  const url = item?.url ?? (item && "image_url" in item ? item.image_url?.url : undefined);
+  const parsed = b64
+    ? { mime: (item as { mime_type?: string }).mime_type ?? "image/png", bytes: Uint8Array.from(Buffer.from(b64, "base64")) }
+    : url
+      ? url.startsWith("data:")
+        ? parseDataUrl(url)
+        : await download(url)
+      : null;
+  if (!parsed) throw new Error("tidak mengembalikan gambar");
+  return { ...parsed, provider: "openrouter", model, caption: null, costUsd: typeof data.usage?.cost === "number" ? data.usage.cost : undefined };
 }
 
 async function viaOpenRouter(key: string, prompt: string, aspectRatio: string, refs: Reference[], only?: string[]): Promise<GeneratedImage> {
