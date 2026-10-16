@@ -103,6 +103,7 @@ function SlideFrame({ t, n, children }: { t: DeckTheme; n: number; children: Rea
 }
 
 function Photo({ src, t, className }: { src?: string; t: DeckTheme; className?: string }) {
+  // eslint-disable-next-line @next/next/no-img-element -- file pribadi via /api/attachments (bukan aset statis)
   if (src) return <img src={src} alt="" className={`h-full w-full object-cover ${className ?? ""}`} loading="lazy" />;
   return (
     <div className={`flex h-full w-full items-center justify-center ${className ?? ""}`} style={{ background: hex(t.surface2), color: hex(t.muted) }}>
