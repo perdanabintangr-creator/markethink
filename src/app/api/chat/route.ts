@@ -190,6 +190,9 @@ export async function POST(req: Request) {
     await supabase.from("chats").update({ tier: tierChoice, generating_at: new Date().toISOString() }).eq("id", chatId);
   }
 
+  // Simpan pesan user sejak awal: bila user pindah chat lalu membukanya lagi, pertanyaannya terlihat & jawabannya ditunggu.
+  await saveMessages(chatId, user.id, messages).catch((err) => console.error("[chat] simpan awal gagal", err));
+
   const startedAt = Date.now();
   const admin = createAdminClient();
   let refunded = false;
