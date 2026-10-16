@@ -166,20 +166,28 @@ export async function POST(req: Request) {
       agent_id: chatAgentId,
       tier: tierChoice,
       title: truncate(lastText || "Chat baru", 60),
+      generating_at: new Date().toISOString(),
     });
     if (error) {
       // Workspace bukan milik user / tidak valid → ulang tanpa workspace.
       workspaceId = null;
       const retry = await supabase
         .from("chats")
-        .insert({ id: chatId, user_id: user.id, agent_id: chatAgentId, tier: tierChoice, title: truncate(lastText || "Chat baru", 60) });
+        .insert({
+          id: chatId,
+          user_id: user.id,
+          agent_id: chatAgentId,
+          tier: tierChoice,
+          title: truncate(lastText || "Chat baru", 60),
+          generating_at: new Date().toISOString(),
+        });
       if (retry.error) {
         await refundCredits(user.id, cost, "chat_create_failed");
         return json(400, { error: "chat_create_failed" });
       }
     }
   } else {
-    await supabase.from("chats").update({ tier: tierChoice }).eq("id", chatId);
+    await supabase.from("chats").update({ tier: tierChoice, generating_at: new Date().toISOString() }).eq("id", chatId);
   }
 
   const startedAt = Date.now();
@@ -254,7 +262,7 @@ export async function POST(req: Request) {
         apiSearches++;
         writer.write({ type: "data-status", data: { state: "searching", label: "Mencari di web…" }, transient: true });
         try {
-          sources = await webSearch(lastText, { signal: req.signal });
+          sources = await webSearch(lastText);
           for (const s of sources) {
             writer.write({ type: "source-url", sourceId: String(s.id), url: s.url, title: s.title });
           }
@@ -376,7 +384,7 @@ export async function POST(req: Request) {
                     apiSearches++;
                     writer.write({ type: "data-status", data: { state: "searching", label: `Mencari di web: ${truncate(query, 60)}` }, transient: true });
                     try {
-                      const found = await webSearch(query, { maxResults: 6, signal: req.signal });
+                      const found = await webSearch(query, { maxResults: 6 });
                       // Baca isi 3 halaman teratas (gratis) agar jawaban tidak hanya dari cuplikan Google.
                       const readable = found.filter((f) => !/instagram|tiktok|facebook|youtube|lemon8|shopee|tokopedia/i.test(f.url)).slice(0, 3);
                       const pages = await Promise.allSettled(readable.map((f) => fetchPageText(f.url, { maxChars: 2500, timeoutMs: 6000 })));
@@ -408,7 +416,7 @@ export async function POST(req: Request) {
         },
         // Beberapa langkah: model memanggil tool (gambar/PPT) lalu menjelaskan hasilnya.
         stopWhen: stepCountIs(5),
-        abortSignal: req.signal,
+        // Tanpa abortSignal: jawaban tetap diselesaikan & disimpan walau user pindah chat / menutup tab (seperti ChatGPT).
         onFinish: async ({ totalUsage: usage, steps, text }) => {
           settled = true;
           // Jawaban kosong (tanpa teks & tanpa hasil tool yang berhasil) → kuota dikembalikan penuh.
@@ -497,7 +505,11 @@ export async function POST(req: Request) {
     },
     onFinish: async ({ messages: finalMessages, outcome }) => {
       markDone();
-      if (outcome.status === "failed") return;
+      const clearGenerating = () => admin.from("chats").update({ generating_at: null }).eq("id", chatId);
+      if (outcome.status === "failed") {
+        await clearGenerating();
+        return;
+      }
       try {
         // Label kredit di pesan tersimpan = kredit nyata setelah disesuaikan.
         const lastMsg = finalMessages[finalMessages.length - 1];
@@ -508,12 +520,14 @@ export async function POST(req: Request) {
       } catch (err) {
         console.error("[chat] gagal simpan pesan", err);
       }
+      await clearGenerating();
     },
   });
 
   // Tugas latar: judul & memory (tidak memblokir respons).
   after(async () => {
     await Promise.race([done, new Promise((r) => setTimeout(r, 280_000))]);
+    await admin.from("chats").update({ generating_at: null }).eq("id", chatId);
     if (!settled) {
       await refundOnce();
       await admin.from("usage_logs").insert({

@@ -7,6 +7,22 @@ const patchSchema = z.object({
   workspace_id: z.string().uuid().nullable().optional(),
 });
 
+/** Status & pesan terbaru — dipakai saat chat dibuka ketika AI masih menjawab (jawaban muncul otomatis begitu selesai). */
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const s = await apiSession();
+  if (s.error) return s.error;
+  const { id } = await params;
+  const [{ data: chat }, { data: rows }] = await Promise.all([
+    s.supabase.from("chats").select("generating_at").eq("id", id).maybeSingle(),
+    s.supabase.from("messages").select("id, role, parts, metadata").eq("chat_id", id).order("position"),
+  ]);
+  if (!chat) return jsonError(404, "not_found");
+  return NextResponse.json({
+    generating_at: chat.generating_at,
+    messages: (rows ?? []).map((r) => ({ id: r.id, role: r.role, parts: r.parts, metadata: r.metadata ?? undefined })),
+  });
+}
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const s = await apiSession();
   if (s.error) return s.error;

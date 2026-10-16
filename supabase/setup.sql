@@ -2400,3 +2400,8 @@ update public.feature_flags set enabled = false where plan_id = 'beta' and key i
 -- ===== 20261016000037_free_research_on.sql =====
 -- Riset Web dibuka lagi untuk paket Free (biaya ±Rp17/pencarian), tetap dibatasi 5 pencarian/hari (feature_flags web_search per_day).
 update public.feature_flags set enabled = true where plan_id = 'beta' and key in ('research', 'web_search');
+
+
+-- ===== 20261016000038_chat_generating.sql =====
+-- Penanda chat yang sedang dijawab AI (untuk ikon loading di riwayat & melanjutkan jawaban saat user pindah chat).
+alter table public.chats add column if not exists generating_at timestamptz;

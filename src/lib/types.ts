@@ -43,7 +43,13 @@ export interface ChatSummary {
   source_run_id?: string | null;
   /** Chat "Bahas paket" dari misi Markethink Agent (tampil di mode Tools Pro). */
   source_agent_id?: string | null;
+  /** Diisi saat AI sedang menjawab chat ini (kosong = selesai). */
+  generating_at?: string | null;
 }
+
+/** Chat dianggap masih dijawab bila penandanya < 5 menit (pengaman bila penanda tidak sempat dihapus). */
+export const isGenerating = (generatingAt: string | null | undefined, now = Date.now()) =>
+  Boolean(generatingAt) && now - new Date(generatingAt!).getTime() < 5 * 60_000;
 
 /** Hasil Tools Pro yang tampil di riwayat sidebar. */
 export interface ToolRunSummary {

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { ChatView } from "@/components/chat/chat-view";
 import { requireUser } from "@/lib/auth";
 import { isTier, publicTiers } from "@/lib/tiers-public";
-import type { MtMessage } from "@/lib/types";
+import { isGenerating, type MtMessage } from "@/lib/types";
 
 export const metadata = { title: "Chat" };
 
@@ -12,7 +12,7 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
   const { supabase } = await requireUser();
   const { data: chat } = await supabase
     .from("chats")
-    .select("id, tier, workspace_id, share_token, source_run_id, agent:agents(id, name, output_canvas), run:tool_runs!chats_source_run_id_fkey(id, tool)")
+    .select("id, tier, workspace_id, share_token, source_run_id, generating_at, agent:agents(id, name, output_canvas), run:tool_runs!chats_source_run_id_fkey(id, tool)")
     .eq("id", id)
     .maybeSingle();
   if (!chat) notFound();
@@ -44,6 +44,7 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
       initialCanvasIds={(canvases ?? []).map((c) => c.id)}
       initialShareToken={chat.share_token}
       toolRun={run ? { rootId: run.id, tool: run.tool } : null}
+      initialGenerating={isGenerating(chat.generating_at as string | null)}
     />
   );
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
-import { ArrowDown, Bot, Briefcase, Check, ChevronDown, FileText, FolderOpen, Link2, PanelRight, Share2, X } from "lucide-react";
+import { ArrowDown, Bot, Briefcase, Check, ChevronDown, FileText, FolderOpen, Link2, Loader2, PanelRight, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,7 +23,7 @@ import { UPDATE_RESULT_BLOCK } from "@/lib/addons/format";
 import { readToolTierPref } from "@/lib/addons/tool-tier";
 import { emitChatsChanged, emitCredits } from "@/lib/events";
 import { track } from "@/lib/analytics";
-import { ATTACHMENT_URL_PREFIX, PENDING_KEY, type MtMessage, type PendingAgentRun } from "@/lib/types";
+import { ATTACHMENT_URL_PREFIX, PENDING_KEY, isGenerating, type MtMessage, type PendingAgentRun } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ChatMessage, messageToText } from "./message";
 import { buildQuotedMessage } from "@/lib/quote";
@@ -45,6 +45,7 @@ export function ChatView({
   initialCanvasIds,
   initialShareToken,
   toolRun = null,
+  initialGenerating = false,
 }: {
   chatId: string;
   initialMessages: MtMessage[];
@@ -58,6 +59,8 @@ export function ChatView({
   initialShareToken: string | null;
   /** Chat dari "Bahas di Chat": hasil Tools Pro tampil di panel kanan & bisa diperbarui lewat percakapan. */
   toolRun?: { rootId: string; tool: string } | null;
+  /** Chat dibuka saat AI masih menjawab (mis. user sempat pindah chat) → jawaban dimuat otomatis begitu selesai. */
+  initialGenerating?: boolean;
 }) {
   const { t, lang, user, workspaces, allowedTiers } = useApp();
   const [tier, setTier] = useState<TierChoice>(() => pickTierChoice(initialTier, allowedTiers));
@@ -206,6 +209,36 @@ export function ChatView({
   });
 
   const busy = status === "submitted" || status === "streaming";
+
+  // Riwayat sidebar langsung memuat chat ini (dengan ikon loading) begitu AI mulai menjawab.
+  useEffect(() => {
+    if (status === "streaming") emitChatsChanged();
+  }, [status]);
+
+  // Dibuka saat AI masih menjawab di server → tunggu & tampilkan jawabannya tanpa perlu refresh.
+  const [remoteWaiting, setRemoteWaiting] = useState(
+    initialGenerating && initialMessages[initialMessages.length - 1]?.role === "user",
+  );
+  useEffect(() => {
+    if (!remoteWaiting) return;
+    let stopped = false;
+    const tick = async () => {
+      const res = await fetch(`/api/chats/${chatId}`).catch(() => null);
+      if (stopped || !res?.ok) return;
+      const data = (await res.json()) as { generating_at: string | null; messages: MtMessage[] };
+      if (!isGenerating(data.generating_at)) {
+        setMessages(data.messages);
+        setRemoteWaiting(false);
+        emitChatsChanged();
+      }
+    };
+    const timer = setInterval(() => void tick(), 3000);
+    void tick();
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [remoteWaiting, chatId, setMessages]);
 
   const onLockedTier = (lt: TierOption) => {
     setLimitNotice(null);
@@ -441,6 +474,11 @@ export function ChatView({
               ))}
               {status === "submitted" && messages[messages.length - 1]?.role === "user" && (
                 <p className="animate-pulse text-sm text-muted-foreground">{statusLabel ?? t.thinking}</p>
+              )}
+              {remoteWaiting && !busy && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin text-primary" /> Markethink masih menyusun jawaban… hasilnya muncul otomatis di sini.
+                </p>
               )}
               {error && !quotaOpen && (
                 <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
