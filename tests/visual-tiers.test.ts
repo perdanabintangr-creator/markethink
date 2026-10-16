@@ -27,7 +27,6 @@ it("Starter: hanya cover yang mendapat foto AI", () => {
   expect(deckImageRequests(input, 1).map((r) => r.key)).toEqual(["cover"]);
 });
 
-it("gaya deck sinematik hanya Promax (dan admin)", () => {
-  expect(["beta", "starter", "pro", "promax"].map((p) => deckStyleFor(p, false))).toEqual(["standard", "standard", "standard", "cinematic"]);
-  expect(deckStyleFor("pro", true)).toBe("cinematic");
+it("gaya sinematik navy dinonaktifkan untuk semua paket", () => {
+  expect(["beta", "starter", "pro", "promax"].map((p) => deckStyleFor(p, false))).toEqual(["standard", "standard", "standard", "standard"]);
 });

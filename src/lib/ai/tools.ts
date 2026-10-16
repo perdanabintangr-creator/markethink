@@ -28,7 +28,8 @@ export const deckImageMaxFor = (planId: string, isAdmin: boolean) => (isAdmin ? 
 /** Pro & Promax: arahan visual premium untuk gambar baru. */
 export const premiumVisualsFor = (planId: string, isAdmin: boolean) => isAdmin || planId === "pro" || planId === "promax";
 /** Promax: gaya deck sinematik (latar foto gelap penuh, panel transparan, grid & glow) — tingkat visual tertinggi. */
-export const deckStyleFor = (planId: string, isAdmin: boolean): DeckStyle => (isAdmin || planId === "promax" ? "cinematic" : "standard");
+// Dinonaktifkan (16 Okt, founder): latar navy seragam bukan yang diminta — Promax menunggu "art director" per tema.
+export const deckStyleFor = (planId: string, isAdmin: boolean): DeckStyle => (isAdmin && planId === "__off__" ? "cinematic" : "standard");
 const CINEMATIC_ART_DIRECTION =
   "Dark cinematic mood: deep navy and black tones, dramatic low-key lighting with cool blue/cyan accents and soft light beams, " +
   "atmospheric depth, wide composition with calm negative space so overlaid text stays readable.";
