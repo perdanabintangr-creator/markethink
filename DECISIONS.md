@@ -219,3 +219,10 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   pencarian (Serper/Claude/Gemini) bila paket tidak membuka `research`; tombol Riset Web tampil terkunci + ajakan Starter.
 - AI paket Free diberi tahu pencarian web tidak tersedia: jawab dari pengetahuan, label "perkiraan" untuk data terbaru,
   jangan mengarang sumber. Baca tautan & file tetap tersedia (gratis dibuka, hanya token).
+- (16 Okt, revisi founder) Riset Web Free **dibuka lagi** (±Rp17/pencarian), batas 5 pencarian/hari kini juga berlaku untuk
+  tombol Riset Web. Free memakai Serper (bukan Google Search bawaan Gemini yang kuota gratisnya cepat habis). Migrasi 0037.
+- Free: jawaban maks 2.000 token (±1.500 kata), riwayat yang dibaca AI 10–19 pesan terakhir (`historyStart(total, 10)`).
+- Free: gambar memakai model hemat OpenRouter dulu (`openai/gpt-image-2` → `meta/muse-image`, ±$0,006–0,01) lalu jalur biasa
+  (Gemini Flash Image ±$0,034) bila gagal. Override env `OPENROUTER_BUDGET_IMAGE_MODEL`. Kuota tetap 6 kredit/gambar.
+- Prompt Junior ditambah "standar kualitas": spesifik + asumsi wajar, konteks Indonesia, kerangka marketing, contoh siap pakai,
+  data berlabel perkiraan / pakai pencarian, cek mandiri sebelum kirim.

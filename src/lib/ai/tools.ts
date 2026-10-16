@@ -52,6 +52,8 @@ interface ToolCtx {
   dailyLimit?: (kind: "image" | "pptx") => Promise<string | null>;
   /** Boleh membuat gambar AI untuk cover/slide PPT (paket berbayar). */
   deckImages?: boolean;
+  /** Paket Free: pakai model gambar hemat dulu. */
+  budgetImages?: boolean;
 }
 
 const errText = (err: unknown) => (err instanceof Error ? err.message : String(err)).slice(0, 1500);
@@ -139,7 +141,7 @@ export function createChatTools(ctx: ToolCtx) {
         if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat gambar. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
         try {
           const refs = await loadReferences(ctx, reference_ids ?? []);
-          const img = await generateImage(prompt, aspect_ratio, refs);
+          const img = await generateImage(prompt, aspect_ratio, refs, { budget: ctx.budgetImages });
           const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
           const saved = await storeFile(ctx, "images", `markethink-${Date.now()}.${ext}`, img.mime, img.bytes, `Gambar AI: ${prompt}`);
           await logUsage(ctx, { tier: "image", provider: img.provider, model: img.model, credits: IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD });

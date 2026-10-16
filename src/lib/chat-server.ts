@@ -20,8 +20,12 @@ export function messageText(m: MtMessage) {
  * Awal riwayat yang dikirim ke model: ± 40 pesan terakhir, tapi titik awalnya bergeser per 10 pesan
  * (bukan tiap pesan) supaya awalan percakapan tetap sama dan prompt cache Claude tetap kena.
  */
-export function historyStart(total: number) {
-  return total <= 40 ? 0 : Math.floor((total - 40) / 10) * 10;
+/**
+ * Awal riwayat yang dikirim ke AI: maks `window` pesan terakhir (+ sampai 9 pesan lagi), bergeser per 10 pesan
+ * supaya awal riwayat stabil dan cache prompt tetap terpakai.
+ */
+export function historyStart(total: number, window = 40) {
+  return total <= window ? 0 : Math.floor((total - window) / 10) * 10;
 }
 
 export function attachmentIds(m: MtMessage | undefined) {

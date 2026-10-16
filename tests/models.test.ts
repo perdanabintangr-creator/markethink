@@ -94,6 +94,11 @@ describe("jendela riwayat chat", () => {
     expect(historyStart(49)).toBe(0);
     expect(historyStart(50)).toBe(10);
     expect(historyStart(59)).toBe(10);
+    // Paket Free: jendela 10 pesan (dibaca 10–19 pesan terakhir).
+    expect(historyStart(10, 10)).toBe(0);
+    expect(historyStart(19, 10)).toBe(0);
+    expect(historyStart(20, 10)).toBe(10);
+    expect(historyStart(35, 10)).toBe(20);
     expect(historyStart(60)).toBe(20);
   });
 });

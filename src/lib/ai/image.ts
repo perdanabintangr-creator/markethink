@@ -59,10 +59,23 @@ async function viaImagen(key: string, prompt: string, aspectRatio: string): Prom
  * Buat gambar dari prompt; `references` = gambar acuan (edit/variasi) berupa base64.
  * Urutan provider: OpenRouter (top-up kecil, prabayar) → Google AI Studio (butuh billing).
  */
-export async function generateImage(prompt: string, aspectRatio: string, references: Reference[] = []): Promise<GeneratedImage> {
+export async function generateImage(
+  prompt: string,
+  aspectRatio: string,
+  references: Reference[] = [],
+  opts: { budget?: boolean } = {},
+): Promise<GeneratedImage> {
   const { openrouter, google, imagen } = keys();
   if (!openrouter && !google && !imagen) throw new Error("Belum ada API key pembuat gambar (OPENROUTER_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY)");
   const errors: string[] = [];
+  // Paket Free: model gambar hemat di OpenRouter dulu (saldo yang sama, ±$0,006–0,01/gambar vs ±$0,034). Gagal → jalur biasa.
+  if (opts.budget && openrouter && !references.length) {
+    try {
+      return await viaOpenRouter(openrouter, prompt, aspectRatio, [], budgetImageModels());
+    } catch (err) {
+      errors.push(`openrouter-hemat: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
   // Gambar baru (tanpa acuan) → Imagen 4 Fast lebih murah. Edit/variasi gambar butuh Gemini (Imagen tidak menerima gambar acuan).
   if (imagen && !references.length) {
     try {
@@ -123,8 +136,14 @@ export function imageModelScore(id: string) {
   );
 }
 
-async function viaOpenRouter(key: string, prompt: string, aspectRatio: string, refs: Reference[]): Promise<GeneratedImage> {
-  const models = await openRouterImageModels(key);
+/** Model gambar hemat untuk paket Free. Override: env OPENROUTER_BUDGET_IMAGE_MODEL (dipisah koma). */
+export function budgetImageModels(): string[] {
+  const env = process.env.OPENROUTER_BUDGET_IMAGE_MODEL;
+  return env ? env.split(",").map((s) => s.trim()).filter(Boolean) : ["openai/gpt-image-2", "meta/muse-image"];
+}
+
+async function viaOpenRouter(key: string, prompt: string, aspectRatio: string, refs: Reference[], only?: string[]): Promise<GeneratedImage> {
+  const models = only ?? (await openRouterImageModels(key));
   if (!models.length) throw new Error("tidak ada model gambar di OpenRouter");
   const errors: string[] = [];
   for (const model of models.slice(0, 3)) {
@@ -138,7 +157,8 @@ async function viaOpenRouter(key: string, prompt: string, aspectRatio: string, r
       },
       body: JSON.stringify({
         model,
-        modalities: ["image", "text"],
+        // Gemini menjawab teks + gambar; model gambar murni (OpenAI, Meta, FLUX) hanya "image".
+        modalities: model.startsWith("google/") ? ["image", "text"] : ["image"],
         usage: { include: true },
         image_config: { aspect_ratio: aspectRatio },
         messages: [

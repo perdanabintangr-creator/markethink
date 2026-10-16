@@ -2395,3 +2395,8 @@ grant execute on function public.consume_credits(uuid, integer, text, jsonb) to 
 -- ===== 20261016000036_free_no_research.sql =====
 -- Paket Free: Riset Web (pencarian Google) dimatikan untuk menekan biaya. Baca tautan & upload file tetap ada.
 update public.feature_flags set enabled = false where plan_id = 'beta' and key in ('research', 'web_search');
+
+
+-- ===== 20261016000037_free_research_on.sql =====
+-- Riset Web dibuka lagi untuk paket Free (biaya ±Rp17/pencarian), tetap dibatasi 5 pencarian/hari (feature_flags web_search per_day).
+update public.feature_flags set enabled = true where plan_id = 'beta' and key in ('research', 'web_search');

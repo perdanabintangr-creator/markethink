@@ -61,6 +61,10 @@ const json = (status: number, body: Record<string, unknown>) =>
 
 const genId = createIdGenerator({ prefix: "msg", size: 16 });
 
+/** Paket Free: batas panjang jawaban (±1.500 kata) & jumlah pesan riwayat yang dibaca AI. */
+const FREE_MAX_OUTPUT_TOKENS = 2_000;
+const FREE_HISTORY_WINDOW = 10;
+
 /** Gemini memakai free tier (tanpa billing) kecuali env GOOGLE_BILLING_ENABLED diisi → biaya Rp0. */
 const freeTierModel = (c: { provider: string }) => c.provider === "google" && !process.env.GOOGLE_BILLING_ENABLED;
 
@@ -95,6 +99,8 @@ export async function POST(req: Request) {
   const research = parsed.data.research && researchAllowed;
   // Paket Free: model gratis (Gemini) dulu, Claude sebagai cadangan. Admin selalu Claude.
   const preferFree = profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+  // Paket Free: jawaban lebih ringkas, riwayat lebih pendek, gambar model hemat (menekan modal, kualitas tetap terjaga).
+  const isFreePlan = profile.role !== "admin" && profile.plan_id === "beta";
   const setting = (key: string) => settings?.find((r) => r.key === key)?.value === true;
   const webSearchEnabled = setting("web_search");
   const imageBlockedReason = !imageGenerationEnabled()
@@ -232,8 +238,10 @@ export async function POST(req: Request) {
       }
 
       let sources: Source[] = [];
+      // Batas pencarian harian paket (Free 5×/hari) berlaku untuk Riset Web & pencarian otomatis AI.
+      const paidSearchCapped = Boolean(await dailyLimitReached(dailyLimits, user.id, "search"));
       // Riset Web: API pencarian sendiri (Serper ±$1/1.000 → Tavily) sebelum AI menjawab.
-      const useTavily = research && searchApiEnabled();
+      const useTavily = research && searchApiEnabled() && !paidSearchCapped;
       let apiSearches = 0;
       if (useTavily && lastText.trim()) {
         apiSearches++;
@@ -291,9 +299,9 @@ export async function POST(req: Request) {
       const { messages: resolvedRaw, hasImages } = await resolveAttachments(
         supabase,
         // Hasil Tools Pro ("Bahas di Chat") di pesan pertama selalu ikut sebagai konteks walau chat sudah panjang.
-        historyStart(messages.length) > 0 && /^(tool|agent)-/.test(messages[0]?.id ?? "")
-          ? [messages[0], ...messages.slice(historyStart(messages.length))]
-          : messages.slice(historyStart(messages.length)),
+        historyStart(messages.length, isFreePlan ? FREE_HISTORY_WINDOW : undefined) > 0 && /^(tool|agent)-/.test(messages[0]?.id ?? "")
+          ? [messages[0], ...messages.slice(historyStart(messages.length, isFreePlan ? FREE_HISTORY_WINDOW : undefined))]
+          : messages.slice(historyStart(messages.length, isFreePlan ? FREE_HISTORY_WINDOW : undefined)),
       );
       // Jejak tool tidak dikirim ulang apa adanya — hasil gambar/PPT diringkas jadi teks.
       const resolved = resolvedRaw.map(summarizeToolParts);
@@ -301,15 +309,14 @@ export async function POST(req: Request) {
         const lastMsg = resolved[resolved.length - 1];
         resolved[resolved.length - 1] = { ...lastMsg, parts: [{ type: "text", text: turnContext }, ...lastMsg.parts] };
       }
-      // Pencarian web Claude (berbayar) — paket Free dibatasi per hari; Google Search (gratis) untuk Gemini.
-      const paidSearchCapped = Boolean(await dailyLimitReached(dailyLimits, user.id, "search"));
       // Serper terpasang → AI mencari lewat Serper (10× lebih murah dari pencarian bawaan Claude, bisa dipakai semua model).
-      const serperOn = researchAllowed && webSearchEnabled && tier.webSearches > 0 && serperEnabled() && !paidSearchCapped && !preferFree;
+      const serperOn = researchAllowed && webSearchEnabled && tier.webSearches > 0 && serperEnabled() && !paidSearchCapped;
       const webSearchOn =
         !serperOn && researchAllowed && webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY) && !paidSearchCapped;
       const maxSearches = research ? tier.webSearches + 2 : tier.webSearches;
       let nextSourceId = sources.length;
-      const googleSearchOn = researchAllowed && webSearchEnabled && preferFree;
+      // Google Search bawaan Gemini hanya bila Serper tidak ada (Gemini tidak bisa mencampur alat bawaan & alat kita; kuota gratisnya juga cepat habis).
+      const googleSearchOn = !serperOn && researchAllowed && webSearchEnabled && preferFree && !paidSearchCapped;
       const routed = routeTier(tierId, { needsVision: hasImages, preferFree });
 
       const result = streamText({
@@ -324,7 +331,7 @@ export async function POST(req: Request) {
             }),
           ),
         ],
-        maxOutputTokens: tier.maxOutputTokens,
+        maxOutputTokens: isFreePlan ? Math.min(tier.maxOutputTokens, FREE_MAX_OUTPUT_TOKENS) : tier.maxOutputTokens,
         temperature: tier.temperature,
         maxRetries: 0,
         providerOptions: { anthropic: { effort: tier.effort, cacheControl: { type: "ephemeral" } } },
@@ -337,6 +344,7 @@ export async function POST(req: Request) {
             dailyLimit: (kind) => dailyLimitReached(dailyLimits, user.id, kind),
             // Foto AI di PPT hanya untuk paket tanpa batas harian gambar (Pro/Promax/admin).
             deckImages: !imageBlockedReason && dailyLimits.image === undefined,
+            budgetImages: isFreePlan,
           }),
           ...(serperOn
             ? {
