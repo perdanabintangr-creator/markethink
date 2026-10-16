@@ -193,6 +193,12 @@ export function ChatMessage({
   }
 
   const showActions = !(isLast && isStreaming) && text;
+  // Jawaban selesai tapi kosong (model berhenti tanpa hasil) → beri tahu user, kuota sudah dikembalikan server.
+  const emptyDone =
+    message.role === "assistant" &&
+    !(isLast && isStreaming) &&
+    !text &&
+    !message.parts.some((p) => p.type.startsWith("tool-") && (p as { state?: string }).state === "output-available" && (p as { output?: { ok?: boolean } }).output?.ok);
   return (
     <div className="group space-y-2">
       {links.length > 0 && (
@@ -230,6 +236,12 @@ export function ChatMessage({
       {(statusLabel || searching) && isLast && isStreaming && !text && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> {searching ? t.searching : statusLabel}
+        </p>
+      )}
+
+      {emptyDone && (
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+          Maaf, jawaban gagal dibuat dan kuota kamu sudah dikembalikan. Kirim ulang pesannya, ya.
         </p>
       )}
 

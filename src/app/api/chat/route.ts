@@ -22,7 +22,7 @@ import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
 import { extractLinks, linkContext, linkHistoryText, readLink, toLinkPart, type LinkRead } from "@/lib/ai/links";
 import { estimateCostUsd, getTier, messageCreditCost, type TierId } from "@/lib/ai/models.config";
-import { autoTier, isImageRequest, resolveTier } from "@/lib/ai/auto-tier";
+import { autoTier, isDeckRequest, isImageRequest, resolveTier } from "@/lib/ai/auto-tier";
 import {
   attachmentIds,
   extractMemories,
@@ -98,7 +98,9 @@ export async function POST(req: Request) {
   const researchAllowed = profile.role === "admin" || planFlag("research");
   const research = parsed.data.research && researchAllowed;
   // Paket Free: model gratis (Gemini) dulu, Claude sebagai cadangan. Admin selalu Claude.
-  const preferFree = profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+  // PPT tidak memakai Gemini gratis: model itu sering berhenti tanpa hasil saat menyusun file presentasi besar (uji 16 Okt).
+  const preferFree =
+    profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY) && !isDeckRequest(lastText);
   // Paket Free: jawaban lebih ringkas, riwayat lebih pendek, gambar model hemat (menekan modal, kualitas tetap terjaga).
   const isFreePlan = profile.role !== "admin" && profile.plan_id === "beta";
   const setting = (key: string) => settings?.find((r) => r.key === key)?.value === true;
@@ -398,8 +400,12 @@ export async function POST(req: Request) {
         // Beberapa langkah: model memanggil tool (gambar/PPT) lalu menjelaskan hasilnya.
         stopWhen: stepCountIs(5),
         abortSignal: req.signal,
-        onFinish: async ({ totalUsage: usage, steps }) => {
+        onFinish: async ({ totalUsage: usage, steps, text }) => {
           settled = true;
+          // Jawaban kosong (tanpa teks & tanpa hasil tool yang berhasil) → kuota dikembalikan penuh.
+          const produced =
+            text.trim().length > 0 ||
+            steps.some((s) => s.text.trim().length > 0 || s.toolResults.some((r) => (r?.output as { ok?: boolean } | undefined)?.ok));
           const used = routed.resolved() ?? routed.candidates[0];
           const claudeSearches = steps.reduce((sum, step) => {
             const raw = step.providerMetadata?.anthropic?.usage as { server_tool_use?: { web_search_requests?: number } } | undefined;
@@ -417,7 +423,7 @@ export async function POST(req: Request) {
               : estimateCostUsd(used, usage.inputTokens ?? 0, usage.outputTokens ?? 0, { read: cacheRead, write: cacheWrite })) +
             claudeSearches * 0.01 +
             (serperEnabled() ? apiSearches * SERPER_COST_USD : 0);
-          actualCredits = creditsForUsd(costUsd);
+          actualCredits = produced ? creditsForUsd(costUsd) : 0;
           remainingAfter = await settleCredits(user.id, cost, actualCredits, "chat_settle", { chatId, tier: tierId });
           await admin.from("usage_logs").insert({
             user_id: user.id,
@@ -431,7 +437,12 @@ export async function POST(req: Request) {
             cache_read_tokens: cacheRead,
             cache_write_tokens: cacheWrite,
             web_searches: searches,
-            error: routed.toolFallback() ? `web search dilewati: ${routed.toolFallback()}` : null,
+            status: produced ? "ok" : "error",
+            error: !produced
+              ? `jawaban kosong (model berhenti tanpa hasil): finish=${steps.at(-1)?.finishReason ?? "?"}`
+              : routed.toolFallback()
+                ? `web search dilewati: ${routed.toolFallback()}`
+                : null,
             credits: actualCredits,
             research,
             attachments: attachCount,
