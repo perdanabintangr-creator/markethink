@@ -14,6 +14,7 @@ import { changePlan, grantCredits, refundAddonSale, refundSale, setBetaAccess, s
 import { AddonSaleForm } from "@/components/backoffice/addon-sale-form";
 import { ADDON_NAME } from "@/lib/admin-format";
 import { requireBackoffice } from "@/lib/backoffice";
+import { ResetLinkButton } from "@/components/backoffice/reset-link";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Detail pelanggan" };
@@ -51,6 +52,13 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
     admin.from("tool_runs").select("tool, status, source, created_at").eq("user_id", id).gte("created_at", new Date(Date.now() - 30 * 86_400_000).toISOString()),
       ]);
   if (!u) notFound();
+  // Info akun login (Supabase Auth). Password tidak pernah bisa dilihat — hanya disimpan dalam bentuk hash.
+  const { data: authData } = await admin.auth.admin.getUserById(id);
+  const au = authData?.user;
+  const providers = [...new Set((au?.identities ?? []).map((i) => i.provider))];
+  const methodLabel = providers.length
+    ? providers.map((p) => (p === "google" ? "Google" : p === "email" ? "Email + password" : p)).join(" & ")
+    : "Email + password";
 
   const sales = subs ?? [];
   const valid = sales.filter((s) => !s.refunded_at);
@@ -93,6 +101,42 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
         <Stat label="Pelanggan berbayar sejak" value={firstPaid ? durationSince(firstPaid) : "–"} sub={firstPaid ? dateID(firstPaid) : "belum pernah bayar"} />
         <Stat label="Total sudah dibayar" value={rupiah(totalPaid)} sub={`${num(valid.length)}× pembayaran`} />
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Akun login</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Password tidak bisa dilihat siapa pun (termasuk tim) karena disimpan teracak. Bila pelanggan lupa, buat link reset di bawah.
+          </p>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+          <div>
+            <p className="text-xs text-muted-foreground">Email</p>
+            <p className="break-all font-medium">{au?.email ?? u.email}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Cara masuk</p>
+            <p className="font-medium">{methodLabel}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Email terverifikasi</p>
+            <p className="font-medium">{au?.email_confirmed_at ? `Ya · ${dateID(au.email_confirmed_at)}` : "Belum"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Terakhir login</p>
+            <p className="font-medium">{au?.last_sign_in_at ? dateID(au.last_sign_in_at) : "–"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Daftar</p>
+            <p className="font-medium">{dateID(au?.created_at ?? u.created_at)}</p>
+          </div>
+          {isOwner && (
+            <div className="sm:col-span-2 lg:col-span-5">
+              <ResetLinkButton userId={u.id} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <Card>

@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 function GoogleIcon() {
   return (
@@ -175,10 +176,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               </Link>
             )}
           </div>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             required
             minLength={8}
             autoComplete={mode === "login" ? "current-password" : "new-password"}

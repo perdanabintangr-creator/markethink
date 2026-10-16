@@ -23,6 +23,11 @@ export const emails = {
 <p>Akun beta kamu sudah aktif. Kamu dapat kredit gratis setiap hari untuk ngobrol dengan otak marketing kamu.</p>
 <p>Mulai dari: buat Project untuk brand kamu, lalu coba agent <b>Campaign Plan</b> atau <b>Content Calendar</b>.</p>
 <p><a href="${env.appUrl}/chat">Buka Markethink →</a></p>`),
+  resetPassword: (link: string) =>
+    wrap(`<h2>Reset password Markethink</h2>
+<p>Ada permintaan untuk mengganti password akun kamu. Klik tombol di bawah (berlaku 1 jam, bisa dibuka di HP maupun laptop):</p>
+<p><a href="${link}" style="display:inline-block;background:#1e5bff;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Buat password baru</a></p>
+<p style="color:#666;font-size:13px">Tidak merasa meminta? Abaikan email ini — password kamu tidak berubah.</p>`),
   waitlist: () =>
     wrap(`<h2>Kamu masuk waitlist Markethink Pro ✨</h2>
 <p>Terima kasih! Kami akan kabari begitu paket Pro tersedia — dengan kuota lebih besar dan fitur tambahan.</p>`),

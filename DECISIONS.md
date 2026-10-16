@@ -204,3 +204,12 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Biaya = token AI membaca isi (maks 12 rb karakter/tautan di pesan saat ini; 4 rb karakter tersimpan sebagai `data-link`
   di jawaban & ikut riwayat). Kredit tetap disesuaikan ke biaya nyata.
 - Tahap 2 (scraper berbayar untuk IG/TikTok/marketplace) belum — perlu laporan biaya & ACC.
+
+## Login, daftar & lupa password (16 Okt 2026)
+- Tombol mata (lihat/sembunyikan) di kolom password masuk, daftar & password baru.
+- **Password pelanggan tidak ditampilkan di back office** (permintaan founder ditolak demi keamanan & UU PDP): Supabase menyimpan
+  password sebagai hash, tidak bisa dibaca siapa pun. Gantinya: kartu "Akun login" (email, cara masuk Google/email, verifikasi,
+  terakhir login) + tombol owner "Buat link reset password" (sekali pakai, 1 jam) untuk dikirim lewat WA/email.
+- Lupa password diperbaiki: penyebab dari log — link reset (PKCE) hanya jalan di browser yang sama; founder membuka di HP → gagal.
+  Sekarang lewat `/api/auth/forgot` dengan link tanpa PKCE (token di `#`), bisa dibuka di perangkat mana pun. Bila Resend
+  terpasang, email dikirim sendiri (tanpa batas email bawaan Supabase ±2/jam).

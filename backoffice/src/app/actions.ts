@@ -299,6 +299,25 @@ export async function setCreditOverride(userId: string, formData: FormData) {
   refresh(userId);
 }
 
+/**
+ * Buat link reset password untuk pelanggan (owner) — dikirim tim lewat WhatsApp/email bila pelanggan tidak menerima email.
+ * Password pelanggan sendiri TIDAK pernah bisa dilihat (tersimpan teracak/hash).
+ */
+export async function createResetLink(userId: string): Promise<{ link?: string; error?: string }> {
+  await requireOwner();
+  const admin = createAdminClient();
+  const { data: u, error: getErr } = await admin.auth.admin.getUserById(userId);
+  if (getErr || !u.user?.email) return { error: "Akun tidak ditemukan." };
+  const appUrl = (process.env.MARKETHINK_APP_URL || "https://markethink-pi.vercel.app").replace(/\/$/, "");
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email: u.user.email,
+    options: { redirectTo: `${appUrl}/auth/callback?next=/reset-password` },
+  });
+  if (error || !data.properties?.action_link) return { error: "Gagal membuat link. Coba lagi." };
+  return { link: data.properties.action_link };
+}
+
 export async function grantCredits(userId: string, formData: FormData) {
   await requireOwner();
   const amount = z.coerce.number().int().min(1).max(100000).safeParse(formData.get("amount"));

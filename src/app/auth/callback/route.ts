@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
+  // Link reset password tanpa PKCE: token ada di bagian "#..." URL (tidak terlihat server) — browser membawanya ke halaman tujuan.
+  if (next === "/reset-password") return NextResponse.redirect(`${origin}/reset-password`);
   return NextResponse.redirect(`${origin}/login?error=auth`);
 }
 
