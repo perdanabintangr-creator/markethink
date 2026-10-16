@@ -1,7 +1,7 @@
 "use client";
 
 import { UPDATE_RESULT_BLOCK } from "@/lib/addons/format";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Check,
@@ -204,6 +204,12 @@ export function ChatMessage({
   }
 
   const showActions = !(isLast && isStreaming) && text;
+  // Selama belum ada tulisan baru & tidak ada tool yang sedang tampil prosesnya → tampilkan indikator "sedang bekerja",
+  // agar jeda berpikir (otak Director, PPT) tidak disangka error.
+  const toolBusy = message.parts.some(
+    (p) => p.type.startsWith("tool-") && ["input-streaming", "input-available"].includes((p as { state?: string }).state ?? ""),
+  );
+  const working = message.role === "assistant" && !toolBusy && !(lastPart?.type === "text" && lastPart.text.trim());
   // Jawaban selesai tapi kosong (model berhenti tanpa hasil) → beri tahu user, kuota sudah dikembalikan server.
   const emptyDone =
     message.role === "assistant" &&
@@ -244,11 +250,7 @@ export function ChatMessage({
         </div>
       )}
 
-      {(statusLabel || searching) && isLast && isStreaming && !text && (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> {searching ? t.searching : statusLabel}
-        </p>
-      )}
+      {isLast && isStreaming && (searching || working) && <WorkingIndicator label={searching ? t.searching : statusLabel} fallback={t.thinking} />}
 
       {emptyDone && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
@@ -377,6 +379,23 @@ function UserBubble({ text }: { text: string }) {
   );
 }
 
+/** Indikator proses dengan label yang berganti bila menunggu lama. */
+function WorkingIndicator({ label, fallback }: { label?: string | null; fallback: string }) {
+  const [secs, setSecs] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const text =
+    label ?? (secs < 6 ? fallback : secs < 20 ? "Menyusun jawaban terbaik untukmu…" : "Masih bekerja — permintaan besar butuh waktu sedikit lebih lama…");
+  return (
+    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Loader2 className="size-4 animate-spin text-primary" />
+      <span className="animate-pulse">{text}</span>
+    </p>
+  );
+}
+
 function ToolPending({ label, streaming }: { label: string; streaming: boolean }) {
   if (!streaming) return null;
   return (
@@ -422,7 +441,8 @@ function ImageResult({ part, streaming }: { part: ToolPart; streaming: boolean }
 function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
   const { t } = useApp();
   if (part.state === "output-error") return <ToolError message="Gagal membuat presentasi." />;
-  if (part.state !== "output-available" || !part.output) return <ToolPending label={t.buildingDeck} streaming={streaming} />;
+  if (part.state !== "output-available" || !part.output)
+    return <ToolPending label={part.state === "input-streaming" ? "Sedang menyusun isi & alur slide…" : t.buildingDeck} streaming={streaming} />;
   if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat presentasi."} />;
   const titles = (part.output.slideTitles as string[] | undefined) ?? [];
   const theme = DECK_THEMES[String(part.output.theme ?? "")] ?? DECK_THEMES.midnight;
