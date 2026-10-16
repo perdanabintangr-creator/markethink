@@ -1,12 +1,13 @@
 import { expect, it } from "vitest";
 import { createUIMessageStream, readUIMessageStream, streamText, simulateReadableStream } from "ai";
 import { MockLanguageModelV2 } from "ai/test";
+import type { LanguageModelV2StreamPart } from "@ai-sdk/provider";
 
 // Pola Stop di /api/chat: abort dari server → onAbort terpanggil, stream UI tetap selesai & onFinish (simpan pesan) berjalan.
 it("Stop menghentikan AI, jawaban sebagian tetap tersimpan", async () => {
   const model = new MockLanguageModelV2({
     doStream: async ({ abortSignal }) => ({
-      stream: simulateReadableStream({
+      stream: simulateReadableStream<LanguageModelV2StreamPart>({
         chunkDelayInMs: 30,
         chunks: [
           { type: "stream-start", warnings: [] },
@@ -15,7 +16,7 @@ it("Stop menghentikan AI, jawaban sebagian tetap tersimpan", async () => {
           { type: "text-end", id: "t" },
           { type: "finish", finishReason: "stop", usage: { inputTokens: 1, outputTokens: 50, totalTokens: 51 } },
         ],
-      }).pipeThrough(new TransformStream({ transform: (c, ctl) => (abortSignal?.aborted ? ctl.terminate() : ctl.enqueue(c)) })),
+      }).pipeThrough(new TransformStream<LanguageModelV2StreamPart, LanguageModelV2StreamPart>({ transform: (c, ctl) => (abortSignal?.aborted ? ctl.terminate() : ctl.enqueue(c)) })),
     }),
   });
   const ctrl = new AbortController();
