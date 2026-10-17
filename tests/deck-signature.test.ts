@@ -86,4 +86,18 @@ it("foto slide pakai Muse (tanpa acuan) kecuali maskot / ilustrasi lucu", () => 
   expect(deckNeedsReference({ theme: "midnight", design: { mood: "tech", kv: "x", image_style: "3d" } })).toBe(true);
   expect(deckNeedsReference({ theme: "midnight", design: { mood: "playful", kv: "x" } })).toBe(true);
   expect(deckNeedsReference({ theme: "midnight", design: { mood: "warm", kv: "x", cast: "brand mascot Popo, a round chocolate bean" } })).toBe(true);
+  expect(deckNeedsReference({ theme: "midnight", design: { mood: "tech", kv: "x", cast: "Two main characters: a gamer and a creator" } })).toBe(false);
+});
+
+it("PPTX menanam font (EOT) dan memakai nama font sesuai file", async () => {
+  const JSZip = (await import("jszip")).default;
+  const scene = buildScene(deck, { images: {} });
+  const zip = await JSZip.loadAsync(await renderScenePptx(scene, {}, deck.title));
+  const pres = await zip.file("ppt/presentation.xml")!.async("string");
+  expect(pres).toContain('embedTrueTypeFonts="1"');
+  expect(pres).toMatch(/<p:embeddedFont><p:font typeface="Chakra Petch"[^>]*\/><p:bold r:id=/);
+  const fnt = await zip.file("ppt/fonts/font1.fntdata")!.async("uint8array");
+  expect(Buffer.from(fnt).readUInt16LE(34)).toBe(0x504c); // magic EOT
+  const slide = await zip.file("ppt/slides/slide2.xml")!.async("string");
+  expect(slide).toContain('typeface="Inter SemiBold"');
 });

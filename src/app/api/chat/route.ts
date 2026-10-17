@@ -103,7 +103,10 @@ export async function POST(req: Request) {
   const researchAllowed = profile.role === "admin" || planFlag("research");
   const research = parsed.data.research && researchAllowed;
   // Paket Free: model gratis (Gemini) dulu, Claude sebagai cadangan. Admin selalu Claude.
-  const deckRequest = isDeckRequest(lastText);
+  // Revisi deck ("ubah namanya…", "ganti warnanya…") juga dihitung permintaan PPT bila jawaban terakhir berisi PPT.
+  const prevAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+  const deckRequest =
+    isDeckRequest(lastText) || Boolean(prevAssistant?.parts.some((p) => p.type === "tool-create_presentation"));
   // PPT tidak memakai Gemini gratis: model itu sering berhenti tanpa hasil saat menyusun file presentasi besar (uji 16 Okt).
   const preferFree =
     profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY) && !deckRequest;

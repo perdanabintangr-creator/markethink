@@ -163,7 +163,7 @@ export function imageStylePrompt(input: Pick<PresentationInput, "theme" | "desig
 /** Maskot / ilustrasi lucu → foto slide perlu KV sebagai acuan agar karakternya tidak berubah bentuk. */
 export function deckNeedsReference(input: Pick<PresentationInput, "theme" | "design">) {
   const style = (input.design?.image_style as ImageStyle | undefined) ?? moodOf(input).imageStyle;
-  return style === "3d" || style === "flat" || moodOf(input).id === "playful" || /maskot|mascot|karakter|character/i.test(input.design?.cast ?? "");
+  return style === "3d" || style === "flat" || moodOf(input).id === "playful" || /maskot|mascot/i.test(input.design?.cast ?? "");
 }
 
 const THEME_MOOD: Record<string, MoodId> = { midnight: "modern", clean: "minimal", sunset: "warm", forest: "warm", ocean: "modern", luxe: "editorial", coral: "playful", corporate: "corporate" };

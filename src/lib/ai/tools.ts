@@ -283,6 +283,28 @@ async function deckPreviewUrls(
   return out;
 }
 
+/**
+ * Siapkan gambar untuk deck: PNG/JPEG apa adanya; format lain (mis. WebP dari Meta Muse, yang sering berlabel "image/png")
+ * diubah ke JPEG — PDF hanya mendukung PNG/JPEG, sebelumnya gambar seperti ini hilang dari PDF.
+ */
+async function deckReadyImage(bytes: Uint8Array, mime: string): Promise<DeckImages[string] | null> {
+  const isPng = bytes[0] === 0x89 && bytes[1] === 0x50;
+  const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
+  let out = bytes;
+  let type = isPng ? "image/png" : isJpeg ? "image/jpeg" : mime;
+  if (!isPng && !isJpeg) {
+    try {
+      const sharp = (await import("sharp")).default;
+      out = new Uint8Array(await sharp(Buffer.from(bytes)).jpeg({ quality: 88 }).toBuffer());
+      type = "image/jpeg";
+    } catch (err) {
+      console.warn("[deck] konversi gambar gagal", errText(err));
+    }
+  }
+  const size = imageSize(out);
+  return size ? { data: Buffer.from(out).toString("base64"), mime: type, ...size } : null;
+}
+
 /** Muat foto milik user (attachment) yang dipakai di deck. */
 async function loadOwnedImages(ctx: ToolCtx, reqs: { key: string; imageId?: string }[], images: DeckImages) {
   const owned = reqs.filter((r) => r.imageId && /^[0-9a-f-]{36}$/i.test(r.imageId));
@@ -299,9 +321,8 @@ async function loadOwnedImages(ctx: ToolCtx, reqs: { key: string; imageId?: stri
       if (!row) return;
       const { data } = await ctx.admin.storage.from("uploads").download(row.storage_path as string);
       if (!data) return;
-      const bytes = new Uint8Array(await data.arrayBuffer());
-      const size = imageSize(bytes);
-      if (size) images[r.key] = { data: Buffer.from(bytes).toString("base64"), mime: row.mime as string, ...size };
+      const img = await deckReadyImage(new Uint8Array(await data.arrayBuffer()), row.mime as string);
+      if (img) images[r.key] = img;
     }),
   );
 }
@@ -334,9 +355,9 @@ async function makeDeckImages(ctx: ToolCtx, input: PresentationInput): Promise<D
           ),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout gambar deck")), 80_000)),
         ]);
-        const size = imageSize(img.bytes);
-        if (!size) return false;
-        images[r.key] = { data: Buffer.from(img.bytes).toString("base64"), mime: img.mime, ...size };
+        const ready = await deckReadyImage(img.bytes, img.mime);
+        if (!ready) return false;
+        images[r.key] = ready;
         await logUsage(ctx, { tier: "deck_image", provider: img.provider, model: img.model, credits: DECK_IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD });
         return true;
       } catch (err) {
@@ -406,9 +427,9 @@ async function makeSignatureImages(ctx: ToolCtx, input: PresentationInput, reqs:
         generateImage(prompt, r.aspect, refs, { budget: !refs.length && r.key !== "cover" }),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout gambar deck")), 90_000)),
       ]);
-      const size = imageSize(img.bytes);
-      if (!size) throw new Error("format gambar tidak dikenal");
-      images[r.key] = { data: Buffer.from(img.bytes).toString("base64"), mime: img.mime, ...size };
+      const ready = await deckReadyImage(img.bytes, img.mime);
+      if (!ready) throw new Error("format gambar tidak dikenal");
+      images[r.key] = ready;
       await logUsage(ctx, { tier: "deck_image", provider: img.provider, model: img.model, credits: DECK_IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD, note: img.notes });
     } catch (err) {
       failed++;

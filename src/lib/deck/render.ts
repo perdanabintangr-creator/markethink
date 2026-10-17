@@ -5,6 +5,7 @@ import { PDFDocument, clip, degrees, endPath, popGraphicsState, pushGraphicsStat
 import fontkit from "@pdf-lib/fontkit";
 import type { DeckImages } from "@/lib/pptx";
 import { baselineOffset, loadDeckFont } from "./engine";
+import { embedFontsInPptx, pptFaceOf } from "./font-embed";
 import type { FontRole, Scene, SceneItem } from "./scene";
 
 /** Penggambar Scene → .pptx (bisa diedit) dan .pdf (font asli tertanam, tampil persis). */
@@ -85,7 +86,13 @@ export async function renderScenePptx(scene: Scene, images: DeckImages, title: s
     if (sl.notes) slide.addNotes(sl.notes);
   }
   const out = (await pptx.write({ outputType: "uint8array" })) as Uint8Array;
-  return out;
+  // Font ditanam di file agar tampil sama di PowerPoint / WPS walau font tidak terpasang.
+  try {
+    return await embedFontsInPptx(out, Object.values(scene.fonts).map((f) => f.file));
+  } catch (err) {
+    console.warn("[deck-pptx] gagal menanam font", err instanceof Error ? err.message : err);
+    return out;
+  }
 }
 
 function drawPptx(pptx: PptxGenJS, slide: PptxGenJS.Slide, it: SceneItem, scene: Scene, images: DeckImages) {
@@ -146,8 +153,9 @@ function drawPptx(pptx: PptxGenJS, slide: PptxGenJS.Slide, it: SceneItem, scene:
           w: it.w + 0.08,
           h: Math.max(it.h, (it.lines.length * it.size * it.lh) / 72),
           margin: 0,
-          fontFace: f.family,
-          bold: f.bold,
+          // Nama font sesuai isi file font (mis. "Inter SemiBold") agar cocok dengan font yang ditanam.
+          fontFace: pptFaceOf(f.file).face,
+          bold: pptFaceOf(f.file).bold,
           fontSize: it.size,
           color: it.color,
           transparency: it.o !== undefined ? alpha(it.o) : undefined,
@@ -197,8 +205,11 @@ export async function renderScenePdf(scene: Scene, images: DeckImages, title: st
     const src = images[key];
     let out: PDFImage | null = null;
     try {
-      if (src?.mime.includes("png")) out = await doc.embedPng(Buffer.from(src.data, "base64"));
-      else if (src?.mime.includes("jpeg") || src?.mime.includes("jpg")) out = await doc.embedJpg(Buffer.from(src.data, "base64"));
+      // Format dibaca dari isi file (label mime bisa keliru).
+      const buf = src ? Buffer.from(src.data, "base64") : null;
+      if (buf && buf[0] === 0x89 && buf[1] === 0x50) out = await doc.embedPng(buf);
+      else if (buf && buf[0] === 0xff && buf[1] === 0xd8) out = await doc.embedJpg(buf);
+      else if (buf) console.warn("[deck-pdf] format gambar tidak didukung", key, src?.mime);
     } catch (err) {
       console.warn("[deck-pdf] gambar dilewati", key, err instanceof Error ? err.message : err);
     }

@@ -300,3 +300,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - (17 Okt, founder ACC hybrid) Foto deck Signature: KV/cover tetap model utama (Imagen/Gemini), 7 foto slide pakai Meta Muse (±Rp165)
   dengan naskah terkunci (`design.kv` + `design.cast` tokoh tetap + color grade dari palet, kamera tidak close-up wajah) + lapisan warna
   seragam di mesin deck. Maskot / ilustrasi 3D-flat / playful tetap memakai KV sebagai acuan (Gemini). Target ±Rp5.300/deck.
+- (17 Okt) PPTX Signature menanam font (ppt/fonts/*.fntdata = EOT tanpa kompresi, identik dengan ttf2eot) + nama font sesuai isi
+  file (mis. "Inter SemiBold") agar tampil sama di PowerPoint/WPS tanpa font terpasang. Gambar non-PNG/JPEG (WebP dari Muse,
+  berlabel image/png) diubah ke JPEG via sharp — sebelumnya hilang di PDF. Revisi deck dihitung permintaan PPT (Opus, bukan Fable);
+  acuan KV hanya untuk maskot (kata "character" tidak lagi memicu Gemini).
