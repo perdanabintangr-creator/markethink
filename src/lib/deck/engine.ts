@@ -704,7 +704,7 @@ function stats(c: Composer, s: SlideInput, i: number) {
   const limit = limitOf(s);
   const hb = c.header(s, x0, TOP + (photo ? 0.35 : 0), w);
   const stmt = s.takeaway ? c.measure(s.takeaway, "strong", w - 0.6, { size: 14.5, maxLines: 2, lh: 1.25 }).h + 0.62 : 0;
-  const cols = w < 5 ? 2 : 4;
+  const cols = w < 5 || (w < 8 && list.length >= 4) ? 2 : 4;
   const rows = Math.ceil(list.length / Math.min(cols, list.length));
   const boxH = (photo || w < 8 ? 1.6 : 2.3) * rows + 0.18 * (rows - 1);
   const y = hb + (photo ? 0.3 : 0.45);
