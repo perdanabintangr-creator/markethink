@@ -304,3 +304,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   file (mis. "Inter SemiBold") agar tampil sama di PowerPoint/WPS tanpa font terpasang. Gambar non-PNG/JPEG (WebP dari Muse,
   berlabel image/png) diubah ke JPEG via sharp — sebelumnya hilang di PDF. Revisi deck dihitung permintaan PPT (Opus, bukan Fable);
   acuan KV hanya untuk maskot (kata "character" tidak lagi memicu Gemini).
+- (17 Okt) Unduhan utama .pptx Signature = tiap slide gambar JPEG Full HD (SVG → sharp, teks digambar dari path font asli) →
+  tampil persis sama di WPS, PowerPoint, Google Slides, iPhone/Android. Versi teks bisa diedit tetap tersedia
+  ("… (bisa diedit).pptx", font ditanam). PDF tetap vektor (pdf-lib, font tertanam).

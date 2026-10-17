@@ -15,12 +15,14 @@ export function ScenePreviewButton({
   images,
   pdfUrl,
   pptxUrl,
+  editableUrl,
   title,
 }: {
   sceneUrl: string;
   images?: Record<string, string>;
   pdfUrl?: string;
   pptxUrl: string;
+  editableUrl?: string;
   title: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -49,8 +51,7 @@ export function ScenePreviewButton({
           <DialogHeader className="border-b px-4 py-3 pr-12">
             <DialogTitle className="truncate text-base">{title}</DialogTitle>
             <DialogDescription className="text-xs">
-              Pratinjau {scene ? `${scene.slides.length} slide` : "slide"}. PDF tampil persis seperti ini; di PowerPoint font khusus tampil bila terpasang (Google Slides
-              otomatis).
+              Pratinjau {scene ? `${scene.slides.length} slide` : "slide"}. PDF & .pptx tampil persis seperti ini di aplikasi mana pun. Perlu mengubah teks? Pakai “.pptx bisa diedit”.
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-muted/40 p-3 sm:p-4">
@@ -81,6 +82,13 @@ export function ScenePreviewButton({
               <Button asChild size="sm" variant="outline">
                 <a href={`${pdfUrl}?download=1`}>
                   <FileText /> Unduh PDF
+                </a>
+              </Button>
+            )}
+            {editableUrl && (
+              <Button asChild size="sm" variant="outline">
+                <a href={`${editableUrl}?download=1`} title="Teks bisa diedit; tampilan bisa sedikit berbeda antar aplikasi">
+                  <Download /> .pptx bisa diedit
                 </a>
               </Button>
             )}

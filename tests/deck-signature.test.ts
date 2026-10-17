@@ -101,3 +101,14 @@ it("PPTX menanam font (EOT) dan memakai nama font sesuai file", async () => {
   const slide = await zip.file("ppt/slides/slide2.xml")!.async("string");
   expect(slide).toContain('typeface="Inter SemiBold"');
 });
+
+it("PPT tampilan persis: tiap slide jadi gambar Full HD dengan font asli", async () => {
+  const { renderSlideImages, renderImagePptx, slideSvg } = await import("@/lib/deck/render-image");
+  const scene = buildScene(deck, { images: { cover: img } });
+  expect(slideSvg(scene.slides[0], scene, { cover: img })).toContain("<path");
+  const jpgs = await renderSlideImages(scene, { cover: img });
+  expect(jpgs).toHaveLength(scene.slides.length);
+  expect([jpgs[0][0], jpgs[0][1]]).toEqual([0xff, 0xd8]);
+  const pptx = await renderImagePptx(scene, jpgs, deck.title);
+  expect([...pptx.slice(0, 2)]).toEqual([0x50, 0x4b]);
+}, 60_000);
