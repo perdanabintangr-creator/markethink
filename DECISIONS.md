@@ -292,3 +292,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   tech/sport/bold/modern), frame (foto di kartu/bingkai — playful/warm/beauty/minimal), bleed (foto tegas separuh slide —
   editorial/corporate/heritage); ornamen khas (confetti, garis balap, bentuk organik, lengkung, garis editorial, bingkai ornamen, blok);
   gaya label (teks berspasi / pil / batang).
+
+## Hemat modal PPT Director (17 Okt 2026, founder ACC opsi B)
+- Deck Director (Promax) tadi: ±Rp14.800 (Fable 5.1 $0,626 = 7,1 rb token tulis + 21 rb token cache write; 8 foto $0,27).
+- Permintaan PPT di otak Director kini ditulis Opus 5.5 (`routeTier(..., { deck: true })` melewati Fable); chat biasa tetap Fable.
+  Desain tetap dari mesin deck. Balasan setelah PPT jadi maks 4 baris (tanpa tabel/daftar slide). Target ±Rp7.500–8.500/deck.

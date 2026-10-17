@@ -118,12 +118,20 @@ export const FREE_CANDIDATES: ModelCandidate[] = parseCandidates(process.env.MOD
   { provider: "google", modelId: "gemini-3.8-flash" },
 ]);
 
+/** Model yang dilewati saat menyusun PPT (terlalu mahal untuk menulis data slide). */
+export const DECK_SKIP_MODELS = ["claude-fable-5-1"];
+
 export function routeTier(
   tierId: string | null | undefined,
-  opts: { needsVision?: boolean; preferFree?: boolean } = {},
+  opts: { needsVision?: boolean; preferFree?: boolean; deck?: boolean } = {},
 ) {
   const tier: TierConfig = getTier(tierId);
   let candidates = tier.candidates.filter((c) => isProviderConfigured(c.provider));
+  // Pembuatan PPT: isi deck ditulis model kedua terbaik (Opus) — desain dikerjakan mesin deck, modal ±60% lebih hemat (founder ACC 17 Okt).
+  if (opts.deck) {
+    const lean = candidates.filter((c) => !DECK_SKIP_MODELS.includes(c.modelId));
+    if (lean.length) candidates = lean;
+  }
   if (opts.preferFree) {
     const free = FREE_CANDIDATES.filter((c) => isProviderConfigured(c.provider));
     const same = (a: ModelCandidate, b: ModelCandidate) => a.provider === b.provider && a.modelId === b.modelId;

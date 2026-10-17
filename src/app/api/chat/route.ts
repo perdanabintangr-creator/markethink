@@ -342,7 +342,7 @@ export async function POST(req: Request) {
       let nextSourceId = sources.length;
       // Google Search bawaan Gemini hanya bila Serper tidak ada (Gemini tidak bisa mencampur alat bawaan & alat kita; kuota gratisnya juga cepat habis).
       const googleSearchOn = !serperOn && researchAllowed && webSearchEnabled && preferFree && !paidSearchCapped;
-      const routed = routeTier(tierId, { needsVision: hasImages, preferFree });
+      const routed = routeTier(tierId, { needsVision: hasImages, preferFree, deck: deckRequest });
 
       // Tombol Stop: /api/chat/stop mengisi chats.stop_requested_at → AI di server dihentikan (dicek tiap 1,5 detik).
       const stopCtrl = new AbortController();
