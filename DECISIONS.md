@@ -307,3 +307,4 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - (17 Okt) Unduhan utama .pptx Signature = tiap slide gambar JPEG Full HD (SVG → sharp, teks digambar dari path font asli) →
   tampil persis sama di WPS, PowerPoint, Google Slides, iPhone/Android. Versi teks bisa diedit tetap tersedia
   ("… (bisa diedit).pptx", font ditanam). PDF tetap vektor (pdf-lib, font tertanam).
+- (17 Okt, founder) Cukup satu tombol "Unduh PPT" = versi bisa diedit (font ditanam); PPT versi gambar tidak dibuat lagi (kode render-image disimpan). PDF untuk tampilan persis.

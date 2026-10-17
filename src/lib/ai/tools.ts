@@ -16,7 +16,6 @@ import {
 } from "@/lib/pptx";
 import { buildScene, deckNeedsReference, imageStylePrompt, resolvePalette, signatureImageRequests, type SignatureImageRequest } from "@/lib/deck/engine";
 import { renderScenePdf, renderScenePptx } from "@/lib/deck/render";
-import { renderImagePptx, renderSlideImages } from "@/lib/deck/render-image";
 import { sanitizeFileName } from "@/lib/files";
 import { readToolResult } from "@/lib/addons/chat-context";
 
@@ -458,22 +457,12 @@ async function signatureDeck(ctx: ToolCtx, input: PresentationInput): Promise<Pr
   const dims = Object.fromEntries(Object.entries(images).map(([k, v]) => [k, { width: v.width, height: v.height }]));
   const scene = buildScene(deck, { images: dims });
   const base = sanitizeFileName(input.title).slice(0, 60) || "presentasi";
-  const [editableBytes, pdfBytes, exactBytes] = await Promise.all([
-    renderScenePptx(scene, images, input.title),
-    renderScenePdf(scene, images, input.title),
-    // Unduhan utama: tiap slide = gambar Full HD → tampil persis sama di PowerPoint, WPS, Google Slides & HP.
-    renderSlideImages(scene, images)
-      .then((jpgs) => renderImagePptx(scene, jpgs, input.title))
-      .catch((err) => {
-        console.warn("[deck-signature] PPT gambar gagal, pakai versi edit", errText(err));
-        return null;
-      }),
-  ]);
+  // Founder (17 Okt): satu tombol "Unduh PPT" = versi yang bisa diedit (font ditanam). PDF untuk tampilan persis.
+  const [pptxBytes, pdfBytes] = await Promise.all([renderScenePptx(scene, images, input.title), renderScenePdf(scene, images, input.title)]);
   const outline = presentationOutline(deck);
   const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-  const [saved, editable, pdf, sceneFile, previewImages] = await Promise.all([
-    storeFile(ctx, "presentations", `${base}.pptx`, PPTX_MIME, exactBytes ?? editableBytes, outline),
-    exactBytes ? storeFile(ctx, "presentations", `${base} (bisa diedit).pptx`, PPTX_MIME, editableBytes, null) : null,
+  const [saved, pdf, sceneFile, previewImages] = await Promise.all([
+    storeFile(ctx, "presentations", `${base}.pptx`, PPTX_MIME, pptxBytes, outline),
     storeFile(ctx, "presentations", `${base}.pdf`, "application/pdf", pdfBytes, null),
     storeFile(ctx, "presentations", `${base}.scene.json`, "application/json", new TextEncoder().encode(JSON.stringify(scene)), null),
     deckPreviewUrls(ctx, deck, images, reqs),
@@ -491,7 +480,6 @@ async function signatureDeck(ctx: ToolCtx, input: PresentationInput): Promise<Pr
     images: Object.keys(images).length,
     style: "signature",
     pdfUrl: pdf.url,
-    editableUrl: editable?.url,
     sceneUrl: sceneFile.url,
     previewImages,
   };

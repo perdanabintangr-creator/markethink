@@ -490,8 +490,7 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
               sceneUrl={String(part.output.sceneUrl)}
               images={part.output.previewImages as Record<string, string> | undefined}
               pdfUrl={part.output.pdfUrl ? String(part.output.pdfUrl) : undefined}
-              pptxUrl={String(part.output.url)}
-              editableUrl={part.output.editableUrl ? String(part.output.editableUrl) : undefined}
+              pptxUrl={String(part.output.editableUrl ?? part.output.url)}
               title={String(part.output.title)}
             />
           ) : part.input ? (
@@ -509,20 +508,12 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
             </Button>
           ) : null}
           <Button asChild size="sm">
-            <a href={`${String(part.output.url)}?download=1`}>
-              <Download /> {t.downloadPptx}
+            <a href={`${String(part.output.editableUrl ?? part.output.url)}?download=1`}>
+              <Download /> {part.output.sceneUrl ? "Unduh PPT" : t.downloadPptx}
             </a>
           </Button>
         </div>
       </div>
-      {part.output.editableUrl ? (
-        <p className="border-b px-4 py-2 text-xs text-muted-foreground">
-          .pptx &amp; PDF tampil persis sama di aplikasi mana pun.{" "}
-          <a href={`${String(part.output.editableUrl)}?download=1`} className="font-medium text-primary hover:underline">
-            Unduh versi .pptx yang teksnya bisa diedit
-          </a>
-        </p>
-      ) : null}
       <ol className="max-h-56 space-y-1 overflow-y-auto px-4 py-3 text-xs text-muted-foreground">
         {titles.map((title, i) => (
           <li key={i} className="flex gap-2">
