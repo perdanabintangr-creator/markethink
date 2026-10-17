@@ -32,6 +32,7 @@ export function Composer({
   onClearQuote,
   prefill,
   autoFocus,
+  placeholder,
 }: {
   onSend: (text: string, attachments: PendingAttachment[]) => void;
   onStop: () => void;
@@ -46,6 +47,8 @@ export function Composer({
   /** Isi kotak ketik dari luar (chip jalan pintas). `key` berubah tiap kali dipilih. */
   prefill?: { text: string; key: number } | null;
   autoFocus?: boolean;
+  /** Teks petunjuk kotak chat (default dari kamus bahasa). */
+  placeholder?: string;
 }) {
   const { t, researchAllowed } = useApp();
   const router = useRouter();
@@ -181,7 +184,7 @@ export function Composer({
         rows={1}
         autoFocus={autoFocus}
         maxLength={20000}
-        placeholder={t.placeholder}
+        placeholder={placeholder ?? t.placeholder}
         className="block max-h-60 w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
       />
       <div className="flex items-center gap-1 p-2">

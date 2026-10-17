@@ -989,11 +989,21 @@ function ProjectRow({
           dropTarget && "bg-primary/15 ring-2 ring-primary",
         )}
       >
-        <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left text-sm">
+        <button onClick={onToggle} className="py-1.5 pl-2 pr-0.5" aria-label={open ? "Tutup daftar chat project" : "Buka daftar chat project"}>
           <ChevronRight className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />
+        </button>
+        {/* Klik nama project → halaman depan project (seperti ChatGPT/Claude Projects). */}
+        <Link
+          href={`/chat?workspace=${project.id}`}
+          onClick={() => {
+            if (!open) onToggle();
+            onNavigate?.();
+          }}
+          className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pl-1 pr-2 text-left text-sm"
+        >
           <Icon className="size-4 shrink-0 text-primary" />
           <span className="truncate">{project.name}</span>
-        </button>
+        </Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button

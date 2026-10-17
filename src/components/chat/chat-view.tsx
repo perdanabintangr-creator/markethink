@@ -29,6 +29,7 @@ import { ChatMessage, messageToText } from "./message";
 import { buildQuotedMessage } from "@/lib/quote";
 import { Composer, type PendingAttachment } from "./composer";
 import { ModelSelector, type TierOption } from "./model-selector";
+import { ProjectHome, type ProjectHomeData } from "./project-home";
 import { QuickStarts, type QuickStart } from "./quick-starts";
 import { QuotaDialog } from "./quota-dialog";
 
@@ -46,6 +47,7 @@ export function ChatView({
   initialShareToken,
   toolRun = null,
   initialGenerating = false,
+  project = null,
 }: {
   chatId: string;
   initialMessages: MtMessage[];
@@ -61,6 +63,8 @@ export function ChatView({
   toolRun?: { rootId: string; tool: string } | null;
   /** Chat dibuka saat AI masih menjawab (mis. user sempat pindah chat) → jawaban dimuat otomatis begitu selesai. */
   initialGenerating?: boolean;
+  /** Chat baru dibuka dari sebuah project → tampil halaman depan project (seperti ChatGPT/Claude Projects). */
+  project?: ProjectHomeData | null;
 }) {
   const { t, lang, user, workspaces, allowedTiers, personaRole } = useApp();
   const [tier, setTier] = useState<TierChoice>(() => pickTierChoice(initialTier, allowedTiers));
@@ -339,7 +343,7 @@ export function ChatView({
     if (q.research) setResearch(true);
     setPrefill({ text: q.prompt[lang], key: Date.now() });
   };
-  const composer = (extra: { autoFocus?: boolean } = {}) => (
+  const composer = (extra: { autoFocus?: boolean; placeholder?: string } = {}) => (
     <Composer
       onSend={(text, files) => {
         setPrefill(null);
@@ -354,6 +358,7 @@ export function ChatView({
       onClearQuote={() => setQuote(null)}
       prefill={prefill}
       autoFocus={extra.autoFocus}
+      placeholder={extra.placeholder}
     />
   );
   const disclaimer = <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{t.disclaimer}</p>;
@@ -436,7 +441,27 @@ export function ChatView({
           }}
           className="relative min-h-0 flex-1 overflow-y-auto"
         >
-          {messages.length === 0 ? (
+          {messages.length === 0 && project && project.id === workspaceId && !activeAgent ? (
+            <ProjectHome
+              project={project}
+              composer={composer({ autoFocus: true, placeholder: `Chat baru di ${project.name}…` })}
+              extras={
+                <div className="mt-3">
+                  <QuickStarts
+                    lang={lang}
+                    onPick={pickQuickStart}
+                    role={personaRole}
+                    onTemplate={(tpl) => {
+                      if (tpl.research) setResearch(true);
+                      setPrefill({ text: tpl.prompt, key: Date.now() });
+                    }}
+                    compact
+                  />
+                  <div className="mt-2">{disclaimer}</div>
+                </div>
+              }
+            />
+          ) : messages.length === 0 ? (
             <div className="mx-auto flex min-h-full max-w-3xl flex-col justify-center px-3 py-8 sm:px-4">
               <div className="mb-6 text-center">
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">

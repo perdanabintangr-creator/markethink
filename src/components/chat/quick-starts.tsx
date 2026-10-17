@@ -105,16 +105,20 @@ export function QuickStarts({
   onPick,
   role,
   onTemplate,
+  compact = false,
 }: {
   lang: Lang;
   onPick: (q: QuickStart) => void;
   role?: string | null;
   onTemplate?: (t: Template) => void;
+  /** Versi ringkas (halaman project): template + pintasan pembuat konten saja. */
+  compact?: boolean;
 }) {
+  const items = compact ? QUICK_STARTS.filter((q) => ["caption", "carousel", "pptx", "product-photo"].includes(q.id)) : QUICK_STARTS;
   return (
-    <div className="flex flex-wrap justify-center gap-2">
+    <div className={compact ? "flex flex-wrap gap-2" : "flex flex-wrap justify-center gap-2"}>
       {onTemplate && <TemplateButton role={role} onPick={onTemplate} />}
-      {QUICK_STARTS.map((q) => {
+      {items.map((q) => {
         const Icon = q.icon;
         return (
           <button
