@@ -68,6 +68,7 @@ const PRESENTATION_JSON_SCHEMA = z.toJSONSchema(presentationSchema) as Parameter
 const FREE_MAX_OUTPUT_TOKENS = 2_000;
 const FREE_HISTORY_WINDOW = 10;
 /** Ruang jawaban minimal untuk membuat PPT (semua slide dikirim dalam satu panggilan tool). */
+const DECK_MAX_SEARCHES = 2;
 const DECK_MIN_OUTPUT_TOKENS = 16_000;
 
 /** Gemini memakai free tier (tanpa billing) kecuali env GOOGLE_BILLING_ENABLED diisi → biaya Rp0. */
@@ -341,7 +342,8 @@ export async function POST(req: Request) {
       const serperOn = researchAllowed && webSearchEnabled && tier.webSearches > 0 && serperEnabled() && !paidSearchCapped;
       const webSearchOn =
         !serperOn && researchAllowed && webSearchEnabled && tier.webSearches > 0 && Boolean(process.env.ANTHROPIC_API_KEY) && !paidSearchCapped;
-      const maxSearches = research ? tier.webSearches + 2 : tier.webSearches;
+      // PPT: maks 2 pencarian (founder ACC 17 Okt) — tiap hasil riset ikut dibaca ulang AI, 4× riset menambah ±Rp1.500–2.000/deck.
+      const maxSearches = Math.min(research ? tier.webSearches + 2 : tier.webSearches, deckRequest ? DECK_MAX_SEARCHES : Infinity);
       let nextSourceId = sources.length;
       // Google Search bawaan Gemini hanya bila Serper tidak ada (Gemini tidak bisa mencampur alat bawaan & alat kita; kuota gratisnya juga cepat habis).
       const googleSearchOn = !serperOn && researchAllowed && webSearchEnabled && preferFree && !paidSearchCapped;
@@ -429,7 +431,7 @@ export async function POST(req: Request) {
             : webSearchOn
             ? {
                 web_search: anthropic.tools.webSearch_20250305({
-                  maxUses: research ? tier.webSearches + 2 : tier.webSearches,
+                  maxUses: maxSearches,
                   userLocation: { type: "approximate", country: "ID", timezone: "Asia/Jakarta" },
                 }),
               }

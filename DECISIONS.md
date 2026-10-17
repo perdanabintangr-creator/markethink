@@ -308,3 +308,4 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   tampil persis sama di WPS, PowerPoint, Google Slides, iPhone/Android. Versi teks bisa diedit tetap tersedia
   ("… (bisa diedit).pptx", font ditanam). PDF tetap vektor (pdf-lib, font tertanam).
 - (17 Okt, founder) Cukup satu tombol "Unduh PPT" = versi bisa diedit (font ditanam); PPT versi gambar tidak dibuat lagi (kode render-image disimpan). PDF untuk tampilan persis.
+- (17 Okt, founder ACC) Permintaan PPT: riset web maks 2× per pesan (`DECK_MAX_SEARCHES`), termasuk riset awal.
