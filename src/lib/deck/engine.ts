@@ -160,6 +160,12 @@ export function imageStylePrompt(input: Pick<PresentationInput, "theme" | "desig
   return IMAGE_STYLE_PROMPT[style] ?? IMAGE_STYLE_PROMPT.photo;
 }
 
+/** Maskot / ilustrasi lucu → foto slide perlu KV sebagai acuan agar karakternya tidak berubah bentuk. */
+export function deckNeedsReference(input: Pick<PresentationInput, "theme" | "design">) {
+  const style = (input.design?.image_style as ImageStyle | undefined) ?? moodOf(input).imageStyle;
+  return style === "3d" || style === "flat" || moodOf(input).id === "playful" || /maskot|mascot|karakter|character/i.test(input.design?.cast ?? "");
+}
+
 const THEME_MOOD: Record<string, MoodId> = { midnight: "modern", clean: "minimal", sunset: "warm", forest: "warm", ocean: "modern", luxe: "editorial", coral: "playful", corporate: "corporate" };
 export const moodOf = (input: Pick<PresentationInput, "theme" | "design">): DeckMood =>
   DECK_MOODS[(input.design?.mood as MoodId) ?? THEME_MOOD[input.theme ?? ""] ?? "modern"] ?? DECK_MOODS.modern;
@@ -452,6 +458,7 @@ class Composer {
       const pw = W * 0.44;
       const x = side === "right" ? W - pw : 0;
       this.img(key, x, 0, pw, H);
+      this.rect(x, 0, pw, H, { fill: pal.accent, fo: 0.06 });
       this.line(side === "right" ? x : pw, 0, side === "right" ? x : pw, H, pal.accent, 2.5);
       this.ax = side === "right" ? M : pw + 0.6;
       this.aw = side === "right" ? W - pw - M - 0.55 : W - M - this.ax;
@@ -468,6 +475,8 @@ class Composer {
       const inset = mood.treatment === "frame" && mood.decor !== "none" ? Math.max(0.12, r * 0.35) : 0;
       if (inset) this.rect(x, y, fw, fh, { fill: pal.dark ? mix(pal.surface, pal.text, 0.06) : "FFFFFF", r });
       this.img(key, x + inset, y + inset, fw - inset * 2, fh - inset * 2);
+      // Lapisan warna tipis agar semua foto terasa satu seri.
+      this.rect(x + inset, y + inset, fw - inset * 2, fh - inset * 2, { fill: pal.accent, fo: 0.06 });
       if (!inset) this.rect(x, y, fw, fh, { line: pal.text, lo: 0.12, lw: 0.75 });
       this.ax = side === "right" ? M : x + fw + 0.6;
       this.aw = side === "right" ? x - M - 0.5 : W - M - this.ax;

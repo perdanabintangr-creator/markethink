@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { presentationSchema } from "@/lib/pptx";
-import { buildScene, resolvePalette, signatureImageRequests } from "@/lib/deck/engine";
+import { buildScene, deckNeedsReference, resolvePalette, signatureImageRequests } from "@/lib/deck/engine";
 import { renderScenePdf, renderScenePptx } from "@/lib/deck/render";
 import { MOOD_IDS } from "@/lib/deck/moods";
 import { SCENE_H, SCENE_W } from "@/lib/deck/scene";
@@ -79,4 +79,11 @@ describe("Signature mengikuti mood", () => {
     const title = scene.slides[1].items.find((it) => it.t === "text" && it.font === "head");
     expect(title && title.t === "text" && title.x + title.w).toBeLessThan(SCENE_W * 0.62);
   });
+});
+
+it("foto slide pakai Muse (tanpa acuan) kecuali maskot / ilustrasi lucu", () => {
+  expect(deckNeedsReference({ design: { mood: "tech", kv: "x" } })).toBe(false);
+  expect(deckNeedsReference({ design: { mood: "tech", kv: "x", image_style: "3d" } })).toBe(true);
+  expect(deckNeedsReference({ design: { mood: "playful", kv: "x" } })).toBe(true);
+  expect(deckNeedsReference({ design: { mood: "warm", kv: "x", cast: "brand mascot Popo, a round chocolate bean" } })).toBe(true);
 });

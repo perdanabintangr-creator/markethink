@@ -14,7 +14,7 @@ import {
   type DeckImages,
   type PresentationInput,
 } from "@/lib/pptx";
-import { buildScene, imageStylePrompt, signatureImageRequests, type SignatureImageRequest } from "@/lib/deck/engine";
+import { buildScene, deckNeedsReference, imageStylePrompt, resolvePalette, signatureImageRequests, type SignatureImageRequest } from "@/lib/deck/engine";
 import { renderScenePdf, renderScenePptx } from "@/lib/deck/render";
 import { sanitizeFileName } from "@/lib/files";
 import { readToolResult } from "@/lib/addons/chat-context";
@@ -365,6 +365,7 @@ const SIGNATURE_GUIDE =
   "F&B: makanan/minuman, bahan, meja, uap, cahaya hangat; lucu: karakter/maskot imut, warna pastel) — semua gambar dibuat dari KV ini " +
   "sehingga tokoh & suasananya sama. (d) `design.palette` dari KV & brand: terang & ceria untuk lucu/F&B/beauty, gelap hanya bila temanya " +
   "malam/teknologi/premium gelap; kontras teks tinggi. (e) Isi `design.cover_kicker`, `design.tagline`, `design.presenter` bila relevan. " +
+  "Isi juga `design.cast` = deskripsi tetap 1–2 tokoh/maskot utama (usia, rambut, pakaian & warnanya, aksesori) bila deck memakai orang/maskot. " +
   "(f) Beri image_prompt pada ± 7 slide terpenting (cards, section, stats, closing, quote, image_text; untuk mood tech/sport/bold/modern " +
   "juga timeline & comparison): tulis ADEGAN-nya saja dengan elemen khas topik (siapa/apa, melakukan apa, di mana) — gaya & komposisi " +
   "diatur otomatis. Untuk cards 2 kartu pada mood tech/sport/bold/modern, gambarkan dua subjek kiri-kanan. (g) Teks sangat ringkas: " +
@@ -379,7 +380,13 @@ async function makeSignatureImages(ctx: ToolCtx, input: PresentationInput, reqs:
   const credit = await consumeCredits(ctx.userId, toGenerate.length * DECK_IMAGE_CREDIT_COST, "deck_images", { chatId: ctx.chatId });
   if (!credit.ok) return images;
   const world = input.design?.kv?.trim();
+  const cast = input.design?.cast?.trim();
   const look = imageStylePrompt(input);
+  // Hybrid (founder ACC 17 Okt): KV dibuat model utama, foto slide pakai Muse (hemat ±70%) dengan "naskah" tokoh & warna yang dikunci.
+  // Maskot/ilustrasi lucu tetap memakai KV sebagai acuan agar karakternya tidak berubah bentuk.
+  const useRefs = deckNeedsReference(input);
+  const pal = resolvePalette(input);
+  const grade = `Consistent color grade across the series: dominant tones #${pal.bg} and #${pal.surface}, accent light #${pal.accent} and #${pal.accent2}.`;
   const NO_TEXT = "No text, no words, no letters, no logos, no watermark.";
   let failed = 0;
   const run = async (r: SignatureImageRequest, refs: { mime: string; data: string }[]) => {
@@ -389,7 +396,11 @@ async function makeSignatureImages(ctx: ToolCtx, input: PresentationInput, reqs:
         `${look} ${NO_TEXT}`
       : r.product
         ? `Premium product shot: ${r.prompt}. ${r.composition} ${world ? `Mood: ${world}. ` : ""}${look} ${NO_TEXT}`
-        : `${world ? `${world}. ` : ""}${r.prompt}. ${r.composition} Premium campaign key visual. ${look} ${NO_TEXT}`;
+        : r.key === "cover"
+          ? `${world ? `${world}. ` : ""}${cast ? `Main characters: ${cast}. ` : ""}${r.prompt}. ${r.composition} Premium campaign key visual. ${grade} ${look} ${NO_TEXT}`
+          : `Part of one consistent campaign photo series. ${world ? `World: ${world}. ` : ""}` +
+            `${cast ? `Recurring characters (identical look, hair, wardrobe and colors in every image): ${cast}. ` : ""}` +
+            `Scene: ${r.prompt}. ${r.composition} Camera: medium-wide, side, over-the-shoulder or back view; avoid close-up faces. ${grade} ${look} ${NO_TEXT}`;
     try {
       const img = await Promise.race([
         generateImage(prompt, r.aspect, refs, { budget: !refs.length && r.key !== "cover" }),
@@ -408,8 +419,8 @@ async function makeSignatureImages(ctx: ToolCtx, input: PresentationInput, reqs:
   const kvReq = toGenerate.find((r) => r.key === "cover");
   if (kvReq) await run(kvReq, []);
   const kv = images.cover;
-  const refs = kv ? [{ mime: kv.mime, data: kv.data }] : [];
-  // 2) Foto slide lain paralel, mengacu ke KV (foto produk tanpa acuan agar produknya tetap bersih).
+  const refs = kv && useRefs ? [{ mime: kv.mime, data: kv.data }] : [];
+  // 2) Foto slide lain paralel: Muse dengan naskah terkunci, atau mengacu ke KV untuk maskot/ilustrasi (foto produk tanpa acuan).
   await Promise.all(toGenerate.filter((r) => r !== kvReq).map((r) => run(r, r.product ? [] : refs)));
   if (failed) await refundCredits(ctx.userId, failed * DECK_IMAGE_CREDIT_COST, "deck_images_failed");
   return images;

@@ -148,6 +148,9 @@ export const presentationSchema = z.object({
         .enum(IMAGE_STYLES)
         .optional()
         .describe("Gaya gambar: photo (foto nyata), 3d (ilustrasi 3D lucu/imut), flat (ilustrasi vektor ceria), watercolor (cat air lembut). Ikuti permintaan user (mis. 'lucu' → 3d/flat)"),
+      cast: short(400)
+        .optional()
+        .describe("Deskripsi TETAP 1–2 tokoh/maskot utama (bahasa Inggris: usia, rambut, pakaian & warnanya, aksesori) — dipakai sama persis di semua gambar agar konsisten"),
       cover_kicker: short(70).optional().describe("Label kecil di atas judul cover, mis. 'ESPORTS TOURNAMENT · AI VIDEO COMPETITION'"),
       tagline: short(80).optional().describe("Tagline pendek di cover, mis. 'Play the Game. Create the Future.'"),
       presenter: short(60).optional().describe("Mis. 'Presented by Partai Demokrat'"),

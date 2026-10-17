@@ -297,3 +297,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Deck Director (Promax) tadi: ±Rp14.800 (Fable 5.1 $0,626 = 7,1 rb token tulis + 21 rb token cache write; 8 foto $0,27).
 - Permintaan PPT di otak Director kini ditulis Opus 5.5 (`routeTier(..., { deck: true })` melewati Fable); chat biasa tetap Fable.
   Desain tetap dari mesin deck. Balasan setelah PPT jadi maks 4 baris (tanpa tabel/daftar slide). Target ±Rp7.500–8.500/deck.
+- (17 Okt, founder ACC hybrid) Foto deck Signature: KV/cover tetap model utama (Imagen/Gemini), 7 foto slide pakai Meta Muse (±Rp165)
+  dengan naskah terkunci (`design.kv` + `design.cast` tokoh tetap + color grade dari palet, kamera tidak close-up wajah) + lapisan warna
+  seragam di mesin deck. Maskot / ilustrasi 3D-flat / playful tetap memakai KV sebagai acuan (Gemini). Target ±Rp5.300/deck.
