@@ -62,7 +62,7 @@ export function ChatView({
   /** Chat dibuka saat AI masih menjawab (mis. user sempat pindah chat) → jawaban dimuat otomatis begitu selesai. */
   initialGenerating?: boolean;
 }) {
-  const { t, lang, user, workspaces, allowedTiers } = useApp();
+  const { t, lang, user, workspaces, allowedTiers, personaRole } = useApp();
   const [tier, setTier] = useState<TierChoice>(() => pickTierChoice(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
@@ -447,7 +447,15 @@ export function ChatView({
               {composer({ autoFocus: true })}
               {!activeAgent && (
                 <div className="mt-4">
-                  <QuickStarts lang={lang} onPick={pickQuickStart} />
+                  <QuickStarts
+                    lang={lang}
+                    onPick={pickQuickStart}
+                    role={personaRole}
+                    onTemplate={(tpl) => {
+                      if (tpl.research) setResearch(true);
+                      setPrefill({ text: tpl.prompt, key: Date.now() });
+                    }}
+                  />
                 </div>
               )}
               <div className="mt-3">{disclaimer}</div>

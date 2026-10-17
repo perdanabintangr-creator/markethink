@@ -310,3 +310,15 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - (17 Okt, founder) Cukup satu tombol "Unduh PPT" = versi bisa diedit (font ditanam); PPT versi gambar tidak dibuat lagi (kode render-image disimpan). PDF untuk tampilan persis.
 - (17 Okt, founder ACC) Permintaan PPT: riset web maks 2× per pesan (`DECK_MAX_SEARCHES`), termasuk riset awal.
 - (17 Okt) Foto deck dikompres (maks 1600 px, JPEG q84; PNG transparan tetap PNG) — penyimpanan per deck Signature ±6–8 MB → ±3 MB.
+
+## 4 fitur baru (17 Okt 2026, founder ACC)
+1. **Carousel & poster** — tool `create_carousel` (1–10 slide; 4:5 / 1:1 / 9:16) memakai mesin desain Signature (mood, font, KV) di
+   kanvas potret: JPEG 1080 px per slide + ZIP + PDF + caption siap posting; semua paket (foto AI sesuai paket, maks 6; Free tanpa foto).
+   Kredit 2 + foto; batas harian Free ikut kuota PPT ("PPT/carousel").
+2. **Brand Kit visual** di Workspace: logo (upload), warna utama/kedua, gaya desain, akun sosmed (jsonb `brand_kit`). Otomatis dipakai:
+   warna & gaya menimpa pilihan AI di PPT Signature/carousel, `brand_color` PPT standar, logo di cover + pojok slide/kaki carousel,
+   warna brand sebagai aksen di generate_image (tanpa acuan).
+3. **Foto Produk Studio** — tool `product_photo`: foto HP → foto katalog (6 gaya), 1–4 variasi, produk dijaga sama (Gemini + acuan);
+   kredit & batas harian = gambar; Free 1 variasi per permintaan.
+4. **Template per peran** — tombol "Template" di layar chat (UMKM, Marketing Officer, Agency, Freelancer; 6 template masing-masing,
+   tab awal sesuai peran onboarding) + chip baru "Carousel / poster" & "Foto produk studio".

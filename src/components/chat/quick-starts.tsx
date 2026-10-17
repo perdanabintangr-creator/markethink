@@ -1,6 +1,7 @@
 "use client";
 
-import { CalendarDays, Image as ImageIcon, MessageSquareText, Presentation, Rocket, TrendingUp, UserRound, type LucideIcon } from "lucide-react";
+import { CalendarDays, Camera, GalleryHorizontalEnd, Image as ImageIcon, MessageSquareText, Presentation, Rocket, TrendingUp, UserRound, type LucideIcon } from "lucide-react";
+import { TemplateButton, type Template } from "./template-library";
 import type { Lang } from "@/lib/i18n/dict";
 
 export interface QuickStart {
@@ -70,6 +71,24 @@ export const QUICK_STARTS: QuickStart[] = [
     },
   },
   {
+    id: "carousel",
+    icon: GalleryHorizontalEnd,
+    label: { id: "Carousel / poster", en: "Carousel / poster" },
+    prompt: {
+      id: "Buatkan carousel Instagram [6] slide tentang [topik] untuk [brand], format [4:5], gaya [ceria/elegan/profesional].",
+      en: "Make a [6]-slide Instagram carousel about [topic] for [brand], [4:5] format, [playful/elegant/professional] style.",
+    },
+  },
+  {
+    id: "product-photo",
+    icon: Camera,
+    label: { id: "Foto produk studio", en: "Product photo studio" },
+    prompt: {
+      id: "Ubah foto produk yang saya lampirkan jadi foto katalog [studio putih/lifestyle/flatlay], 2 variasi.",
+      en: "Turn the product photo I attached into a [white studio/lifestyle/flat lay] catalog photo, 2 variations.",
+    },
+  },
+  {
     id: "image",
     icon: ImageIcon,
     label: { id: "Buat gambar", en: "Make an image" },
@@ -81,9 +100,20 @@ export const QUICK_STARTS: QuickStart[] = [
 ];
 
 /** Chip jalan pintas di layar chat kosong: mengisi kotak chat dengan kerangka perintah. */
-export function QuickStarts({ lang, onPick }: { lang: Lang; onPick: (q: QuickStart) => void }) {
+export function QuickStarts({
+  lang,
+  onPick,
+  role,
+  onTemplate,
+}: {
+  lang: Lang;
+  onPick: (q: QuickStart) => void;
+  role?: string | null;
+  onTemplate?: (t: Template) => void;
+}) {
   return (
     <div className="flex flex-wrap justify-center gap-2">
+      {onTemplate && <TemplateButton role={role} onPick={onTemplate} />}
       {QUICK_STARTS.map((q) => {
         const Icon = q.icon;
         return (

@@ -53,7 +53,13 @@ interface ToolPart {
 }
 
 type Block = { kind: "text"; text: string } | { kind: "tool"; part: ToolPart };
-const RENDERED_TOOLS = new Set(["tool-generate_image", "tool-create_presentation", "tool-read_tool_result"]);
+const RENDERED_TOOLS = new Set([
+  "tool-generate_image",
+  "tool-create_presentation",
+  "tool-read_tool_result",
+  "tool-create_carousel",
+  "tool-product_photo",
+]);
 
 /** Urutan tampilan jawaban: teks (potongan bersebelahan digabung) diselingi hasil gambar/PPT. */
 function assistantBlocks(m: MtMessage): Block[] {
@@ -266,6 +272,10 @@ export function ChatMessage({
             <ReadResultChip key={b.part.toolCallId ?? i} part={b.part} />
           ) : b.part.type === "tool-generate_image" ? (
             <ImageResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
+          ) : b.part.type === "tool-create_carousel" ? (
+            <CarouselResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
+          ) : b.part.type === "tool-product_photo" ? (
+            <ProductPhotoResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
           ) : (
             <DeckResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
           ),
@@ -435,6 +445,105 @@ function ImageResult({ part, streaming }: { part: ToolPart; streaming: boolean }
         <Download className="size-3.5" /> {t.download}
       </a>
     </figure>
+  );
+}
+
+/** Carousel / poster: deretan slide (JPEG siap posting), unduh ZIP & PDF, salin caption. */
+function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
+  const [copiedCaption, setCopiedCaption] = useState(false);
+  if (part.state === "output-error") return <ToolError message="Gagal membuat carousel." />;
+  if (part.state !== "output-available" || !part.output)
+    return <ToolPending label={part.state === "input-streaming" ? "Sedang menyusun isi carousel…" : "Sedang mendesain slide & membuat foto… (±30–90 detik)"} streaming={streaming} />;
+  if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat carousel."} />;
+  const o = part.output;
+  const slides = (o.slides as string[] | undefined) ?? [];
+  const format = String(o.format ?? "4:5");
+  const ratio = format === "1:1" ? "1 / 1" : format === "9:16" ? "9 / 16" : "4 / 5";
+  const caption = o.caption ? String(o.caption) : "";
+  const single = slides.length === 1;
+  return (
+    <div className="max-w-xl overflow-hidden rounded-xl border bg-card">
+      <div className="flex gap-2 overflow-x-auto bg-muted/40 p-3">
+        {slides.map((src, i) => (
+          <a key={src} href={`${src}?download=1`} title={`Unduh slide ${i + 1}`} className="shrink-0" style={{ width: single ? 220 : 150 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- file pribadi via /api/attachments */}
+            <img src={src} alt={`Slide ${i + 1}`} loading="lazy" className="w-full rounded-md object-cover shadow-sm ring-1 ring-black/5" style={{ aspectRatio: ratio }} />
+          </a>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-3 border-t px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{String(o.title)}</p>
+          <p className="text-xs text-muted-foreground">
+            {single ? "Poster" : `Carousel · ${slides.length} slide`} · {format} · JPEG + PDF
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {o.sceneUrl ? (
+            <ScenePreviewButton
+              sceneUrl={String(o.sceneUrl)}
+              images={o.previewImages as Record<string, string> | undefined}
+              pdfUrl={o.pdfUrl ? String(o.pdfUrl) : undefined}
+              pptxUrl={String(o.url)}
+              downloadLabel="Unduh semua (ZIP)"
+              title={String(o.title)}
+            />
+          ) : null}
+          <Button asChild size="sm" variant="outline">
+            <a href={`${String(o.pdfUrl)}?download=1`}>
+              <FileText /> PDF
+            </a>
+          </Button>
+          <Button asChild size="sm">
+            <a href={`${single ? slides[0] : String(o.url)}?download=1`}>
+              <Download /> {single ? "Unduh JPEG" : "Unduh semua"}
+            </a>
+          </Button>
+        </div>
+      </div>
+      {caption && (
+        <div className="border-t px-4 py-3">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted-foreground">Caption siap posting</p>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              onClick={async () => {
+                await navigator.clipboard.writeText(caption);
+                setCopiedCaption(true);
+                setTimeout(() => setCopiedCaption(false), 1500);
+              }}
+            >
+              {copiedCaption ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} {copiedCaption ? "Tersalin" : "Salin"}
+            </button>
+          </div>
+          <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-sm">{caption}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Foto Produk Studio: hasil beberapa variasi foto katalog. */
+function ProductPhotoResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
+  if (part.state === "output-error") return <ToolError message="Gagal membuat foto produk." />;
+  if (part.state !== "output-available" || !part.output) return <ToolPending label="Sedang memotret ulang produk kamu di studio… (±20–40 detik)" streaming={streaming} />;
+  if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat foto produk."} />;
+  const images = (part.output.images as { attachmentId: string; url: string }[] | undefined) ?? [];
+  return (
+    <div className="grid max-w-xl grid-cols-2 gap-2">
+      {images.map((img, i) => (
+        <figure key={img.attachmentId} className="space-y-1">
+          <a href={img.url} target="_blank" rel="noopener noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element -- file pribadi via /api/attachments */}
+            <img src={img.url} alt={`Foto produk ${i + 1}`} loading="lazy" className="w-full rounded-xl border bg-muted object-cover" />
+          </a>
+          <a href={`${img.url}?download=1`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <Download className="size-3.5" /> Unduh
+          </a>
+        </figure>
+      ))}
+    </div>
   );
 }
 

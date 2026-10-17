@@ -16,7 +16,12 @@ import {
 } from "@/lib/pptx";
 import { buildScene, deckNeedsReference, imageStylePrompt, resolvePalette, signatureImageRequests, type SignatureImageRequest } from "@/lib/deck/engine";
 import { renderScenePdf, renderScenePptx } from "@/lib/deck/render";
+import { renderSlideImages } from "@/lib/deck/render-image";
+import { buildCarouselScene, carouselImageRequests, carouselSchema } from "@/lib/deck/carousel";
+import JSZip from "jszip";
 import { sanitizeFileName } from "@/lib/files";
+import type { BrandVisual } from "@/lib/ai/prompt";
+import { MOOD_IDS, type MoodId } from "@/lib/deck/moods";
 import { readToolResult } from "@/lib/addons/chat-context";
 
 export const IMAGE_CREDIT_COST = 6; // ±Rp555 modal per gambar (1 kredit ≈ Rp100)
@@ -35,6 +40,41 @@ const PREMIUM_ART_DIRECTION =
   "Execute at premium creative-agency quality: refined composition, rich detail, polished lighting and color grading, faithful to the requested style.";
 /** Perkiraan biaya per gambar (USD) bila provider tidak melaporkan biaya nyata. */
 const IMAGE_COST_USD = 0.04;
+
+export const CAROUSEL_CREDIT_COST = 2;
+/** Maks foto AI per carousel (selain foto milik user). */
+const CAROUSEL_IMAGE_MAX = 6;
+
+export type CarouselToolOutput =
+  | {
+      ok: true;
+      attachmentId: string;
+      url: string;
+      title: string;
+      format: string;
+      slideCount: number;
+      /** JPEG tiap slide (siap upload ke Instagram/TikTok). */
+      slides: string[];
+      pdfUrl: string;
+      sceneUrl: string;
+      previewImages?: Record<string, string>;
+      caption?: string;
+    }
+  | { ok: false; error: string };
+
+export type ProductPhotoOutput =
+  | { ok: true; images: { attachmentId: string; url: string }[]; style: string; failed: number }
+  | { ok: false; error: string; hint?: string };
+
+const PRODUCT_STYLES = {
+  studio_putih: "a clean seamless white studio background, soft diffused light, subtle natural shadow — premium e-commerce catalog photo",
+  studio_warna: "a seamless colored studio backdrop in a color that complements the product, soft studio light — modern catalog style",
+  lifestyle: "a realistic lifestyle scene where the product is naturally used in an Indonesian setting, natural window light",
+  flatlay: "a top-down flat lay on a styled surface with a few relevant props, balanced composition, soft light",
+  outdoor: "an outdoor natural setting, warm golden-hour light, shallow depth of field",
+  premium_gelap: "a dark premium moody backdrop, dramatic rim light and reflections — luxury advertising look",
+} as const;
+const PRODUCT_ANGLES = ["front three-quarter view", "slightly elevated angle with props", "close-up hero shot", "side view with negative space for text"];
 
 export type ImageToolOutput =
   | { ok: true; attachmentId: string; url: string; prompt: string; aspectRatio: string }
@@ -74,8 +114,10 @@ interface ToolCtx {
   deckImageMax?: number;
   /** Pro & Promax: gambar baru diberi arahan visual premium. */
   premiumVisuals?: boolean;
-  /** Gaya deck sesuai paket (Promax = sinematik). */
+  /** Gaya deck sesuai paket (Promax = Signature). */
   deckStyle?: DeckStyle;
+  /** Identitas visual dari Brand Kit project aktif (warna, logo, gaya, akun sosmed). */
+  brand?: BrandVisual | null;
   /** Pakai model gambar hemat (Muse) dulu untuk gambar baru — kini semua paket. */
   budgetImages?: boolean;
 }
@@ -165,7 +207,10 @@ export function createChatTools(ctx: ToolCtx) {
         if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat gambar. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
         try {
           const refs = await loadReferences(ctx, reference_ids ?? []);
-          const finalPrompt = ctx.premiumVisuals && !refs.length ? `${prompt}\n\n${PREMIUM_ART_DIRECTION}` : prompt;
+          const brandColors = [ctx.brand?.colorPrimary, ctx.brand?.colorSecondary].filter(Boolean).join(" and ");
+          const finalPrompt =
+            (ctx.premiumVisuals && !refs.length ? `${prompt}\n\n${PREMIUM_ART_DIRECTION}` : prompt) +
+            (brandColors && !refs.length ? `\nWhere it fits naturally, use the brand colors ${brandColors} as accent colors.` : "");
           const img = await generateImage(finalPrompt, aspect_ratio, refs, { budget: ctx.budgetImages });
           const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
           const saved = await storeFile(ctx, "images", `markethink-${Date.now()}.${ext}`, img.mime, img.bytes, `Gambar AI: ${prompt}`);
@@ -211,6 +256,7 @@ export function createChatTools(ctx: ToolCtx) {
         try {
           const style = ctx.deckStyle ?? "standard";
           if (style === "signature") return await signatureDeck(ctx, input);
+          if (ctx.brand?.colorPrimary && !input.brand_color) input = { ...input, brand_color: ctx.brand.colorPrimary };
           const images = await makeDeckImages(ctx, input);
           // Slide yang tidak mendapat foto (sesuai paket / gagal dibuat) → layout teks rapi, tanpa kotak foto kosong.
           const deck = fitDeckToImages(input, (key) => Boolean(images[key]));
@@ -245,6 +291,116 @@ export function createChatTools(ctx: ToolCtx) {
           await refundCredits(ctx.userId, PPTX_CREDIT_COST, "presentation_failed");
           return { ok: false, error: `Gagal membuat file PPT: ${errText(err)}` };
         }
+      },
+    }),
+
+    create_carousel: tool({
+      description:
+        "Buat carousel Instagram/TikTok (2–10 slide) atau poster/feed tunggal (1 slide) berdesain agency, siap posting: file JPEG per slide + PDF. " +
+        "Pakai setiap kali user minta carousel, konten slide IG/LinkedIn, poster, flyer, feed, atau konten edukasi/promo bergambar berisi teks. " +
+        "(Untuk gambar/ilustrasi TANPA teks tetap pakai generate_image.) " +
+        "ATURAN: slide 1 = hook yang menghentikan scroll (judul ≤ 8 kata, janji manfaat/angka/pertanyaan); slide tengah 1 ide per slide " +
+        "(point/list/stat/quote); slide terakhir = cta (ajakan jelas: simpan, follow, beli, DM). Teks sangat ringkas & besar — maks 2 kalimat per slide. " +
+        "Format default 4:5 (feed IG); 9:16 untuk Story/Reels/TikTok; 1:1 bila diminta. WAJIB isi `design` seperti PPT (mood sesuai gaya user & topik, " +
+        "kv, palette, image_style; 'lucu' → playful + 3d). Beri image_prompt pada slide 1 (dan maks 2 slide lain bila membantu); foto produk user → image_id. " +
+        "Isi `caption` siap posting (hook, isi singkat, CTA, 5–10 hashtag relevan). Setelah jadi, balas maks 3 baris; jangan mengulang isi slide.",
+      inputSchema: carouselSchema,
+      execute: async (raw): Promise<CarouselToolOutput> => {
+        const limit = await ctx.dailyLimit?.("pptx");
+        if (limit) return { ok: false, error: limit };
+        const credit = await consumeCredits(ctx.userId, CAROUSEL_CREDIT_COST, "carousel", { chatId: ctx.chatId });
+        if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat carousel. Sampaikan ke user tanpa menyebut angka." };
+        try {
+          const input = applyBrand(raw, ctx.brand);
+          const design = { theme: input.theme ?? ("midnight" as const), brand_color: input.brand_color, design: input.design };
+          const reqs = [
+            ...carouselImageRequests(input, Math.min(ctx.deckImageMax ?? 0, CAROUSEL_IMAGE_MAX)),
+            ...(ctx.brand?.logoId ? [{ key: "logo", aspect: "1:1", imageId: ctx.brand.logoId, composition: "" }] : []),
+          ];
+          const images = await makeSignatureImages(ctx, design, reqs);
+          const dims = Object.fromEntries(Object.entries(images).map(([k, v]) => [k, { width: v.width, height: v.height }]));
+          const scene = buildCarouselScene(input, dims, { handle: ctx.brand?.handle, brandName: ctx.brand?.name });
+          const base = sanitizeFileName(input.title).slice(0, 50) || "carousel";
+          const [jpgs, pdfBytes] = await Promise.all([renderSlideImages(scene, images), renderScenePdf(scene, images, input.title)]);
+          const zip = new JSZip();
+          jpgs.forEach((j, i) => zip.file(`${base}-${String(i + 1).padStart(2, "0")}.jpg`, j));
+          const zipBytes = await zip.generateAsync({ type: "uint8array" });
+          const [zipFile, pdf, sceneFile, previewImages, ...slideFiles] = await Promise.all([
+            storeFile(ctx, "presentations", `${base}.zip`, "application/zip", zipBytes, input.slides.map((sl) => sl.title).join(" | ")),
+            storeFile(ctx, "presentations", `${base}.pdf`, "application/pdf", pdfBytes, null),
+            storeFile(ctx, "presentations", `${base}.scene.json`, "application/json", new TextEncoder().encode(JSON.stringify(scene)), null),
+            deckPreviewUrls(ctx, presentationLike(input), images, reqs),
+            ...jpgs.map((j, i) => storeFile(ctx, "images", `${base}-${String(i + 1).padStart(2, "0")}.jpg`, "image/jpeg", new Uint8Array(j), null)),
+          ]);
+          await logUsage(ctx, { tier: "carousel", credits: CAROUSEL_CREDIT_COST, cost: 0, note: `carousel:${scene.mood}:${input.format}` });
+          return {
+            ok: true,
+            attachmentId: zipFile.id,
+            url: zipFile.url,
+            title: input.title,
+            format: input.format,
+            slideCount: input.slides.length,
+            slides: slideFiles.map((f) => f.url),
+            pdfUrl: pdf.url,
+            sceneUrl: sceneFile.url,
+            previewImages,
+            caption: input.caption,
+          };
+        } catch (err) {
+          console.error("[carousel] gagal", err);
+          await refundCredits(ctx.userId, CAROUSEL_CREDIT_COST, "carousel_failed");
+          return { ok: false, error: `Gagal membuat carousel: ${errText(err)}` };
+        }
+      },
+    }),
+
+    product_photo: tool({
+      description:
+        "Foto Produk Studio: ubah foto produk dari HP milik user menjadi foto katalog/iklan profesional (produk TETAP sama persis). " +
+        "Pakai saat user mengirim foto produk dan minta foto katalog, foto marketplace (Shopee/Tokopedia), foto iklan, ganti background, atau foto lifestyle produk. " +
+        "Butuh id foto produk dari user (lihat '[Gambar dari user: … — id: …]'); bila belum ada, minta user melampirkan foto produknya dulu. " +
+        "Pilih style sesuai permintaan (default studio_putih untuk marketplace). Setelah jadi, balas 1–2 kalimat + saran pemakaian.",
+      inputSchema: z.object({
+        image_id: z.string().uuid().describe("ID foto produk milik user"),
+        style: z.enum(Object.keys(PRODUCT_STYLES) as [keyof typeof PRODUCT_STYLES, ...(keyof typeof PRODUCT_STYLES)[]]).default("studio_putih"),
+        count: z.number().int().min(1).max(4).default(2).describe("Jumlah variasi (1–4)"),
+        aspect_ratio: z.enum(["1:1", "4:5", "9:16", "16:9"]).default("1:1").describe("1:1 untuk marketplace"),
+        notes: z.string().max(300).optional().describe("Arahan tambahan (bahasa Inggris): warna latar, properti, suasana"),
+      }),
+      execute: async ({ image_id, style, count, aspect_ratio, notes }): Promise<ProductPhotoOutput> => {
+        if (ctx.imageBlockedReason) return { ok: false, error: ctx.imageBlockedReason };
+        const limit = await ctx.dailyLimit?.("image");
+        if (limit) return { ok: false, error: limit };
+        // Paket dengan batas harian gambar (Free) cukup 1 variasi per permintaan.
+        const n = ctx.deckImageMax ? count : 1;
+        const refs = await loadReferences(ctx, [image_id]);
+        if (!refs.length) return { ok: false, error: "Foto produk tidak ditemukan. Minta user melampirkan foto produknya lagi." };
+        const credit = await consumeCredits(ctx.userId, n * IMAGE_CREDIT_COST, "image", { chatId: ctx.chatId });
+        if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat foto produk. Sampaikan ke user tanpa menyebut angka." };
+        const results = await Promise.all(
+          Array.from({ length: n }, async (_, k) => {
+            const prompt =
+              "Professional product photography. Keep THE EXACT product from the reference photo unchanged — same shape, proportions, colors, " +
+              "label, logo and all text on the packaging; do not redesign or retype it. Remove the original messy background and phone-photo look. " +
+              `Place the product in ${PRODUCT_STYLES[style]}. Composition: ${PRODUCT_ANGLES[k % PRODUCT_ANGLES.length]}. ` +
+              `${notes ? `${notes}. ` : ""}Photorealistic, sharp focus on the product, high-end commercial quality. No added text, no watermark.`;
+            try {
+              const img = await generateImage(prompt, aspect_ratio, refs);
+              const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
+              const saved = await storeFile(ctx, "images", `foto-produk-${style}-${k + 1}.${ext}`, img.mime, img.bytes, null);
+              await logUsage(ctx, { tier: "image", provider: img.provider, model: img.model, credits: IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD, note: `product:${style}` });
+              return { attachmentId: saved.id, url: saved.url };
+            } catch (err) {
+              console.warn("[product_photo] gagal", errText(err));
+              return null;
+            }
+          }),
+        );
+        const ok = results.filter((r): r is { attachmentId: string; url: string } => Boolean(r));
+        const failed = n - ok.length;
+        if (failed) await refundCredits(ctx.userId, failed * IMAGE_CREDIT_COST, "image_failed");
+        if (!ok.length) return { ok: false, error: "Foto produk gagal dibuat. Coba lagi sebentar lagi." };
+        return { ok: true, images: ok, style, failed };
       },
     }),
   };
@@ -299,7 +455,10 @@ async function deckReadyImage(bytes: Uint8Array, mime: string): Promise<DeckImag
     const sharp = (await import("sharp")).default;
     const img = sharp(Buffer.from(bytes)).rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true });
     const meta = await sharp(Buffer.from(bytes)).metadata();
-    if (meta.hasAlpha && isPng) out = new Uint8Array(await img.png({ compressionLevel: 9 }).toBuffer());
+    if (meta.hasAlpha) {
+      out = new Uint8Array(await img.png({ compressionLevel: 9 }).toBuffer());
+      type = "image/png";
+    }
     else {
       out = new Uint8Array(await img.jpeg({ quality: 84, mozjpeg: true }).toBuffer());
       type = "image/jpeg";
@@ -400,7 +559,11 @@ const SIGNATURE_GUIDE =
   "kicker 2–4 kata, judul ≤ 7 kata yang kuat & sesuai nada user (lucu → ringan & playful), isi kartu 2–3 kalimat pendek, takeaway 1 kalimat.";
 
 /** KV dulu (jadi acuan), lalu foto slide lain dibuat dari KV agar tokoh, tempat & warna konsisten. */
-async function makeSignatureImages(ctx: ToolCtx, input: PresentationInput, reqs: SignatureImageRequest[]): Promise<DeckImages> {
+async function makeSignatureImages(
+  ctx: ToolCtx,
+  input: Pick<PresentationInput, "theme" | "brand_color" | "design">,
+  reqs: SignatureImageRequest[],
+): Promise<DeckImages> {
   const images: DeckImages = {};
   await loadOwnedImages(ctx, reqs, images);
   const toGenerate = reqs.filter((r) => !r.imageId && r.prompt);
@@ -454,8 +617,32 @@ async function makeSignatureImages(ctx: ToolCtx, input: PresentationInput, reqs:
   return images;
 }
 
-async function signatureDeck(ctx: ToolCtx, input: PresentationInput): Promise<PresentationToolOutput> {
-  const reqs = signatureImageRequests(input, ctx.deckImageMax ?? 0);
+/** deckPreviewUrls hanya butuh daftar foto milik user; bentuk carousel cukup dibungkus seperti deck. */
+function presentationLike(input: { title: string }): PresentationInput {
+  return { title: input.title, theme: "midnight", cover_style: "hero", slides: [] } as unknown as PresentationInput;
+}
+
+/** Terapkan Brand Kit: warna brand jadi aksen, gaya desain pilihan user menang atas pilihan AI. */
+export function applyBrand<T extends { brand_color?: string; design?: PresentationInput["design"] }>(input: T, brand?: BrandVisual | null): T {
+  if (!brand) return input;
+  const out = { ...input };
+  if (brand.colorPrimary) out.brand_color = brand.colorPrimary;
+  if (out.design) {
+    const palette = { ...(out.design.palette ?? {}) };
+    if (brand.colorPrimary) palette.accent = brand.colorPrimary;
+    if (brand.colorSecondary) palette.accent2 = brand.colorSecondary;
+    const mood = MOOD_IDS.includes(brand.mood as MoodId) ? (brand.mood as MoodId) : out.design.mood;
+    out.design = { ...out.design, mood, palette };
+  }
+  return out;
+}
+
+async function signatureDeck(ctx: ToolCtx, rawInput: PresentationInput): Promise<PresentationToolOutput> {
+  const input = applyBrand(rawInput, ctx.brand);
+  const reqs = [
+    ...signatureImageRequests(input, ctx.deckImageMax ?? 0),
+    ...(ctx.brand?.logoId ? [{ key: "logo", aspect: "1:1", imageId: ctx.brand.logoId, composition: "" }] : []),
+  ];
   const images = await makeSignatureImages(ctx, input, reqs);
   // Slide produk/galeri/gambar+teks yang tidak mendapat foto → versi teks rapi.
   const deck = fitDeckToImages(input, (key) => Boolean(images[key]));
@@ -540,6 +727,10 @@ export function capabilitiesPrompt(imageBlockedReason: string | null, opts: { we
       ? `- **Membuat gambar:** saat ini TIDAK tersedia untuk user ini (${imageBlockedReason}). Bila diminta, jelaskan singkat lalu tawarkan prompt gambar siap pakai + arahan visual yang detail.`
       : "- **Membuat gambar:** bila user minta dibuatkan gambar/desain/visual/poster/konten feed, panggil tool `generate_image` (jangan hanya mendeskripsikan). Untuk edit/variasi gambar sebelumnya atau gambar dari user, isi `reference_ids` dengan id gambarnya. Gambar persis sesuai permintaan user — jangan menambahkan brand/logo/produk user ke gambar kecuali diminta. Setelah gambar jadi, cukup 1–2 kalimat singkat (mis. konsep visualnya); jangan menambahkan caption atau konten lain kecuali diminta, dan jangan menulis ulang URL gambar.",
     "- **Membuat PPT/slide:** bila user minta presentasi/PPT/deck/slide, panggil tool `create_presentation` dengan isi lengkap dan berkualitas (8–14 slide kecuali diminta lain) dan ikuti aturan desain di deskripsi tool: layout bervariasi (agenda, section, cards+ikon, stats, chart, timeline, comparison, table, quote, closing), teks ringkas, gambar cover, dan speaker notes. Bila ada dokumen terlampir, rangkum & susun slide dari dokumen itu seperti NotebookLM. Setelah file jadi, balas SINGKAT (maks 4 baris): 1 kalimat asumsi utama + 2–3 poin yang perlu user sesuaikan. JANGAN membuat tabel atau mengulang daftar/isi slide (sudah tampil di kartu PPT).",
+    "- **Carousel & poster:** bila user minta carousel IG/TikTok/LinkedIn, poster, flyer, atau konten feed berisi teks, panggil `create_carousel` (bukan generate_image) — hasilnya file JPEG per slide + PDF + caption siap posting.",
+    imageBlockedReason
+      ? ""
+      : "- **Foto Produk Studio:** bila user mengirim foto produk dan minta foto katalog/marketplace/iklan/ganti background, panggil `product_photo` dengan id fotonya (produk dijaga sama persis).",
     "- Jika tool mengembalikan error, sampaikan ke user dengan jujur dan singkat, lalu tawarkan alternatif.",
   ].join("\n");
 }

@@ -18,7 +18,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/lib/credits";
 import { routeTier } from "@/lib/ai/router";
-import { buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
+import { brandVisualOf, buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
 import { clampToSchema } from "@/lib/schema-clamp";
 import { presentationSchema } from "@/lib/pptx";
@@ -38,6 +38,7 @@ import {
   summarizeToolParts,
   withCacheBreakpoints,
 } from "@/lib/chat-server";
+import { carouselSchema } from "@/lib/deck/carousel";
 import { deckImageMaxFor, deckStyleFor, premiumVisualsFor, capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
 import { imageGenerationEnabled } from "@/lib/ai/image";
 import type { MtMessage } from "@/lib/types";
@@ -63,6 +64,11 @@ const json = (status: number, body: Record<string, unknown>) =>
 
 const genId = createIdGenerator({ prefix: "msg", size: 16 });
 const PRESENTATION_JSON_SCHEMA = z.toJSONSchema(presentationSchema) as Parameters<typeof clampToSchema>[1];
+/** Tool berisi data besar yang dirapikan otomatis bila melebihi batas skema (bukan gagal lalu mengulang). */
+const REPAIRABLE: Record<string, { json: Parameters<typeof clampToSchema>[1]; schema: z.ZodTypeAny }> = {
+  create_presentation: { json: PRESENTATION_JSON_SCHEMA, schema: presentationSchema },
+  create_carousel: { json: z.toJSONSchema(carouselSchema) as Parameters<typeof clampToSchema>[1], schema: carouselSchema },
+};
 
 /** Paket Free: batas panjang jawaban (±1.500 kata) & jumlah pesan riwayat yang dibaca AI. */
 const FREE_MAX_OUTPUT_TOKENS = 2_000;
@@ -107,7 +113,8 @@ export async function POST(req: Request) {
   // Revisi deck ("ubah namanya…", "ganti warnanya…") juga dihitung permintaan PPT bila jawaban terakhir berisi PPT.
   const prevAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const deckRequest =
-    isDeckRequest(lastText) || Boolean(prevAssistant?.parts.some((p) => p.type === "tool-create_presentation"));
+    isDeckRequest(lastText) ||
+    Boolean(prevAssistant?.parts.some((p) => p.type === "tool-create_presentation" || p.type === "tool-create_carousel"));
   // PPT tidak memakai Gemini gratis: model itu sering berhenti tanpa hasil saat menyusun file presentasi besar (uji 16 Okt).
   const preferFree =
     profile.role !== "admin" && planFlag("free_models") && Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY) && !deckRequest;
@@ -395,6 +402,7 @@ export async function POST(req: Request) {
             deckStyle: deckStyleFor(profile.plan_id, profile.role === "admin"),
             // Semua paket: gambar baru memakai Muse (±$0,01). Edit dari foto/gambar acuan tetap Gemini.
             budgetImages: true,
+            brand: brandVisualOf(wsCtx.brandKit),
           }),
           ...(serperOn
             ? {
@@ -440,10 +448,11 @@ export async function POST(req: Request) {
         },
         // Isi PPT melebihi batas skema (sering pada otak Director yang sangat detail) → dirapikan, bukan gagal lalu mengulang.
         experimental_repairToolCall: async ({ toolCall }) => {
-          if (toolCall.toolName !== "create_presentation") return null;
+          const repair = REPAIRABLE[toolCall.toolName];
+          if (!repair) return null;
           try {
-            const fixed = clampToSchema(JSON.parse(toolCall.input), PRESENTATION_JSON_SCHEMA);
-            if (!fixed || !presentationSchema.safeParse(fixed).success) return null;
+            const fixed = clampToSchema(JSON.parse(toolCall.input), repair.json);
+            if (!fixed || !repair.schema.safeParse(fixed).success) return null;
             return { ...toolCall, input: JSON.stringify(fixed) };
           } catch {
             return null;

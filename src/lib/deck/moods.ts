@@ -69,4 +69,19 @@ export const DECK_MOODS: Record<MoodId, DeckMood> = {
   modern: { id: "modern", head: f("Space Grotesk", "space-grotesk-700", true), body: INTER, strong: INTER_B, upper: false, headTracking: 0, radius: 0.14, panel: "outline", hint: "agency kreatif, media, komunitas, startup modern", treatment: "stage", kicker: "plain", decor: "glow", imageStyle: "photo" },
 };
 
+/** Nama gaya desain untuk user (Brand Kit). */
+export const MOOD_LABELS: Record<MoodId, string> = {
+  tech: "Teknologi / gaming",
+  editorial: "Editorial / mewah",
+  corporate: "Korporat / profesional",
+  bold: "Berani / streetwear",
+  warm: "Hangat / F&B",
+  beauty: "Lembut / kecantikan",
+  playful: "Ceria / lucu",
+  sport: "Sporty / otomotif",
+  minimal: "Minimalis",
+  heritage: "Budaya / klasik",
+  modern: "Modern / kreatif",
+};
+
 export const moodGuide = () => MOOD_IDS.map((id) => `${id} (${DECK_MOODS[id].head.family}: ${DECK_MOODS[id].hint})`).join("; ");

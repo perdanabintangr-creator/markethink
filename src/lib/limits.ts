@@ -15,13 +15,13 @@ const FLAG_KEY: Record<DailyLimitKind, string> = { chat: "chat", image: "image_g
 const LOG_TIERS: Record<DailyLimitKind, string[]> = {
   chat: CHAT_TIERS,
   image: ["image"],
-  pptx: ["pptx"],
+  pptx: ["pptx", "carousel"],
   search: CHAT_TIERS,
 };
 export const LIMIT_LABEL: Record<DailyLimitKind, string> = {
   chat: "chat",
   image: "gambar",
-  pptx: "PPT",
+  pptx: "PPT/carousel",
   search: "pencarian web berbayar",
 };
 

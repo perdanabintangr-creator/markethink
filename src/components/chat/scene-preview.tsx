@@ -15,12 +15,15 @@ export function ScenePreviewButton({
   images,
   pdfUrl,
   pptxUrl,
+  downloadLabel = "Unduh PPT",
   title,
 }: {
   sceneUrl: string;
   images?: Record<string, string>;
   pdfUrl?: string;
-  pptxUrl: string;
+  pptxUrl?: string;
+  /** Tombol unduh utama (default "Unduh PPT"). */
+  downloadLabel?: string;
   title: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -49,7 +52,7 @@ export function ScenePreviewButton({
           <DialogHeader className="border-b px-4 py-3 pr-12">
             <DialogTitle className="truncate text-base">{title}</DialogTitle>
             <DialogDescription className="text-xs">
-              Pratinjau {scene ? `${scene.slides.length} slide` : "slide"}. PDF tampil persis seperti ini; PPT bisa diedit (tampilan bisa sedikit berbeda di tiap aplikasi).
+              Pratinjau {scene ? `${scene.slides.length} slide` : "slide"}. {downloadLabel === "Unduh PPT" ? "PDF tampil persis seperti ini; PPT bisa diedit (tampilan bisa sedikit berbeda di tiap aplikasi)." : "JPEG & PDF tampil persis seperti ini — siap diunggah ke Instagram/TikTok."}
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-muted/40 p-3 sm:p-4">
@@ -57,8 +60,11 @@ export function ScenePreviewButton({
               <>
                 <SceneFonts scene={scene} />
                 {scene.slides.map((sl, i) => (
-                  <div key={i} className="mx-auto w-full max-w-3xl" style={{ containerType: "inline-size" }}>
-                    <div className="relative aspect-video w-full overflow-hidden rounded-lg shadow-sm ring-1 ring-black/5" style={{ background: `#${sl.bg}` }}>
+                  <div key={i} className={`mx-auto w-full ${scene.h > scene.w * 0.75 ? "max-w-md" : "max-w-3xl"}`} style={{ containerType: "inline-size" }}>
+                    <div
+                      className="relative w-full overflow-hidden rounded-lg shadow-sm ring-1 ring-black/5"
+                      style={{ background: `#${sl.bg}`, aspectRatio: `${scene.w} / ${scene.h}` }}
+                    >
                       {sl.items.map((it, k) => (
                         <Item key={k} it={it} scene={scene} images={images} />
                       ))}
@@ -83,11 +89,13 @@ export function ScenePreviewButton({
                 </a>
               </Button>
             )}
-            <Button asChild size="sm">
-              <a href={`${pptxUrl}?download=1`}>
-                <Download /> Unduh PPT
-              </a>
-            </Button>
+            {pptxUrl && (
+              <Button asChild size="sm">
+                <a href={`${pptxUrl}?download=1`}>
+                  <Download /> {downloadLabel}
+                </a>
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

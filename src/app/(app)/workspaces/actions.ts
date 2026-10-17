@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BRAND_KIT_FIELDS } from "@/lib/ai/prompt";
 import { createProject } from "@/lib/projects";
+import { MOOD_IDS } from "@/lib/deck/moods";
 
 export async function createWorkspace(formData: FormData) {
   const { supabase, profile } = await requireUser();
@@ -25,6 +26,17 @@ export async function saveBrandKit(workspaceId: string, _prev: { ok?: boolean; e
     const v = String(formData.get(f.key) ?? "").trim().slice(0, 2000);
     if (v) kit[f.key] = v;
   }
+  // Identitas visual.
+  for (const key of ["color_primary", "color_secondary"] as const) {
+    const v = String(formData.get(key) ?? "").trim();
+    if (/^#?[0-9a-fA-F]{6}$/.test(v)) kit[key] = `#${v.replace("#", "").toUpperCase()}`;
+  }
+  const logo = String(formData.get("logo_id") ?? "").trim();
+  if (/^[0-9a-f-]{36}$/i.test(logo)) kit.logo_id = logo;
+  const mood = String(formData.get("design_mood") ?? "").trim();
+  if ((MOOD_IDS as readonly string[]).includes(mood)) kit.design_mood = mood;
+  const handle = String(formData.get("social_handle") ?? "").trim().slice(0, 60);
+  if (handle) kit.social_handle = handle;
   const { error } = await supabase
     .from("workspaces")
     .update({ name, brand_kit: kit, updated_at: new Date().toISOString() })

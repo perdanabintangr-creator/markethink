@@ -22,6 +22,8 @@ export interface AppContextValue {
   freeModels: boolean;
   /** Riset Web (pencarian Google) termasuk paket — Free tidak. */
   researchAllowed: boolean;
+  /** Peran user dari onboarding (umkm_owner, marketing_pro, freelancer, …) — untuk template. */
+  personaRole?: string | null;
 }
 
 /** Tier awal: preferensi bila diizinkan, selain itu Senior bila boleh, selain itu tier pertama yang diizinkan. */

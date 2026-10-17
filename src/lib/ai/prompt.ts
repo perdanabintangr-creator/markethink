@@ -11,6 +11,37 @@ export interface BrandKit {
   channels?: string;
   budget_range?: string;
   notes?: string;
+  /** Identitas visual (dipakai otomatis di PPT, carousel & gambar). */
+  color_primary?: string;
+  color_secondary?: string;
+  logo_id?: string;
+  design_mood?: string;
+  social_handle?: string;
+}
+
+/** Brand Kit visual yang sudah divalidasi — untuk tool PPT/carousel/gambar. */
+export interface BrandVisual {
+  name?: string;
+  colorPrimary?: string;
+  colorSecondary?: string;
+  logoId?: string;
+  mood?: string;
+  handle?: string;
+}
+
+const HEX = /^#?[0-9a-fA-F]{6}$/;
+export function brandVisualOf(kit: (BrandKit & { brand_name?: string }) | null | undefined): BrandVisual | null {
+  if (!kit) return null;
+  const hex = (v?: string) => (v && HEX.test(v.trim()) ? `#${v.trim().replace("#", "").toUpperCase()}` : undefined);
+  const out: BrandVisual = {
+    name: kit.brand_name?.trim() || undefined,
+    colorPrimary: hex(kit.color_primary),
+    colorSecondary: hex(kit.color_secondary),
+    logoId: kit.logo_id && /^[0-9a-f-]{36}$/i.test(kit.logo_id) ? kit.logo_id : undefined,
+    mood: kit.design_mood?.trim() || undefined,
+    handle: kit.social_handle?.trim() || undefined,
+  };
+  return out.colorPrimary || out.logoId || out.mood || out.handle ? out : null;
 }
 
 export const BRAND_KIT_FIELDS: { key: keyof BrandKit; label: string }[] = [
@@ -47,6 +78,11 @@ export function formatBrandKit(kit: BrandKit | null | undefined) {
   const lines = BRAND_KIT_FIELDS.filter((f) => kit[f.key]?.trim()).map(
     (f) => `- ${f.label}: ${kit[f.key]!.trim()}`,
   );
+  const colors = [kit.color_primary, kit.color_secondary].filter((c) => c && HEX.test(c.trim()));
+  if (colors.length) lines.push(`- Warna brand: ${colors.join(", ")} (PPT, carousel & gambar otomatis memakai warna ini)`);
+  if (kit.logo_id) lines.push("- Logo brand: tersedia (otomatis dipasang di PPT & carousel)");
+  if (kit.design_mood?.trim()) lines.push(`- Gaya desain pilihan: ${kit.design_mood.trim()}`);
+  if (kit.social_handle?.trim()) lines.push(`- Akun media sosial: ${kit.social_handle.trim()}`);
   return lines.length ? lines.join("\n") : "Brand Kit masih kosong.";
 }
 

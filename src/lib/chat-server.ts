@@ -113,6 +113,11 @@ export function summarizeToolParts(m: MtMessage): MtMessage {
       parts.push({ type: "text", text: `[Kamu sudah membuat gambar — id: ${String(tp.output.attachmentId)}; prompt: ${truncate(String(tp.input?.prompt ?? ""), 300)}]` });
     } else if (tp.type === "tool-read_tool_result") {
       parts.push({ type: "text", text: `[Kamu sudah membaca hasil Tools Pro "${String(tp.output.title)}" (id ${String(tp.input?.run_id ?? "")}). Baca lagi bila butuh detailnya.]` });
+    } else if (tp.type === "tool-create_carousel") {
+      parts.push({ type: "text", text: `[Kamu sudah membuat carousel/poster "${String(tp.output.title)}" (${String(tp.output.slideCount)} slide, ${String(tp.output.format)})]` });
+    } else if (tp.type === "tool-product_photo") {
+      const imgs = (tp.output.images as { attachmentId: string }[] | undefined) ?? [];
+      parts.push({ type: "text", text: `[Kamu sudah membuat ${imgs.length} foto produk (style ${String(tp.output.style)}) — id: ${imgs.map((x) => x.attachmentId).join(", ")}]` });
     } else if (tp.type === "tool-create_presentation") {
       const titles = (tp.output.slideTitles as string[] | undefined) ?? [];
       parts.push({ type: "text", text: `[Kamu sudah membuat file PPT "${String(tp.output.title)}" (${titles.length} slide): ${truncate(titles.join(" | "), 600)}]` });

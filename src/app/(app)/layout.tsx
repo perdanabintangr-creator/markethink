@@ -34,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         allowedTiers,
         planName: plan?.name ?? profile.plan_id,
         planId: profile.plan_id,
+        personaRole: profile.persona_role ?? null,
         freeModels: profile.role !== "admin" && Boolean(flags?.find((f) => f.key === "free_models")?.enabled),
         researchAllowed: profile.role === "admin" || Boolean(flags?.find((f) => f.key === "research")?.enabled),
       }}

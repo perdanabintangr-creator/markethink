@@ -9,8 +9,8 @@ import type { Scene, SceneItem, SceneSlide } from "./scene";
  * jadi hasilnya persis sama dengan pratinjau & PDF di aplikasi mana pun (PowerPoint, WPS, Google Slides, iPhone/Android).
  */
 
-const PX = 1920;
-const PY = 1080;
+/** 144 px per inci: deck 16:9 → 1920×1080, carousel 4:5 → 1080×1350. */
+const PPI = 144;
 
 interface GlyphFont {
   unitsPerEm: number;
@@ -92,7 +92,7 @@ export function slideSvg(slide: SceneSlide, scene: Scene, images: DeckImages) {
   const body = slide.items.map((it) => itemSvg(it, scene, images, defs)).join("");
   const W = n(scene.w * 72);
   const H = n(scene.h * 72);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${PX}" height="${PY}" viewBox="0 0 ${W} ${H}"><defs>${defs.join("")}</defs><rect width="${W}" height="${H}" fill="#${esc(slide.bg)}"/>${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(scene.w * PPI)}" height="${Math.round(scene.h * PPI)}" viewBox="0 0 ${W} ${H}"><defs>${defs.join("")}</defs><rect width="${W}" height="${H}" fill="#${esc(slide.bg)}"/>${body}</svg>`;
 }
 
 /** Semua slide → JPEG Full HD. */

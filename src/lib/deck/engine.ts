@@ -256,7 +256,7 @@ export function signatureImageRequests(input: PresentationInput, maxGenerated = 
 // Penyusun slide
 // ---------------------------------------------------------------------------
 
-interface TextOpts {
+export interface TextOpts {
   size: number;
   min?: number;
   maxLines?: number;
@@ -271,9 +271,9 @@ interface TextOpts {
   h?: number;
 }
 
-type Dims = Record<string, { width: number; height: number }>;
+export type Dims = Record<string, { width: number; height: number }>;
 
-class Composer {
+export class Composer {
   items: SceneItem[] = [];
   /** Area isi (inci) — menyempit bila foto ditaruh di bingkai/separuh slide. */
   ax = M;
@@ -287,6 +287,9 @@ class Composer {
     readonly images: Dims,
     /** Nomor slide — untuk variasi ornamen. */
     readonly seed = 0,
+    /** Ukuran kanvas (inci) — 16:9 untuk deck; carousel/poster memakai ukuran lain. */
+    readonly W = SCENE_W,
+    readonly H = SCENE_H,
   ) {}
 
   has = (key: string) => Boolean(this.images[key]) && !this.hidden.has(key);
@@ -353,17 +356,17 @@ class Composer {
 
   /** Foto penuh sebagai panggung + penggelap agar teks terbaca. */
   stage(key: string, dim = 0.3) {
-    if (!this.img(key, 0, 0, W, H)) return false;
-    this.rect(0, 0, W, H, { fill: this.pal.bg, fo: this.pal.dark ? dim : dim * 0.75 });
+    if (!this.img(key, 0, 0, this.W, this.H)) return false;
+    this.rect(0, 0, this.W, this.H, { fill: this.pal.bg, fo: this.pal.dark ? dim : dim * 0.75 });
     // Aksen khas mood tetap terlihat di atas foto (garis balap / blok warna di tepi kanan).
     if (this.mood.decor === "speed")
-      [0, 0.3].forEach((dx, k) => this.rect(W - 0.9 + dx, -1.2, k ? 0.07 : 0.16, H + 2.4, { fill: k ? this.pal.accent2 : this.pal.accent, fo: k ? 0.7 : 0.85, rot: 24 }));
-    else if (this.mood.decor === "blocks") this.rect(W - 0.32, 0, 0.32, H, { fill: this.pal.accent });
+      [0, 0.3].forEach((dx, k) => this.rect(this.W - 0.9 + dx, -1.2, k ? 0.07 : 0.16, this.H + 2.4, { fill: k ? this.pal.accent2 : this.pal.accent, fo: k ? 0.7 : 0.85, rot: 24 }));
+    else if (this.mood.decor === "blocks") this.rect(this.W - 0.32, 0, 0.32, this.H, { fill: this.pal.accent });
     return true;
   }
 
   /** Ornamen khas mood (di belakang isi). cx/cy/r = posisi saran untuk ornamen bulat. */
-  ambient(cx = W - 2.4, cy = H * 0.62, r = 2.6) {
+  ambient(cx = this.W - 2.4, cy = this.H * 0.62, r = 2.6) {
     const { accent, accent2, dark, text } = this.pal;
     const rnd = (k: number) => {
       const v = Math.sin((this.seed + 1) * 12.9898 + k * 78.233) * 43758.5453;
@@ -380,26 +383,26 @@ class Composer {
       case "confetti": {
         // Bulatan & "stiker" warna-warni di sudut — ceria tapi tidak mengganggu teks.
         const spots = [
-          { x: W - 0.95, y: 0.55, d: 0.75, c: accent, o: 0.9 },
-          { x: W - 1.85, y: 0.35, d: 0.28, c: accent2, o: 0.9 },
-          { x: W - 0.5, y: 1.75, d: 0.36, c: accent2, o: 0.55 },
-          { x: 0.25, y: H - 0.9, d: 0.55, c: accent2, o: 0.8 },
-          { x: 0.95, y: H - 0.42, d: 0.22, c: accent, o: 0.7 },
-          { x: W - 1.2, y: H - 0.85, d: 0.5, c: accent, o: 0.35 },
+          { x: this.W - 0.95, y: 0.55, d: 0.75, c: accent, o: 0.9 },
+          { x: this.W - 1.85, y: 0.35, d: 0.28, c: accent2, o: 0.9 },
+          { x: this.W - 0.5, y: 1.75, d: 0.36, c: accent2, o: 0.55 },
+          { x: 0.25, y: this.H - 0.9, d: 0.55, c: accent2, o: 0.8 },
+          { x: 0.95, y: this.H - 0.42, d: 0.22, c: accent, o: 0.7 },
+          { x: this.W - 1.2, y: this.H - 0.85, d: 0.5, c: accent, o: 0.35 },
         ];
         spots.forEach((p, k) => {
           const j = (rnd(k) - 0.5) * 0.3;
           this.ellipse(p.x + j, p.y - j, p.d, p.d, { fill: p.c, fo: p.o });
         });
-        this.rect(W - 2.0, H - 0.75, 0.4, 0.4, { fill: accent2, fo: 0.85, r: 0.1, rot: 15 + rnd(9) * 30 });
+        this.rect(this.W - 2.0, this.H - 0.75, 0.4, 0.4, { fill: accent2, fo: 0.85, r: 0.1, rot: 15 + rnd(9) * 30 });
         this.rect(0.45, 0.42, 0.3, 0.3, { fill: accent, fo: 0.6, r: 0.08, rot: -20 + rnd(7) * 20 });
         return;
       }
       case "speed": {
         // Garis balap miring di sisi kanan.
-        const base = W - 2.6 + rnd(1) * 0.6;
+        const base = this.W - 2.6 + rnd(1) * 0.6;
         [0, 0.42, 0.7].forEach((dx, k) =>
-          this.rect(base + dx, -1.2, [0.26, 0.12, 0.05][k], H + 2.4, { fill: k === 1 ? accent2 : accent, fo: [0.9, 0.55, 0.35][k], rot: 24 }),
+          this.rect(base + dx, -1.2, [0.26, 0.12, 0.05][k], this.H + 2.4, { fill: k === 1 ? accent2 : accent, fo: [0.9, 0.55, 0.35][k], rot: 24 }),
         );
         return;
       }
@@ -410,20 +413,20 @@ class Composer {
         return;
       case "arch":
         this.ellipse(cx - r, cy - r, r * 2, r * 2, { fill: accent, fo: 0.08 });
-        this.rect(W - 2.9, 0.75, 2.1, H - 1.3, { line: accent, lo: 0.35, lw: 0.75, r: 1.05 });
+        this.rect(this.W - 2.9, 0.75, 2.1, this.H - 1.3, { line: accent, lo: 0.35, lw: 0.75, r: 1.05 });
         return;
       case "rules":
-        this.line(M, 0.38, W - M, 0.38, accent, 1.25, 0.9);
-        this.line(M, H - 0.32, W - M, H - 0.32, text, 0.5, 0.18);
+        this.line(M, 0.38, this.W - M, 0.38, accent, 1.25, 0.9);
+        this.line(M, this.H - 0.32, this.W - M, this.H - 0.32, text, 0.5, 0.18);
         return;
       case "ornament":
-        this.rect(0.24, 0.24, W - 0.48, H - 0.48, { line: accent, lo: 0.65, lw: 0.75 });
-        this.rect(0.32, 0.32, W - 0.64, H - 0.64, { line: accent, lo: 0.3, lw: 0.5 });
-        for (const [x, y] of [[W / 2, 0.28], [W / 2, H - 0.28]]) this.rect(x - 0.07, y - 0.07, 0.14, 0.14, { fill: accent, rot: 45 });
+        this.rect(0.24, 0.24, this.W - 0.48, this.H - 0.48, { line: accent, lo: 0.65, lw: 0.75 });
+        this.rect(0.32, 0.32, this.W - 0.64, this.H - 0.64, { line: accent, lo: 0.3, lw: 0.5 });
+        for (const [x, y] of [[this.W / 2, 0.28], [this.W / 2, this.H - 0.28]]) this.rect(x - 0.07, y - 0.07, 0.14, 0.14, { fill: accent, rot: 45 });
         return;
       case "blocks":
-        this.rect(W - 0.32, 0, 0.32, H, { fill: accent });
-        this.rect(W - 0.75, H - 0.9, 0.3, 0.3, { fill: accent2 });
+        this.rect(this.W - 0.32, 0, 0.32, this.H, { fill: accent });
+        this.rect(this.W - 0.75, this.H - 0.9, 0.3, 0.3, { fill: accent2 });
         return;
       default:
         return;
@@ -450,22 +453,35 @@ class Composer {
     return this.text(str, "strong", x, y, w, { size, ls: 2.6, upper: true, color: this.pal.accent2, maxLines: 1, min: 8 });
   }
 
+  /** Logo brand (Brand Kit) di dalam kotak, rata kiri/kanan; di latar gelap diberi alas terang agar logo gelap tetap terlihat. */
+  logo(x: number, y: number, w: number, h: number, align: "left" | "right") {
+    const dim = this.images.logo;
+    if (!dim) return;
+    const sc = Math.min(w / dim.width, h / dim.height);
+    const lw = dim.width * sc;
+    const lh = dim.height * sc;
+    const lx = align === "right" ? x + w - lw : x;
+    const ly = y + (h - lh) / 2;
+    if (this.pal.dark) this.rect(lx - 0.08, ly - 0.06, lw + 0.16, lh + 0.12, { fill: "FFFFFF", fo: 0.92, r: 0.06 });
+    this.items.push({ t: "img", key: "logo", x: lx, y: ly, w: lw, h: lh, fit: "contain" });
+  }
+
   /** Foto di samping (bingkai kartu / separuh slide), lalu area isi pindah ke sisi lain. */
   photoPanel(key: string, side: "left" | "right") {
     if (!this.has(key)) return false;
     const { pal, mood } = this;
     if (mood.treatment === "bleed") {
-      const pw = W * 0.44;
-      const x = side === "right" ? W - pw : 0;
-      this.img(key, x, 0, pw, H);
-      this.rect(x, 0, pw, H, { fill: pal.accent, fo: 0.06 });
-      this.line(side === "right" ? x : pw, 0, side === "right" ? x : pw, H, pal.accent, 2.5);
+      const pw = this.W * 0.44;
+      const x = side === "right" ? this.W - pw : 0;
+      this.img(key, x, 0, pw, this.H);
+      this.rect(x, 0, pw, this.H, { fill: pal.accent, fo: 0.06 });
+      this.line(side === "right" ? x : pw, 0, side === "right" ? x : pw, this.H, pal.accent, 2.5);
       this.ax = side === "right" ? M : pw + 0.6;
-      this.aw = side === "right" ? W - pw - M - 0.55 : W - M - this.ax;
+      this.aw = side === "right" ? this.W - pw - M - 0.55 : this.W - M - this.ax;
     } else {
-      const fw = W * 0.4;
-      const fh = H - 1.0;
-      const x = side === "right" ? W - fw - 0.55 : 0.55;
+      const fw = this.W * 0.4;
+      const fh = this.H - 1.0;
+      const x = side === "right" ? this.W - fw - 0.55 : 0.55;
       const y = 0.5;
       const r = mood.radius ? Math.max(0.2, mood.radius * 1.3) : 0;
       // Bentuk latar khas mood di belakang bingkai.
@@ -479,7 +495,7 @@ class Composer {
       this.rect(x + inset, y + inset, fw - inset * 2, fh - inset * 2, { fill: pal.accent, fo: 0.06 });
       if (!inset) this.rect(x, y, fw, fh, { line: pal.text, lo: 0.12, lw: 0.75 });
       this.ax = side === "right" ? M : x + fw + 0.6;
-      this.aw = side === "right" ? x - M - 0.5 : W - M - this.ax;
+      this.aw = side === "right" ? x - M - 0.5 : this.W - M - this.ax;
     }
     this.hidden.add(key);
     return true;
@@ -579,7 +595,7 @@ class Composer {
   }
 
   footnote(text: string) {
-    this.text(text, "body", M, H - 0.5, W - 2 * M, { size: 8.5, min: 7.5, maxLines: 1, color: this.pal.muted, o: 0.9 });
+    this.text(text, "body", M, this.H - 0.5, this.W - 2 * M - (this.images.logo ? 1.6 : 0), { size: 8.5, min: 7.5, maxLines: 1, color: this.pal.muted, o: 0.9 });
   }
 
   /** Grid kotak (maks 3 kolom per baris bila > 4 kotak). */
@@ -1042,6 +1058,9 @@ export function buildScene(input: PresentationInput, opts: SceneOptions): Scene 
     }
     fn(c);
     if (s?.source) c.footnote(`Sumber: ${s.source}`);
+    // Logo Brand Kit: besar di cover (kiri atas), kecil di pojok kanan bawah slide isi.
+    if (key === "cover") c.logo(M, 0.4, 2.2, 0.55, "left");
+    else c.logo(W - M - 1.3, H - 0.52, 1.3, 0.3, "right");
     slides.push({ bg: pal.bg, items: c.items, notes: s?.notes });
   };
   make((c) => cover(c, input), undefined, "cover");
