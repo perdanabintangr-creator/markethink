@@ -486,7 +486,7 @@ export function ChatView({
               <div className="mt-3">{disclaimer}</div>
             </div>
           ) : (
-            <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+            <div className="chat-thread chat-col mx-auto max-w-3xl space-y-6 px-4 py-6">
               {activeAgent && (
                 <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                   <Bot className="size-3.5" /> Agent: {activeAgent.name}
@@ -536,7 +536,7 @@ export function ChatView({
         </div>
 
         {messages.length > 0 && (
-        <div className="relative mx-auto w-full max-w-3xl px-3 pb-3 sm:px-4">
+        <div className="chat-col relative mx-auto w-full max-w-3xl px-3 pb-3 sm:px-4">
           {!atBottom && (
             <button
               onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })}

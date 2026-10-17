@@ -1,5 +1,6 @@
 import { readFile } from "fs/promises";
 import path from "path";
+import type { ResponseStyle } from "./prompt-styles";
 
 export interface BrandKit {
   brand_name?: string;
@@ -65,6 +66,23 @@ export interface PromptContext {
   memories?: string[];
 }
 
+const STYLE_RULES: Record<ResponseStyle, string | null> = {
+  seimbang: null,
+  santai: "Pakai gaya bahasa santai & akrab seperti rekan kerja (boleh sapaan ringan), tetap jelas & tidak bertele-tele.",
+  profesional: "Pakai gaya bahasa formal & profesional yang siap diteruskan ke atasan/klien; hindari bahasa gaul & emoji.",
+  singkat: "Jawab sesingkat mungkin: langsung ke poin, utamakan bullet, tanpa pembukaan/penutup panjang — kecuali user meminta detail.",
+};
+
+/** Preferensi jawaban pribadi user (Pengaturan → Personalisasi). null bila default & kosong. */
+export function formatPersonalization(style?: string | null, instructions?: string | null) {
+  const lines: string[] = [];
+  const rule = STYLE_RULES[(style ?? "seimbang") as ResponseStyle];
+  if (rule) lines.push(`- Gaya jawaban: ${rule}`);
+  const extra = instructions?.trim().slice(0, 1500);
+  if (extra) lines.push(`- Instruksi pribadi user (ikuti selama tidak bertentangan dengan aturan sistem & instruksi di pesan terbaru):\n${extra}`);
+  return lines.length ? lines.join("\n") : null;
+}
+
 let cachedTemplate: string | null = null;
 
 export async function loadSystemTemplate() {
@@ -117,6 +135,7 @@ export async function buildSystemPrompt(
     agentInstructions?: string | null;
     capabilities?: string | null;
     project?: string | null;
+    personalization?: string | null;
   } = {},
 ) {
   const parts = [fillTemplate(await loadSystemTemplate(), ctx)];
@@ -125,6 +144,7 @@ export async function buildSystemPrompt(
       `## Project aktif: ${extras.project.replace(/[\r\n]/g, " ")}\nChat ini berada di dalam project "${extras.project.replace(/[\r\n]/g, " ")}". Fokus hanya pada brand/klien project ini dan gunakan Brand Kit, dokumen, serta memory project ini. Jangan mengaitkan atau menyebut brand/klien/project lain milik user. Patuhi "Catatan lain" di Brand Kit sebagai instruksi khusus project.`,
     );
   }
+  if (extras.personalization) parts.push(`## Preferensi jawaban user\n${extras.personalization}`);
   if (extras.capabilities) parts.push(`## Kemampuan file, gambar & presentasi\n${extras.capabilities}`);
   if (extras.tierInstructions) parts.push(`## Level otak\n${extras.tierInstructions}`);
   if (extras.agentInstructions) parts.push(`## Mode agent\n${extras.agentInstructions}`);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSystemPrompt, buildTurnContext, fillTemplate, formatBrandKit, untrusted } from "@/lib/ai/prompt";
+import { buildSystemPrompt, buildTurnContext, fillTemplate, formatBrandKit, formatPersonalization, untrusted } from "@/lib/ai/prompt";
 
 describe("system prompt", () => {
   it("mengisi semua variabel", () => {
@@ -40,5 +40,22 @@ describe("system prompt", () => {
     expect(a).not.toContain("Hasil Riset Web");
     expect(buildTurnContext({ research: "[1] sumber" })).toContain("Hasil Riset Web");
     expect(buildTurnContext({})).toBeNull();
+  });
+});
+
+describe("formatPersonalization", () => {
+  it("kosong untuk default tanpa instruksi", () => {
+    expect(formatPersonalization("seimbang", "")).toBeNull();
+    expect(formatPersonalization(null, null)).toBeNull();
+  });
+  it("memuat gaya & instruksi, dan masuk ke system prompt", async () => {
+    const p = formatPersonalization("singkat", "Selalu pakai Rupiah.");
+    expect(p).toContain("sesingkat mungkin");
+    expect(p).toContain("Selalu pakai Rupiah.");
+    const sys = await buildSystemPrompt({}, { personalization: p });
+    expect(sys).toContain("## Preferensi jawaban user");
+  });
+  it("gaya tak dikenal diabaikan", () => {
+    expect(formatPersonalization("aneh", "")).toBeNull();
   });
 });

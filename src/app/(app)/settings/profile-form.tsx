@@ -12,7 +12,7 @@ import { updateProfile } from "./actions";
 export function ProfileForm({
   profile,
 }: {
-  profile: { full_name: string; email: string; language: string; persona_role: string; industry: string; experience: string; goal: string };
+  profile: { full_name: string; email: string; persona_role: string; industry: string; experience: string; goal: string };
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(updateProfile, undefined);
@@ -61,15 +61,8 @@ export function ProfileForm({
           {goals.map((g) => <option key={g} value={g}>{g}</option>)}
         </NativeSelect>
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="language">Bahasa</Label>
-        <NativeSelect id="language" name="language" defaultValue={profile.language}>
-          <option value="id">Bahasa Indonesia</option>
-          <option value="en">English</option>
-        </NativeSelect>
-      </div>
-      <div className="flex items-end">
-        <Button disabled={pending} className="w-full">{pending && <Loader2 className="animate-spin" />} Simpan profil</Button>
+      <div className="flex items-end sm:col-span-2 sm:justify-end">
+        <Button disabled={pending} className="w-full sm:w-auto">{pending && <Loader2 className="animate-spin" />} Simpan profil</Button>
       </div>
     </form>
   );

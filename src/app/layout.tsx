@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers";
+import { CHAT_PREFS_SCRIPT } from "@/lib/chat-prefs";
 import { resolveAppUrl } from "@/lib/env";
 import "./globals.css";
 
@@ -22,6 +23,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: CHAT_PREFS_SCRIPT }} />
+      </head>
       <body className="font-sans">
         <Providers>{children}</Providers>
       </body>

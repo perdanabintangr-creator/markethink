@@ -18,7 +18,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/lib/credits";
 import { routeTier } from "@/lib/ai/router";
-import { brandVisualOf, buildSystemPrompt, buildTurnContext } from "@/lib/ai/prompt";
+import { brandVisualOf, buildSystemPrompt, buildTurnContext, formatPersonalization } from "@/lib/ai/prompt";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
 import { clampToSchema } from "@/lib/schema-clamp";
 import { presentationSchema } from "@/lib/pptx";
@@ -311,6 +311,7 @@ export async function POST(req: Request) {
           capabilities: capabilitiesPrompt(imageBlockedReason, { webSearch: researchAllowed }),
           agentInstructions: agent?.instructions ?? null,
           project: wsCtx.name,
+          personalization: formatPersonalization(profile.response_style, profile.custom_instructions),
         },
       );
       // Chat dari hasil Tools Pro: AI tahu versi terbaru & bisa memicu pembaruan hasil di panel kanan.

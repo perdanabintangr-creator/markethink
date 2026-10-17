@@ -6,10 +6,10 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EXPERIENCE, ROLES } from "@/lib/personas";
+import { RESPONSE_STYLES } from "@/lib/ai/prompt-styles";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(80),
-  language: z.enum(["id", "en"]),
   persona_role: z.enum(ROLES.map((r) => r.id) as [string, ...string[]]),
   industry: z.string().trim().min(1).max(80),
   experience: z.enum(EXPERIENCE.map((e) => e.id) as [string, ...string[]]),
@@ -54,6 +54,60 @@ export async function deleteMemory(id: string) {
 export async function clearMemories() {
   const { supabase, user } = await requireUser();
   await supabase.from("memories").delete().eq("user_id", user.id);
+  revalidatePath("/settings");
+}
+
+type FormState = { ok?: boolean; error?: string } | undefined;
+
+const personalizationSchema = z.object({
+  response_style: z.enum(RESPONSE_STYLES.map((r) => r.id) as [string, ...string[]]),
+  custom_instructions: z.string().trim().max(1500),
+});
+
+export async function updatePersonalization(_prev: FormState, formData: FormData): Promise<FormState> {
+  const { supabase, user } = await requireUser();
+  const parsed = personalizationSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Maksimal 1.500 karakter." };
+  const { error } = await supabase
+    .from("profiles")
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+  if (error) return { error: "Gagal menyimpan." };
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+export async function changePassword(_prev: FormState, formData: FormData): Promise<FormState> {
+  const { supabase } = await requireUser();
+  const password = String(formData.get("password") ?? "");
+  if (password.length < 8) return { error: "Password minimal 8 karakter." };
+  if (password !== formData.get("confirm")) return { error: "Konfirmasi password tidak sama." };
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    if (/same/i.test(error.message)) return { error: "Password baru harus berbeda dari yang lama." };
+    if (/reauth|recent/i.test(error.message)) return { error: "Demi keamanan, keluar lalu masuk lagi, kemudian ulangi ganti password." };
+    if (/weak|pwned|leaked/i.test(error.message)) return { error: "Password terlalu lemah/umum. Pakai kombinasi huruf, angka & simbol." };
+    return { error: "Gagal mengganti password." };
+  }
+  return { ok: true };
+}
+
+/** Keluar dari semua perangkat (mencabut semua sesi login). */
+export async function signOutEverywhere() {
+  const { supabase } = await requireUser();
+  await supabase.auth.signOut({ scope: "global" });
+  redirect("/login");
+}
+
+/** Matikan link publik chat/dokumen. Tanpa id = matikan semua. */
+export async function revokeShare(kind: "chat" | "canvas" | "all", id?: string) {
+  const { supabase, user } = await requireUser();
+  const tables = kind === "all" ? ["chats", "canvases"] : [kind === "chat" ? "chats" : "canvases"];
+  for (const t of tables) {
+    let q = supabase.from(t).update({ share_token: null }).eq("user_id", user.id).not("share_token", "is", null);
+    if (id) q = q.eq("id", id);
+    await q;
+  }
   revalidatePath("/settings");
 }
 

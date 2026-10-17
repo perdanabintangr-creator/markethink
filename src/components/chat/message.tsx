@@ -378,7 +378,7 @@ function MaybeSelectionAsk({
 function UserBubble({ text }: { text: string }) {
   const { quote, body } = parseQuotedMessage(text);
   return (
-    <div className="max-w-[85%] space-y-2 rounded-2xl rounded-br-md bg-primary/10 px-4 py-2.5 text-sm">
+    <div className="user-bubble max-w-[85%] space-y-2 rounded-2xl rounded-br-md bg-primary/10 px-4 py-2.5 text-sm">
       {quote && (
         <p className="line-clamp-4 whitespace-pre-wrap border-l-2 border-primary/50 pl-2.5 text-xs text-muted-foreground">
           {quote}

@@ -322,3 +322,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
    kredit & batas harian = gambar; Free 1 variasi per permintaan.
 4. **Template per peran** — tombol "Template" di layar chat (UMKM, Marketing Officer, Agency, Freelancer; 6 template masing-masing,
    tab awal sesuai peran onboarding) + chip baru "Carousel / poster" & "Foto produk studio".
+
+## 2026-10-17 — Menu Pengaturan baru (ala ChatGPT/Claude)
+- `/settings?tab=…` dengan menu kiri (HP: tab geser): Umum, Profil & peran, Personalisasi, Memori, Brand & project, Paket & penggunaan, Penyimpanan, Link dibagikan, Akun & keamanan.
+- Personalisasi: kolom `profiles.response_style` (seimbang/santai/profesional/singkat) + `custom_instructions` (≤1.500 karakter) → bagian "Preferensi jawaban user" di system prompt.
+- Ukuran teks & lebar chat disimpan per perangkat (localStorage, `src/lib/chat-prefs.ts`).
+- Tidak diambil: Pets, Parental controls, Voice, Claude Code/Chrome, Cloud computer. Ditunda: Notifikasi (butuh domain/Resend), Konektor (fase 2), Penagihan/invoice (butuh payment gateway).

@@ -17,6 +17,9 @@ export interface Profile {
   industry: string | null;
   experience: string | null;
   goal: string | null;
+  /** Gaya jawaban pilihan user (Pengaturan → Personalisasi). */
+  response_style?: string | null;
+  custom_instructions?: string | null;
   onboarded: boolean;
   consent_at: string | null;
   banned: boolean;
