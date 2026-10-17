@@ -32,13 +32,15 @@ import type { LinkPart, MtMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { isTransparent, textBlocks } from "@/lib/message-text";
 import { parseQuotedMessage } from "@/lib/quote";
+import { chatText, type ChatText } from "@/lib/i18n/chat";
 import { Markdown } from "./markdown";
 import { DeckPreviewButton, type DeckInput } from "./deck-preview";
 import { ScenePreviewButton } from "./scene-preview";
 import { SelectionAsk } from "./selection-ask";
 
 const TIER_LABEL = Object.fromEntries(getTiers({}).map((t) => [t.id, t.label]));
-const NEGATIVE_REASONS = ["Tidak akurat", "Terlalu umum", "Tidak sesuai brand", "Format berantakan", "Bahasa kurang pas", "Lainnya"];
+/** Nilai alasan yang disimpan (selalu versi Indonesia); labelnya mengikuti bahasa UI. */
+const NEGATIVE_REASONS = chatText("id").negativeReasons;
 
 export function messageToText(m: MtMessage) {
   return textBlocks(m.parts).join("\n\n");
@@ -116,7 +118,8 @@ export function ChatMessage({
   applyHighlight?: boolean;
   statusLabel?: string | null;
 }) {
-  const { t } = useApp();
+  const { t, lang } = useApp();
+  const c = chatText(lang);
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -260,14 +263,14 @@ export function ChatMessage({
 
       {emptyDone && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
-          Maaf, jawaban gagal dibuat dan kuota kamu sudah dikembalikan. Kirim ulang pesannya, ya.
+          {c.emptyAnswer}
         </p>
       )}
 
       <MaybeSelectionAsk enabled={!(isLast && isStreaming)} onQuote={onQuote} onExplain={onExplain}>
         {blocks.map((b, i) =>
           b.kind === "text" ? (
-            <Markdown key={i}>{linkCitations(hideUpdateBlock(b.text), sources)}</Markdown>
+            <Markdown key={i}>{linkCitations(hideUpdateBlock(b.text, c), sources)}</Markdown>
           ) : b.part.type === "tool-read_tool_result" ? (
             <ReadResultChip key={b.part.toolCallId ?? i} part={b.part} />
           ) : b.part.type === "tool-generate_image" ? (
@@ -290,10 +293,10 @@ export function ChatMessage({
               <RefreshCw />
             </IconBtn>
           )}
-          <IconBtn label="Bagus" onClick={() => sendFeedback(1)} active={rating === 1}>
+          <IconBtn label={c.good} onClick={() => sendFeedback(1)} active={rating === 1}>
             <ThumbsUp />
           </IconBtn>
-          <IconBtn label="Kurang bagus" onClick={() => setReasonOpen(true)} active={rating === -1}>
+          <IconBtn label={c.notGood} onClick={() => setReasonOpen(true)} active={rating === -1}>
             <ThumbsDown />
           </IconBtn>
           {onOpenCanvas && (
@@ -302,8 +305,8 @@ export function ChatMessage({
             </Button>
           )}
           {onApplyToResult && !applyHighlight && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onApplyToResult(hideUpdateBlock(text))}>
-              <RefreshCw /> Terapkan ke hasil
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onApplyToResult(hideUpdateBlock(text, c))}>
+              <RefreshCw /> {c.applyToResult}
             </Button>
           )}
           {message.metadata?.tier && (
@@ -317,9 +320,9 @@ export function ChatMessage({
       {showActions && onApplyToResult && applyHighlight && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm">
           <Wand2 className="size-4 shrink-0 text-primary" />
-          <span className="min-w-0 flex-1 text-muted-foreground">Ada masukan di jawaban ini yang mau dimasukkan ke hasil di panel kanan?</span>
-          <Button size="sm" className="h-8" onClick={() => onApplyToResult(hideUpdateBlock(text))}>
-            <RefreshCw /> Perbarui hasil
+          <span className="min-w-0 flex-1 text-muted-foreground">{c.applyPrompt}</span>
+          <Button size="sm" className="h-8" onClick={() => onApplyToResult(hideUpdateBlock(text, c))}>
+            <RefreshCw /> {c.updateResult}
           </Button>
         </div>
       )}
@@ -327,10 +330,10 @@ export function ChatMessage({
       <Dialog open={reasonOpen} onOpenChange={setReasonOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Apa yang kurang?</DialogTitle>
+            <DialogTitle>{c.whatWasWrong}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-wrap gap-2">
-            {NEGATIVE_REASONS.map((r) => (
+            {NEGATIVE_REASONS.map((r, i) => (
               <Button
                 key={r}
                 variant="outline"
@@ -340,12 +343,12 @@ export function ChatMessage({
                   void sendFeedback(-1, r);
                 }}
               >
-                {r}
+                {c.negativeReasons[i] ?? r}
               </Button>
             ))}
           </div>
           <Textarea
-            placeholder="Detail tambahan (opsional) — tulis sebelum memilih alasan"
+            placeholder={c.feedbackDetail}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             maxLength={1000}
@@ -391,13 +394,14 @@ function UserBubble({ text }: { text: string }) {
 
 /** Indikator proses dengan label yang berganti bila menunggu lama. */
 function WorkingIndicator({ label, fallback }: { label?: string | null; fallback: string }) {
+  const c = chatText(useApp().lang);
   const [secs, setSecs] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setSecs((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
   const text =
-    label ?? (secs < 6 ? fallback : secs < 20 ? "Menyusun jawaban terbaik untukmu…" : "Masih bekerja — permintaan besar butuh waktu sedikit lebih lama…");
+    label ?? (secs < 6 ? fallback : secs < 20 ? c.workingLong : c.workingLonger);
   return (
     <p className="flex items-center gap-2 text-sm text-muted-foreground">
       <Loader2 className="size-4 animate-spin text-primary" />
@@ -420,11 +424,12 @@ function ToolError({ message }: { message: string }) {
 }
 
 function ImageResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
-  const { t } = useApp();
+  const { t, lang } = useApp();
+  const c = chatText(lang);
   const [broken, setBroken] = useState(false);
-  if (part.state === "output-error") return <ToolError message="Gagal membuat gambar." />;
+  if (part.state === "output-error") return <ToolError message={c.imageFailed} />;
   if (part.state !== "output-available" || !part.output) return <ToolPending label={t.generatingImage} streaming={streaming} />;
-  if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat gambar."} />;
+  if (!part.output.ok) return <ToolError message={part.output.error ?? c.imageFailed} />;
   const url = String(part.output.url);
   return (
     <figure className="w-fit max-w-full space-y-1.5">
@@ -435,7 +440,7 @@ function ImageResult({ part, streaming }: { part: ToolPart; streaming: boolean }
           {/* eslint-disable-next-line @next/next/no-img-element -- file privat lewat signed URL */}
           <img
             src={url}
-            alt={String(part.output.prompt ?? "Gambar buatan AI")}
+            alt={String(part.output.prompt ?? c.imageAlt)}
             className="max-h-[520px] max-w-full rounded-xl border bg-muted object-contain"
             onError={() => setBroken(true)}
           />
@@ -450,11 +455,13 @@ function ImageResult({ part, streaming }: { part: ToolPart; streaming: boolean }
 
 /** Carousel / poster: deretan slide (JPEG siap posting), unduh ZIP & PDF, salin caption. */
 function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
+  const { t, lang } = useApp();
+  const c = chatText(lang);
   const [copiedCaption, setCopiedCaption] = useState(false);
-  if (part.state === "output-error") return <ToolError message="Gagal membuat carousel." />;
+  if (part.state === "output-error") return <ToolError message={c.carouselFailed} />;
   if (part.state !== "output-available" || !part.output)
-    return <ToolPending label={part.state === "input-streaming" ? "Sedang menyusun isi carousel…" : "Sedang mendesain slide & membuat foto… (±30–90 detik)"} streaming={streaming} />;
-  if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat carousel."} />;
+    return <ToolPending label={part.state === "input-streaming" ? c.carouselWriting : c.carouselDesigning} streaming={streaming} />;
+  if (!part.output.ok) return <ToolError message={part.output.error ?? c.carouselFailed} />;
   const o = part.output;
   const slides = (o.slides as string[] | undefined) ?? [];
   const format = String(o.format ?? "4:5");
@@ -465,9 +472,9 @@ function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolea
     <div className="max-w-xl overflow-hidden rounded-xl border bg-card">
       <div className="flex gap-2 overflow-x-auto bg-muted/40 p-3">
         {slides.map((src, i) => (
-          <a key={src} href={`${src}?download=1`} title={`Unduh slide ${i + 1}`} className="shrink-0" style={{ width: single ? 220 : 150 }}>
+          <a key={src} href={`${src}?download=1`} title={c.downloadSlide(i + 1)} className="shrink-0" style={{ width: single ? 220 : 150 }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- file pribadi via /api/attachments */}
-            <img src={src} alt={`Slide ${i + 1}`} loading="lazy" className="w-full rounded-md object-cover shadow-sm ring-1 ring-black/5" style={{ aspectRatio: ratio }} />
+            <img src={src} alt={c.slideAlt(i + 1)} loading="lazy" className="w-full rounded-md object-cover shadow-sm ring-1 ring-black/5" style={{ aspectRatio: ratio }} />
           </a>
         ))}
       </div>
@@ -475,7 +482,7 @@ function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolea
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{String(o.title)}</p>
           <p className="text-xs text-muted-foreground">
-            {single ? "Poster" : `Carousel · ${slides.length} slide`} · {format} · JPEG + PDF
+            {single ? c.poster : c.carouselMeta(slides.length)} · {format} · JPEG + PDF
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
@@ -485,7 +492,8 @@ function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolea
               images={o.previewImages as Record<string, string> | undefined}
               pdfUrl={o.pdfUrl ? String(o.pdfUrl) : undefined}
               pptxUrl={String(o.url)}
-              downloadLabel="Unduh semua (ZIP)"
+              kind="carousel"
+              downloadLabel={c.downloadAllZip}
               title={String(o.title)}
             />
           ) : null}
@@ -496,7 +504,7 @@ function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolea
           </Button>
           <Button asChild size="sm">
             <a href={`${single ? slides[0] : String(o.url)}?download=1`}>
-              <Download /> {single ? "Unduh JPEG" : "Unduh semua"}
+              <Download /> {single ? c.downloadJpeg : c.downloadAll}
             </a>
           </Button>
         </div>
@@ -504,7 +512,7 @@ function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolea
       {caption && (
         <div className="border-t px-4 py-3">
           <div className="mb-1 flex items-center justify-between">
-            <p className="text-xs font-semibold text-muted-foreground">Caption siap posting</p>
+            <p className="text-xs font-semibold text-muted-foreground">{c.captionReady}</p>
             <button
               type="button"
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
@@ -514,7 +522,7 @@ function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolea
                 setTimeout(() => setCopiedCaption(false), 1500);
               }}
             >
-              {copiedCaption ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} {copiedCaption ? "Tersalin" : "Salin"}
+              {copiedCaption ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} {copiedCaption ? t.copied : t.copy}
             </button>
           </div>
           <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-sm">{caption}</p>
@@ -526,9 +534,11 @@ function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolea
 
 /** Foto Produk Studio: hasil beberapa variasi foto katalog. */
 function ProductPhotoResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
-  if (part.state === "output-error") return <ToolError message="Gagal membuat foto produk." />;
-  if (part.state !== "output-available" || !part.output) return <ToolPending label="Sedang memotret ulang produk kamu di studio… (±20–40 detik)" streaming={streaming} />;
-  if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat foto produk."} />;
+  const { t, lang } = useApp();
+  const c = chatText(lang);
+  if (part.state === "output-error") return <ToolError message={c.productPhotoFailed} />;
+  if (part.state !== "output-available" || !part.output) return <ToolPending label={c.productPhotoPending} streaming={streaming} />;
+  if (!part.output.ok) return <ToolError message={part.output.error ?? c.productPhotoFailed} />;
   const images = (part.output.images as { attachmentId: string; url: string }[] | undefined) ?? [];
   return (
     <div className="grid max-w-xl grid-cols-2 gap-2">
@@ -536,10 +546,10 @@ function ProductPhotoResult({ part, streaming }: { part: ToolPart; streaming: bo
         <figure key={img.attachmentId} className="space-y-1">
           <a href={img.url} target="_blank" rel="noopener noreferrer">
             {/* eslint-disable-next-line @next/next/no-img-element -- file pribadi via /api/attachments */}
-            <img src={img.url} alt={`Foto produk ${i + 1}`} loading="lazy" className="w-full rounded-xl border bg-muted object-cover" />
+            <img src={img.url} alt={c.productPhotoAlt(i + 1)} loading="lazy" className="w-full rounded-xl border bg-muted object-cover" />
           </a>
           <a href={`${img.url}?download=1`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <Download className="size-3.5" /> Unduh
+            <Download className="size-3.5" /> {t.download}
           </a>
         </figure>
       ))}
@@ -548,11 +558,12 @@ function ProductPhotoResult({ part, streaming }: { part: ToolPart; streaming: bo
 }
 
 function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
-  const { t } = useApp();
-  if (part.state === "output-error") return <ToolError message="Gagal membuat presentasi." />;
+  const { t, lang } = useApp();
+  const c = chatText(lang);
+  if (part.state === "output-error") return <ToolError message={c.deckFailed} />;
   if (part.state !== "output-available" || !part.output)
-    return <ToolPending label={part.state === "input-streaming" ? "Sedang menyusun isi & alur slide…" : t.buildingDeck} streaming={streaming} />;
-  if (!part.output.ok) return <ToolError message={part.output.error ?? "Gagal membuat presentasi."} />;
+    return <ToolPending label={part.state === "input-streaming" ? c.deckWriting : t.buildingDeck} streaming={streaming} />;
+  if (!part.output.ok) return <ToolError message={part.output.error ?? c.deckFailed} />;
   const titles = (part.output.slideTitles as string[] | undefined) ?? [];
   const theme = DECK_THEMES[String(part.output.theme ?? "")] ?? DECK_THEMES.midnight;
   const images = Number(part.output.images ?? 0);
@@ -580,7 +591,7 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
         </p>
         <p className="relative mt-1 text-[11px]" style={{ color: cover ? "rgba(255,255,255,.75)" : theme.muted }}>
           {Number(part.output.slideCount)} {t.slides}
-          {images > 0 ? ` · ${images} foto AI` : ""}
+          {images > 0 ? c.aiPhotos(images) : ""}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-b bg-gradient-to-r from-primary/15 to-transparent px-4 py-3">
@@ -618,7 +629,7 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
           ) : null}
           <Button asChild size="sm">
             <a href={`${String(part.output.editableUrl ?? part.output.url)}?download=1`}>
-              <Download /> {part.output.sceneUrl ? "Unduh PPT" : t.downloadPptx}
+              <Download /> {part.output.sceneUrl ? c.downloadPpt : t.downloadPptx}
             </a>
           </Button>
         </div>
@@ -679,19 +690,20 @@ function IconBtn({
 }
 
 /** Blok [[PERBARUI_HASIL]] (instruksi untuk sistem) diganti keterangan singkat untuk user. */
-function hideUpdateBlock(text: string) {
-  return text.replace(UPDATE_RESULT_BLOCK, "\n\n> 🔄 **Hasil di panel kanan diperbarui** sesuai permintaan ini.");
+function hideUpdateBlock(text: string, c: ChatText) {
+  return text.replace(UPDATE_RESULT_BLOCK, c.updateBlockNote);
 }
 
 /** Penanda AI sedang/sudah membaca hasil Tools Pro user (chat biasa). */
 function ReadResultChip({ part }: { part: ToolPart }) {
+  const c = chatText(useApp().lang);
   const out = part.output as { ok?: boolean; title?: string; tool?: string; link?: string } | undefined;
   const done = part.state === "output-available" || part.state === "output-error";
   const cls = "not-prose inline-flex max-w-full items-center gap-1.5 rounded-full border bg-muted/50 px-3 py-1 text-xs text-muted-foreground";
   if (!done) {
     return (
       <span className={cn(cls, "animate-pulse")}>
-        <FolderOpen className="size-3.5 text-primary" /> Membaca hasil Tools Pro…
+        <FolderOpen className="size-3.5 text-primary" /> {c.readingToolResult}
       </span>
     );
   }
@@ -700,7 +712,7 @@ function ReadResultChip({ part }: { part: ToolPart }) {
     <a href={out.link} className={cn(cls, "hover:bg-accent hover:text-foreground")}>
       <FolderOpen className="size-3.5 shrink-0 text-primary" />
       <span className="truncate">
-        Membaca hasil Tools Pro: <span className="font-medium text-foreground">{out.title}</span>
+        {c.readToolResult}<span className="font-medium text-foreground">{out.title}</span>
       </span>
     </a>
   );
@@ -708,6 +720,7 @@ function ReadResultChip({ part }: { part: ToolPart }) {
 
 /** Penanda tautan yang dibaca AI (atau alasan bila tidak bisa dibaca). */
 function LinkChip({ link }: { link: LinkPart }) {
+  const c = chatText(useApp().lang);
   const cls = "not-prose inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs";
   return (
     <a
@@ -719,7 +732,7 @@ function LinkChip({ link }: { link: LinkPart }) {
     >
       {link.ok ? <Link2 className="size-3.5 shrink-0 text-primary" /> : <Link2Off className="size-3.5 shrink-0" />}
       <span className="truncate">
-        {link.ok ? "Membaca tautan: " : "Tidak terbaca: "}
+        {link.ok ? c.readingLink : c.linkUnreadable}
         <span className="font-medium">{link.title ? `${link.title.slice(0, 60)} · ${link.host}` : link.host}</span>
         {!link.ok && link.note ? ` — ${link.note}` : ""}
       </span>

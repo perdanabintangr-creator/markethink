@@ -17,6 +17,7 @@ import { useApp } from "@/components/app/app-context";
 import type { AgentRunLite, AgentStep } from "@/lib/agent/catalog";
 import { emitChatsChanged } from "@/lib/events";
 import { cn } from "@/lib/utils";
+import { chatText, type ChatText } from "@/lib/i18n/chat";
 
 interface ResultLite {
   id: string;
@@ -26,18 +27,13 @@ interface ResultLite {
   status: string;
 }
 
-const SUMMARY_STEPS = ["Membaca semua hasil", "Menarik benang merah strategi", "Menyusun rencana eksekusi", "Menentukan angka yang dipantau"];
-
-const stepLabels = (tool: string) => [
-  "Membaca tujuan & hasil langkah sebelumnya",
-  "Mengisi brief otomatis",
-  ...(PRO_FORMS[tool]?.steps ?? ["Riset & analisis", "Menyusun hasil", "Membuat PPT & Excel"]),
-];
+const stepLabels = (tool: string, c: ChatText) => [...c.stepBaseLabels, ...(PRO_FORMS[tool]?.steps ?? c.stepDefaultLabels)];
 
 /** Halaman misi Agent: rencana → jalankan langkah satu per satu (tiap langkah = satu Tools Pro) → ringkasan paket. */
 export function AgentMission({ initial, initialResults }: { initial: AgentRunLite; initialResults: ResultLite[] }) {
   const router = useRouter();
-  const { credits } = useApp();
+  const { credits, lang } = useApp();
+  const c = chatText(lang);
   const [run, setRun] = useState(initial);
   const [results, setResults] = useState(initialResults);
   const [working, setWorking] = useState<{ index: number; since: number } | null>(null);
@@ -66,13 +62,13 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
     try {
       const res = await fetch(`/api/agent/${initial.id}/finish`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) toast.error(data.message ?? "Gagal menyusun ringkasan. Coba lagi.");
-      else toast.success("Paket selesai! 🎉");
+      if (!res.ok) toast.error(data.message ?? c.summaryFailed);
+      else toast.success(c.packageDone);
     } finally {
       setSummarizing(null);
       await refresh();
     }
-  }, [initial.id, refresh]);
+  }, [initial.id, refresh, c]);
 
   /** Jalankan langkah berikutnya terus sampai habis (satu permintaan per langkah). */
   const runAll = useCallback(
@@ -95,21 +91,21 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
           next = undefined;
           const data = await res.json().catch(() => ({}));
           if (res.status === 409) {
-            toast.message(data.message ?? "Langkah sebelumnya masih berjalan, tunggu sebentar.");
+            toast.message(data.message ?? c.stepStillRunning);
             break;
           }
           if (!res.ok) {
-            toast.error(data.message ?? "Koneksi terputus. Klik Lanjutkan untuk meneruskan.");
+            toast.error(data.message ?? c.offlineContinue);
             break;
           }
           if (data.done) break;
-          if (data.ok) toast.success(`${toolInfo(current.plan[idx].tool)?.name ?? "Langkah"} selesai`);
-          else toast.error(data.error ?? "Langkah gagal.");
+          if (data.ok) toast.success(c.stepDone(toolInfo(current.plan[idx].tool)?.name));
+          else toast.error(data.error ?? c.stepFailed);
           emitChatsChanged();
           if (!data.more) break;
         }
       } catch {
-        toast.error("Koneksi terputus. Klik Lanjutkan untuk meneruskan.");
+        toast.error(c.offlineContinue);
       } finally {
         setWorking(null);
         loopRef.current = false;
@@ -119,7 +115,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
         await finish();
       }
     },
-    [initial.id, refresh, finish],
+    [initial.id, refresh, finish, c],
   );
 
   // Kembali ke halaman saat langkah masih diproses server → pantau sampai selesai.
@@ -134,7 +130,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
   async function removeStep(i: number) {
     const res = await fetch(`/api/agent/${initial.id}`, { method: "PATCH", body: JSON.stringify({ remove: i }) });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return void toast.error(data.message ?? "Gagal membuang langkah.");
+    if (!res.ok) return void toast.error(data.message ?? c.removeStepFailed);
     await refresh();
   }
 
@@ -143,7 +139,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
     try {
       const res = await fetch(`/api/agent/${initial.id}/to-chat`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.chatId) return void toast.error("Gagal membuka chat. Coba lagi.");
+      if (!res.ok || !data.chatId) return void toast.error(c.openChatFailed);
       emitChatsChanged();
       router.push(`/chat/${data.chatId}`);
     } finally {
@@ -159,24 +155,25 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
     <div className="space-y-6">
       <div className="rounded-2xl border bg-card p-4 sm:p-6">
         <p className="text-xs font-medium uppercase tracking-wide text-primary">Markethink Agent</p>
-        <h1 className="mt-1 text-xl font-bold sm:text-2xl">{run.title ?? "Misi baru"}</h1>
+        <h1 className="mt-1 text-xl font-bold sm:text-2xl">{run.title ?? c.newMission}</h1>
         <blockquote className="mt-3 border-l-2 border-primary/40 pl-3 text-sm text-muted-foreground">{run.goal}</blockquote>
         {notStarted && !busy && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary/5 p-3">
             <p className="text-sm">
-              <span className="font-medium">{active.length} langkah</span> · {quotaShare(active.length * TOOL_CREDIT_ESTIMATE[run.tier ?? "senior"], credits.monthLimit) ?? "sebagian"} kuota bulanan · ±{Math.ceil(totalSeconds / 60)} menit.
-              <span className="block text-xs text-muted-foreground">Buang langkah yang tidak perlu (✕), lalu jalankan. Biarkan halaman ini terbuka selama Agent bekerja.</span>
+              <span className="font-medium">{c.stepsCount(active.length)}</span>
+              {c.missionEstimate(quotaShare(active.length * TOOL_CREDIT_ESTIMATE[run.tier ?? "senior"], credits.monthLimit), Math.ceil(totalSeconds / 60))}
+              <span className="block text-xs text-muted-foreground">{c.removeStepsHint}</span>
             </p>
             <Button onClick={() => void runAll()}>
-              <Play /> Jalankan semua langkah
+              <Play /> {c.runAllSteps}
             </Button>
           </div>
         )}
         {!notStarted && pending && !busy && runningIdx === -1 && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary/5 p-3">
-            <p className="text-sm">Masih ada langkah yang belum dijalankan.</p>
+            <p className="text-sm">{c.stepsLeft}</p>
             <Button onClick={() => void runAll()}>
-              <Play /> Lanjutkan
+              <Play /> {c.continue}
             </Button>
           </div>
         )}
@@ -200,7 +197,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
                     <p className="font-semibold">
                       {n}. {info?.name ?? step.tool}
                     </p>
-                    <StepBadge status={isWorking ? "running" : step.status} />
+                    <StepBadge status={isWorking ? "running" : step.status} c={c} />
                   </div>
                   <p className="mt-0.5 text-sm text-muted-foreground">{step.why}</p>
                   {step.status === "ok" && result && (
@@ -215,13 +212,13 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <p className="text-sm text-destructive">{step.error}</p>
                       <Button size="sm" variant="outline" disabled={busy} onClick={() => void runAll(i)}>
-                        <RotateCcw /> Ulangi langkah ini
+                        <RotateCcw /> {c.retryStep}
                       </Button>
                     </div>
                   )}
                 </div>
                 {step.status === "pending" && notStarted && !busy && active.length > 1 && (
-                  <button onClick={() => void removeStep(i)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Buang langkah" title="Buang langkah">
+                  <button onClick={() => void removeStep(i)} className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label={c.removeStep} title={c.removeStep}>
                     <X className="size-4" />
                   </button>
                 )}
@@ -233,9 +230,9 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
                     tool={step.tool}
                     since={working?.since}
                     typical={(info?.seconds ?? 90) + 20}
-                    title={`Langkah ${n} dari ${active.length}: ${info?.menu ?? "memproses"}…`}
-                    note="Jangan tutup halaman ini — langkah berikutnya otomatis lanjut."
-                    steps={stepLabels(step.tool)}
+                    title={c.stepOf(n, active.length, info?.menu)}
+                    note={c.keepPageOpen}
+                    steps={stepLabels(step.tool, c)}
                   />
                 </div>
               )}
@@ -246,7 +243,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
 
       {summarizing !== null && (
         <div className="flex justify-center rounded-2xl border bg-card p-6">
-          <WorkingShowcase tool="agent" since={summarizing} typical={45} title="Merangkai semua hasil jadi satu paket…" steps={SUMMARY_STEPS} />
+          <WorkingShowcase tool="agent" since={summarizing} typical={45} title={c.summarizing} steps={c.summarySteps} />
         </div>
       )}
 
@@ -254,10 +251,10 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
         <section className="rounded-2xl border bg-card p-4 sm:p-6">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 text-lg font-bold">
-              <Sparkles className="size-5 text-primary" /> Ringkasan paket
+              <Sparkles className="size-5 text-primary" /> {c.summaryTitle}
             </h2>
             <Button onClick={openChat} disabled={chatBusy}>
-              {chatBusy ? <Loader2 className="animate-spin" /> : <MessageSquareText />} Bahas paket di Chat
+              {chatBusy ? <Loader2 className="animate-spin" /> : <MessageSquareText />} {c.discussInChat}
             </Button>
           </div>
           <div className="prose prose-sm max-w-none dark:prose-invert">
@@ -269,7 +266,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
       {!run.summary && !busy && !pending && runningIdx === -1 && okCount > 0 && (
         <div className="flex justify-center">
           <Button onClick={() => void finish()}>
-            <Sparkles /> Susun ringkasan paket
+            <Sparkles /> {c.buildSummary}
           </Button>
         </div>
       )}
@@ -277,13 +274,13 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
   );
 }
 
-function StepBadge({ status }: { status: AgentStep["status"] }) {
+function StepBadge({ status, c }: { status: AgentStep["status"]; c: ChatText }) {
   const map = {
-    pending: { icon: <CircleDashed className="size-3.5" />, label: "Menunggu", cls: "text-muted-foreground" },
-    running: { icon: <Loader2 className="size-3.5 animate-spin" />, label: "Dikerjakan", cls: "text-primary" },
-    ok: { icon: <CheckCircle2 className="size-3.5" />, label: "Selesai", cls: "text-emerald-600 dark:text-emerald-400" },
-    error: { icon: <CircleAlert className="size-3.5" />, label: "Gagal", cls: "text-destructive" },
-    skipped: { icon: null, label: "Dilewati", cls: "text-muted-foreground" },
+    pending: { icon: <CircleDashed className="size-3.5" />, label: c.stepStatus.pending, cls: "text-muted-foreground" },
+    running: { icon: <Loader2 className="size-3.5 animate-spin" />, label: c.stepStatus.running, cls: "text-primary" },
+    ok: { icon: <CheckCircle2 className="size-3.5" />, label: c.stepStatus.ok, cls: "text-emerald-600 dark:text-emerald-400" },
+    error: { icon: <CircleAlert className="size-3.5" />, label: c.stepStatus.error, cls: "text-destructive" },
+    skipped: { icon: null, label: c.stepStatus.skipped, cls: "text-muted-foreground" },
   }[status];
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium", map.cls)}>

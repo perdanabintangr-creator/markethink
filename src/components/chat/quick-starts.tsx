@@ -117,7 +117,7 @@ export function QuickStarts({
   const items = compact ? QUICK_STARTS.filter((q) => ["caption", "carousel", "pptx", "product-photo"].includes(q.id)) : QUICK_STARTS;
   return (
     <div className={compact ? "flex flex-wrap gap-2" : "flex flex-wrap justify-center gap-2"}>
-      {onTemplate && <TemplateButton role={role} onPick={onTemplate} />}
+      {onTemplate && <TemplateButton lang={lang} role={role} onPick={onTemplate} />}
       {items.map((q) => {
         const Icon = q.icon;
         return (

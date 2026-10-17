@@ -5,6 +5,8 @@ import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PLAN_LABEL, type PlanId } from "@/lib/ai/models.config";
+import { useApp } from "@/components/app/app-context";
+import { chatText } from "@/lib/i18n/chat";
 
 export function QuotaDialog({
   open,
@@ -19,6 +21,7 @@ export function QuotaDialog({
   /** Bila diisi: batas harian paket Free (mis. 20 chat/hari) tercapai. */
   notice?: string | null;
 }) {
+  const c = chatText(useApp().lang);
   const [tierLabel, planId] = lockedTier?.split("|") ?? [];
   const planLabel = PLAN_LABEL[(planId as PlanId) ?? "pro"] ?? "Pro";
 
@@ -28,18 +31,18 @@ export function QuotaDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />{" "}
-            {lockedTier ? `${tierLabel} mulai paket ${planLabel}` : notice ? "Batas harian tercapai" : "Kuota bulan ini sudah habis"}
+            {lockedTier ? c.tierLockedTitle(tierLabel, planLabel) : notice ? c.dailyLimitTitle : c.quotaTitle}
           </DialogTitle>
           <DialogDescription>
             {notice
-              ? `${notice} Paket berbayar tidak punya batas harian — cukup kuota bulanan.`
+              ? c.dailyLimitDesc(notice)
               : lockedTier
-                ? "Starter membuka Senior (strategi & campaign) + semua Tools Pro. Pro menambah Associate (sekelas konsultan) & Markethink Agent. Promax membuka Director — otak paling cerdas."
-                : "Kuota direset otomatis tiap tanggal 1 pukul 00.00 WIB. Butuh lebih banyak sekarang? Upgrade paket untuk kuota bulanan yang lebih besar."}
+                ? c.tierLockedDesc
+                : c.quotaDesc}
           </DialogDescription>
         </DialogHeader>
         <Button asChild className="w-full" onClick={() => onOpenChange(false)}>
-          <Link href="/pricing">Lihat paket & harga</Link>
+          <Link href="/pricing">{c.seePlansPricing}</Link>
         </Button>
       </DialogContent>
     </Dialog>

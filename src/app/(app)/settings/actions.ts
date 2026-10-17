@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EXPERIENCE, ROLES } from "@/lib/personas";
 import { RESPONSE_STYLES } from "@/lib/ai/prompt-styles";
+import { settingsText } from "@/lib/i18n/settings";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(80),
@@ -17,14 +18,15 @@ const profileSchema = z.object({
 });
 
 export async function updateProfile(_prev: { ok?: boolean; error?: string } | undefined, formData: FormData) {
-  const { supabase, user } = await requireUser();
+  const { supabase, user, profile } = await requireUser();
+  const t = settingsText(profile.language);
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: "Data tidak valid." };
+  if (!parsed.success) return { error: t.errInvalidData };
   const { error } = await supabase
     .from("profiles")
     .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq("id", user.id);
-  if (error) return { error: "Gagal menyimpan." };
+  if (error) return { error: t.errSaveFailed };
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -65,29 +67,31 @@ const personalizationSchema = z.object({
 });
 
 export async function updatePersonalization(_prev: FormState, formData: FormData): Promise<FormState> {
-  const { supabase, user } = await requireUser();
+  const { supabase, user, profile } = await requireUser();
+  const t = settingsText(profile.language);
   const parsed = personalizationSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: "Maksimal 1.500 karakter." };
+  if (!parsed.success) return { error: t.errMax1500 };
   const { error } = await supabase
     .from("profiles")
     .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq("id", user.id);
-  if (error) return { error: "Gagal menyimpan." };
+  if (error) return { error: t.errSaveFailed };
   revalidatePath("/settings");
   return { ok: true };
 }
 
 export async function changePassword(_prev: FormState, formData: FormData): Promise<FormState> {
-  const { supabase } = await requireUser();
+  const { supabase, profile } = await requireUser();
+  const t = settingsText(profile.language);
   const password = String(formData.get("password") ?? "");
-  if (password.length < 8) return { error: "Password minimal 8 karakter." };
-  if (password !== formData.get("confirm")) return { error: "Konfirmasi password tidak sama." };
+  if (password.length < 8) return { error: t.errPasswordMin };
+  if (password !== formData.get("confirm")) return { error: t.errPasswordMismatch };
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    if (/same/i.test(error.message)) return { error: "Password baru harus berbeda dari yang lama." };
-    if (/reauth|recent/i.test(error.message)) return { error: "Demi keamanan, keluar lalu masuk lagi, kemudian ulangi ganti password." };
-    if (/weak|pwned|leaked/i.test(error.message)) return { error: "Password terlalu lemah/umum. Pakai kombinasi huruf, angka & simbol." };
-    return { error: "Gagal mengganti password." };
+    if (/same/i.test(error.message)) return { error: t.errPasswordSame };
+    if (/reauth|recent/i.test(error.message)) return { error: t.errPasswordReauth };
+    if (/weak|pwned|leaked/i.test(error.message)) return { error: t.errPasswordWeak };
+    return { error: t.errPasswordFailed };
   }
   return { ok: true };
 }
@@ -114,7 +118,9 @@ export async function revokeShare(kind: "chat" | "canvas" | "all", id?: string) 
 /** Hapus akun & seluruh data (UU PDP: hak penghapusan). */
 export async function deleteAccount(formData: FormData) {
   const { supabase, user } = await requireUser();
-  if (formData.get("confirm") !== "HAPUS") return;
+  // Kata konfirmasi mengikuti bahasa tampilan (HAPUS / DELETE).
+  const word = formData.get("confirm");
+  if (word !== settingsText("id").deleteWord && word !== settingsText("en").deleteWord) return;
   const admin = createAdminClient();
   // Hapus semua file di storage milik user.
   const [{ data: att }, { data: wsFiles }] = await Promise.all([

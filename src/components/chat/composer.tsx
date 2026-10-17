@@ -10,6 +10,7 @@ import { UsageRing } from "@/components/app/usage-ring";
 import { cn } from "@/lib/utils";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 import { buildQuotedMessage } from "@/lib/quote";
+import { chatText } from "@/lib/i18n/chat";
 
 export interface PendingAttachment {
   id: string;
@@ -50,7 +51,8 @@ export function Composer({
   /** Teks petunjuk kotak chat (default dari kamus bahasa). */
   placeholder?: string;
 }) {
-  const { t, researchAllowed } = useApp();
+  const { t, lang, researchAllowed } = useApp();
+  const c = chatText(lang);
   const router = useRouter();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
@@ -89,7 +91,7 @@ export function Composer({
       try {
         const data = await uploadFile<PendingAttachment>(file, { scope: "chat" });
         if ("error" in data) {
-          toast.error(`${file.name}: ${("message" in data && data.message) || UPLOAD_ERRORS[data.error] || "Upload gagal."}`);
+          toast.error(`${file.name}: ${("message" in data && data.message) || UPLOAD_ERRORS[data.error] || c.uploadFailed}`);
           continue;
         }
         setAttachments((a) => [
@@ -107,7 +109,7 @@ export function Composer({
     if (busy || uploading) return;
     const value = text.trim();
     if (!value && !attachments.length && !quote) return;
-    const message = value || (attachments.length ? "Tolong analisis file terlampir." : t.explainPrompt);
+    const message = value || (attachments.length ? c.analyzeAttached : t.explainPrompt);
     onSend(quote ? buildQuotedMessage(quote, message) : message, attachments);
     onClearQuote?.();
     setText("");
@@ -137,14 +139,14 @@ export function Composer({
                 <FileText className="size-4" />
               )}
               <span className="max-w-32 truncate">{a.name}</span>
-              <button onClick={() => setAttachments((x) => x.filter((y) => y.id !== a.id))} aria-label="Hapus lampiran">
+              <button onClick={() => setAttachments((x) => x.filter((y) => y.id !== a.id))} aria-label={c.removeAttachment}>
                 <X className="size-3.5" />
               </button>
             </span>
           ))}
           {uploading > 0 && (
             <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" /> Mengunggah…
+              <Loader2 className="size-3.5 animate-spin" /> {c.uploading}
             </span>
           )}
         </div>
@@ -156,7 +158,7 @@ export function Composer({
             <p className="font-medium text-primary">{t.replyingTo}</p>
             <p className="line-clamp-2 text-muted-foreground">{quote}</p>
           </div>
-          <button onClick={onClearQuote} aria-label="Batal" className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClearQuote} aria-label={t.cancel} className="text-muted-foreground hover:text-foreground">
             <X className="size-3.5" />
           </button>
         </div>
@@ -197,9 +199,9 @@ export function Composer({
           onClick={() =>
             researchAllowed
               ? onResearchChange(!research)
-              : toast("Riset Web tersedia mulai paket Starter", {
-                  description: "Cari data & tren terbaru dari Google lengkap dengan sumbernya.",
-                  action: { label: "Lihat paket", onClick: () => router.push("/pricing") },
+              : toast(c.researchLockedTitle, {
+                  description: c.researchLockedDesc,
+                  action: { label: c.seePlans, onClick: () => router.push("/pricing") },
                 })
           }
           className={cn(
@@ -207,7 +209,7 @@ export function Composer({
             research && researchAllowed ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent",
           )}
           aria-pressed={research && researchAllowed}
-          title={researchAllowed ? undefined : "Tersedia mulai paket Starter"}
+          title={researchAllowed ? undefined : c.researchLockedHint}
         >
           <Globe className="size-3.5" /> {t.research}
           {!researchAllowed && <Lock className="size-3" />}

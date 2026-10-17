@@ -25,6 +25,7 @@ import { emitChatsChanged, emitCredits } from "@/lib/events";
 import { track } from "@/lib/analytics";
 import { ATTACHMENT_URL_PREFIX, PENDING_KEY, isGenerating, type MtMessage, type PendingAgentRun } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { chatText } from "@/lib/i18n/chat";
 import { ChatMessage, messageToText } from "./message";
 import { buildQuotedMessage } from "@/lib/quote";
 import { Composer, type PendingAttachment } from "./composer";
@@ -67,6 +68,7 @@ export function ChatView({
   project?: ProjectHomeData | null;
 }) {
   const { t, lang, user, workspaces, allowedTiers, personaRole } = useApp();
+  const c = chatText(lang);
   const [tier, setTier] = useState<TierChoice>(() => pickTierChoice(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
@@ -103,18 +105,18 @@ export function ChatView({
           body: JSON.stringify({ __revise: { runId: latestRunId.current ?? toolRun.rootId, note }, __tier: readToolTierPref() }),
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) return void toast.error(data.message ?? "Gagal memperbarui hasil. Coba minta lagi.");
+        if (!res.ok) return void toast.error(data.message ?? c.toolRunUpdateFailed);
         latestRunId.current = data.runId;
         setRunRefresh((n) => n + 1);
-        toast.success("Hasil diperbarui — lihat panel kanan");
+        toast.success(c.toolRunUpdated);
         emitChatsChanged();
       } catch {
-        toast.error("Koneksi terputus saat memperbarui hasil. Coba lagi.");
+        toast.error(c.toolRunUpdateOffline);
       } finally {
         setRunUpdating(null);
       }
     },
-    [toolRun],
+    [toolRun, c],
   );
 
   /** Tombol "Perbarui hasil" di bawah jawaban: jadikan pembahasan itu arahan revisi. */
@@ -149,13 +151,13 @@ export function ChatView({
   const createCanvas = useCallback(
     async (content: string) => {
       const res = await fetch("/api/canvas", { method: "POST", body: JSON.stringify({ chatId, content }) });
-      if (!res.ok) return toast.error("Gagal membuka canvas");
+      if (!res.ok) return toast.error(c.canvasFailed);
       const { id } = await res.json();
       setCanvasIds((ids) => [id, ...ids]);
       setCanvasId(id);
       track("canvas_opened");
     },
-    [chatId],
+    [chatId, c],
   );
 
   const { messages, sendMessage, status, stop, regenerate, setMessages, error, clearError } = useChat<MtMessage>({
@@ -191,7 +193,7 @@ export function ChatView({
       if (code === "daily_limit") {
         setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
         setLockedTier(null);
-        setLimitNotice(serverMessage || "Batas harian paket kamu sudah tercapai.");
+        setLimitNotice(serverMessage || c.dailyLimitDefault);
         setQuotaOpen(true);
         track("daily_limit");
       } else if (code === "quota_exceeded") {
@@ -199,14 +201,14 @@ export function ChatView({
         setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
         setQuotaOpen(true);
         track("quota_exceeded");
-      } else if (code === "rate_limited") toast.error("Terlalu banyak permintaan. Tunggu sebentar ya.");
+      } else if (code === "rate_limited") toast.error(c.rateLimited);
       else if (code === "tier_locked") {
         setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
         setTier(pickTierChoice(null, allowedTiers));
         setLimitNotice(null);
-        setLockedTier("Otak ini|pro");
+        setLockedTier(`${c.thisBrain}|pro`);
         setQuotaOpen(true);
-      } else if (code === "server_not_configured") toast.error("Server AI belum selesai dikonfigurasi. Hubungi admin.");
+      } else if (code === "server_not_configured") toast.error(c.serverNotConfigured);
       const res = await fetch("/api/credits");
       if (res.ok) emitCredits((await res.json()).remaining);
     },
@@ -313,20 +315,20 @@ export function ChatView({
   }
 
   async function share() {
-    if (!persisted) return toast.error("Kirim pesan dulu sebelum membagikan chat.");
+    if (!persisted) return toast.error(c.shareNeedsMessage);
     const res = await fetch(`/api/chats/${chatId}/share`, { method: "POST" });
-    if (!res.ok) return toast.error("Gagal membuat link");
+    if (!res.ok) return toast.error(c.shareLinkFailed);
     const { token } = await res.json();
     setShareToken(token);
     await navigator.clipboard.writeText(`${window.location.origin}/share/${token}`);
-    toast.success("Link publik (read-only) disalin ke clipboard");
+    toast.success(c.shareLinkCopied);
     track("chat_shared");
   }
 
   async function unshare() {
     await fetch(`/api/chats/${chatId}/share`, { method: "DELETE" });
     setShareToken(null);
-    toast.success("Link publik dimatikan");
+    toast.success(c.shareLinkDisabled);
   }
 
   function editMessage(index: number, text: string) {
@@ -398,7 +400,7 @@ export function ChatView({
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/workspaces">+ Kelola project</Link>
+                <Link href="/workspaces">{c.manageProjects}</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -406,7 +408,7 @@ export function ChatView({
           <div className="flex-1" />
           {toolRun && !runOpen && (
             <Button variant="ghost" size="sm" onClick={() => setRunOpen(true)}>
-              <PanelRight /> <span className="hidden sm:inline">Hasil</span>
+              <PanelRight /> <span className="hidden sm:inline">{c.result}</span>
             </Button>
           )}
           {canvasIds.length > 0 && !canvasId && (
@@ -422,11 +424,11 @@ export function ChatView({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={share}>
-                <Link2 /> {shareToken ? "Salin link publik" : "Buat link publik (read-only)"}
+                <Link2 /> {shareToken ? c.copyPublicLink : c.createPublicLink}
               </DropdownMenuItem>
               {shareToken && (
                 <DropdownMenuItem onClick={unshare}>
-                  <X /> Matikan link publik
+                  <X /> {c.disablePublicLink}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -444,7 +446,7 @@ export function ChatView({
           {messages.length === 0 && project && project.id === workspaceId && !activeAgent ? (
             <ProjectHome
               project={project}
-              composer={composer({ autoFocus: true, placeholder: `Chat baru di ${project.name}…` })}
+              composer={composer({ autoFocus: true, placeholder: c.newChatIn(project.name) })}
               extras={
                 <div className="mt-3">
                   <QuickStarts
@@ -520,14 +522,14 @@ export function ChatView({
               )}
               {remoteWaiting && !busy && (
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin text-primary" /> Markethink masih menyusun jawaban… hasilnya muncul otomatis di sini.
+                  <Loader2 className="size-4 animate-spin text-primary" /> {c.remoteWaiting}
                 </p>
               )}
               {error && !quotaOpen && (
                 <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
-                  Terjadi kendala saat menghubungi otak marketing.{" "}
+                  {c.chatError}{" "}
                   <button className="font-medium underline" onClick={() => regenerate()}>
-                    Coba lagi
+                    {c.retry}
                   </button>
                 </div>
               )}
@@ -541,7 +543,7 @@ export function ChatView({
             <button
               onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })}
               className="absolute -top-12 left-1/2 -translate-x-1/2 rounded-full border bg-background p-2 shadow"
-              aria-label="Scroll ke bawah"
+              aria-label={c.scrollDown}
             >
               <ArrowDown className="size-4" />
             </button>

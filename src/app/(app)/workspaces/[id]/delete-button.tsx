@@ -4,11 +4,14 @@ import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useApp } from "@/components/app/app-context";
+import { settingsText } from "@/lib/i18n/settings";
 import { deleteWorkspace } from "../actions";
 
 export function DeleteWorkspaceButton({ workspaceId }: { workspaceId: string }) {
   const [pending, start] = useTransition();
   const [confirm, confirmDialog] = useConfirm();
+  const t = settingsText(useApp().lang);
   return (
     <>
       <Button
@@ -17,16 +20,15 @@ export function DeleteWorkspaceButton({ workspaceId }: { workspaceId: string }) 
         disabled={pending}
         onClick={async () => {
           const ok = await confirm({
-            title: "Hapus project ini?",
-            description:
-              "Brand Kit, file knowledge, dan memory project ini akan dihapus permanen. Chat-nya tetap tersimpan (pindah ke riwayat umum).",
-            confirmLabel: "Hapus project",
+            title: t.deleteProjectTitle,
+            description: t.deleteProjectDesc,
+            confirmLabel: t.deleteProject,
             destructive: true,
           });
           if (ok) start(() => deleteWorkspace(workspaceId));
         }}
       >
-        <Trash2 /> Hapus project
+        <Trash2 /> {t.deleteProject}
       </Button>
       {confirmDialog}
     </>

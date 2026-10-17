@@ -6,6 +6,8 @@ import { Copy, ExternalLink, FileText, Loader2, MessageSquare, Unlink } from "lu
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useApp } from "@/components/app/app-context";
+import { settingsText } from "@/lib/i18n/settings";
 import { revokeShare } from "./actions";
 
 export interface SharedItem {
@@ -17,6 +19,7 @@ export interface SharedItem {
 }
 
 export function SharedLinks({ items }: { items: SharedItem[] }) {
+  const t = settingsText(useApp().lang);
   const [pending, start] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, confirmDialog] = useConfirm();
@@ -26,7 +29,7 @@ export function SharedLinks({ items }: { items: SharedItem[] }) {
     setBusy(it?.id ?? "all");
     start(async () => {
       await revokeShare(it ? it.kind : "all", it?.id);
-      toast.success(it ? "Link dimatikan" : "Semua link dimatikan");
+      toast.success(it ? t.linkRevoked : t.allLinksRevoked);
       setBusy(null);
     });
   }
@@ -34,7 +37,7 @@ export function SharedLinks({ items }: { items: SharedItem[] }) {
   if (!items.length) {
     return (
       <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-        Belum ada chat atau dokumen yang kamu bagikan lewat link publik.
+        {t.noSharedLinks}
       </p>
     );
   }
@@ -51,24 +54,24 @@ export function SharedLinks({ items }: { items: SharedItem[] }) {
                 {it.title}
               </Link>
               <p className="text-xs text-muted-foreground">
-                {it.kind === "chat" ? "Chat" : "Dokumen"} · {new Date(it.updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                {it.kind === "chat" ? t.kindChat : t.kindDoc} · {new Date(it.updated_at).toLocaleDateString(t.locale, { day: "numeric", month: "short", year: "numeric" })}
               </p>
             </div>
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              aria-label="Salin link"
-              onClick={() => navigator.clipboard.writeText(urlOf(it)).then(() => toast.success("Link disalin"))}
+              aria-label={t.copyLink}
+              onClick={() => navigator.clipboard.writeText(urlOf(it)).then(() => toast.success(t.linkCopied))}
             >
               <Copy />
             </Button>
-            <Button asChild size="icon" variant="ghost" aria-label="Buka link">
+            <Button asChild size="icon" variant="ghost" aria-label={t.openLink}>
               <a href={`/share/${it.kind === "canvas" ? "canvas/" : ""}${it.token}`} target="_blank" rel="noreferrer">
                 <ExternalLink />
               </a>
             </Button>
-            <Button type="button" size="icon" variant="ghost" aria-label="Matikan link" disabled={pending} onClick={() => revoke(it)}>
+            <Button type="button" size="icon" variant="ghost" aria-label={t.revokeLink} disabled={pending} onClick={() => revoke(it)}>
               {busy === it.id ? <Loader2 className="animate-spin" /> : <Unlink />}
             </Button>
           </li>
@@ -81,10 +84,10 @@ export function SharedLinks({ items }: { items: SharedItem[] }) {
           size="sm"
           disabled={pending}
           onClick={async () => {
-            if (await confirm({ title: "Matikan semua link?", description: "Siapa pun yang punya link tidak bisa membukanya lagi. Chat & dokumennya tetap aman di akunmu.", confirmLabel: "Matikan semua" })) revoke();
+            if (await confirm({ title: t.revokeAllTitle, description: t.revokeAllDesc, confirmLabel: t.revokeAllConfirm })) revoke();
           }}
         >
-          {busy === "all" && <Loader2 className="animate-spin" />} Matikan semua link
+          {busy === "all" && <Loader2 className="animate-spin" />} {t.revokeAll}
         </Button>
       </div>
     </div>

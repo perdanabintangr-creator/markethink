@@ -5,6 +5,8 @@ import { Download, Eye, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { FontRole, Scene, SceneItem } from "@/lib/deck/scene";
+import { useApp } from "@/components/app/app-context";
+import { chatText } from "@/lib/i18n/chat";
 
 /**
  * Pratinjau deck Signature (Promax): menggambar Scene yang sama persis dengan file PPT/PDF —
@@ -15,17 +17,21 @@ export function ScenePreviewButton({
   images,
   pdfUrl,
   pptxUrl,
-  downloadLabel = "Unduh PPT",
+  kind = "deck",
+  downloadLabel,
   title,
 }: {
   sceneUrl: string;
   images?: Record<string, string>;
   pdfUrl?: string;
   pptxUrl?: string;
+  /** Deck (PPT + PDF) atau carousel/poster (JPEG + PDF) — menentukan keterangan pratinjau. */
+  kind?: "deck" | "carousel";
   /** Tombol unduh utama (default "Unduh PPT"). */
   downloadLabel?: string;
   title: string;
 }) {
+  const c = chatText(useApp().lang);
   const [open, setOpen] = useState(false);
   const [scene, setScene] = useState<Scene | null>(null);
   const [failed, setFailed] = useState(false);
@@ -45,14 +51,15 @@ export function ScenePreviewButton({
   return (
     <>
       <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
-        <Eye /> Lihat
+        <Eye /> {c.view}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:w-[calc(100vw-4rem)]">
           <DialogHeader className="border-b px-4 py-3 pr-12">
             <DialogTitle className="truncate text-base">{title}</DialogTitle>
             <DialogDescription className="text-xs">
-              Pratinjau {scene ? `${scene.slides.length} slide` : "slide"}. {downloadLabel === "Unduh PPT" ? "PDF tampil persis seperti ini; PPT bisa diedit (tampilan bisa sedikit berbeda di tiap aplikasi)." : "JPEG & PDF tampil persis seperti ini — siap diunggah ke Instagram/TikTok."}
+              {c.scenePreview(scene ? scene.slides.length : null)}
+              {kind === "deck" ? c.sceneDeckNote : c.sceneCarouselNote}
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-muted/40 p-3 sm:p-4">
@@ -74,25 +81,25 @@ export function ScenePreviewButton({
               </>
             ) : (
               <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                {failed ? "Pratinjau gagal dimuat — silakan unduh filenya." : <Loader2 className="size-5 animate-spin" />}
+                {failed ? c.previewFailed : <Loader2 className="size-5 animate-spin" />}
               </div>
             )}
           </div>
           <div className="flex flex-wrap justify-end gap-2 border-t px-4 py-3">
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-              Tutup
+              {c.close}
             </Button>
             {pdfUrl && (
               <Button asChild size="sm" variant="outline">
                 <a href={`${pdfUrl}?download=1`}>
-                  <FileText /> Unduh PDF
+                  <FileText /> {c.downloadPdf}
                 </a>
               </Button>
             )}
             {pptxUrl && (
               <Button asChild size="sm">
                 <a href={`${pptxUrl}?download=1`}>
-                  <Download /> {downloadLabel}
+                  <Download /> {downloadLabel ?? c.downloadPpt}
                 </a>
               </Button>
             )}

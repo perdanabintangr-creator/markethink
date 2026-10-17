@@ -12,6 +12,7 @@ import { PLAN_LABEL, type PlanId, type TierId } from "@/lib/ai/models.config";
 import type { TierChoice } from "@/lib/ai/auto-tier";
 import { useApp } from "@/components/app/app-context";
 import { cn } from "@/lib/utils";
+import { chatText } from "@/lib/i18n/chat";
 
 export interface TierOption {
   id: TierId;
@@ -64,17 +65,18 @@ export function ModelSelector({
   compact?: boolean;
 }) {
   const { lang, allowedTiers } = useApp();
+  const c = chatText(lang);
   const isAuto = value === "auto";
   const autoOk = allowedTiers.includes("junior") && allowedTiers.includes("senior");
   const current = tiers.find((t) => t.id === value) ?? tiers[0];
-  const autoLabel = lang === "en" ? "Auto" : "Otomatis";
+  const autoLabel = c.auto;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {compact ? (
           <button
             className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 text-xs font-medium text-primary hover:bg-primary/15"
-            aria-label="Pilih otak"
+            aria-label={c.chooseBrain}
           >
             {isAuto ? <Wand2 className="size-3.5" /> : <Brain className="size-3.5" />} {isAuto ? autoLabel : current.label.replace("Markethink ", "")}
             <ChevronDown className="size-3.5" />
@@ -87,17 +89,17 @@ export function ModelSelector({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-80 max-w-[calc(100vw-1.5rem)] p-1.5">
-        <DropdownMenuLabel className="px-2 pt-1 pb-2">{lang === "en" ? "Choose your marketing brain" : "Pilih otak marketing"}</DropdownMenuLabel>
+        <DropdownMenuLabel className="px-2 pt-1 pb-2">{c.chooseBrainTitle}</DropdownMenuLabel>
         {autoOk && (
           <DropdownMenuItem onClick={() => onChange("auto")} className={cn("gap-3 rounded-lg px-2.5 py-2.5", isAuto && "bg-accent")}>
             <Wand2 className="!size-4 text-primary" />
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5 text-sm font-medium">
                 {autoLabel}
-                <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">{lang === "en" ? "Recommended" : "Disarankan"}</span>
+                <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">{c.recommended}</span>
               </span>
               <span className="block text-xs text-muted-foreground">
-                {lang === "en" ? "Junior for light tasks, Senior for strategy" : "Junior untuk hal ringan, Senior untuk strategi"}
+                {c.autoDesc}
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
@@ -133,9 +135,7 @@ export function ModelSelector({
           );
         })}
         <p className="px-2.5 pt-1.5 pb-1 text-[11px] leading-snug text-muted-foreground">
-          {lang === "en"
-            ? "Smarter brains use more of your monthly usage."
-            : "Makin pintar otaknya, makin banyak kuota bulanan terpakai."}
+          {c.brainCostNote}
         </p>
       </DropdownMenuContent>
     </DropdownMenu>

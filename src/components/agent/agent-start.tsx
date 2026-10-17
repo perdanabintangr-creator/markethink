@@ -12,8 +12,7 @@ import { AGENT_EXAMPLES } from "@/lib/agent/catalog";
 import { TOOL_CREDIT_ESTIMATE, quotaShare } from "@/lib/addons/format";
 import { useApp } from "@/components/app/app-context";
 import { cn } from "@/lib/utils";
-
-const PLAN_STEPS = ["Memahami tujuanmu", "Memetakan pekerjaan tim marketing", "Memilih Tools Pro yang dibutuhkan", "Mengatur urutan kerja", "Mengecek kuota"];
+import { chatText } from "@/lib/i18n/chat";
 
 /** Form misi Agent: satu tujuan (+ info bisnis opsional) → rencana langkah. */
 export function AgentStart({ locked }: { locked: boolean }) {
@@ -23,19 +22,20 @@ export function AgentStart({ locked }: { locked: boolean }) {
   const [showContext, setShowContext] = useState(false);
   const [busy, setBusy] = useState(false);
   const brain = useToolTier();
-  const { credits } = useApp();
+  const { credits, lang } = useApp();
+  const c = chatText(lang);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (goal.trim().length < 15) return toast.error("Ceritakan tujuannya sedikit lebih lengkap, ya.");
+    if (goal.trim().length < 15) return toast.error(c.goalTooShort);
     setBusy(true);
     try {
       const res = await fetch("/api/agent", { method: "POST", body: JSON.stringify({ goal, context, tier: brain.tier }) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.id) return void toast.error(data.message ?? "Agent gagal menyusun rencana. Coba lagi.");
+      if (!res.ok || !data.id) return void toast.error(data.message ?? c.planFailed);
       router.push(`/tools/agent/${data.id}`);
     } catch {
-      toast.error("Koneksi terputus. Coba lagi.");
+      toast.error(c.offlineRetry);
     } finally {
       setBusy(false);
     }
@@ -44,7 +44,7 @@ export function AgentStart({ locked }: { locked: boolean }) {
   return (
     <form onSubmit={submit} className="relative overflow-hidden rounded-2xl border bg-card p-4 sm:p-6">
       <label htmlFor="agent-goal" className="text-sm font-medium">
-        Apa yang mau kamu capai?
+        {c.goalLabel}
       </label>
       <Textarea
         id="agent-goal"
@@ -54,7 +54,7 @@ export function AgentStart({ locked }: { locked: boolean }) {
         maxLength={2000}
         disabled={locked || busy}
         className="mt-2 text-base"
-        placeholder="mis. Siapkan kampanye Ramadan untuk toko hijab online saya, target perempuan 20–35 tahun, budget iklan Rp5 juta."
+        placeholder={c.goalPlaceholder}
       />
       <div className="mt-2 flex flex-wrap gap-1.5">
         {AGENT_EXAMPLES.map((ex) => (
@@ -75,7 +75,7 @@ export function AgentStart({ locked }: { locked: boolean }) {
         onClick={() => setShowContext((v) => !v)}
         className="mt-4 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
-        <ChevronRight className={cn("size-4 transition-transform", showContext && "rotate-90")} /> Info bisnis (opsional, bikin hasil lebih tajam)
+        <ChevronRight className={cn("size-4 transition-transform", showContext && "rotate-90")} /> {c.contextToggle}
       </button>
       {showContext && (
         <Textarea
@@ -85,7 +85,7 @@ export function AgentStart({ locked }: { locked: boolean }) {
           maxLength={3000}
           disabled={locked || busy}
           className="mt-2"
-          placeholder={"mis.\n- Brand: Aisyah Hijab, jualan di Shopee & Instagram\n- Harga Rp89–149 ribu, pembeli kebanyakan mahasiswi & pekerja muda\n- Kompetitor: Elzatta, Buttonscarves\n- Kendala: follower banyak tapi jarang beli"}
+          placeholder={c.contextPlaceholder}
         />
       )}
 
@@ -94,16 +94,16 @@ export function AgentStart({ locked }: { locked: boolean }) {
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
         <p className="text-xs text-muted-foreground">
-          Agent menyusun rencana dulu — kamu bisa cek & buang langkah sebelum dijalankan. Setiap langkah memakai {quotaShare(TOOL_CREDIT_ESTIMATE[brain.tier], credits.monthLimit) ?? "sebagian"} kuota bulanan.
+          {c.planNote(quotaShare(TOOL_CREDIT_ESTIMATE[brain.tier], credits.monthLimit))}
         </p>
         <Button type="submit" disabled={locked || busy}>
-          <Sparkles /> Susun rencana
+          <Sparkles /> {c.buildPlan}
         </Button>
       </div>
 
       {busy && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90 p-6 backdrop-blur-sm">
-          <WorkingShowcase tool="agent" typical={35} title="Agent sedang menyusun rencana…" steps={PLAN_STEPS} compact />
+          <WorkingShowcase tool="agent" typical={35} title={c.planning} steps={c.planSteps} compact />
         </div>
       )}
     </form>

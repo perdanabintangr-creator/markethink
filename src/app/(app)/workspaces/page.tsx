@@ -3,12 +3,14 @@ import { Briefcase, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { settingsText } from "@/lib/i18n/settings";
 import { createWorkspace } from "./actions";
 
 export const metadata = { title: "Projects" };
 
 export default async function WorkspacesPage() {
-  const { supabase } = await requireUser();
+  const { supabase, profile } = await requireUser();
+  const t = settingsText(profile.language);
   const { data: workspaces } = await supabase
     .from("workspaces")
     .select("id, name, brand_kit, updated_at")
@@ -18,14 +20,12 @@ export default async function WorkspacesPage() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl px-4 py-8">
         <h1 className="text-2xl font-bold">Projects</h1>
-        <p className="mt-1 text-muted-foreground">
-          Satu project per brand/klien. Isi Brand Kit & upload dokumen — semua chat di project otomatis memakai konteks project itu saja, terpisah dari project lain (termasuk memory-nya).
-        </p>
+        <p className="mt-1 text-muted-foreground">{t.projectsDesc}</p>
 
         <form action={createWorkspace} className="mt-6 flex gap-2">
-          <Input name="name" placeholder="Nama project (brand / klien) baru" required maxLength={80} />
+          <Input name="name" placeholder={t.newProjectPlaceholder} required maxLength={80} />
           <Button>
-            <Plus /> Buat
+            <Plus /> {t.create}
           </Button>
         </form>
 
@@ -39,16 +39,16 @@ export default async function WorkspacesPage() {
                   <Briefcase className="size-4 text-primary" /> {w.name}
                 </div>
                 <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                  {kit.products || kit.usp || "Brand Kit belum diisi"}
+                  {kit.products || kit.usp || t.brandKitEmpty}
                 </p>
-                <p className="mt-2 text-[11px] text-muted-foreground">Brand Kit: {filled}/8 terisi</p>
+                <p className="mt-2 text-[11px] text-muted-foreground">{t.brandKitFilledOf(filled)}</p>
               </Link>
             );
           })}
         </div>
         {!workspaces?.length && (
           <p className="mt-6 rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Belum ada project. Buat satu untuk tiap brand/klien yang kamu tangani.
+            {t.noProjects}
           </p>
         )}
       </div>

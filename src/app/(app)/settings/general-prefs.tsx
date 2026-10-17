@@ -6,6 +6,8 @@ import { useTheme } from "next-themes";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
 import { readChatPref, writeChatPref } from "@/lib/chat-prefs";
+import { useApp } from "@/components/app/app-context";
+import { settingsText } from "@/lib/i18n/settings";
 import { SettingRow } from "./settings-nav";
 import { Segmented } from "./segmented";
 
@@ -16,6 +18,7 @@ export function GeneralPrefs({ language }: { language: "id" | "en" }) {
   const [text, setText] = useState("md");
   const [width, setWidth] = useState("md");
   const [lang, setLang] = useState(language);
+  const t = settingsText(useApp().lang);
 
   useEffect(() => {
     setMounted(true);
@@ -28,7 +31,7 @@ export function GeneralPrefs({ language }: { language: "id" | "en" }) {
     const res = await fetch("/api/profile", { method: "PATCH", body: JSON.stringify({ language: next }) });
     if (!res.ok) {
       setLang(language);
-      toast.error("Gagal menyimpan bahasa.");
+      toast.error(t.languageSaveFailed);
       return;
     }
     toast.success(next === "id" ? "Bahasa: Indonesia" : "Language: English");
@@ -37,18 +40,18 @@ export function GeneralPrefs({ language }: { language: "id" | "en" }) {
 
   return (
     <div>
-      <SettingRow title="Tema" desc="Terang, gelap, atau ikuti pengaturan perangkat.">
+      <SettingRow title={t.theme} desc={t.themeDesc}>
         <Segmented
           value={mounted ? (theme ?? "system") : "system"}
           onChange={setTheme}
           options={[
-            { id: "system", label: <Monitor />, title: "Sistem" },
-            { id: "light", label: <Sun />, title: "Terang" },
-            { id: "dark", label: <Moon />, title: "Gelap" },
+            { id: "system", label: <Monitor />, title: t.themeSystem },
+            { id: "light", label: <Sun />, title: t.themeLight },
+            { id: "dark", label: <Moon />, title: t.themeDark },
           ]}
         />
       </SettingRow>
-      <SettingRow title="Bahasa" desc="Bahasa tampilan & bahasa jawaban default Markethink.">
+      <SettingRow title={t.language} desc={t.languageDesc}>
         <Segmented
           value={lang}
           onChange={changeLang}
@@ -58,7 +61,7 @@ export function GeneralPrefs({ language }: { language: "id" | "en" }) {
           ]}
         />
       </SettingRow>
-      <SettingRow title="Ukuran teks percakapan" desc="Ukuran tulisan di chat. Tersimpan di perangkat ini.">
+      <SettingRow title={t.textSize} desc={t.textSizeDesc}>
         <Segmented
           value={text}
           onChange={(v) => {
@@ -66,13 +69,13 @@ export function GeneralPrefs({ language }: { language: "id" | "en" }) {
             writeChatPref("text", v);
           }}
           options={[
-            { id: "sm", label: "Kecil" },
-            { id: "md", label: "Sedang" },
-            { id: "lg", label: "Besar" },
+            { id: "sm", label: t.small },
+            { id: "md", label: t.medium },
+            { id: "lg", label: t.large },
           ]}
         />
       </SettingRow>
-      <SettingRow title="Lebar kolom chat" desc="Lebar area chat & kotak tulis di layar besar. Tersimpan di perangkat ini.">
+      <SettingRow title={t.chatWidth} desc={t.chatWidthDesc}>
         <Segmented
           value={width}
           onChange={(v) => {
@@ -80,8 +83,8 @@ export function GeneralPrefs({ language }: { language: "id" | "en" }) {
             writeChatPref("width", v);
           }}
           options={[
-            { id: "md", label: "Sedang" },
-            { id: "lg", label: "Lebar" },
+            { id: "md", label: t.medium },
+            { id: "lg", label: t.wide },
           ]}
         />
       </SettingRow>

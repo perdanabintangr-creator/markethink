@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { resolveDeckTheme, type DeckTheme } from "@/lib/deck-theme";
 import { fitDeckToImages } from "@/lib/deck-fit";
+import { useApp } from "@/components/app/app-context";
+import { chatText, type ChatText } from "@/lib/i18n/chat";
 
 /** Bentuk isi deck dari input tool create_presentation (longgar — data lama bisa tidak lengkap). */
 interface Slide {
@@ -45,6 +47,8 @@ export function DeckPreviewButton({
   images?: Record<string, string>;
   downloadUrl: string;
 }) {
+  const { t: dict, lang } = useApp();
+  const c = chatText(lang);
   const [open, setOpen] = useState(false);
   const t = resolveDeckTheme({ theme: deck.theme, brand_color: deck.brand_color });
   // Sama seperti file: slide tanpa foto (sesuai paket) memakai layout teks. Deck lama (tanpa data foto) apa adanya.
@@ -54,14 +58,14 @@ export function DeckPreviewButton({
   return (
     <>
       <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
-        <Eye /> Lihat
+        <Eye /> {c.view}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:w-[calc(100vw-4rem)]">
           <DialogHeader className="border-b px-4 py-3 pr-12">
-            <DialogTitle className="truncate text-base">{deck.title ?? "Presentasi"}</DialogTitle>
+            <DialogTitle className="truncate text-base">{deck.title ?? c.presentation}</DialogTitle>
             <DialogDescription className="text-xs">
-              Pratinjau {slides.length + 1} slide. Detail desain di PowerPoint / Google Slides bisa sedikit berbeda.
+              {c.deckPreviewDesc(slides.length + 1)}
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-muted/40 p-3 sm:p-4">
@@ -71,17 +75,17 @@ export function DeckPreviewButton({
             {slides.map((s, i) => (
               <SlideFrame key={i} t={t} n={i + 2}>
                 <SlideBody s={s} t={t} image={images?.[String(i)]} gallery={[0, 1, 2].map((k) => images?.[`${i}-g${k}`])} />
-                <SoWhat s={s} t={t} />
+                <SoWhat s={s} t={t} c={c} />
               </SlideFrame>
             ))}
           </div>
           <div className="flex justify-end gap-2 border-t px-4 py-3">
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-              Tutup
+              {c.close}
             </Button>
             <Button asChild size="sm">
               <a href={downloadUrl}>
-                <Download /> Unduh .pptx
+                <Download /> {dict.downloadPptx}
               </a>
             </Button>
           </div>
@@ -487,7 +491,7 @@ function ChartSlide({ s, t }: { s: Slide; t: DeckTheme }) {
 }
 
 /** Kotak "so what" & sumber data (sama seperti di file .pptx). */
-function SoWhat({ s, t }: { s: Slide; t: DeckTheme }) {
+function SoWhat({ s, t, c }: { s: Slide; t: DeckTheme; c: ChatText }) {
   const fullSlide = ["section", "quote", "image_text", "closing", "agenda"].includes(s.layout ?? "");
   if (fullSlide || (!s.takeaway && !s.source)) return null;
   return (
@@ -507,7 +511,7 @@ function SoWhat({ s, t }: { s: Slide; t: DeckTheme }) {
       )}
       {s.source && (
         <p className="italic" style={{ color: hex(t.muted), fontSize: "1cqw" }}>
-          Sumber: {s.source}
+          {c.source}{s.source}
         </p>
       )}
     </div>

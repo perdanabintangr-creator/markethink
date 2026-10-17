@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { AlertCircle, CheckCircle2, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useApp } from "@/components/app/app-context";
+import { settingsText } from "@/lib/i18n/settings";
 import { deleteWorkspaceFile } from "../actions";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 
@@ -25,14 +27,15 @@ export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; fi
   const [uploading, setUploading] = useState(false);
   const [, startTransition] = useTransition();
   const [confirm, confirmDialog] = useConfirm();
+  const t = settingsText(useApp().lang);
 
   async function upload(list: FileList | null) {
     if (!list?.length) return;
     setUploading(true);
     for (const file of Array.from(list)) {
       const data = await uploadFile<{ chunks: number }>(file, { scope: "workspace", workspaceId });
-      if ("error" in data) toast.error(`${file.name}: ${data.message ?? UPLOAD_ERRORS[data.error] ?? "gagal diproses"}`);
-      else toast.success(`${file.name} siap dipakai (${data.chunks} bagian)`);
+      if ("error" in data) toast.error(`${file.name}: ${t.uploadErrors[data.error] ?? data.message ?? UPLOAD_ERRORS[data.error] ?? t.fileProcessFailed}`);
+      else toast.success(t.fileReady(file.name, data.chunks));
     }
     setUploading(false);
     if (inputRef.current) inputRef.current.value = "";
@@ -43,7 +46,7 @@ export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; fi
     <div className="space-y-2">
       <input ref={inputRef} type="file" accept=".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv,.json" multiple hidden onChange={(e) => upload(e.target.files)} />
       <Button variant="outline" className="w-full" onClick={() => inputRef.current?.click()} disabled={uploading}>
-        {uploading ? <Loader2 className="animate-spin" /> : <Upload />} Upload file
+        {uploading ? <Loader2 className="animate-spin" /> : <Upload />} {t.uploadFile}
       </Button>
       <ul className="space-y-1.5">
         {files.map((f) => (
@@ -53,23 +56,23 @@ export function KnowledgeFiles({ workspaceId, files }: { workspaceId: string; fi
               <span className="block truncate">{f.name}</span>
               <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 {f.status === "ready" ? (
-                  <><CheckCircle2 className="size-3 text-green-600" /> {f.chunk_count} bagian</>
+                  <><CheckCircle2 className="size-3 text-green-600" /> {t.fileChunks(f.chunk_count)}</>
                 ) : f.status === "error" ? (
-                  <><AlertCircle className="size-3 text-destructive" /> {f.error ?? "gagal"}</>
+                  <><AlertCircle className="size-3 text-destructive" /> {f.error ?? t.fileFailed}</>
                 ) : (
-                  <><Loader2 className="size-3 animate-spin" /> diproses</>
+                  <><Loader2 className="size-3 animate-spin" /> {t.fileProcessing}</>
                 )}
                 · {(f.size / 1024).toFixed(0)} KB
               </span>
             </span>
             <button
               className="rounded p-1 text-muted-foreground hover:text-destructive"
-              aria-label="Hapus file"
+              aria-label={t.deleteFile}
               onClick={async () => {
                 const ok = await confirm({
-                  title: "Hapus file ini?",
-                  description: `"${f.name}" akan dihapus dari knowledge project.`,
-                  confirmLabel: "Hapus",
+                  title: t.deleteFileTitle,
+                  description: t.deleteFileDesc(f.name),
+                  confirmLabel: t.delete,
                   destructive: true,
                 });
                 if (!ok) return;

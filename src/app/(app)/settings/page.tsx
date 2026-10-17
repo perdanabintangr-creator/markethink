@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, FolderOpen, Palette } from "lucide-react";
-import { requireUser } from "@/lib/auth";
+import { getSession, requireUser } from "@/lib/auth";
 import { getCreditStatus } from "@/lib/credits";
 import { getDailyLimits, countToday, LIMIT_LABEL, type DailyLimitKind } from "@/lib/limits";
 import { UNLIMITED_CREDITS, quotaLeftPct } from "@/lib/addons/format";
 import { formatBytes, getStorageStatus } from "@/lib/storage-quota";
 import { Button } from "@/components/ui/button";
+import { settingsText, type SettingsText } from "@/lib/i18n/settings";
 import { ProfileForm } from "./profile-form";
 import { MemoryList } from "./memory-list";
 import { DangerZone } from "./danger-zone";
@@ -15,7 +16,10 @@ import { PasswordForm, SignOutEverywhere } from "./security-form";
 import { SharedLinks, type SharedItem } from "./shared-links";
 import { SETTINGS_TABS, SettingRow, SettingsNav, settingsTabOf } from "./settings-nav";
 
-export const metadata = { title: "Pengaturan" };
+export async function generateMetadata() {
+  const { profile } = await getSession();
+  return { title: settingsText(profile?.language).metaTitle };
+}
 
 type Supa = Awaited<ReturnType<typeof requireUser>>["supabase"];
 type Prof = Awaited<ReturnType<typeof requireUser>>["profile"];
@@ -24,22 +28,23 @@ type User = Awaited<ReturnType<typeof requireUser>>["user"];
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const tab = settingsTabOf((await searchParams).tab);
   const ctx = await requireUser();
-  const meta = SETTINGS_TABS.find((t) => t.id === tab)!;
+  const t = settingsText(ctx.profile.language);
+  const meta = SETTINGS_TABS.find((x) => x.id === tab)!;
 
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-4 py-6 md:py-10">
         <Link href="/chat" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Kembali ke chat
+          <ArrowLeft className="size-4" /> {t.backToChat}
         </Link>
         <div className="flex flex-col gap-6 md:flex-row md:gap-10">
           <aside className="md:sticky md:top-6 md:w-56 md:shrink-0 md:self-start">
-            <h1 className="mb-3 text-2xl font-bold md:px-3">Pengaturan</h1>
-            <SettingsNav active={tab} />
+            <h1 className="mb-3 text-2xl font-bold md:px-3">{t.title}</h1>
+            <SettingsNav active={tab} lang={ctx.profile.language} />
           </aside>
           <main className="min-w-0 flex-1 md:pt-1">
-            <h2 className="mb-1 text-lg font-semibold">{meta.label}</h2>
-            <Section tab={tab} {...ctx} />
+            <h2 className="mb-1 text-lg font-semibold">{t.tabs[meta.id]}</h2>
+            <Section tab={tab} t={t} {...ctx} />
           </main>
         </div>
       </div>
@@ -47,12 +52,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   );
 }
 
-async function Section({ tab, supabase, user, profile }: { tab: string; supabase: Supa; user: User; profile: Prof }) {
+async function Section({ tab, t, supabase, user, profile }: { tab: string; t: SettingsText; supabase: Supa; user: User; profile: Prof }) {
   switch (tab) {
     case "profil":
       return (
         <>
-          <Desc>Markethink menyesuaikan contoh, istilah, dan saran dengan peran & industrimu.</Desc>
+          <Desc>{t.descProfile}</Desc>
           <ProfileForm
             profile={{
               full_name: profile.full_name ?? "",
@@ -68,26 +73,26 @@ async function Section({ tab, supabase, user, profile }: { tab: string; supabase
     case "personalisasi":
       return (
         <>
-          <Desc>Atur cara Markethink menjawab di semua chat — seperti punya asisten yang sudah hafal kebiasaanmu.</Desc>
+          <Desc>{t.descPersonalization}</Desc>
           <PersonalizationForm style={profile.response_style ?? "seimbang"} instructions={profile.custom_instructions ?? ""} />
         </>
       );
     case "memori":
-      return <MemorySection supabase={supabase} />;
+      return <MemorySection t={t} supabase={supabase} />;
     case "project":
-      return <ProjectSection supabase={supabase} />;
+      return <ProjectSection t={t} supabase={supabase} />;
     case "paket":
-      return <UsageSection supabase={supabase} user={user} profile={profile} />;
+      return <UsageSection t={t} supabase={supabase} user={user} profile={profile} />;
     case "penyimpanan":
-      return <StorageSection supabase={supabase} profile={profile} />;
+      return <StorageSection t={t} supabase={supabase} profile={profile} />;
     case "link":
-      return <LinksSection supabase={supabase} />;
+      return <LinksSection t={t} supabase={supabase} />;
     case "akun":
-      return <AccountSection user={user} profile={profile} />;
+      return <AccountSection t={t} user={user} profile={profile} />;
     default:
       return (
         <>
-          <Desc>Tampilan & bahasa aplikasi.</Desc>
+          <Desc>{t.descGeneral}</Desc>
           <GeneralPrefs language={profile.language} />
         </>
       );
@@ -98,14 +103,14 @@ function Desc({ children }: { children: React.ReactNode }) {
   return <p className="mb-5 text-sm text-muted-foreground">{children}</p>;
 }
 
-async function MemorySection({ supabase }: { supabase: Supa }) {
+async function MemorySection({ t, supabase }: { t: SettingsText; supabase: Supa }) {
   const { data: memories } = await supabase
     .from("memories")
     .select("id, content, source, created_at, workspace:workspaces(name)")
     .order("created_at", { ascending: false });
   return (
     <>
-      <Desc>Hal yang diingat Markethink tentang kamu (gaya bahasa, industri, brand). Dipakai untuk personalisasi semua chat.</Desc>
+      <Desc>{t.descMemory}</Desc>
       <MemoryList
         memories={(memories ?? []).map((m) => ({
           id: m.id as string,
@@ -118,7 +123,7 @@ async function MemorySection({ supabase }: { supabase: Supa }) {
   );
 }
 
-async function ProjectSection({ supabase }: { supabase: Supa }) {
+async function ProjectSection({ t, supabase }: { t: SettingsText; supabase: Supa }) {
   const { data } = await supabase.from("workspaces").select("id, name, brand_kit").order("created_at", { ascending: true });
   const projects = (data ?? []).map((w) => {
     const kit = (w.brand_kit ?? {}) as Record<string, unknown>;
@@ -128,10 +133,7 @@ async function ProjectSection({ supabase }: { supabase: Supa }) {
   });
   return (
     <>
-      <Desc>
-        Tiap project punya Brand Kit sendiri (logo, warna, gaya desain, tone, target audience). Semua chat, PPT, carousel & foto produk di project itu otomatis
-        mengikuti Brand Kit-nya.
-      </Desc>
+      <Desc>{t.descProject}</Desc>
       {projects.length ? (
         <ul className="divide-y rounded-xl border">
           {projects.map((p) => (
@@ -149,7 +151,7 @@ async function ProjectSection({ supabase }: { supabase: Supa }) {
                   <span className="block truncate text-sm font-medium">{p.name}</span>
                   <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Palette className="size-3" />
-                    {p.filled ? `Brand Kit terisi (${p.filled} kolom)` : "Brand Kit belum diisi"}
+                    {p.filled ? t.brandKitFilledCols(p.filled) : t.brandKitEmpty}
                     {p.colors.map((c) => (
                       <span key={c} className="inline-block size-2.5 rounded-full ring-1 ring-black/10" style={{ background: c }} />
                     ))}
@@ -162,7 +164,7 @@ async function ProjectSection({ supabase }: { supabase: Supa }) {
         </ul>
       ) : (
         <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-          Belum ada project. Buat project dari menu samping (ikon folder +) untuk tiap brand/klien.
+          {t.noProjectsSettings}
         </p>
       )}
     </>
@@ -175,16 +177,16 @@ function wibMonthStart(now = Date.now()) {
   return new Date(Date.UTC(wib.getUTCFullYear(), wib.getUTCMonth(), 1) - 7 * 3600_000);
 }
 
-const USAGE_GROUPS: { label: string; tiers?: string[]; like?: string; not?: string }[] = [
-  { label: "Chat", tiers: ["junior", "senior", "associate", "director"] },
-  { label: "Gambar & foto produk", tiers: ["image"] },
-  { label: "PPT", tiers: ["pptx"] },
-  { label: "Carousel & poster", tiers: ["carousel"] },
-  { label: "Tools Pro", like: "tool:%", not: "tool:agent" },
-  { label: "Agent", tiers: ["tool:agent"] },
+const USAGE_GROUPS: { id: keyof SettingsText["usageGroups"]; tiers?: string[]; like?: string; not?: string }[] = [
+  { id: "chat", tiers: ["junior", "senior", "associate", "director"] },
+  { id: "image", tiers: ["image"] },
+  { id: "pptx", tiers: ["pptx"] },
+  { id: "carousel", tiers: ["carousel"] },
+  { id: "tools", like: "tool:%", not: "tool:agent" },
+  { id: "agent", tiers: ["tool:agent"] },
 ];
 
-async function UsageSection({ supabase, user, profile }: { supabase: Supa; user: User; profile: Prof }) {
+async function UsageSection({ t, supabase, user, profile }: { t: SettingsText; supabase: Supa; user: User; profile: Prof }) {
   const since = wibMonthStart().toISOString();
   const [credits, { data: plan }, limits, counts] = await Promise.all([
     getCreditStatus(user.id),
@@ -207,24 +209,24 @@ async function UsageSection({ supabase, user, profile }: { supabase: Supa; user:
   const unlimited = credits.monthLimit >= UNLIMITED_CREDITS;
   const leftPct = unlimited ? 100 : quotaLeftPct(credits.remaining, credits.monthLimit);
   const now = new Date(Date.now() + 7 * 3600_000);
-  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toLocaleDateString("id-ID", { day: "numeric", month: "long", timeZone: "UTC" });
+  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toLocaleDateString(t.locale, { day: "numeric", month: "long", timeZone: "UTC" });
 
   return (
     <div className="space-y-8">
       <div className="rounded-xl border p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs text-muted-foreground">Paket aktif</p>
+            <p className="text-xs text-muted-foreground">{t.activePlan}</p>
             <p className="text-lg font-semibold">{plan?.name ?? profile.plan_id}</p>
           </div>
           <Button asChild size="sm">
-            <Link href="/pricing">Lihat / upgrade paket</Link>
+            <Link href="/pricing">{t.viewUpgradePlan}</Link>
           </Button>
         </div>
         <div className="mt-4">
           <div className="flex items-baseline justify-between text-sm">
-            <span>Kuota bulan ini</span>
-            <span className="font-semibold">{unlimited ? "Tanpa batas" : `${leftPct}% tersisa`}</span>
+            <span>{t.monthQuota}</span>
+            <span className="font-semibold">{unlimited ? t.unlimited : t.pctLeft(leftPct)}</span>
           </div>
           {!unlimited && (
             <div className="mt-2 h-2 rounded-full bg-muted">
@@ -234,19 +236,21 @@ async function UsageSection({ supabase, user, profile }: { supabase: Supa; user:
               />
             </div>
           )}
-          <p className="mt-2 text-xs text-muted-foreground">Kuota terisi ulang tanggal {reset}, pukul 00.00 WIB.</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t.quotaResetOn(reset)}</p>
         </div>
       </div>
 
       {daily.length > 0 && (
         <div>
-          <h3 className="mb-1 text-sm font-semibold">Batas harian</h3>
+          <h3 className="mb-1 text-sm font-semibold">{t.dailyLimits}</h3>
           <div>
             {daily.map((d) => (
-              <SettingRow key={d.kind} title={`${LIMIT_LABEL[d.kind].charAt(0).toUpperCase()}${LIMIT_LABEL[d.kind].slice(1)}`} desc="Reset setiap pukul 00.00 WIB.">
-                <span className="text-sm font-medium">
-                  {Math.min(d.used, d.limit)} / {d.limit} hari ini
-                </span>
+              <SettingRow
+                key={d.kind}
+                title={t.limitTitles[d.kind] ?? `${LIMIT_LABEL[d.kind].charAt(0).toUpperCase()}${LIMIT_LABEL[d.kind].slice(1)}`}
+                desc={t.dailyReset}
+              >
+                <span className="text-sm font-medium">{t.usedToday(Math.min(d.used, d.limit), d.limit)}</span>
               </SettingRow>
             ))}
           </div>
@@ -254,32 +258,32 @@ async function UsageSection({ supabase, user, profile }: { supabase: Supa; user:
       )}
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold">Pemakaian bulan ini</h3>
+        <h3 className="mb-2 text-sm font-semibold">{t.monthUsage}</h3>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {USAGE_GROUPS.map((g, i) => (
-            <div key={g.label} className="rounded-xl border p-3">
-              <p className="text-xs text-muted-foreground">{g.label}</p>
-              <p className="text-xl font-semibold">{counts[i].toLocaleString("id-ID")}</p>
+            <div key={g.id} className="rounded-xl border p-3">
+              <p className="text-xs text-muted-foreground">{t.usageGroups[g.id]}</p>
+              <p className="text-xl font-semibold">{counts[i].toLocaleString(t.locale)}</p>
             </div>
           ))}
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">Jumlah permintaan yang berhasil sejak tanggal 1 bulan ini.</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t.monthUsageNote}</p>
       </div>
     </div>
   );
 }
 
-async function StorageSection({ supabase, profile }: { supabase: Supa; profile: Prof }) {
+async function StorageSection({ t, supabase, profile }: { t: SettingsText; supabase: Supa; profile: Prof }) {
   const storage = await getStorageStatus(supabase, profile);
   const pct = storage.limitBytes ? Math.min(100, (storage.usedBytes / storage.limitBytes) * 100) : 0;
   return (
     <>
-      <Desc>Ruang untuk file yang kamu upload di chat & dokumen project.</Desc>
+      <Desc>{t.descStorage}</Desc>
       <div className="rounded-xl border p-4">
         <div className="flex items-baseline justify-between gap-2 text-sm">
           <span>
             <b>{formatBytes(storage.usedBytes)}</b>
-            <span className="text-muted-foreground"> terpakai{storage.limitBytes ? ` dari ${formatBytes(storage.limitBytes)}` : " · tanpa batas"}</span>
+            <span className="text-muted-foreground">{t.storageUsed(storage.limitBytes ? formatBytes(storage.limitBytes) : null)}</span>
           </span>
           {storage.limitBytes && <span className="text-xs text-muted-foreground">{Math.round(pct)}%</span>}
         </div>
@@ -288,16 +292,13 @@ async function StorageSection({ supabase, profile }: { supabase: Supa; profile: 
             <div className={`h-2 rounded-full ${pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-primary"}`} style={{ width: `${Math.max(2, pct)}%` }} />
           </div>
         )}
-        <p className="mt-2 text-xs text-muted-foreground">
-          Maks {Math.round(storage.fileMaxBytes / 1024 / 1024)} MB per file. File hasil buatan Markethink (PPT, Excel, gambar) tidak dihitung. Foto besar otomatis
-          dikompres saat upload. Untuk mengosongkan ruang, hapus chat atau file di project yang tidak dipakai lagi.
-        </p>
+        <p className="mt-2 text-xs text-muted-foreground">{t.storageNote(Math.round(storage.fileMaxBytes / 1024 / 1024))}</p>
       </div>
     </>
   );
 }
 
-async function LinksSection({ supabase }: { supabase: Supa }) {
+async function LinksSection({ t, supabase }: { t: SettingsText; supabase: Supa }) {
   const [{ data: chats }, { data: canvases }] = await Promise.all([
     supabase.from("chats").select("id, title, share_token, updated_at").not("share_token", "is", null).order("updated_at", { ascending: false }).limit(100),
     supabase.from("canvases").select("id, title, share_token, updated_at").not("share_token", "is", null).order("updated_at", { ascending: false }).limit(100),
@@ -308,37 +309,37 @@ async function LinksSection({ supabase }: { supabase: Supa }) {
   ].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   return (
     <>
-      <Desc>Chat & dokumen yang bisa dibuka siapa saja lewat link. Matikan link yang sudah tidak perlu supaya data klien tetap aman.</Desc>
+      <Desc>{t.descLinks}</Desc>
       <SharedLinks items={items} />
     </>
   );
 }
 
-function AccountSection({ user, profile }: { user: User; profile: Prof }) {
+function AccountSection({ t, user, profile }: { t: SettingsText; user: User; profile: Prof }) {
   const providers = ((user.app_metadata?.providers as string[] | undefined) ?? [user.app_metadata?.provider as string]).filter(Boolean);
-  const label = (p: string) => (p === "email" ? "Email & password" : p === "google" ? "Google" : p);
+  const label = (p: string) => (p === "email" ? t.emailPassword : p === "google" ? "Google" : p);
   return (
     <div className="space-y-8">
       <div>
-        <SettingRow title="Email" desc="Dipakai untuk masuk & pemberitahuan penting.">
+        <SettingRow title={t.email} desc={t.emailDesc}>
           <span className="text-sm">{profile.email ?? user.email}</span>
         </SettingRow>
-        <SettingRow title="Metode masuk">
+        <SettingRow title={t.signInMethod}>
           <span className="text-sm">{providers.map(label).join(" · ") || "-"}</span>
         </SettingRow>
-        <SettingRow title="Bergabung sejak">
-          <span className="text-sm">{new Date(profile.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
+        <SettingRow title={t.joinedSince}>
+          <span className="text-sm">{new Date(profile.created_at).toLocaleDateString(t.locale, { day: "numeric", month: "long", year: "numeric" })}</span>
         </SettingRow>
       </div>
 
       <div>
-        <h3 className="mb-3 text-sm font-semibold">Password</h3>
+        <h3 className="mb-3 text-sm font-semibold">{t.password}</h3>
         <PasswordForm hasPassword={providers.includes("email")} />
       </div>
 
       <div>
-        <h3 className="mb-1 text-sm font-semibold">Sesi login</h3>
-        <SettingRow title="Keluar dari semua perangkat" desc="Pakai ini bila akunmu pernah dibuka di HP/laptop orang lain. Kamu perlu masuk lagi.">
+        <h3 className="mb-1 text-sm font-semibold">{t.loginSessions}</h3>
+        <SettingRow title={t.signOutEverywhere} desc={t.signOutEverywhereDesc}>
           <SignOutEverywhere />
         </SettingRow>
       </div>

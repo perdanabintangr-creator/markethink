@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { BRAND_KIT_FIELDS } from "@/lib/ai/prompt";
 import { createProject } from "@/lib/projects";
 import { MOOD_IDS } from "@/lib/deck/moods";
+import { settingsText } from "@/lib/i18n/settings";
 
 export async function createWorkspace(formData: FormData) {
   const { supabase, profile } = await requireUser();
@@ -17,9 +18,10 @@ export async function createWorkspace(formData: FormData) {
 }
 
 export async function saveBrandKit(workspaceId: string, _prev: { ok?: boolean; error?: string } | undefined, formData: FormData) {
-  const { supabase } = await requireUser();
+  const { supabase, profile } = await requireUser();
+  const t = settingsText(profile.language);
   const name = String(formData.get("name") ?? "").trim().slice(0, 80);
-  if (!name) return { error: "Nama workspace wajib diisi." };
+  if (!name) return { error: t.errWorkspaceName };
   const kit: Record<string, string> = {};
   for (const f of BRAND_KIT_FIELDS) {
     if (f.key === "brand_name") continue;
@@ -41,7 +43,7 @@ export async function saveBrandKit(workspaceId: string, _prev: { ok?: boolean; e
     .from("workspaces")
     .update({ name, brand_kit: kit, updated_at: new Date().toISOString() })
     .eq("id", workspaceId);
-  if (error) return { error: "Gagal menyimpan." };
+  if (error) return { error: t.errSaveFailed };
   revalidatePath("/", "layout");
   return { ok: true };
 }
