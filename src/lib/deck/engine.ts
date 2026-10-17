@@ -715,7 +715,7 @@ function stats(c: Composer, s: SlideInput, i: number) {
     let cy = b.y + 0.2;
     const ix = b.x + Math.max(p.padX, 0.2);
     const iw = b.w - Math.max(p.padX, 0.2) * 2;
-    cy += c.text(st.value, "head", ix, cy, iw, { size: photo || w < 8 ? 30 : 46, min: 18, maxLines: 1, color: c.pal.accent, lh: 1.05, ls: c.mood.headTracking }) + 0.08;
+    cy += c.text(st.value, "head", ix, cy, iw, { size: photo || w < 8 ? 30 : 46, min: 13, maxLines: 1, color: c.pal.accent, lh: 1.05, ls: c.mood.headTracking }) + 0.08;
     cy += c.text(st.label, "strong", ix, cy, iw, { size: 10.5, min: 8.5, maxLines: 2, color: p.ink, lh: 1.25 }) + 0.04;
     if (st.note) c.text(st.note, "body", ix, cy, iw, { size: 8.5, min: 7.5, maxLines: 2, color: p.sub, lh: 1.3, h: Math.max(0.2, b.y + b.h - cy - 0.12) });
   });
@@ -827,7 +827,7 @@ function chart(c: Composer, s: SlideInput) {
   c.ambient(1.2, H - 0.8, 1.8);
   const limit = limitOf(s);
   const lw = 4.3;
-  const hb = c.header(s, M, TOP, lw, { size: 28 });
+  const hb = c.header(s, M, TOP, lw, { size: 28, maxLines: 3 });
   const stmt = s.takeaway ? c.measure(s.takeaway, "strong", W - 2 * M - 0.6, { size: 14.5, maxLines: 2, lh: 1.25 }).h + 0.62 : 0;
   c.pointList((s.bullets ?? []).slice(0, 4), M, hb + 0.25, lw, limit - stmt - 0.1, 11);
   const px = M + lw + 0.45;
