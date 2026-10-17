@@ -82,8 +82,8 @@ describe("Signature mengikuti mood", () => {
 });
 
 it("foto slide pakai Muse (tanpa acuan) kecuali maskot / ilustrasi lucu", () => {
-  expect(deckNeedsReference({ design: { mood: "tech", kv: "x" } })).toBe(false);
-  expect(deckNeedsReference({ design: { mood: "tech", kv: "x", image_style: "3d" } })).toBe(true);
-  expect(deckNeedsReference({ design: { mood: "playful", kv: "x" } })).toBe(true);
-  expect(deckNeedsReference({ design: { mood: "warm", kv: "x", cast: "brand mascot Popo, a round chocolate bean" } })).toBe(true);
+  expect(deckNeedsReference({ theme: "midnight", design: { mood: "tech", kv: "x" } })).toBe(false);
+  expect(deckNeedsReference({ theme: "midnight", design: { mood: "tech", kv: "x", image_style: "3d" } })).toBe(true);
+  expect(deckNeedsReference({ theme: "midnight", design: { mood: "playful", kv: "x" } })).toBe(true);
+  expect(deckNeedsReference({ theme: "midnight", design: { mood: "warm", kv: "x", cast: "brand mascot Popo, a round chocolate bean" } })).toBe(true);
 });
