@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { shellText } from "@/lib/i18n/shell";
+import { useApp } from "./app-context";
 
 const CURRENT = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
 
@@ -11,6 +13,12 @@ const CURRENT = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
  */
 export function UpdateNotifier() {
   const shown = useRef(false);
+  const { lang } = useApp();
+  // Disimpan di ref agar pengecekan berkala tidak perlu dipasang ulang saat bahasa berubah.
+  const text = useRef(shellText(lang));
+  useEffect(() => {
+    text.current = shellText(lang);
+  }, [lang]);
 
   useEffect(() => {
     if (CURRENT === "dev") return;
@@ -21,10 +29,11 @@ export function UpdateNotifier() {
         const { build } = (await res.json()) as { build?: string };
         if (!build || build === "dev" || build === CURRENT) return;
         shown.current = true;
-        toast("✨ Markethink baru saja diperbarui", {
-          description: "Muat ulang untuk memakai fitur & tampilan terbaru.",
+        const s = text.current;
+        toast(s.updatedTitle, {
+          description: s.updatedDesc,
           duration: Infinity,
-          action: { label: "Muat ulang", onClick: () => window.location.reload() },
+          action: { label: s.reload, onClick: () => window.location.reload() },
         });
       } catch {
         /* offline — coba lagi nanti */

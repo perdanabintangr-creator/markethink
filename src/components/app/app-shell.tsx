@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Logo } from "@/components/logo";
+import { shellText } from "@/lib/i18n/shell";
 import { AppContextProvider, type AppContextValue } from "./app-context";
 import { Sidebar } from "./sidebar";
 import { UpdateNotifier } from "./update-notifier";
@@ -28,7 +29,7 @@ export function AppShell({ value, children }: { value: AppContextValue; children
         </DialogPrimitive.Root>
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex h-12 items-center gap-2 border-b px-3 md:hidden print:hidden">
-            <button onClick={() => setOpen(true)} className="rounded-md p-1.5 hover:bg-accent" aria-label="Buka menu">
+            <button onClick={() => setOpen(true)} className="rounded-md p-1.5 hover:bg-accent" aria-label={shellText(value.lang).openMenu}>
               <Menu className="size-5" />
             </button>
             <Logo href="/chat" className="text-sm" />

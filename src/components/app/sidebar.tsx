@@ -121,10 +121,12 @@ function swallowNextClick() {
 }
 const itemHref = (c: HistoryItem) => (c.toolRun ? `/tools/${c.toolRun.tool}/${c.id}` : `/chat/${c.id}`);
 import { cn } from "@/lib/utils";
+import { shellText } from "@/lib/i18n/shell";
 import { useApp } from "./app-context";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t, user, lang, workspaces } = useApp();
+  const s = shellText(lang);
   const pathname = usePathname();
   const router = useRouter();
   const { setTheme } = useTheme();
@@ -312,11 +314,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     if (fromProject) void moveChat(item.id, null, { quiet: target === PIN_ZONE || pinned.some((c) => itemKey(c.id) === target) });
     if (target === HISTORY_ZONE) {
       if (fromProject) void placeInHistory(item, undefined, history[0]);
-      else if (isPinned(item)) void savePins(pinned.filter((c) => c.id !== item.id), "Sematan dilepas");
+      else if (isPinned(item)) void savePins(pinned.filter((c) => c.id !== item.id), s.pinRemoved);
       return;
     }
     if (target === PIN_ZONE) {
-      if (!isPinned(item)) void savePins([...pinned, item], "Chat disematkan");
+      if (!isPinned(item)) void savePins([...pinned, item], s.chatPinned);
       return;
     }
     if (target.startsWith("i:")) {
@@ -331,7 +333,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         const list = [...without];
         list.splice(at, 0, item);
         void placeInHistory(item, list[at - 1], list[at + 1]);
-        if (isPinned(item)) void savePins(pinned.filter((c) => c.id !== item.id), "Sematan dilepas");
+        if (isPinned(item)) void savePins(pinned.filter((c) => c.id !== item.id), s.pinRemoved);
         return;
       }
       const overItem = pinned.find((c) => itemKey(c.id) === target);
@@ -344,7 +346,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       } else {
         const list = [...pinned];
         list.splice(list.findIndex((c) => c.id === overItem.id) + (after ? 1 : 0), 0, item);
-        void savePins(list, "Chat disematkan");
+        void savePins(list, s.chatPinned);
       }
     }
   }
@@ -361,7 +363,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       body: JSON.stringify({ id: item.id, kind: item.toolRun ? "run" : "chat", sort_key: key }),
     });
     if (!res.ok) {
-      toast.error("Gagal menyimpan urutan. Coba lagi.");
+      toast.error(s.saveOrderFailed);
       emitChatsChanged();
     }
   }
@@ -378,14 +380,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       body: JSON.stringify({ items: list.map((c) => ({ id: c.id, kind: c.toolRun ? "run" : "chat" })) }),
     });
     if (!res.ok) {
-      toast.error("Gagal menyimpan. Coba lagi.");
+      toast.error(s.saveFailed);
       emitChatsChanged();
     } else if (message) toast.success(message);
   }
 
   function togglePin(c: HistoryItem) {
     const rest = pinned.filter((x) => x.id !== c.id);
-    void savePins(isPinned(c) ? rest : [c, ...rest], isPinned(c) ? "Sematan dilepas" : "Chat disematkan");
+    void savePins(isPinned(c) ? rest : [c, ...rest], isPinned(c) ? s.pinRemoved : s.chatPinned);
   }
 
   /** Pindahkan chat umum ke dalam project (drag & drop atau menu). */
@@ -399,10 +401,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     if (projectId) setExpanded((s) => new Set(s).add(projectId));
     const res = await fetch(`/api/chats/${chatId}`, { method: "PATCH", body: JSON.stringify({ workspace_id: projectId }) });
     if (!res.ok) {
-      toast.error("Gagal memindahkan chat. Coba lagi.");
+      toast.error(s.moveFailed);
       emitChatsChanged();
     } else if (!opts.quiet) {
-      toast.success(project ? `Dipindah ke project "${project.name}"` : "Chat dikeluarkan dari project");
+      toast.success(project ? s.movedToProject(project.name) : s.movedOutOfProject);
     }
   }
 
@@ -411,7 +413,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     setOrder(ids);
     const res = await fetch("/api/workspaces/order", { method: "PATCH", body: JSON.stringify({ ids }) });
     if (!res.ok) {
-      toast.error("Gagal menyimpan urutan project.");
+      toast.error(s.saveProjectOrderFailed);
       setOrder(null);
     } else {
       router.refresh();
@@ -449,15 +451,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         const res = await fetch("/api/workspaces", { method: "POST", body: JSON.stringify({ name }) });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          return setDlgError(
-            data.error === "limit_reached"
-              ? `Batas ${data.limit ?? ""} project untuk paket kamu sudah tercapai. Upgrade untuk menambah project.`
-              : "Gagal membuat project. Coba lagi.",
-          );
+          return setDlgError(data.error === "limit_reached" ? s.projectLimit(data.limit ?? "") : s.createProjectFailed);
         }
         setDlg(null);
         setExpanded((s) => new Set(s).add(data.id));
-        toast.success(`Project "${data.name}" dibuat`);
+        toast.success(s.projectCreated(data.name));
         onNavigate?.();
         router.push(`/chat?workspace=${data.id}`);
         router.refresh();
@@ -474,7 +472,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         const chat = dlg.chat;
         await fetch(chat.toolRun ? `/api/tools/runs/${chat.id}` : `/api/chats/${chat.id}`, { method: "DELETE" });
         setDlg(null);
-        toast.success(chat.toolRun ? "Hasil disembunyikan dari riwayat" : "Chat dihapus");
+        toast.success(chat.toolRun ? s.resultHidden : s.chatDeleted);
         emitChatsChanged();
         if (pathname === itemHref(chat)) router.push(chat.toolRun ? "/tools" : "/chat");
       }
@@ -526,14 +524,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             className={cn("flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent", pathname === "/tools" && "bg-accent font-medium")}
           >
-            <LayoutGrid className="size-4" /> Semua tools
+            <LayoutGrid className="size-4" /> {s.allTools}
           </Link>
         </div>
       )}
 
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={mode === "tools" ? "Cari hasil Tools Pro" : t.searchChats} className="h-9 pl-8" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={mode === "tools" ? s.searchToolResults : t.searchChats} className="h-9 pl-8" />
       </div>
 
       <DndContext
@@ -626,14 +624,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
         <HistoryZone highlight={over?.id === HISTORY_ZONE}>
           {loaded && !history.length && !pinned.length && (
-            <p className="px-2 py-4 text-sm text-muted-foreground">{mode === "tools" ? "Belum ada hasil Tools Pro." : t.noChats}</p>
+            <p className="px-2 py-4 text-sm text-muted-foreground">{mode === "tools" ? s.noToolResults : t.noChats}</p>
           )}
           {/* Label "Riwayat"; saat menggeser (dan belum ada sematan) berubah jadi area sematkan dengan tinggi sama — daftar tidak bergeser. */}
           {activeItem && !pinned.length ? (
             <EmptyPinTarget highlight={over?.id === PIN_ZONE} />
           ) : (
             history.length > 0 && (
-              <p className="flex h-7 items-center px-2 text-xs font-medium text-muted-foreground">{mode === "tools" ? "Riwayat Tools Pro" : "Riwayat"}</p>
+              <p className="flex h-7 items-center px-2 text-xs font-medium text-muted-foreground">{mode === "tools" ? s.toolsHistory : s.history}</p>
             )
           )}
           <SortableContext items={history.map((c) => itemKey(c.id))} strategy={onlyWhen(Boolean(activeItem && !isPinned(activeItem)))}>
@@ -707,7 +705,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/pricing" onClick={onNavigate}>
-              <Zap /> Paket & harga
+              <Zap /> {s.pricing}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -740,11 +738,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           {dlg?.kind === "delete" ? (
             <>
               <DialogHeader>
-                <DialogTitle>{dlg.chat.toolRun ? "Sembunyikan dari riwayat?" : "Hapus chat?"}</DialogTitle>
+                <DialogTitle>{dlg.chat.toolRun ? s.hideTitle : s.deleteTitle}</DialogTitle>
                 <DialogDescription>
-                  {dlg.chat.toolRun
-                    ? `"${dlg.chat.title}" tidak tampil lagi di riwayat sidebar. Hasilnya tetap bisa dibuka dari halaman tool-nya.`
-                    : `Chat "${dlg.chat.title}" akan dihapus permanen dan tidak bisa dikembalikan.`}
+                  {dlg.chat.toolRun ? s.hideDesc(dlg.chat.title) : s.deleteDesc(dlg.chat.title)}
                 </DialogDescription>
               </DialogHeader>
               <div className="flex justify-end gap-2">
@@ -759,10 +755,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               <DialogHeader>
                 <DialogTitle>{dlg?.kind === "rename" ? t.rename : t.newProject}</DialogTitle>
                 {dlg?.kind === "newProject" && (
-                  <DialogDescription>
-                    Satu project untuk satu brand/klien. Chat, Brand Kit, dokumen, dan memory di dalamnya terpisah dari
-                    project lain.
-                  </DialogDescription>
+                  <DialogDescription>{s.newProjectDesc}</DialogDescription>
                 )}
               </DialogHeader>
               <Input
@@ -770,14 +763,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 value={dlgValue}
                 onChange={(e) => setDlgValue(e.target.value)}
                 maxLength={dlg?.kind === "rename" ? 120 : 80}
-                placeholder={dlg?.kind === "rename" ? "Judul chat" : "Mis. Kopi Tuku, Photobebaz, Klien ABC"}
+                placeholder={dlg?.kind === "rename" ? s.chatTitlePlaceholder : s.projectNamePlaceholder}
               />
               {dlgError && <p className="text-sm text-destructive">{dlgError}</p>}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={() => setDlg(null)}>{t.cancel}</Button>
                 <Button type="submit" disabled={dlgBusy || !dlgValue.trim()}>
                   {dlgBusy && <Loader2 className="animate-spin" />}
-                  {dlg?.kind === "rename" ? "Simpan" : "Buat project"}
+                  {dlg?.kind === "rename" ? s.save : s.createProject}
                 </Button>
               </div>
             </form>
@@ -790,19 +783,21 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
 function PinZone({ highlight, children }: { highlight: boolean; children: React.ReactNode }) {
   const { setNodeRef } = useDroppable({ id: PIN_ZONE });
+  const s = shellText(useApp().lang);
   return (
     <div ref={setNodeRef} className={cn("mb-3 rounded-lg transition-colors", highlight && "bg-primary/10 ring-2 ring-primary")}>
       <p className="flex items-center gap-1 px-2 pb-1 text-xs font-medium text-muted-foreground">
-        <Pin className="size-3" /> Disematkan
+        <Pin className="size-3" /> {s.pinned}
       </p>
       {children}
-      {highlight && <p className="px-2 py-1.5 text-xs text-primary">Lepas untuk menyematkan</p>}
+      {highlight && <p className="px-2 py-1.5 text-xs text-primary">{s.dropToPin}</p>}
     </div>
   );
 }
 
 function EmptyPinTarget({ highlight }: { highlight: boolean }) {
   const { setNodeRef } = useDroppable({ id: PIN_ZONE });
+  const s = shellText(useApp().lang);
   return (
     <div
       ref={setNodeRef}
@@ -811,7 +806,7 @@ function EmptyPinTarget({ highlight }: { highlight: boolean }) {
         highlight && "border-solid bg-primary/10 ring-2 ring-primary",
       )}
     >
-      <Pin className="size-3.5" /> Lepas di sini untuk menyematkan
+      <Pin className="size-3.5" /> {s.dropHereToPin}
     </div>
   );
 }
@@ -852,7 +847,8 @@ function SortableHistoryRow({ chat, line, render }: { chat: HistoryItem; line: "
 
 /** Menu "Tools Pro" yang bisa dibuka-tutup: submenu per kelompok (Market Research, Jualan Online, Iklan). */
 function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
-  const { planId, user } = useApp();
+  const { planId, user, lang } = useApp();
+  const s = shellText(lang);
   // Paket Free: Tools Pro terkunci (perlu beli add-on/upgrade) → tandai dengan gembok.
   const lockedPlan = planId === "beta" && user.role !== "admin";
   // Kelompok role yang terbuka: default kelompok tool yang sedang dibuka.
@@ -871,7 +867,7 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
 
   return (
     <div className="mb-3">
-      <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">Tools Pro per role</p>
+      <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">{s.toolsByRole}</p>
       {MENU_GROUPS.map((g) => {
         const tools = TOOLS.filter((tool) => tool.addon === g.addon);
         const groupOpen = openGroups.has(g.addon);
@@ -905,7 +901,7 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
                     >
                       <ToolIcon id={tool.id} className="size-3.5 shrink-0" />
                       <span className="truncate">{tool.menu}</span>
-                      {lockedPlan && <Lock className="ml-auto size-3 shrink-0 opacity-60" aria-label="Terkunci" />}
+                      {lockedPlan && <Lock className="ml-auto size-3 shrink-0 opacity-60" aria-label={s.locked} />}
                     </Link>
                   );
                 })}
@@ -971,7 +967,8 @@ function ProjectRow({
   projects: WorkspaceSummary[];
   onMoveChat: (chatId: string, projectId: string | null) => void;
 }) {
-  const { t } = useApp();
+  const { t, lang } = useApp();
+  const s = shellText(lang);
   const Icon = open ? FolderOpen : Folder;
   const sortable = useSortable({ id: projectKey(project.id) });
   return (
@@ -989,7 +986,7 @@ function ProjectRow({
           dropTarget && "bg-primary/15 ring-2 ring-primary",
         )}
       >
-        <button onClick={onToggle} className="py-1.5 pl-2 pr-0.5" aria-label={open ? "Tutup daftar chat project" : "Buka daftar chat project"}>
+        <button onClick={onToggle} className="py-1.5 pl-2 pr-0.5" aria-label={open ? s.collapseProject : s.expandProject}>
           <ChevronRight className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />
         </button>
         {/* Klik nama project → halaman depan project (seperti ChatGPT/Claude Projects). */}
@@ -1008,7 +1005,7 @@ function ProjectRow({
           <DropdownMenuTrigger asChild>
             <button
               className="mr-1 rounded p-1 opacity-100 hover:bg-background md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100"
-              aria-label="Menu project"
+              aria-label={s.projectMenu}
             >
               <MoreHorizontal className="size-4" />
             </button>
@@ -1084,7 +1081,8 @@ function ChatItem({
   dnd?: RowDnd;
   onTogglePin?: (c: HistoryItem) => void;
 }) {
-  const { t } = useApp();
+  const { t, lang } = useApp();
+  const s = shellText(lang);
   const movable = Boolean(projects && onMove && !chat.toolRun);
   const targets = (projects ?? []).filter((p) => p.id !== chat.workspace_id);
   return (
@@ -1101,20 +1099,20 @@ function ChatItem({
           </span>
         )}
         {!chat.toolRun && (chat.source_run_id || chat.source_agent_id) && (
-          <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground" title="Diskusi hasil Tools Pro">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground" title={s.toolDiscussion}>
             <MessageSquareText className="size-3" />
           </span>
         )}
         <span className="truncate">{chat.title}</span>
         {isGenerating(chat.generating_at) && (
-          <Loader2 className="ml-auto size-3.5 shrink-0 animate-spin text-primary" aria-label="Sedang dijawab" />
+          <Loader2 className="ml-auto size-3.5 shrink-0 animate-spin text-primary" aria-label={s.replying} />
         )}
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             className="mr-1 rounded p-1 opacity-100 hover:bg-background md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100"
-            aria-label="Menu chat"
+            aria-label={s.chatMenu}
           >
             <MoreHorizontal className="size-4" />
           </button>
@@ -1125,18 +1123,18 @@ function ChatItem({
           </DropdownMenuItem>
           {onTogglePin && (
             <DropdownMenuItem onClick={() => onTogglePin(chat)}>
-              {isPinned(chat) ? <PinOff /> : <Pin />} {isPinned(chat) ? "Lepas sematan" : "Sematkan"}
+              {isPinned(chat) ? <PinOff /> : <Pin />} {isPinned(chat) ? s.unpin : s.pin}
             </DropdownMenuItem>
           )}
           {movable && chat.workspace_id && (
             <DropdownMenuItem onClick={() => onMove?.(null)}>
-              <FolderOutput /> Keluarkan dari project
+              <FolderOutput /> {s.removeFromProject}
             </DropdownMenuItem>
           )}
           {movable && targets.length > 0 && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Pindahkan ke project</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">{s.moveToProject}</DropdownMenuLabel>
               {targets.slice(0, 8).map((p) => (
                 <DropdownMenuItem key={p.id} onClick={() => onMove?.(p.id)}>
                   <FolderInput /> <span className="truncate">{p.name}</span>
@@ -1146,7 +1144,7 @@ function ChatItem({
             </>
           )}
           <DropdownMenuItem className="text-destructive" onClick={() => onRemove(chat)}>
-            <Trash2 /> {chat.toolRun ? "Sembunyikan" : t.delete}
+            <Trash2 /> {chat.toolRun ? s.hide : t.delete}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
