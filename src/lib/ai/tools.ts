@@ -294,14 +294,19 @@ async function deckReadyImage(bytes: Uint8Array, mime: string): Promise<DeckImag
   const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
   let out = bytes;
   let type = isPng ? "image/png" : isJpeg ? "image/jpeg" : mime;
-  if (!isPng && !isJpeg) {
-    try {
-      const sharp = (await import("sharp")).default;
-      out = new Uint8Array(await sharp(Buffer.from(bytes)).jpeg({ quality: 88 }).toBuffer());
+  // Hemat penyimpanan (foto ikut tersimpan di PPT, PDF & pratinjau): maks 1600 px, JPEG — PNG transparan tetap PNG.
+  try {
+    const sharp = (await import("sharp")).default;
+    const img = sharp(Buffer.from(bytes)).rotate().resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true });
+    const meta = await sharp(Buffer.from(bytes)).metadata();
+    if (meta.hasAlpha && isPng) out = new Uint8Array(await img.png({ compressionLevel: 9 }).toBuffer());
+    else {
+      out = new Uint8Array(await img.jpeg({ quality: 84, mozjpeg: true }).toBuffer());
       type = "image/jpeg";
-    } catch (err) {
-      console.warn("[deck] konversi gambar gagal", errText(err));
     }
+  } catch (err) {
+    console.warn("[deck] kompres gambar gagal", errText(err));
+    if (!isPng && !isJpeg) return null;
   }
   const size = imageSize(out);
   return size ? { data: Buffer.from(out).toString("base64"), mime: type, ...size } : null;

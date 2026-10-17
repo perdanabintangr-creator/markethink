@@ -309,3 +309,4 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   ("… (bisa diedit).pptx", font ditanam). PDF tetap vektor (pdf-lib, font tertanam).
 - (17 Okt, founder) Cukup satu tombol "Unduh PPT" = versi bisa diedit (font ditanam); PPT versi gambar tidak dibuat lagi (kode render-image disimpan). PDF untuk tampilan persis.
 - (17 Okt, founder ACC) Permintaan PPT: riset web maks 2× per pesan (`DECK_MAX_SEARCHES`), termasuk riset awal.
+- (17 Okt) Foto deck dikompres (maks 1600 px, JPEG q84; PNG transparan tetap PNG) — penyimpanan per deck Signature ±6–8 MB → ±3 MB.
