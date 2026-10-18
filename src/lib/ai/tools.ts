@@ -36,6 +36,12 @@ export const premiumVisualsFor = (planId: string, isAdmin: boolean) => isAdmin |
 /** "signature" (Promax & admin): AI Art Director — font, palet & tata letak mengikuti tema, foto KV konsisten, hasil PPT + PDF. */
 export type DeckStyle = "standard" | "signature";
 export const deckStyleFor = (planId: string, isAdmin: boolean): DeckStyle => (isAdmin || planId === "promax" ? "signature" : "standard");
+/** Panduan edit gambar acuan: hapus/ubah elemen sekaligus merapikan tata letak (seperti editor desain), bukan sekadar menghapus. */
+const EDIT_GUIDANCE =
+  "EDITING RULES: This is an edit of the attached reference image — reproduce it faithfully (same style, fonts, colors, background, logo, " +
+  "text) except for the requested changes. When an element is removed or added, re-flow the layout like a professional designer: " +
+  "redistribute the remaining items evenly across the available space (equal widths and gaps, no empty hole where the removed item was), " +
+  "renumber sequences (01, 02, 03…), keep connectors/lines continuous, and keep margins and alignment consistent. Keep all text sharp and correctly spelled.";
 const PREMIUM_ART_DIRECTION =
   "Execute at premium creative-agency quality: refined composition, rich detail, polished lighting and color grading, faithful to the requested style.";
 /** Perkiraan biaya per gambar (USD) bila provider tidak melaporkan biaya nyata. */
@@ -209,7 +215,7 @@ export function createChatTools(ctx: ToolCtx) {
           const refs = await loadReferences(ctx, reference_ids ?? []);
           const brandColors = [ctx.brand?.colorPrimary, ctx.brand?.colorSecondary].filter(Boolean).join(" and ");
           const finalPrompt =
-            (ctx.premiumVisuals && !refs.length ? `${prompt}\n\n${PREMIUM_ART_DIRECTION}` : prompt) +
+            (refs.length ? `${prompt}\n\n${EDIT_GUIDANCE}` : ctx.premiumVisuals ? `${prompt}\n\n${PREMIUM_ART_DIRECTION}` : prompt) +
             (brandColors && !refs.length ? `\nWhere it fits naturally, use the brand colors ${brandColors} as accent colors.` : "");
           const img = await generateImage(finalPrompt, aspect_ratio, refs, { budget: ctx.budgetImages });
           const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
