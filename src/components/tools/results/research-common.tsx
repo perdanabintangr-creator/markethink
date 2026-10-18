@@ -1,17 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Bullets, Pill, SectionCard } from "../common";
+import { Bullets, Pill, SectionCard, useResultsI18n } from "../common";
+import { shortRpID } from "./fmt";
 
-export const shortRp = (v: number | null | undefined) => {
-  if (v === null || v === undefined || !Number.isFinite(v)) return "-";
-  const f = (x: number, d: number) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: d }).format(x);
-  if (Math.abs(v) >= 1e12) return `Rp${f(v / 1e12, 1)} T`;
-  if (Math.abs(v) >= 1e9) return `Rp${f(v / 1e9, 1)} M`;
-  if (Math.abs(v) >= 1e6) return `Rp${f(v / 1e6, 1)} jt`;
-  if (Math.abs(v) >= 1e3) return `Rp${f(v / 1e3, 0)} rb`;
-  return `Rp${f(v, 0)}`;
-};
+/** Rupiah ringkas versi Indonesia. Untuk tampilan per bahasa pakai `useResultsI18n().f.shortRp`. */
+export const shortRp = shortRpID;
 
 export const toneOf = (level: string): "good" | "warn" | "bad" | "muted" =>
   ["tinggi", "positif", "peluang", "wajib"].includes(level) ? "good" : ["sedang", "netral", "disarankan", "cek"].includes(level) ? "warn" : ["rendah", "negatif", "ancaman"].includes(level) ? "bad" : "muted";
@@ -27,6 +21,7 @@ export function Summary({ text, children }: { text: string; children?: React.Rea
 
 /** Batang horizontal berlabel (nilai 0..max). */
 export function BarList({ items, max, unit = "", color = "bg-primary" }: { items: { label: string; value: number; hint?: string }[]; max?: number; unit?: string; color?: string }) {
+  const { f } = useResultsI18n();
   const top = max ?? Math.max(1, ...items.map((i) => i.value));
   return (
     <div className="space-y-2">
@@ -35,7 +30,7 @@ export function BarList({ items, max, unit = "", color = "bg-primary" }: { items
           <div className="mb-1 flex justify-between gap-2">
             <span className="truncate">{i.label}</span>
             <span className="shrink-0 font-medium tabular-nums">
-              {new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(i.value)}
+              {new Intl.NumberFormat(f.locale, { maximumFractionDigits: 1 }).format(i.value)}
               {unit}
             </span>
           </div>
@@ -49,9 +44,10 @@ export function BarList({ items, max, unit = "", color = "bg-primary" }: { items
   );
 }
 
-export function Recommendations({ items, title = "Rekomendasi" }: { items: { title: string; detail: string; priority: string }[]; title?: string }) {
+export function Recommendations({ items, title }: { items: { title: string; detail: string; priority: string }[]; title?: string }) {
+  const { t } = useResultsI18n();
   return (
-    <SectionCard title={title}>
+    <SectionCard title={title ?? t.common.recommendations}>
       <ol className="space-y-2">
         {items.map((r, i) => (
           <li key={i} className="flex gap-3 rounded-xl border bg-background p-3 text-sm">
@@ -60,7 +56,7 @@ export function Recommendations({ items, title = "Rekomendasi" }: { items: { tit
               <b>{r.title}</b>
               <span className="block text-muted-foreground">{r.detail}</span>
             </span>
-            <Pill tone={r.priority === "tinggi" ? "good" : r.priority === "sedang" ? "warn" : "muted"}>{r.priority}</Pill>
+            <Pill tone={r.priority === "tinggi" ? "good" : r.priority === "sedang" ? "warn" : "muted"}>{t.ev(r.priority)}</Pill>
           </li>
         ))}
       </ol>
@@ -69,10 +65,10 @@ export function Recommendations({ items, title = "Rekomendasi" }: { items: { tit
 }
 
 export function Sources({ sources }: { sources?: { title: string; url: string }[] }) {
-  if (!sources?.length)
-    return <Bullets items={["Riset web tidak tersedia saat ini — analisis memakai pengetahuan umum AI."]} className="text-xs text-muted-foreground" />;
+  const { t } = useResultsI18n();
+  if (!sources?.length) return <Bullets items={[t.common.noWebResearch]} className="text-xs text-muted-foreground" />;
   return (
-    <SectionCard title="Sumber riset" hint={`${sources.length} sumber`}>
+    <SectionCard title={t.common.researchSources} hint={t.common.nSources(sources.length)}>
       <ol className="list-decimal space-y-1 pl-5 text-xs">
         {sources.map((s) => (
           <li key={s.url} className="truncate">

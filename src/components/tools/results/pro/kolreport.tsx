@@ -9,9 +9,6 @@ import {
   VERDICT_LABEL,
   WEIGHTS,
   kolCalcOf,
-  kolNum,
-  kolRp,
-  metricText,
   type KolMetric,
   type KolObjective,
   type KolRow,
@@ -19,7 +16,7 @@ import {
   type KolreportOutput,
 } from "@/lib/addons/pro/specs/kolreport";
 import { cn } from "@/lib/utils";
-import { CardGrid, DataTable, Pill, Points, SectionCard, StatGrid } from "./kit";
+import { CardGrid, DataTable, Pill, Points, SectionCard, StatGrid, useResultsI18n } from "./kit";
 
 const TONE: Record<KolVerdict, "good" | "warn" | "bad" | "muted"> = { lanjut: "good", negosiasi: "warn", stop: "bad", cek_data: "muted" };
 const BAR: Record<KolVerdict, string> = { lanjut: "bg-emerald-500", negosiasi: "bg-amber-500", stop: "bg-red-500", cek_data: "bg-muted-foreground/40" };
@@ -46,15 +43,18 @@ function ScoreBar({ score, verdict }: { score: number | null; verdict: KolVerdic
 }
 
 function CreatorCard({ r }: { r: KolRow }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.kolreport;
+  const { kolNum, kolRp, metricText } = f;
   const cells: [string, string][] = [
-    ["Followers", kolNum(r.followers)],
-    ["Fee", kolRp(r.fee)],
-    ["Views", kolNum(r.views)],
-    ["Engagement", kolNum(r.engagements)],
-    [r.er_base === "followers" ? "ER (followers)" : "ER", metricText("er", r.er)],
-    ["Klik", kolNum(r.clicks)],
-    ["Order", kolNum(r.orders)],
-    ["Omzet", kolRp(r.revenue)],
+    [t.followers, kolNum(r.followers)],
+    [t.fee, kolRp(r.fee)],
+    [t.views, kolNum(r.views)],
+    [t.engagement, kolNum(r.engagements)],
+    [r.er_base === "followers" ? t.erFollowers : "ER", metricText("er", r.er)],
+    [t.clicks, kolNum(r.clicks)],
+    [t.orders, kolNum(r.orders)],
+    [t.revenue, kolRp(r.revenue)],
     ["CPM", metricText("cpm", r.cpm)],
     ["CPE", metricText("cpe", r.cpe)],
     ["CPO", metricText("cpo", r.cpo)],
@@ -71,7 +71,7 @@ function CreatorCard({ r }: { r: KolRow }) {
             {[r.platform, TIER_LABEL[r.tier] !== "-" ? TIER_LABEL[r.tier] : "", r.content].filter(Boolean).join(" · ")}
           </p>
         </div>
-        <Pill tone={TONE[r.verdict]}>{VERDICT_LABEL[r.verdict]}</Pill>
+        <Pill tone={TONE[r.verdict]}>{tr.labels.kolVerdict[r.verdict] ?? VERDICT_LABEL[r.verdict]}</Pill>
       </div>
       <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1 text-xs sm:grid-cols-4">
         {cells
@@ -85,15 +85,19 @@ function CreatorCard({ r }: { r: KolRow }) {
       </dl>
       {r.note && <p className="mt-2 text-muted-foreground">{r.note}</p>}
       <p className="mt-2 rounded-lg bg-muted/60 p-2">
-        <span className="text-xs font-semibold uppercase text-primary">Berikutnya · </span>
+        <span className="text-xs font-semibold uppercase text-primary">{t.next}</span>
         {r.next_step}
-        {r.fair_fee !== null && <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">Patokan fee wajar: {kolRp(r.fair_fee)} (agar efisiensinya setara median kampanye)</span>}
+        {r.fair_fee !== null && <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">{t.fairFee(kolRp(r.fair_fee))}</span>}
       </p>
     </div>
   );
 }
 
 export function KolreportResult({ data, objective }: { data: KolreportOutput; objective?: string }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.kolreport;
+  const { kolNum, kolRp, metricText } = f;
+  const verdictLabel = (v: KolVerdict) => tr.labels.kolVerdict[v] ?? VERDICT_LABEL[v];
   const calc = useMemo(() => kolCalcOf(data, (objective as KolObjective) || "penjualan"), [data, objective]);
   const o = calc.objective;
   const T = calc.totals;
@@ -111,17 +115,17 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
   const maxV = Math.max(1e-9, ...metricRows.map((x) => x.v));
 
   const stats: { label: string; value: string; note?: string; tone?: "good" | "warn" | "bad" | "primary" }[] = [
-    { label: "Total fee kreator", value: kolRp(T.fee), note: `${T.creators} kreator · rata-rata ${kolRp(T.avg_fee)}`, tone: "primary" },
-    { label: "Total views", value: kolNum(T.views), note: T.followers ? `dari ${kolNum(T.followers)} total followers` : undefined },
-    { label: "Engagement", value: kolNum(T.engagements), note: T.er !== null ? `ER ${metricText("er", T.er)}` : undefined },
-    { label: "CPM kampanye", value: metricText("cpm", T.cpm), note: T.cpe !== null ? `CPE ${metricText("cpe", T.cpe)}` : undefined },
+    { label: t.totalFee, value: kolRp(T.fee), note: t.feeNote(T.creators, kolRp(T.avg_fee)), tone: "primary" },
+    { label: t.totalViews, value: kolNum(T.views), note: T.followers ? t.fromFollowers(kolNum(T.followers)) : undefined },
+    { label: t.engagement, value: kolNum(T.engagements), note: T.er !== null ? `ER ${metricText("er", T.er)}` : undefined },
+    { label: t.campaignCpm, value: metricText("cpm", T.cpm), note: T.cpe !== null ? `CPE ${metricText("cpe", T.cpe)}` : undefined },
   ];
   if (T.clicks || T.orders || T.revenue) {
     stats.push(
-      { label: "Klik", value: kolNum(T.clicks), note: T.cpc !== null ? `CPC ${metricText("cpc", T.cpc)}` : undefined },
-      { label: o === "install" ? "Install / daftar" : "Order", value: kolNum(T.orders), note: T.cpo !== null ? `${o === "install" ? "CPI" : "CPO"} ${metricText("cpo", T.cpo)}` : undefined },
-      { label: "Omzet teratribusi", value: kolRp(T.revenue) },
-      { label: "ROAS kampanye", value: metricText("roas", T.roas), tone: T.roas === null ? undefined : T.roas >= 3 ? "good" : T.roas >= 1.5 ? "warn" : "bad" },
+      { label: t.clicks, value: kolNum(T.clicks), note: T.cpc !== null ? `CPC ${metricText("cpc", T.cpc)}` : undefined },
+      { label: o === "install" ? t.installs : t.orders, value: kolNum(T.orders), note: T.cpo !== null ? `${o === "install" ? "CPI" : "CPO"} ${metricText("cpo", T.cpo)}` : undefined },
+      { label: t.attributed, value: kolRp(T.revenue) },
+      { label: t.campaignRoas, value: metricText("roas", T.roas), tone: T.roas === null ? undefined : T.roas >= 3 ? "good" : T.roas >= 1.5 ? "warn" : "bad" },
     );
   }
 
@@ -129,8 +133,8 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
     <div className="space-y-4">
       <section className="rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Ringkasan kampanye</p>
-          <Pill tone="primary">Tujuan: {OBJECTIVE_LABEL[o]}</Pill>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t.summary}</p>
+          <Pill tone="primary">{t.objective(tr.labels.kolObjective[o] ?? OBJECTIVE_LABEL[o])}</Pill>
         </div>
         <h2 className="mt-1 text-lg font-bold">{data.headline}</h2>
         <p className="mt-2 text-sm">{data.summary}</p>
@@ -139,15 +143,13 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
       <StatGrid items={stats} />
 
       <SectionCard
-        title="Peringkat kreator"
+        title={t.ranking}
         hint={
-          <span>
-            Skor dihitung sistem: {Object.entries(WEIGHTS[o]).map(([m, w]) => `${METRIC_LABEL[m as KolMetric]} ${Math.round((w ?? 0) * 100)}%`).join(" · ")}
-          </span>
+          <span>{t.scoreBy(Object.entries(WEIGHTS[o]).map(([m, w]) => `${METRIC_LABEL[m as KolMetric]} ${Math.round((w ?? 0) * 100)}%`).join(" · "))}</span>
         }
       >
         <div className="mb-3 flex h-2.5 overflow-hidden rounded-full bg-muted">
-          {VERDICTS.map((v) => (calc.counts[v] ? <div key={v} className={BAR[v]} style={{ width: `${(calc.counts[v] / Math.max(1, T.creators)) * 100}%` }} title={`${VERDICT_LABEL[v]}: ${calc.counts[v]}`} /> : null))}
+          {VERDICTS.map((v) => (calc.counts[v] ? <div key={v} className={BAR[v]} style={{ width: `${(calc.counts[v] / Math.max(1, T.creators)) * 100}%` }} title={`${verdictLabel(v)}: ${calc.counts[v]}`} /> : null))}
         </div>
         <div className="mb-3 flex flex-wrap gap-1.5 print:hidden">
           {(["all", ...VERDICTS] as const)
@@ -162,12 +164,12 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
                   filter === v ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:border-primary/50",
                 )}
               >
-                {v === "all" ? `Semua (${T.creators})` : `${VERDICT_LABEL[v]} (${calc.counts[v]})`}
+                {v === "all" ? t.all(T.creators) : `${verdictLabel(v)} (${calc.counts[v]})`}
               </button>
             ))}
         </div>
         <DataTable
-          headers={["#", "Kreator", "Fee", "Views", "ER", ...cols.map((c) => c.label), "Skor", "Verdict"]}
+          headers={["#", t.creator, t.fee, t.views, "ER", ...cols.map((c) => c.label), t.score, t.verdict]}
           minWidth={820}
           rows={rows.map((r) => [
             <span key="r" className="text-muted-foreground">{r.rank}</span>,
@@ -187,13 +189,13 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
               </span>
             )),
             <ScoreBar key="s" score={r.score} verdict={r.verdict} />,
-            <Pill key="p" tone={TONE[r.verdict]}>{VERDICT_LABEL[r.verdict]}</Pill>,
+            <Pill key="p" tone={TONE[r.verdict]}>{verdictLabel(r.verdict)}</Pill>,
           ])}
         />
         <details className="group mt-3 rounded-xl border">
           <summary className="cursor-pointer list-none p-3 text-sm font-medium text-primary">
-            <span className="group-open:hidden">Lihat rincian & langkah berikutnya per kreator ▾</span>
-            <span className="hidden group-open:inline">Tutup rincian ▴</span>
+            <span className="group-open:hidden">{t.seeDetails}</span>
+            <span className="hidden group-open:inline">{t.hideDetails}</span>
           </summary>
           <div className="grid gap-2 p-3 pt-0 md:grid-cols-2">
             {rows.map((r) => (
@@ -204,7 +206,7 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
       </SectionCard>
 
       {metrics.length > 0 && (
-        <SectionCard title="Biaya per hasil" hint={LOWER_BETTER.has(metric) ? "Makin pendek makin efisien" : "Makin panjang makin baik"}>
+        <SectionCard title={t.costPer} hint={LOWER_BETTER.has(metric) ? t.shorter : t.longer}>
           <div className="mb-3 flex flex-wrap gap-1.5 print:hidden">
             {metrics.map((m) => (
               <button
@@ -230,23 +232,24 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
           </div>
           {T[metric as "cpm"] !== undefined && (
             <p className="mt-3 text-xs text-muted-foreground">
-              Rata-rata kampanye: <b>{metricText(metric, T[metric as "cpm" | "cpe" | "cpc" | "cpo" | "roas" | "er"])}</b> · warna batang = verdict kreator
+              {t.avg} <b>{metricText(metric, T[metric as "cpm" | "cpe" | "cpc" | "cpo" | "roas" | "er"])}</b>
+              {t.barNote}
             </p>
           )}
         </SectionCard>
       )}
 
-      <SectionCard title="Insight kampanye">
+      <SectionCard title={t.insights}>
         <div className="space-y-2">
           {data.insights.map((i, k) => (
             <div key={k} className="grid gap-2 rounded-xl border bg-background p-3 text-sm md:grid-cols-3 print:break-inside-avoid">
               <p className="font-medium">{i.title}</p>
               <p className="text-muted-foreground">
-                <span className="text-xs font-semibold uppercase">Bukti · </span>
+                <span className="text-xs font-semibold uppercase">{tr.common.evidenceDot}</span>
                 {i.evidence}
               </p>
               <p>
-                <span className="text-xs font-semibold uppercase text-primary">Artinya · </span>
+                <span className="text-xs font-semibold uppercase text-primary">{tr.common.soWhatDot}</span>
                 {i.action}
               </p>
             </div>
@@ -254,18 +257,18 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
         </div>
       </SectionCard>
 
-      <SectionCard title="Pelajaran konten untuk brief berikutnya">
+      <SectionCard title={t.lessons}>
         <CardGrid
           items={data.lessons.map((l) => ({
             title: l.lesson,
             tag: l.aspect,
             tone: "primary" as const,
-            body: <span className="italic">Contoh: {l.example}</span>,
+            body: <span className="italic">{t.example(l.example)}</span>,
           }))}
         />
       </SectionCard>
 
-      <SectionCard title="Rekomendasi gelombang berikutnya" hint={data.next_wave.budget_total ? `Usulan budget ${kolRp(data.next_wave.budget_total)}` : undefined}>
+      <SectionCard title={t.nextWave} hint={data.next_wave.budget_total ? t.budgetProposal(kolRp(data.next_wave.budget_total)) : undefined}>
         <p className="mb-3 text-sm">{data.next_wave.strategy}</p>
         <div className="grid gap-3 md:grid-cols-3">
           {(["lanjut", "negosiasi", "stop"] as const).map((v) => {
@@ -273,27 +276,27 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
             return (
               <div key={v} className={cn("rounded-xl p-3 text-sm", v === "lanjut" ? "bg-emerald-500/10" : v === "negosiasi" ? "bg-amber-500/10" : "bg-red-500/10")}>
                 <div className="mb-2 flex items-center justify-between">
-                  <b>{VERDICT_LABEL[v]}</b>
-                  <Pill tone={TONE[v]}>{list.length} kreator</Pill>
+                  <b>{verdictLabel(v)}</b>
+                  <Pill tone={TONE[v]}>{t.nCreators(list.length)}</Pill>
                 </div>
                 {list.length ? (
                   <ul className="space-y-2">
                     {list.map((r) => (
                       <li key={r.rank}>
                         <p className="font-medium">
-                          {r.name} <span className="text-xs font-normal text-muted-foreground">skor {r.score ?? "-"}</span>
+                          {r.name} <span className="text-xs font-normal text-muted-foreground">{t.scoreOf(String(r.score ?? "-"))}</span>
                         </p>
                         <p className="text-muted-foreground">{r.next_step}</p>
                         {r.fair_fee !== null && (
                           <p className="text-xs text-amber-700 dark:text-amber-300">
-                            Fee {kolRp(r.fee)} → patokan {kolRp(r.fair_fee)}
+                            {t.feeArrow(kolRp(r.fee), kolRp(r.fair_fee))}
                           </p>
                         )}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-muted-foreground">Tidak ada.</p>
+                  <p className="text-muted-foreground">{t.none}</p>
                 )}
               </div>
             );
@@ -302,7 +305,7 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
 
         {data.next_wave.budget.length > 0 && (
           <div className="mt-4">
-            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Alokasi budget</p>
+            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{t.budgetAlloc}</p>
             <div className="mb-2 flex h-3 overflow-hidden rounded-full">
               {data.next_wave.budget.map((b, i) => (
                 <div key={i} style={{ width: `${b.share_pct}%`, opacity: 1 - i * 0.15 }} className="bg-primary" title={`${b.bucket} ${b.share_pct}%`} />
@@ -327,16 +330,14 @@ export function KolreportResult({ data, objective }: { data: KolreportOutput; ob
 
         {data.next_wave.tests.length > 0 && (
           <div className="mt-4">
-            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Eksperimen berikutnya</p>
+            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{t.experiments}</p>
             <Points items={data.next_wave.tests} />
           </div>
         )}
       </SectionCard>
 
-      {data.data_notes && <p className="text-xs text-muted-foreground">Catatan data: {data.data_notes}</p>}
-      <p className="text-xs text-muted-foreground">
-        Metrik, skor, dan verdict dihitung otomatis dari angka per kreator (50% patokan pasar Indonesia + 50% posisi relatif di kampanye ini). Skor ≥65 lanjut, 40-64 negosiasi ulang, &lt;40 stop.
-      </p>
+      {data.data_notes && <p className="text-xs text-muted-foreground">{tr.common.dataNotes(data.data_notes)}</p>}
+      <p className="text-xs text-muted-foreground">{t.method}</p>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { FUNNEL_LABEL, idr, type PlanOutput } from "@/lib/addons/pro/specs/plan";
+import { FUNNEL_LABEL, type PlanOutput } from "@/lib/addons/pro/specs/plan";
 import { cn } from "@/lib/utils";
-import { Checklist, CopyButton, DataTable, KeyValues, Pill, Points, SectionCard, StatGrid, Timeline } from "./kit";
+import { Checklist, CopyButton, DataTable, KeyValues, Pill, Points, SectionCard, StatGrid, Timeline, useResultsI18n } from "./kit";
 
 const STAGES = ["awareness", "consideration", "conversion", "retention"] as const;
 const STAGE_TONE: Record<(typeof STAGES)[number], string> = {
@@ -15,6 +15,7 @@ export const SPLIT_COLORS = ["#2563eb", "#0ea5e9", "#14b8a6", "#f59e0b", "#ec489
 
 /** Bar komposisi 100% + rincian pos budget (dipakai plan, campaign, gtm). */
 export function BudgetSplit({ items }: { items: { item: string; pct: number; amount: number | null; note: string }[] }) {
+  const idr = useResultsI18n().f.idr;
   return (
     <div>
       <div className="mb-3 flex h-3 overflow-hidden rounded-full bg-muted">
@@ -46,38 +47,42 @@ export function BudgetSplit({ items }: { items: { item: string; pct: number; amo
 const levelTone = (l: string) => (l === "tinggi" ? "bad" : l === "sedang" ? "warn" : "muted") as "bad" | "warn" | "muted";
 
 export function PlanResult({ data }: { data: PlanOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.plan;
+  const c0 = tr.common;
+  const idr = f.idr;
   const s = data.situation;
   const monthly = data.budget.monthly;
   const paid = data.channels.filter((c) => c.budget_pct > 0).length;
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Ringkasan eksekutif</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">{c0.execSummary}</p>
         <h2 className="mt-1 text-lg font-bold">{data.headline}</h2>
         <p className="mt-2 text-sm">{data.summary}</p>
         {!!data.assumptions.length && (
           <p className="mt-3 text-xs text-muted-foreground">
-            <b>Asumsi:</b> {data.assumptions.join(" · ")}
+            <b>{c0.assumptions}</b> {data.assumptions.join(" · ")}
           </p>
         )}
       </section>
 
       <StatGrid
         items={[
-          { label: "Budget per bulan", value: idr(monthly), note: data.budget.basis === "rekomendasi" ? "Rekomendasi (belum diisi)" : "Sesuai isian", tone: "primary" },
-          { label: "Tujuan SMART", value: String(data.objectives.length), note: `${data.objectives.filter((o) => o.level === "bisnis").length} tujuan bisnis` },
-          { label: "Kanal", value: String(data.channels.length), note: `${paid} berbayar` },
-          { label: "Periode roadmap", value: String(data.roadmap.length), note: data.roadmap.length ? `${data.roadmap[0].period} – ${data.roadmap[data.roadmap.length - 1].period}` : "" },
+          { label: t.monthlyBudget, value: idr(monthly), note: data.budget.basis === "rekomendasi" ? t.recNotFilled : c0.asProvided, tone: "primary" },
+          { label: t.smart, value: String(data.objectives.length), note: t.nBizGoals(data.objectives.filter((o) => o.level === "bisnis").length) },
+          { label: t.channels, value: String(data.channels.length), note: t.nPaid(paid) },
+          { label: t.roadmapPeriods, value: String(data.roadmap.length), note: data.roadmap.length ? `${data.roadmap[0].period} – ${data.roadmap[data.roadmap.length - 1].period}` : "" },
         ]}
       />
 
-      <SectionCard title="Analisis situasi">
+      <SectionCard title={t.situation}>
         <div className="grid gap-2 sm:grid-cols-2">
           {[
-            { label: "Kekuatan", items: s.strengths, cls: "bg-emerald-500/10", head: "text-emerald-700 dark:text-emerald-300" },
-            { label: "Kelemahan", items: s.weaknesses, cls: "bg-red-500/10", head: "text-red-700 dark:text-red-300" },
-            { label: "Peluang", items: s.opportunities, cls: "bg-sky-500/10", head: "text-sky-700 dark:text-sky-300" },
-            { label: "Ancaman", items: s.threats, cls: "bg-amber-500/10", head: "text-amber-700 dark:text-amber-300" },
+            { label: c0.strengths, items: s.strengths, cls: "bg-emerald-500/10", head: "text-emerald-700 dark:text-emerald-300" },
+            { label: c0.weaknesses, items: s.weaknesses, cls: "bg-red-500/10", head: "text-red-700 dark:text-red-300" },
+            { label: c0.opportunities, items: s.opportunities, cls: "bg-sky-500/10", head: "text-sky-700 dark:text-sky-300" },
+            { label: c0.threats, items: s.threats, cls: "bg-amber-500/10", head: "text-amber-700 dark:text-amber-300" },
           ].map((q) => (
             <div key={q.label} className={cn("rounded-xl p-3 print:break-inside-avoid", q.cls)}>
               <p className={cn("mb-1 text-xs font-semibold uppercase", q.head)}>{q.label}</p>
@@ -91,7 +96,7 @@ export function PlanResult({ data }: { data: PlanOutput }) {
               <div key={k} className="grid gap-1 rounded-xl border bg-background p-3 text-sm sm:grid-cols-2 sm:gap-3 print:break-inside-avoid">
                 <p className="font-medium">{i.insight}</p>
                 <p>
-                  <span className="text-xs font-semibold uppercase text-primary">Artinya · </span>
+                  <span className="text-xs font-semibold uppercase text-primary">{c0.soWhatDot}</span>
                   {i.implication}
                 </p>
               </div>
@@ -100,15 +105,15 @@ export function PlanResult({ data }: { data: PlanOutput }) {
         )}
       </SectionCard>
 
-      <SectionCard title="Tujuan SMART">
+      <SectionCard title={t.smart}>
         <DataTable
-          headers={["Tujuan", "Metrik", "Sekarang", "Target", "Deadline"]}
+          headers={t.smartHeaders}
           minWidth={680}
           rows={data.objectives.map((o) => [
             <span key="o" className="flex flex-col gap-1">
               {o.objective}
               <span>
-                <Pill tone={o.level === "bisnis" ? "primary" : "muted"}>{o.level}</Pill>
+                <Pill tone={o.level === "bisnis" ? "primary" : "muted"}>{tr.ev(o.level)}</Pill>
               </span>
             </span>,
             o.metric,
@@ -119,24 +124,24 @@ export function PlanResult({ data }: { data: PlanOutput }) {
         />
       </SectionCard>
 
-      <SectionCard title="Target pasar & positioning">
+      <SectionCard title={t.market}>
         <KeyValues
           items={[
-            { k: "Segmen utama", v: data.segment.primary },
-            { k: "Kebutuhan utama", v: data.segment.need },
-            ...(data.segment.secondary ? [{ k: "Segmen berikutnya", v: data.segment.secondary }] : []),
+            { k: t.primarySeg, v: data.segment.primary },
+            { k: t.need, v: data.segment.need },
+            ...(data.segment.secondary ? [{ k: t.nextSeg, v: data.segment.secondary }] : []),
           ]}
         />
         <div className="mt-3 rounded-xl border-l-4 border-primary bg-muted/50 p-3 text-sm">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase text-primary">Positioning statement</p>
+            <p className="text-xs font-semibold uppercase text-primary">{t.statement}</p>
             <CopyButton text={data.segment.positioning} />
           </div>
           <p className="italic">{data.segment.positioning}</p>
         </div>
       </SectionCard>
 
-      <SectionCard title="Pilar strategis" hint={`${data.pillars.length} taruhan utama`}>
+      <SectionCard title={t.pillars} hint={t.pillarsHint(data.pillars.length)}>
         <div className="grid gap-2 sm:grid-cols-2">
           {data.pillars.map((p, i) => (
             <div key={i} className="rounded-xl border bg-background p-3 text-sm print:break-inside-avoid">
@@ -152,7 +157,7 @@ export function PlanResult({ data }: { data: PlanOutput }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Channel plan" hint="Peran tiap kanal di funnel">
+      <SectionCard title={t.channelPlan} hint={t.channelHint}>
         <div className="mb-3 grid gap-2 sm:grid-cols-4">
           {STAGES.map((st) => {
             const list = data.channels.filter((c) => c.funnel === st);
@@ -172,7 +177,7 @@ export function PlanResult({ data }: { data: PlanOutput }) {
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 text-sm">
                 <b className="min-w-0 flex-1">{c.channel}</b>
                 <Pill tone="primary">{FUNNEL_LABEL[c.funnel]}</Pill>
-                <Pill>{c.budget_pct > 0 ? `${c.budget_pct}% budget` : "organik"}</Pill>
+                <Pill>{c.budget_pct > 0 ? t.budgetPct(c.budget_pct) : t.organic}</Pill>
                 <span className="text-xs text-muted-foreground">
                   {c.kpi}: <b className="text-foreground">{c.target}</b>
                 </span>
@@ -186,7 +191,7 @@ export function PlanResult({ data }: { data: PlanOutput }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Roadmap">
+      <SectionCard title={t.roadmap}>
         <Timeline
           items={data.roadmap.map((r) => ({
             title: r.theme,
@@ -195,7 +200,7 @@ export function PlanResult({ data }: { data: PlanOutput }) {
               <div className="space-y-1.5">
                 <Points items={r.activities} />
                 <p className="text-xs">
-                  <span className="font-semibold text-emerald-700 dark:text-emerald-300">Milestone · </span>
+                  <span className="font-semibold text-emerald-700 dark:text-emerald-300">{t.milestone}</span>
                   {r.milestone}
                 </p>
               </div>
@@ -204,13 +209,13 @@ export function PlanResult({ data }: { data: PlanOutput }) {
         />
       </SectionCard>
 
-      <SectionCard title="Alokasi budget" hint={monthly !== null ? `${idr(monthly)}/bulan${data.budget.basis === "rekomendasi" ? " · rekomendasi" : ""}` : undefined}>
+      <SectionCard title={t.budgetAlloc} hint={monthly !== null ? `${t.perMonth(idr(monthly))}${data.budget.basis === "rekomendasi" ? c0.recommendedSuffix : ""}` : undefined}>
         <BudgetSplit items={data.budget.items} />
         {data.budget.note && <p className="mt-3 rounded-lg bg-muted/60 p-3 text-sm">{data.budget.note}</p>}
       </SectionCard>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="Rencana pengukuran">
+        <SectionCard title={t.measurement}>
           <div className="space-y-2">
             {data.measurement.map((m, i) => (
               <div key={i} className="rounded-lg border bg-background px-3 py-2 text-sm">
@@ -219,30 +224,30 @@ export function PlanResult({ data }: { data: PlanOutput }) {
                   <Pill tone="primary">{m.frequency}</Pill>
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {m.tool} · PIC {m.owner}
+                  {m.tool} · {t.pic(m.owner)}
                 </p>
               </div>
             ))}
           </div>
         </SectionCard>
-        <SectionCard title="Quick wins 30 hari">
+        <SectionCard title={t.quickWins}>
           <Checklist items={data.quick_wins.map((q) => ({ task: `${q.action} → ${q.impact}`, owner: q.owner, when: q.due }))} />
         </SectionCard>
       </div>
 
-      <SectionCard title="Risiko & mitigasi">
+      <SectionCard title={c0.risksMitigation}>
         <div className="space-y-2">
           {data.risks.map((r, i) => (
             <div key={i} className="grid gap-2 rounded-xl border bg-background p-3 text-sm sm:grid-cols-[1fr_1fr] print:break-inside-avoid">
               <div>
                 <p className="font-medium">{r.risk}</p>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  <Pill tone={levelTone(r.likelihood)}>peluang {r.likelihood}</Pill>
-                  <Pill tone={levelTone(r.impact)}>dampak {r.impact}</Pill>
+                  <Pill tone={levelTone(r.likelihood)}>{t.likelihood(tr.ev(r.likelihood))}</Pill>
+                  <Pill tone={levelTone(r.impact)}>{t.impact(tr.ev(r.impact))}</Pill>
                 </div>
               </div>
               <p className="text-muted-foreground">
-                <span className="text-xs font-semibold uppercase text-primary">Mitigasi · </span>
+                <span className="text-xs font-semibold uppercase text-primary">{c0.mitigationDot}</span>
                 {r.mitigation}
               </p>
             </div>

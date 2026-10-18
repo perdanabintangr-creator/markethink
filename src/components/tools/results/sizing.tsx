@@ -1,8 +1,8 @@
 "use client";
 
 import type { SizingOutput } from "@/lib/addons/schemas";
-import { Pill, SectionCard } from "../common";
-import { BarList, Recommendations, Sources, Summary, shortRp, toneOf } from "./research-common";
+import { Pill, SectionCard, useResultsI18n } from "../common";
+import { BarList, Recommendations, Sources, Summary, toneOf } from "./research-common";
 
 /** Lingkaran bertingkat TAM ⊃ SAM ⊃ SOM (luas sebanding nilai, dengan batas minimum agar terbaca). */
 function MarketCircles({ data }: { data: SizingOutput }) {
@@ -25,6 +25,9 @@ function MarketCircles({ data }: { data: SizingOutput }) {
 }
 
 function Projection({ data }: { data: SizingOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.sizing;
+  const shortRp = f.shortRp;
   const rows = data.projection.slice(0, 6);
   if (rows.length < 2) return null;
   const W = 520;
@@ -34,13 +37,13 @@ function Projection({ data }: { data: SizingOutput }) {
   const x = (i: number) => pad + (i / (rows.length - 1)) * (W - pad * 2);
   const y = (v: number) => H - pad - (Math.max(0, v) / max) * (H - pad * 2);
   const series = [
-    { key: "optimistic" as const, name: "Optimis", color: "#10b981" },
-    { key: "base" as const, name: "Dasar", color: "#2563eb" },
-    { key: "conservative" as const, name: "Konservatif", color: "#f59e0b" },
+    { key: "optimistic" as const, name: t.optimistic, color: "#10b981" },
+    { key: "base" as const, name: t.base, color: "#2563eb" },
+    { key: "conservative" as const, name: t.conservative, color: "#f59e0b" },
   ];
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Proyeksi pasar">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={t.projAria}>
         <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} className="stroke-border" />
         {rows.map((p, i) => (
           <text key={p.year} x={x(i)} y={H - pad + 16} textAnchor="middle" className="fill-muted-foreground text-[11px]">
@@ -73,25 +76,28 @@ function Projection({ data }: { data: SizingOutput }) {
   );
 }
 
-const PESTEL_LABEL: Record<string, string> = { politik: "Politik", ekonomi: "Ekonomi", sosial: "Sosial", teknologi: "Teknologi", lingkungan: "Lingkungan", hukum: "Hukum" };
+const PESTEL_KEYS = ["politik", "ekonomi", "sosial", "teknologi", "lingkungan", "hukum"];
 
 export function SizingResult({ data }: { data: SizingOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.sizing;
+  const shortRp = f.shortRp;
   const levels = [
-    { key: "TAM", name: "Total pasar", d: data.tam, cls: "bg-primary/10" },
-    { key: "SAM", name: "Pasar yang bisa kamu layani", d: data.sam, cls: "bg-primary/20" },
-    { key: "SOM", name: "Target realistis 1-3 tahun", d: data.som, cls: "bg-primary text-primary-foreground" },
+    { key: "TAM", name: t.tam, d: data.tam, cls: "bg-primary/10" },
+    { key: "SAM", name: t.sam, d: data.sam, cls: "bg-primary/20" },
+    { key: "SOM", name: t.som, d: data.som, cls: "bg-primary text-primary-foreground" },
   ];
   return (
     <div className="space-y-4">
       <Summary text={data.summary}>
         <div className="mt-2 flex flex-wrap gap-2">
-          <Pill tone="primary">Tumbuh {data.cagr_pct.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%/tahun</Pill>
-          <Pill tone="muted">Fase {data.lifecycle}</Pill>
-          <Pill tone={toneOf(data.confidence)}>Keyakinan data: {data.confidence}</Pill>
+          <Pill tone="primary">{t.growth(f.n(data.cagr_pct, { maximumFractionDigits: 1 }))}</Pill>
+          <Pill tone="muted">{t.phase(tr.ev(data.lifecycle))}</Pill>
+          <Pill tone={toneOf(data.confidence)}>{t.confidence(tr.ev(data.confidence))}</Pill>
         </div>
       </Summary>
 
-      <SectionCard title="Ukuran pasar per tahun" hint={data.market_definition}>
+      <SectionCard title={t.sizeTitle} hint={data.market_definition}>
         <div className="grid items-center gap-4 md:grid-cols-[260px_1fr]">
           <MarketCircles data={data} />
           <div className="space-y-2">
@@ -112,16 +118,16 @@ export function SizingResult({ data }: { data: SizingOutput }) {
       </SectionCard>
 
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <SectionCard title="Proyeksi 5 tahun (SAM)" hint="3 skenario">
+        <SectionCard title={t.projTitle} hint={t.scenariosHint}>
           <Projection data={data} />
           <p className="mt-2 text-xs text-muted-foreground">{data.lifecycle_note}</p>
         </SectionCard>
-        <SectionCard title="Porsi penjualan per kanal">
+        <SectionCard title={t.channelShare}>
           <BarList items={data.channels.map((c) => ({ label: c.channel, value: c.share_pct }))} max={100} unit="%" />
         </SectionCard>
       </div>
 
-      <SectionCard title="Cara hitung (bottom-up)" hint="Angka bisa kamu ubah di Excel">
+      <SectionCard title={t.bottomUp} hint={t.bottomUpHint}>
         <ol className="space-y-1.5 text-sm">
           {data.bottom_up.map((b, i) => (
             <li key={i} className="grid gap-1 rounded-lg border bg-background px-3 py-2 sm:grid-cols-[1fr_auto]">
@@ -136,28 +142,28 @@ export function SizingResult({ data }: { data: SizingOutput }) {
         </ol>
       </SectionCard>
 
-      <SectionCard title="Tren yang membentuk pasar">
+      <SectionCard title={t.trends}>
         <div className="grid gap-2 sm:grid-cols-2">
-          {data.trends.map((t, i) => (
+          {data.trends.map((x, i) => (
             <div key={i} className="rounded-xl border bg-background p-3 text-sm">
               <div className="flex items-center justify-between gap-2">
-                <b>{t.title}</b>
-                <Pill tone={toneOf(t.impact)}>{t.impact}</Pill>
+                <b>{x.title}</b>
+                <Pill tone={toneOf(x.impact)}>{tr.ev(x.impact)}</Pill>
               </div>
-              <p className="mt-1 text-muted-foreground">{t.detail}</p>
+              <p className="mt-1 text-muted-foreground">{x.detail}</p>
             </div>
           ))}
         </div>
       </SectionCard>
 
-      <SectionCard title="Analisis PESTEL">
+      <SectionCard title={t.pestelTitle}>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {Object.keys(PESTEL_LABEL).map((f) => {
-            const items = data.pestel.filter((p) => p.factor === f);
+          {PESTEL_KEYS.map((k) => {
+            const items = data.pestel.filter((p) => p.factor === k);
             if (!items.length) return null;
             return (
-              <div key={f} className="rounded-xl border bg-background p-3 text-sm">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">{PESTEL_LABEL[f]}</p>
+              <div key={k} className="rounded-xl border bg-background p-3 text-sm">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">{t.pestel[k]}</p>
                 <ul className="space-y-1.5">
                   {items.map((p, k) => (
                     <li key={k} className="flex items-start gap-2">
@@ -173,10 +179,10 @@ export function SizingResult({ data }: { data: SizingOutput }) {
       </SectionCard>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="🚀 Pendorong pasar">
+        <SectionCard title={t.drivers}>
           <ul className="space-y-1.5 text-sm">{data.drivers.map((d, i) => <li key={i}>• {d}</li>)}</ul>
         </SectionCard>
-        <SectionCard title="🧱 Penghambat">
+        <SectionCard title={t.barriers}>
           <ul className="space-y-1.5 text-sm">{data.barriers.map((d, i) => <li key={i}>• {d}</li>)}</ul>
         </SectionCard>
       </div>
@@ -184,7 +190,7 @@ export function SizingResult({ data }: { data: SizingOutput }) {
       <Recommendations items={data.recommendations} />
 
       {!!data.data_gaps.length && (
-        <SectionCard title="Yang masih perlu divalidasi">
+        <SectionCard title={t.gaps}>
           <ul className="space-y-1.5 text-sm text-muted-foreground">{data.data_gaps.map((d, i) => <li key={i}>• {d}</li>)}</ul>
         </SectionCard>
       )}

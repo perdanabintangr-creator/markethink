@@ -3,7 +3,7 @@
 import { Fragment } from "react";
 import { flowVariables, type FlowMessage, type FlowOutput } from "@/lib/addons/pro/specs/flow";
 import { cn } from "@/lib/utils";
-import { CardGrid, CopyButton, Pill, SectionCard, StatGrid, Summary, Timeline, num } from "./kit";
+import { CardGrid, CopyButton, Pill, SectionCard, StatGrid, Summary, Timeline, useResultsI18n } from "./kit";
 
 /** Teks pesan: *tebal*, _miring_, dan {variabel} disorot. */
 function MsgText({ text }: { text: string }) {
@@ -30,16 +30,17 @@ function MsgText({ text }: { text: string }) {
 const isEmail = (m: FlowMessage) => /mail/i.test(m.channel);
 
 function Message({ m }: { m: FlowMessage }) {
-  const copy = isEmail(m) && m.subject ? `Subjek: ${m.subject}\n\n${m.text}` : m.text;
+  const t = useResultsI18n().t.flow;
+  const copy = isEmail(m) && m.subject ? `${t.subjectCopy(m.subject)}\n\n${m.text}` : m.text;
   return (
     <div className="min-w-0 flex-1">
       {isEmail(m) ? (
         <div className="overflow-hidden rounded-xl border bg-background shadow-sm">
           <div className="flex items-center gap-2 border-b bg-muted/50 px-3 py-2 text-xs">
             <span>✉️</span>
-            <span className="text-muted-foreground">Subjek:</span>
+            <span className="text-muted-foreground">{t.subject}</span>
             <b className="min-w-0 truncate">
-              <MsgText text={m.subject || "(tanpa subjek)"} />
+              <MsgText text={m.subject || t.noSubject} />
             </b>
           </div>
           <p className="whitespace-pre-line px-3 py-2.5 text-sm">
@@ -72,6 +73,9 @@ function Message({ m }: { m: FlowMessage }) {
 }
 
 export function FlowResult({ data }: { data: FlowOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.flow;
+  const num = f.num;
   const all = data.stages.flatMap((s) => s.messages);
   const wa = all.filter((m) => !isEmail(m)).length;
   const vars = [...new Set(all.flatMap((m) => flowVariables(`${m.subject} ${m.text}`)))];
@@ -82,23 +86,23 @@ export function FlowResult({ data }: { data: FlowOutput }) {
 
       <StatGrid
         items={[
-          { label: "Tahap", value: String(data.stages.length), tone: "primary" },
-          { label: "Total pesan", value: String(all.length) },
-          { label: "Kanal", value: `${wa} WA · ${all.length - wa} email`, note: "WhatsApp · email" },
-          { label: "Variabel dipakai", value: String(vars.length), note: vars.slice(0, 4).join(" ") },
+          { label: t.stages, value: String(data.stages.length), tone: "primary" },
+          { label: t.totalMessages, value: String(all.length) },
+          { label: t.channels, value: t.channelSplit(wa, all.length - wa), note: t.channelNote },
+          { label: t.variables, value: String(vars.length), note: vars.slice(0, 4).join(" ") },
         ]}
       />
 
-      <SectionCard title="Peta alur pelanggan">
+      <SectionCard title={t.map}>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch">
           {data.stages.map((s, i) => (
             <div key={i} className="flex items-center gap-2 sm:flex-1">
               <a href={`#tahap-${i + 1}`} className="flex-1 rounded-xl border bg-background p-3 text-sm transition-colors hover:border-primary/50">
-                <p className="text-[11px] font-semibold uppercase text-primary">Tahap {i + 1}</p>
+                <p className="text-[11px] font-semibold uppercase text-primary">{t.stageN(i + 1)}</p>
                 <p className="font-medium">{s.stage}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {s.messages.length} pesan
-                  {s.conversion_rate !== null && <> · konversi {num(s.conversion_rate, 1)}%</>}
+                  {t.nMessages(s.messages.length)}
+                  {s.conversion_rate !== null && <> · {t.conversion(num(s.conversion_rate, 1))}</>}
                 </p>
               </a>
               {i < data.stages.length - 1 && <span className="hidden text-muted-foreground sm:inline">→</span>}
@@ -113,23 +117,23 @@ export function FlowResult({ data }: { data: FlowOutput }) {
             <span className="flex size-7 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{i + 1}</span>
             <h2 className="font-semibold">{s.stage}</h2>
             <span className="ml-auto flex flex-wrap gap-1">
-              {s.reply_rate !== null && <Pill tone="primary">balasan {num(s.reply_rate, 1)}%</Pill>}
-              {s.conversion_rate !== null && <Pill tone="good">konversi {num(s.conversion_rate, 1)}%</Pill>}
-              <span className="text-xs text-muted-foreground group-open:hidden">Lihat pesan</span>
+              {s.reply_rate !== null && <Pill tone="primary">{t.reply(num(s.reply_rate, 1))}</Pill>}
+              {s.conversion_rate !== null && <Pill tone="good">{t.conversion(num(s.conversion_rate, 1))}</Pill>}
+              <span className="text-xs text-muted-foreground group-open:hidden">{t.seeMessages}</span>
             </span>
           </summary>
 
           <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
             <div className="rounded-lg bg-sky-500/10 p-2.5">
-              <p className="text-[11px] font-semibold uppercase text-sky-700 dark:text-sky-300">Pemicu</p>
+              <p className="text-[11px] font-semibold uppercase text-sky-700 dark:text-sky-300">{t.trigger}</p>
               <p>{s.trigger}</p>
             </div>
             <div className="rounded-lg bg-primary/10 p-2.5">
-              <p className="text-[11px] font-semibold uppercase text-primary">Tujuan</p>
+              <p className="text-[11px] font-semibold uppercase text-primary">{t.goal}</p>
               <p>{s.goal}</p>
             </div>
             <div className="rounded-lg bg-muted p-2.5">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Keluar alur bila</p>
+              <p className="text-[11px] font-semibold uppercase text-muted-foreground">{t.exit}</p>
               <p>{s.exit}</p>
             </div>
           </div>
@@ -152,11 +156,11 @@ export function FlowResult({ data }: { data: FlowOutput }) {
             ))}
           </ol>
 
-          {s.metric_note && <p className="mt-3 rounded-lg bg-muted/60 p-2 text-xs text-muted-foreground">📏 Cara mengukur: {s.metric_note}</p>}
+          {s.metric_note && <p className="mt-3 rounded-lg bg-muted/60 p-2 text-xs text-muted-foreground">{t.measure(s.metric_note)}</p>}
         </details>
       ))}
 
-      <SectionCard title="Segmentasi pelanggan" hint="Buat sebagai label/tag di alatmu">
+      <SectionCard title={t.segments} hint={t.segmentsHint}>
         <CardGrid
           cols={3}
           items={data.segments.map((s) => ({
@@ -172,10 +176,10 @@ export function FlowResult({ data }: { data: FlowOutput }) {
       </SectionCard>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="Langkah setup">
+        <SectionCard title={t.setup}>
           <Timeline items={data.setup.map((s) => ({ title: s.title, body: s.detail }))} />
         </SectionCard>
-        <SectionCard title="🛡️ Aturan kirim agar nomor aman">
+        <SectionCard title={t.rules}>
           <div className="space-y-2">
             {data.compliance.map((c, i) => (
               <div key={i} className="rounded-xl bg-amber-500/10 p-3 text-sm">
@@ -187,7 +191,7 @@ export function FlowResult({ data }: { data: FlowOutput }) {
         </SectionCard>
       </div>
 
-      <SectionCard title="Target keseluruhan">
+      <SectionCard title={t.targets}>
         <div className="grid gap-2 sm:grid-cols-2">
           {data.kpis.map((k) => (
             <div key={k.metric} className="flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm">

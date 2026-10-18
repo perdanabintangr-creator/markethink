@@ -6,11 +6,31 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ToolFileLite } from "@/lib/addons/format";
+import { useApp } from "@/components/app/app-context";
+import type { Lang } from "@/lib/i18n/dict";
+import { resultsText } from "@/lib/i18n/tools-results";
+import { fmtFor } from "./results/fmt";
 
 export { rupiah, numID, dateID, quotaText } from "@/lib/addons/format";
 export type { AddonStatusLite, ToolFileLite } from "@/lib/addons/format";
 
-export function CopyButton({ text, label = "Salin", className }: { text: string; label?: string; className?: string }) {
+/** Bahasa UI untuk halaman hasil Tools Pro. Aman dipakai di luar AppContextProvider (bawaan: Indonesia). */
+export function useResultLang(): Lang {
+  try {
+    return useApp().lang;
+  } catch {
+    return "id";
+  }
+}
+
+/** Teks statis (t), formatter angka/tanggal (f), dan bahasa hasil Tools Pro. */
+export function useResultsI18n() {
+  const lang = useResultLang();
+  return { lang, t: resultsText(lang), f: fmtFor(lang) };
+}
+
+export function CopyButton({ text, label, className }: { text: string; label?: string; className?: string }) {
+  const { t } = useResultsI18n();
   const [done, setDone] = useState(false);
   return (
     <Button
@@ -24,17 +44,18 @@ export function CopyButton({ text, label = "Salin", className }: { text: string;
           setDone(true);
           setTimeout(() => setDone(false), 1500);
         } catch {
-          toast.error("Gagal menyalin. Salin manual ya.");
+          toast.error(t.common.copyFailed);
         }
       }}
     >
-      {done ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} {done ? "Tersalin" : label}
+      {done ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} {done ? t.common.copied : (label ?? t.common.copy)}
     </Button>
   );
 }
 
 /** Tombol unduh file hasil + cetak/simpan PDF halaman hasil. */
 export function FilesBar({ files }: { files: ToolFileLite[] }) {
+  const { t } = useResultsI18n();
   return (
     <div className="flex flex-wrap gap-2 print:hidden">
       {files.map((f) => (
@@ -47,7 +68,7 @@ export function FilesBar({ files }: { files: ToolFileLite[] }) {
         </Button>
       ))}
       <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
-        <Printer /> Cetak / simpan PDF
+        <Printer /> {t.common.printPdf}
       </Button>
     </div>
   );

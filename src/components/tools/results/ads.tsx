@@ -2,22 +2,23 @@
 
 import type { AdsOutput } from "@/lib/addons/schemas";
 import { cn } from "@/lib/utils";
-import { Bullets, Pill, SectionCard, numID, rupiah } from "../common";
+import { Bullets, Pill, SectionCard, useResultsI18n } from "../common";
 
 const STATUS = {
-  bagus: { label: "Bagus", tone: "good" as const, bar: "bg-emerald-500" },
-  perhatian: { label: "Perhatian", tone: "warn" as const, bar: "bg-amber-500" },
-  boros: { label: "Boros", tone: "bad" as const, bar: "bg-red-500" },
+  bagus: { tone: "good" as const, bar: "bg-emerald-500" },
+  perhatian: { tone: "warn" as const, bar: "bg-amber-500" },
+  boros: { tone: "bad" as const, bar: "bg-red-500" },
 };
 
 /** Gauge setengah lingkaran untuk skor 0-100. */
 function ScoreGauge({ score, verdict }: { score: number; verdict: AdsOutput["verdict"] }) {
+  const { t } = useResultsI18n();
   const r = 70;
   const c = Math.PI * r;
   const color = verdict === "sehat" ? "#10b981" : verdict === "kritis" ? "#ef4444" : "#f59e0b";
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 180 100" className="w-44" role="img" aria-label={`Skor ${score} dari 100`}>
+      <svg viewBox="0 0 180 100" className="w-44" role="img" aria-label={t.common.scoreOf100(score)}>
         <path d="M20 90 A70 70 0 0 1 160 90" fill="none" stroke="currentColor" strokeWidth="14" className="text-muted" strokeLinecap="round" />
         <path
           d="M20 90 A70 70 0 0 1 160 90"
@@ -32,7 +33,7 @@ function ScoreGauge({ score, verdict }: { score: number; verdict: AdsOutput["ver
         </text>
       </svg>
       <Pill tone={verdict === "sehat" ? "good" : verdict === "kritis" ? "bad" : "warn"}>
-        {verdict === "sehat" ? "Sehat" : verdict === "kritis" ? "Kritis" : "Perlu perhatian"}
+        {verdict === "sehat" ? t.ads.healthy : verdict === "kritis" ? t.ads.critical : t.ads.needsAttention}
       </Pill>
     </div>
   );
@@ -48,6 +49,9 @@ function Kpi({ label, value }: { label: string; value: string }) {
 }
 
 export function AdsResult({ data }: { data: AdsOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.ads;
+  const { numID, rupiah } = f;
   const camps = [...data.campaigns].sort((a, b) => b.spend - a.spend);
   const maxSpend = Math.max(...camps.map((c) => c.spend), 1);
   const useRoas = data.totals.roas !== null;
@@ -58,15 +62,15 @@ export function AdsResult({ data }: { data: AdsOutput }) {
         <div className="space-y-3">
           <p className="text-base font-semibold sm:text-lg">{data.headline}</p>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <Kpi label="Total biaya" value={rupiah(data.totals.spend)} />
-            <Kpi label={`Total ${data.result_label.toLowerCase()}`} value={numID(data.totals.results, 0)} />
-            <Kpi label={useRoas ? "ROAS" : `Biaya / ${data.result_label.toLowerCase()}`} value={useRoas ? `${numID(data.totals.roas, 2)}x` : rupiah(data.totals.cpa)} />
-            <Kpi label={data.totals.revenue !== null ? "Pendapatan" : "CTR"} value={data.totals.revenue !== null ? rupiah(data.totals.revenue) : data.totals.ctr !== null ? `${numID(data.totals.ctr, 2)}%` : "-"} />
+            <Kpi label={t.totalSpend} value={rupiah(data.totals.spend)} />
+            <Kpi label={t.total(data.result_label.toLowerCase())} value={numID(data.totals.results, 0)} />
+            <Kpi label={useRoas ? "ROAS" : t.costPer(data.result_label.toLowerCase())} value={useRoas ? `${numID(data.totals.roas, 2)}x` : rupiah(data.totals.cpa)} />
+            <Kpi label={data.totals.revenue !== null ? t.revenue : "CTR"} value={data.totals.revenue !== null ? rupiah(data.totals.revenue) : data.totals.ctr !== null ? `${numID(data.totals.ctr, 2)}%` : "-"} />
           </div>
         </div>
       </div>
 
-      <SectionCard title="Biaya per kampanye" hint={<span className="flex gap-3"><span>🟢 Bagus</span><span>🟡 Perhatian</span><span>🔴 Boros</span></span>}>
+      <SectionCard title={t.spendPerCampaign} hint={<span className="flex gap-3"><span>🟢 {t.status.bagus}</span><span>🟡 {t.status.perhatian}</span><span>🔴 {t.status.boros}</span></span>}>
         <div className="space-y-2">
           {camps.slice(0, 12).map((c) => (
             <div key={c.name} className="grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 text-sm sm:grid-cols-[minmax(0,16rem)_1fr_auto]">
@@ -82,16 +86,16 @@ export function AdsResult({ data }: { data: AdsOutput }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Rapor per kampanye">
+      <SectionCard title={t.reportCard}>
         <div className="space-y-2">
           {camps.map((c) => (
             <div key={c.name} className="rounded-xl border bg-background p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>
+                <Pill tone={STATUS[c.status].tone}>{t.status[c.status]}</Pill>
                 <span className="font-medium">{c.name}</span>
                 <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                   {rupiah(c.spend)} · {numID(c.results, 0)} {data.result_label.toLowerCase()}
-                  {c.roas !== null ? ` · ROAS ${numID(c.roas, 2)}x` : c.cpa !== null ? ` · ${rupiah(c.cpa)}/hasil` : ""}
+                  {c.roas !== null ? ` · ROAS ${numID(c.roas, 2)}x` : c.cpa !== null ? ` · ${rupiah(c.cpa)}${t.perResult}` : ""}
                   {c.ctr !== null ? ` · CTR ${numID(c.ctr, 2)}%` : ""}
                 </span>
               </div>
@@ -103,15 +107,15 @@ export function AdsResult({ data }: { data: AdsOutput }) {
       </SectionCard>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="🚨 Masalah utama">
+        <SectionCard title={t.problems}>
           <Bullets items={data.problems} />
         </SectionCard>
-        <SectionCard title="✅ Yang sudah bagus">
+        <SectionCard title={t.wins}>
           <Bullets items={data.wins} />
         </SectionCard>
       </div>
 
-      <SectionCard title="Usulan pembagian budget" hint="Sekarang → rekomendasi">
+      <SectionCard title={t.budget} hint={t.budgetHint}>
         <div className="space-y-3">
           {data.budget_plan.map((b) => {
             const up = b.recommended_share > b.current_share;
@@ -138,19 +142,19 @@ export function AdsResult({ data }: { data: AdsOutput }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Langkah perbaikan (urut dampak)">
+      <SectionCard title={t.steps}>
         <ol className="space-y-2">
           {data.next_steps.map((s, i) => (
             <li key={i} className="flex gap-3 rounded-xl border bg-background p-3 text-sm">
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{i + 1}</span>
               <span className="flex-1">{s.step}</span>
-              <Pill tone={s.impact === "tinggi" ? "good" : s.impact === "sedang" ? "warn" : "muted"}>Dampak {s.impact}</Pill>
+              <Pill tone={s.impact === "tinggi" ? "good" : s.impact === "sedang" ? "warn" : "muted"}>{t.impact(tr.ev(s.impact))}</Pill>
             </li>
           ))}
         </ol>
       </SectionCard>
 
-      <p className="text-xs text-muted-foreground">Catatan data: {data.data_notes}</p>
+      <p className="text-xs text-muted-foreground">{tr.common.dataNotes(data.data_notes)}</p>
     </div>
   );
 }

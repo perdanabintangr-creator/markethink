@@ -5,9 +5,11 @@ import { Lock } from "lucide-react";
 import { Input, Label } from "@/components/ui/input";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { rupiah, numID } from "./common";
+import { useResultsI18n } from "./common";
 
-const n = (v: string) => Number(v.replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
+const nID = (v: string) => Number(v.replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
+/** Format Inggris: koma = pemisah ribuan, titik = desimal. */
+const nEN = (v: string) => Number(v.replace(/[^\d.-]/g, "")) || 0;
 
 function Num({ label, value, onChange, suffix, hint }: { label: string; value: string; onChange: (v: string) => void; suffix?: string; hint?: string }) {
   return (
@@ -43,6 +45,11 @@ function Card({ title, desc, children }: { title: string; desc: string; children
 
 /** Kalkulator bisnis (tanpa AI, tidak memakai kuota). */
 export function Calculators({ locked }: { locked: boolean }) {
+  const { lang, t: tr, f } = useResultsI18n();
+  const t = tr.calculators;
+  const { rupiah, numID } = f;
+  const n = lang === "en" ? nEN : nID;
+
   // 1) Harga jual dari HPP
   const [hpp, setHpp] = useState("25000");
   const [extra, setExtra] = useState("3000");
@@ -70,49 +77,49 @@ export function Calculators({ locked }: { locked: boolean }) {
     <div className="relative">
       <div className={locked ? "pointer-events-none select-none blur-[3px]" : undefined} aria-hidden={locked}>
         <div className="grid gap-4 lg:grid-cols-3">
-          <Card title="Harga jual dari HPP" desc="Berapa harga jual agar margin tercapai setelah potongan platform.">
+          <Card title={t.priceTitle} desc={t.priceDesc}>
             <div className="grid grid-cols-2 gap-3">
-              <Num label="HPP / unit" value={hpp} onChange={setHpp} suffix="Rp" />
-              <Num label="Biaya lain / unit" value={extra} onChange={setExtra} suffix="Rp" hint="Kemasan, ongkir subsidi" />
-              <Num label="Potongan platform" value={fee} onChange={setFee} suffix="%" />
-              <Num label="Target margin" value={margin} onChange={setMargin} suffix="%" />
+              <Num label={t.hppUnit} value={hpp} onChange={setHpp} suffix="Rp" />
+              <Num label={t.otherUnit} value={extra} onChange={setExtra} suffix="Rp" hint={t.otherUnitHint} />
+              <Num label={t.platformFee} value={fee} onChange={setFee} suffix="%" />
+              <Num label={t.targetMargin} value={margin} onChange={setMargin} suffix="%" />
             </div>
             <div className="mt-4">
-              <Result label="Harga jual minimal" value={Number.isFinite(price) ? rupiah(price) : "Margin + potongan > 100%"} strong />
+              <Result label={t.minPrice} value={Number.isFinite(price) ? rupiah(price) : t.marginOver} strong />
               {Number.isFinite(price) && (
                 <>
-                  <Result label="Potongan platform" value={rupiah((price * n(fee)) / 100)} />
-                  <Result label="Untung bersih / unit" value={rupiah((price * n(margin)) / 100)} />
+                  <Result label={t.platformFee} value={rupiah((price * n(fee)) / 100)} />
+                  <Result label={t.netProfitUnit} value={rupiah((price * n(margin)) / 100)} />
                 </>
               )}
             </div>
           </Card>
 
-          <Card title="ROAS impas & CPA maksimum" desc="Batas aman iklan: di bawah ROAS ini kamu rugi.">
+          <Card title={t.roasTitle} desc={t.roasDesc}>
             <div className="grid grid-cols-2 gap-3">
-              <Num label="Harga jual" value={sell} onChange={setSell} suffix="Rp" />
-              <Num label="HPP" value={cogs} onChange={setCogs} suffix="Rp" />
-              <Num label="Biaya lain / order" value={other} onChange={setOther} suffix="Rp" />
-              <Num label="Potongan platform" value={fee2} onChange={setFee2} suffix="%" />
+              <Num label={t.sellPrice} value={sell} onChange={setSell} suffix="Rp" />
+              <Num label={t.hpp} value={cogs} onChange={setCogs} suffix="Rp" />
+              <Num label={t.otherOrder} value={other} onChange={setOther} suffix="Rp" />
+              <Num label={t.platformFee} value={fee2} onChange={setFee2} suffix="%" />
             </div>
             <div className="mt-4">
-              <Result label="ROAS impas" value={Number.isFinite(beRoas) ? `${numID(beRoas, 2)}x` : "Rugi sebelum iklan"} strong />
-              <Result label="Biaya iklan maks / order (CPA)" value={profit > 0 ? rupiah(profit) : "-"} />
-              <Result label="Untung sebelum iklan / order" value={rupiah(profit)} />
+              <Result label={t.beRoas} value={Number.isFinite(beRoas) ? `${numID(beRoas, 2)}x` : t.lossBeforeAds} strong />
+              <Result label={t.maxCpa} value={profit > 0 ? rupiah(profit) : "-"} />
+              <Result label={t.profitBeforeAds} value={rupiah(profit)} />
             </div>
           </Card>
 
-          <Card title="Budget iklan untuk target omzet" desc="Berapa budget iklan yang dibutuhkan untuk mengejar target.">
+          <Card title={t.budgetTitle} desc={t.budgetDesc}>
             <div className="grid grid-cols-2 gap-3">
-              <Num label="Target omzet / bulan" value={omzet} onChange={setOmzet} suffix="Rp" />
-              <Num label="Nilai rata-rata order" value={aov} onChange={setAov} suffix="Rp" />
-              <Num label="Target ROAS" value={roas} onChange={setRoas} suffix="x" hint="Lihat hasil kalkulator ROAS impas" />
+              <Num label={t.targetRevenue} value={omzet} onChange={setOmzet} suffix="Rp" />
+              <Num label={t.aov} value={aov} onChange={setAov} suffix="Rp" />
+              <Num label={t.targetRoas} value={roas} onChange={setRoas} suffix="x" hint={t.targetRoasHint} />
             </div>
             <div className="mt-4">
-              <Result label="Budget iklan / bulan" value={Number.isFinite(budget) ? rupiah(budget) : "-"} strong />
-              <Result label="Budget iklan / hari" value={Number.isFinite(budget) ? rupiah(budget / 30) : "-"} />
-              <Result label="Jumlah order dibutuhkan" value={Number.isFinite(orders) ? numID(orders, 0) : "-"} />
-              <Result label="Biaya iklan / order" value={Number.isFinite(budget / orders) ? rupiah(budget / orders) : "-"} />
+              <Result label={t.budgetMonth} value={Number.isFinite(budget) ? rupiah(budget) : "-"} strong />
+              <Result label={t.budgetDay} value={Number.isFinite(budget) ? rupiah(budget / 30) : "-"} />
+              <Result label={t.ordersNeeded} value={Number.isFinite(orders) ? numID(orders, 0) : "-"} />
+              <Result label={t.adCostOrder} value={Number.isFinite(budget / orders) ? rupiah(budget / orders) : "-"} />
             </div>
           </Card>
         </div>
@@ -120,9 +127,9 @@ export function Calculators({ locked }: { locked: boolean }) {
       {locked && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-2xl bg-background/70 p-6 text-center">
           <Lock className="size-6 text-muted-foreground" />
-          <p className="max-w-sm text-sm">Kalkulator tersedia mulai paket Starter (tidak memakai kuota).</p>
+          <p className="max-w-sm text-sm">{t.locked}</p>
           <Button asChild>
-            <Link href="/pricing">Lihat paket</Link>
+            <Link href="/pricing">{t.seePlans}</Link>
           </Button>
         </div>
       )}

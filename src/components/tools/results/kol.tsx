@@ -1,31 +1,35 @@
 "use client";
 
 import type { KolOutput } from "@/lib/addons/schemas";
-import { Bullets, CopyButton, Pill, SectionCard, numID, rupiah } from "../common";
+import { Bullets, CopyButton, Pill, SectionCard, useResultsI18n } from "../common";
 
 export function KolResult({ data }: { data: KolOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.kol;
+  const { numID, rupiah } = f;
+  const b = t.brief;
   const briefText = [
-    `BRIEF KAMPANYE: ${data.campaign_name}`,
-    `Tujuan: ${data.objective}`,
-    `Pesan utama: ${data.key_message}`,
-    `Audiens: ${data.audience}`,
+    `${b.title} ${data.campaign_name}`,
+    `${b.objective} ${data.objective}`,
+    `${b.keyMessage} ${data.key_message}`,
+    `${b.audience} ${data.audience}`,
     "",
-    "DELIVERABLES:",
+    b.deliverables,
     ...data.deliverables.map((d) => `- ${d.qty}× ${d.format}: ${d.specs}`),
     "",
-    "TALKING POINTS:",
-    ...data.talking_points.map((t) => `- ${t}`),
+    b.talking,
+    ...data.talking_points.map((x) => `- ${x}`),
     "",
-    "LAKUKAN:",
-    ...data.dos.map((t) => `- ${t}`),
-    "JANGAN:",
-    ...data.donts.map((t) => `- ${t}`),
+    b.dos,
+    ...data.dos.map((x) => `- ${x}`),
+    b.donts,
+    ...data.donts.map((x) => `- ${x}`),
     "",
-    `Hashtag: ${data.hashtags.join(" ")}`,
+    `${b.hashtag} ${data.hashtags.join(" ")}`,
     `CTA: ${data.cta}`,
     "",
-    "TIMELINE:",
-    ...data.timeline.map((t) => `- ${t.when}: ${t.task}`),
+    b.timeline,
+    ...data.timeline.map((x) => `- ${x.when}: ${x.task}`),
   ].join("\n");
 
   return (
@@ -33,25 +37,25 @@ export function KolResult({ data }: { data: KolOutput }) {
       <div className="rounded-2xl border bg-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-medium tracking-wide text-primary uppercase">Brief kreator</p>
+            <p className="text-xs font-medium tracking-wide text-primary uppercase">{t.creatorBrief}</p>
             <h2 className="text-xl font-bold">{data.campaign_name}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{data.objective}</p>
           </div>
-          <CopyButton text={briefText} label="Salin brief" />
+          <CopyButton text={briefText} label={t.copyBrief} />
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl bg-primary/5 p-3">
-            <p className="text-xs font-semibold text-primary">PESAN UTAMA</p>
+            <p className="text-xs font-semibold text-primary">{t.keyMessage}</p>
             <p className="mt-1 text-sm">{data.key_message}</p>
           </div>
           <div className="rounded-xl bg-muted p-3">
-            <p className="text-xs font-semibold text-muted-foreground">AUDIENS</p>
+            <p className="text-xs font-semibold text-muted-foreground">{t.audience}</p>
             <p className="mt-1 text-sm">{data.audience}</p>
           </div>
         </div>
       </div>
 
-      <SectionCard title="🎬 Deliverables">
+      <SectionCard title={t.deliverables}>
         <div className="grid gap-2 sm:grid-cols-2">
           {data.deliverables.map((d, i) => (
             <div key={i} className="rounded-xl border bg-background p-3 text-sm">
@@ -65,29 +69,29 @@ export function KolResult({ data }: { data: KolOutput }) {
       </SectionCard>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <SectionCard title="🗣️ Talking points">
+        <SectionCard title={t.talking}>
           <Bullets items={data.talking_points} />
         </SectionCard>
-        <SectionCard title="✅ Lakukan">
+        <SectionCard title={t.dos}>
           <Bullets items={data.dos} />
         </SectionCard>
-        <SectionCard title="⛔ Jangan">
+        <SectionCard title={t.donts}>
           <Bullets items={data.donts} />
         </SectionCard>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="📅 Timeline">
+        <SectionCard title={t.timeline}>
           <ol className="relative space-y-3 border-l pl-4 text-sm">
-            {data.timeline.map((t, i) => (
+            {data.timeline.map((x, i) => (
               <li key={i}>
                 <span className="absolute -left-1.5 mt-1.5 size-3 rounded-full bg-primary" />
-                <b>{t.when}</b> — {t.task}
+                <b>{x.when}</b> — {x.task}
               </li>
             ))}
           </ol>
         </SectionCard>
-        <SectionCard title="🎯 KPI">
+        <SectionCard title={t.kpi}>
           <div className="grid grid-cols-2 gap-2">
             {data.kpis.map((k, i) => (
               <div key={i} className="rounded-xl border bg-background p-3">
@@ -109,15 +113,15 @@ export function KolResult({ data }: { data: KolOutput }) {
         </SectionCard>
       </div>
 
-      <SectionCard title="💰 Estimasi fee kreator" hint="Perkiraan pasar — sesuaikan dengan rate card kreator">
+      <SectionCard title={t.fee} hint={t.feeHint}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[480px] text-sm">
             <thead className="text-left text-xs text-muted-foreground">
               <tr>
-                <th className="py-2">Tier</th>
-                <th>Followers</th>
-                <th>Fee / konten</th>
-                <th className="text-right">Kreator</th>
+                <th className="py-2">{t.thTier}</th>
+                <th>{t.thFollowers}</th>
+                <th>{t.thFee}</th>
+                <th className="text-right">{t.thCreators}</th>
               </tr>
             </thead>
             <tbody className="divide-y tabular-nums">
@@ -132,7 +136,7 @@ export function KolResult({ data }: { data: KolOutput }) {
                 </tr>
               ))}
               <tr className="font-semibold">
-                <td className="py-2">Total</td>
+                <td className="py-2">{t.total}</td>
                 <td />
                 <td>
                   {rupiah(data.fee_estimate.total_min)} – {rupiah(data.fee_estimate.total_max)}
@@ -145,11 +149,11 @@ export function KolResult({ data }: { data: KolOutput }) {
         <p className="mt-2 text-xs text-muted-foreground">{data.fee_estimate.note}</p>
       </SectionCard>
 
-      <SectionCard title="✉️ Template DM ajakan kerja sama" hint={<CopyButton text={data.dm_template} />}>
+      <SectionCard title={t.dm} hint={<CopyButton text={data.dm_template} />}>
         <p className="rounded-xl border bg-background p-3 text-sm whitespace-pre-wrap">{data.dm_template}</p>
       </SectionCard>
 
-      <SectionCard title="📝 Poin perjanjian">
+      <SectionCard title={t.contract}>
         <Bullets items={data.contract_points} />
       </SectionCard>
     </div>

@@ -3,12 +3,10 @@
 import { useMemo } from "react";
 import { CHECK_PHASES, MARGIN_LABEL, SCALE_LABEL, platformFeeRp, type PromoOutput } from "@/lib/addons/pro/specs/promo";
 import { cn } from "@/lib/utils";
-import { Checklist, DataTable, KeyValues, Pill, Points, SectionCard, StatGrid, Summary, num, rp, shortRp } from "./kit";
+import { Checklist, DataTable, KeyValues, Pill, Points, SectionCard, StatGrid, Summary, useResultsI18n } from "./kit";
 
 type Campaign = PromoOutput["campaigns"][number];
 
-const DOW = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
-const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const SCALE_STYLE: Record<Campaign["scale"], { bar: string; dot: string; tone: "bad" | "warn" | "primary" }> = {
   besar: { bar: "bg-rose-500 text-white", dot: "bg-rose-500", tone: "bad" },
   sedang: { bar: "bg-amber-400 text-amber-950", dot: "bg-amber-400", tone: "warn" },
@@ -16,10 +14,14 @@ const SCALE_STYLE: Record<Campaign["scale"], { bar: string; dot: string; tone: "
 };
 const STATUS_TONE = { aman: "good", tipis: "warn", rugi: "bad" } as const;
 
-const dm = (s: string) => `${Number(s.slice(8, 10))} ${MONTHS[Number(s.slice(5, 7)) - 1]?.slice(0, 3) ?? ""}`;
-const range = (c: Campaign) => (c.start === c.end ? dm(c.start) : `${dm(c.start)} – ${dm(c.end)}`);
+const dm = (s: string, months: string[]) => `${Number(s.slice(8, 10))} ${months[Number(s.slice(5, 7)) - 1]?.slice(0, 3) ?? ""}`;
+const range = (c: Campaign, months: string[]) => (c.start === c.end ? dm(c.start, months) : `${dm(c.start, months)} – ${dm(c.end, months)}`);
 
 export function PromoResult({ data }: { data: PromoOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.promo;
+  const { num, rp, shortRp } = f;
+  const scaleLabel = (s: Campaign["scale"]) => tr.labels.promoScale[s] ?? SCALE_LABEL[s];
   const totalRev = data.campaigns.reduce((s, c) => s + (c.target_revenue ?? 0), 0);
   const totalUnits = data.campaigns.reduce((s, c) => s + (c.target_units ?? 0), 0);
   const bad = data.margins.filter((m) => m.status === "rugi").length;
@@ -32,66 +34,66 @@ export function PromoResult({ data }: { data: PromoOutput }) {
 
       <StatGrid
         items={[
-          { label: "Target omzet campaign", value: shortRp(totalRev), tone: "primary", note: "Jumlah target semua event" },
-          { label: "Target unit", value: num(totalUnits) },
-          { label: "Campaign", value: String(data.campaigns.length), note: `${big} event besar` },
+          { label: t.revenueTarget, value: shortRp(totalRev), tone: "primary", note: t.revenueNote },
+          { label: t.unitTarget, value: num(totalUnits) },
+          { label: t.campaigns, value: String(data.campaigns.length), note: t.nBig(big) },
           {
-            label: "Skenario margin bermasalah",
+            label: t.badMargins,
             value: String(bad + thin),
             tone: bad ? "bad" : thin ? "warn" : "good",
-            note: bad ? `${bad} rugi · ${thin} tipis` : thin ? `${thin} tipis` : "Semua aman",
+            note: bad ? t.lossThin(bad, thin) : thin ? t.thin(thin) : t.allSafe,
           },
         ]}
       />
 
-      <SectionCard title="Strategi">
+      <SectionCard title={t.strategy}>
         <KeyValues
           items={[
-            { k: "Fokus produk", v: data.strategy.focus },
-            { k: "Penjaga margin", v: data.strategy.margin_guard },
-            { k: "Mesin trafik", v: data.strategy.traffic },
+            { k: t.focus, v: data.strategy.focus },
+            { k: t.guard, v: data.strategy.margin_guard },
+            { k: t.traffic, v: data.strategy.traffic },
           ]}
         />
       </SectionCard>
 
       <SectionCard
-        title="Kalender campaign"
+        title={t.calendar}
         hint={
           <span className="flex flex-wrap gap-3">
             {(Object.keys(SCALE_LABEL) as Campaign["scale"][]).map((s) => (
               <span key={s} className="flex items-center gap-1">
-                <span className={cn("size-2.5 rounded-full", SCALE_STYLE[s].dot)} /> {SCALE_LABEL[s]}
+                <span className={cn("size-2.5 rounded-full", SCALE_STYLE[s].dot)} /> {scaleLabel(s)}
               </span>
             ))}
           </span>
         }
       >
-        <MonthGrids campaigns={data.campaigns} />
+        <MonthGrids campaigns={data.campaigns} dow={t.dow} months={t.months} empty={t.noCampaign} />
       </SectionCard>
 
-      <SectionCard title="Detail tiap campaign" hint="Klik untuk melihat mekanisme, voucher & persiapan">
+      <SectionCard title={t.detail} hint={t.detailHint}>
         <div className="divide-y rounded-xl border">
           {data.campaigns.map((c, i) => (
             <details key={i} className="group p-3 print:break-inside-avoid" open={i === 0}>
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2">
                 <span className={cn("size-2.5 shrink-0 rounded-full", SCALE_STYLE[c.scale].dot)} />
-                <b className="tabular-nums">{range(c)}</b>
+                <b className="tabular-nums">{range(c, t.months)}</b>
                 <span className="font-medium">{c.event}</span>
-                <Pill tone={SCALE_STYLE[c.scale].tone}>{SCALE_LABEL[c.scale]}</Pill>
+                <Pill tone={SCALE_STYLE[c.scale].tone}>{scaleLabel(c.scale)}</Pill>
                 <span className="ml-auto text-sm tabular-nums text-muted-foreground">
                   {c.target_revenue ? <b className="text-foreground">{shortRp(c.target_revenue)}</b> : null}
-                  {c.target_units ? ` · ${num(c.target_units)} unit` : ""}
+                  {c.target_units ? t.units(num(c.target_units)) : ""}
                 </span>
               </summary>
               <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
                 <div className="space-y-2">
                   <p>
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">Mekanisme · </span>
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">{t.mechanism}</span>
                     {c.mechanism}
                   </p>
                   {!!c.hero_products.length && (
                     <div className="flex flex-wrap items-center gap-1">
-                      <span className="text-xs font-semibold uppercase text-muted-foreground">Produk unggulan</span>
+                      <span className="text-xs font-semibold uppercase text-muted-foreground">{t.hero}</span>
                       {c.hero_products.map((h) => (
                         <Pill key={h}>{h}</Pill>
                       ))}
@@ -105,8 +107,8 @@ export function PromoResult({ data }: { data: PromoOutput }) {
                           <span className="px-2 py-1.5">
                             <b>{v.name}</b>
                             <span className="block text-muted-foreground">
-                              {v.min_spend ? `min. ${shortRp(v.min_spend)}` : "tanpa min."}
-                              {v.quota ? ` · kuota ${num(v.quota)}` : ""}
+                              {v.min_spend ? t.minSpend(shortRp(v.min_spend)) : t.noMin}
+                              {v.quota ? t.quota(num(v.quota)) : ""}
                             </span>
                           </span>
                         </div>
@@ -116,14 +118,14 @@ export function PromoResult({ data }: { data: PromoOutput }) {
                 </div>
                 <div className="space-y-2">
                   <p className="rounded-lg bg-muted/60 p-2">
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">Dukungan · </span>
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">{t.support}</span>
                     {c.support}
                   </p>
                   <p className="rounded-lg bg-amber-500/10 p-2">
-                    <span className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-300">Persiapan · </span>
+                    <span className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-300">{t.prep}</span>
                     {c.prep}
                   </p>
-                  <p className="text-xs text-muted-foreground">Platform: {c.platforms}</p>
+                  <p className="text-xs text-muted-foreground">{t.platforms(c.platforms)}</p>
                 </div>
               </div>
             </details>
@@ -132,9 +134,9 @@ export function PromoResult({ data }: { data: PromoOutput }) {
       </SectionCard>
 
       {!!data.margins.length && (
-        <SectionCard title="Hitung margin setelah promo" hint="Dihitung ulang sistem: harga promo − HPP − biaya platform − biaya lain">
+        <SectionCard title={t.margins} hint={t.marginsHint}>
           <DataTable
-            headers={["Produk · skenario", "Harga → promo", "HPP", "Biaya platform", "Biaya lain", "Margin/unit", "Status"]}
+            headers={t.marginHeaders}
             minWidth={820}
             highlight={(i) => (data.margins[i]?.status === "rugi" ? "bg-red-500/10" : data.margins[i]?.status === "tipis" ? "bg-amber-500/10" : undefined)}
             rows={data.margins.map((m) => [
@@ -167,19 +169,19 @@ export function PromoResult({ data }: { data: PromoOutput }) {
                 </span>
               </span>,
               <span key="s" className="space-y-1">
-                <Pill tone={STATUS_TONE[m.status]}>{MARGIN_LABEL[m.status]}</Pill>
+                <Pill tone={STATUS_TONE[m.status]}>{tr.labels.marginStatus[m.status] ?? MARGIN_LABEL[m.status]}</Pill>
                 <span className="block text-xs font-normal text-muted-foreground">{m.note}</span>
               </span>,
             ])}
           />
-          <p className="mt-2 text-xs text-muted-foreground">Status: rugi bila margin &lt; 0, tipis bila &lt; 10% dari harga promo, aman bila ≥ 10%. Biaya platform adalah perkiraan — cek tarif terbaru di Seller Centre.</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t.marginNote}</p>
         </SectionCard>
       )}
 
       {!!data.stock.length && (
-        <SectionCard title="Persiapan stok">
+        <SectionCard title={t.stock}>
           <DataTable
-            headers={["Produk", "Event puncak", "Unit dibutuhkan", "Siap di gudang", "Dasar hitungan"]}
+            headers={t.stockHeaders}
             minWidth={680}
             rows={data.stock.map((s) => [
               s.product,
@@ -192,7 +194,7 @@ export function PromoResult({ data }: { data: PromoOutput }) {
         </SectionCard>
       )}
 
-      <SectionCard title="Checklist persiapan event besar">
+      <SectionCard title={t.checklist}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {CHECK_PHASES.map((ph) => {
             const tasks = data.checklist.filter((c) => c.phase === ph);
@@ -200,10 +202,10 @@ export function PromoResult({ data }: { data: PromoOutput }) {
             return (
               <div key={ph} className="rounded-xl border bg-background p-3 print:break-inside-avoid">
                 <p className="mb-2 flex items-center justify-between text-sm font-semibold">
-                  {ph}
-                  <span className="text-xs font-normal text-muted-foreground">{tasks.length} tugas</span>
+                  {tr.labels.checkPhase[ph] ?? ph}
+                  <span className="text-xs font-normal text-muted-foreground">{t.nTasks(tasks.length)}</span>
                 </p>
-                <Checklist items={tasks.map((t) => ({ task: t.task, owner: t.owner }))} />
+                <Checklist items={tasks.map((x) => ({ task: x.task, owner: x.owner }))} />
               </div>
             );
           })}
@@ -211,7 +213,7 @@ export function PromoResult({ data }: { data: PromoOutput }) {
       </SectionCard>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="KPI periode ini">
+        <SectionCard title={t.kpis}>
           <div className="space-y-2">
             {data.kpis.map((k) => (
               <div key={k.metric} className="flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
@@ -221,7 +223,7 @@ export function PromoResult({ data }: { data: PromoOutput }) {
             ))}
           </div>
         </SectionCard>
-        <SectionCard title="Risiko & antisipasi">
+        <SectionCard title={t.risks}>
           <Points items={data.risks} />
         </SectionCard>
       </div>
@@ -230,7 +232,7 @@ export function PromoResult({ data }: { data: PromoOutput }) {
 }
 
 /** Kalender bulanan dengan blok campaign berwarna menurut skala. */
-function MonthGrids({ campaigns }: { campaigns: Campaign[] }) {
+function MonthGrids({ campaigns, dow, months: monthNames, empty }: { campaigns: Campaign[]; dow: string[]; months: string[]; empty: string }) {
   const months = useMemo(() => {
     const set = new Set<string>();
     for (const c of campaigns) {
@@ -239,7 +241,7 @@ function MonthGrids({ campaigns }: { campaigns: Campaign[] }) {
     }
     return [...set].filter((m) => /^\d{4}-\d{2}$/.test(m)).sort();
   }, [campaigns]);
-  if (!months.length) return <p className="text-sm text-muted-foreground">Belum ada campaign.</p>;
+  if (!months.length) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
     <div className={cn("grid gap-4", months.length > 1 && "lg:grid-cols-2")}>
       {months.map((ym) => {
@@ -250,10 +252,10 @@ function MonthGrids({ campaigns }: { campaigns: Campaign[] }) {
         return (
           <div key={ym} className="print:break-inside-avoid">
             <p className="mb-1 text-sm font-semibold">
-              {MONTHS[m - 1]} {y}
+              {monthNames[m - 1]} {y}
             </p>
             <div className="grid grid-cols-7 gap-0.5 text-[10px]">
-              {DOW.map((d) => (
+              {dow.map((d) => (
                 <div key={d} className="py-0.5 text-center font-medium text-muted-foreground">
                   {d}
                 </div>

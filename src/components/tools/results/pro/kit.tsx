@@ -1,9 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { CopyButton, Pill, SectionCard } from "../../common";
+import { CopyButton, Pill, SectionCard, useResultsI18n } from "../../common";
+import { numIDk, rpID } from "../fmt";
 
-export { SectionCard, Pill, CopyButton };
+export { SectionCard, Pill, CopyButton, useResultsI18n };
 export { BarList, Recommendations, Sources, Summary, shortRp, toneOf } from "../research-common";
 
 /** Angka-angka utama (KPI) dalam kotak besar. */
@@ -154,15 +155,16 @@ export function KeyValues({ items }: { items: { k: string; v: React.ReactNode }[
 }
 
 /** Dua kolom Lakukan / Hindari. */
-export function DoDont({ dos, donts, doLabel = "Lakukan", dontLabel = "Hindari" }: { dos: string[]; donts: string[]; doLabel?: string; dontLabel?: string }) {
+export function DoDont({ dos, donts, doLabel, dontLabel }: { dos: string[]; donts: string[]; doLabel?: string; dontLabel?: string }) {
+  const { t } = useResultsI18n();
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <div className="rounded-xl bg-emerald-500/10 p-3 text-sm">
-        <p className="mb-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">{doLabel}</p>
+        <p className="mb-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">{doLabel ?? t.common.do}</p>
         <ul className="space-y-1">{dos.map((d, i) => <li key={i}>✓ {d}</li>)}</ul>
       </div>
       <div className="rounded-xl bg-red-500/10 p-3 text-sm">
-        <p className="mb-1 text-xs font-semibold text-red-700 dark:text-red-300">{dontLabel}</p>
+        <p className="mb-1 text-xs font-semibold text-red-700 dark:text-red-300">{dontLabel ?? t.common.avoid}</p>
         <ul className="space-y-1">{donts.map((d, i) => <li key={i}>✕ {d}</li>)}</ul>
       </div>
     </div>
@@ -183,7 +185,6 @@ export function Points({ items, className }: { items: string[]; className?: stri
   );
 }
 
-export const rp = (n: number | null | undefined) =>
-  n === null || n === undefined || !Number.isFinite(n) ? "-" : `Rp${new Intl.NumberFormat("id-ID").format(Math.round(n))}`;
-export const num = (n: number | null | undefined, d = 0) =>
-  n === null || n === undefined || !Number.isFinite(n) ? "-" : new Intl.NumberFormat("id-ID", { maximumFractionDigits: d }).format(n);
+/** Versi Indonesia; untuk tampilan per bahasa pakai `useResultsI18n().f.rp` / `.num`. */
+export const rp = rpID;
+export const num = numIDk;

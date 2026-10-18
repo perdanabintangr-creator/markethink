@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Telescope } from "lucide-react";
 import { Markdown } from "@/components/chat/markdown";
 import { cn } from "@/lib/utils";
+import { useResultsI18n } from "./common";
 
 type Src = { title: string; url: string };
 
@@ -19,6 +20,7 @@ function linkSources(text: string, sources: Src[]) {
 export function ResearchNotes({ output }: { output: unknown }) {
   const o = (output ?? {}) as { research_notes?: unknown; sources?: Src[] };
   const [open, setOpen] = useState(true);
+  const { t } = useResultsI18n();
   if (typeof o.research_notes !== "string" || !o.research_notes.trim()) return null;
   const sources = Array.isArray(o.sources) ? o.sources : [];
   return (
@@ -26,14 +28,12 @@ export function ResearchNotes({ output }: { output: unknown }) {
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-2 text-left print:hidden" aria-expanded={open}>
         <Telescope className="size-5 text-primary" />
         <span className="flex-1">
-          <span className="block text-lg font-semibold">Temuan riset lengkap</span>
-          <span className="block text-xs text-muted-foreground">
-            Semua fakta detail dari riset web{sources.length ? ` · ${sources.length} sumber` : ""} — klik nomor [n] untuk membuka sumbernya.
-          </span>
+          <span className="block text-lg font-semibold">{t.researchNotes.title}</span>
+          <span className="block text-xs text-muted-foreground">{t.researchNotes.desc(sources.length)}</span>
         </span>
         <ChevronDown className={cn("size-5 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
-      <h2 className="hidden text-lg font-semibold print:block">Temuan riset lengkap</h2>
+      <h2 className="hidden text-lg font-semibold print:block">{t.researchNotes.title}</h2>
       <div className={cn("mt-4 border-t pt-4", !open && "hidden print:block")}>
         <div className="prose prose-sm max-w-none dark:prose-invert">
           <Markdown>{linkSources(o.research_notes, sources)}</Markdown>

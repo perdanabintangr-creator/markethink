@@ -23,8 +23,10 @@ import { PersonaResult } from "./results/persona";
 import { EntryResult } from "./results/entry";
 import { SurveyResult } from "./results/survey";
 import { PRO_VIEWS } from "./results/pro";
+import { useResultsI18n } from "./common";
 
 export function ResultView({ tool, output, input }: { tool: string; output: unknown; input: Record<string, unknown> }) {
+  const { t } = useResultsI18n();
   const Pro = PRO_VIEWS[tool];
   if (Pro) return <Pro data={output} input={input} />;
   switch (tool) {
@@ -37,7 +39,7 @@ export function ResultView({ tool, output, input }: { tool: string; output: unkn
     case "ads":
       return <AdsResult data={output as AdsOutput} />;
     case "competitor":
-      return <CompetitorResult data={output as CompetitorOutput} brand={String(input.brand ?? "Brand kamu")} />;
+      return <CompetitorResult data={output as CompetitorOutput} brand={String(input.brand ?? t.competitor.defaultBrand)} />;
     case "kol":
       return <KolResult data={output as KolOutput} />;
     case "sizing":

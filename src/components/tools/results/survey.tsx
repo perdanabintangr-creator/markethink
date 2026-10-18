@@ -1,13 +1,14 @@
 "use client";
 
 import { QUESTION_TYPE_LABEL, type SurveyOutput } from "@/lib/addons/schemas";
-import { CopyButton, Pill, SectionCard } from "../common";
+import { CopyButton, Pill, SectionCard, useResultsI18n } from "../common";
 import { BarList } from "./research-common";
 
 type Q = SurveyOutput["sections"][number]["questions"][number];
 
 /** Pratinjau jawaban seperti tampilan formulir. */
 function Answer({ q }: { q: Q }) {
+  const { t } = useResultsI18n();
   if (q.type === "nps" || q.type === "skala") {
     const from = q.type === "nps" ? 0 : 1;
     return (
@@ -23,7 +24,7 @@ function Answer({ q }: { q: Q }) {
   if (q.type === "likert" && !q.options.length)
     return (
       <div className="flex flex-wrap gap-1 text-[11px]">
-        {["Sangat tidak setuju", "Tidak setuju", "Netral", "Setuju", "Sangat setuju"].map((l) => (
+        {t.survey.likert.map((l) => (
           <span key={l} className="rounded-md border px-2 py-1">{l}</span>
         ))}
       </div>
@@ -43,13 +44,13 @@ function Answer({ q }: { q: Q }) {
   );
 }
 
-function asText(data: SurveyOutput) {
+function asText(data: SurveyOutput, typeLabel: (q: Q["type"]) => string) {
   const out: string[] = [data.title, "", data.intro, ""];
   data.screener.forEach((s, i) => out.push(`S${i + 1}. ${s.text}`, ...s.options.map((o) => `   - ${o}`), `   (${s.qualify})`, ""));
   for (const s of data.sections) {
     out.push(`== ${s.title} ==`);
     for (const q of s.questions) {
-      out.push(`${q.code}. ${q.text} [${QUESTION_TYPE_LABEL[q.type]}]`, ...q.options.map((o) => `   - ${o}`));
+      out.push(`${q.code}. ${q.text} [${typeLabel(q.type)}]`, ...q.options.map((o) => `   - ${o}`));
       if (q.note) out.push(`   (${q.note})`);
     }
     out.push("");
@@ -58,47 +59,46 @@ function asText(data: SurveyOutput) {
 }
 
 export function SurveyResult({ data }: { data: SurveyOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.survey;
+  const typeLabel = (k: Q["type"]) => tr.labels.questionType[k] ?? QUESTION_TYPE_LABEL[k];
   const total = data.sections.reduce((s, x) => s + x.questions.length, 0);
   return (
     <div className="space-y-4">
       {data.sample && (
         <section className="grid gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:grid-cols-3">
           <div>
-            <p className="text-xs text-muted-foreground">Responden minimal</p>
-            <p className="text-2xl font-bold">{data.sample.n.toLocaleString("id-ID")}</p>
-            <p className="text-xs text-muted-foreground">
-              margin ±{data.sample.margin}% · keyakinan {data.sample.confidence}%
-            </p>
+            <p className="text-xs text-muted-foreground">{t.minResp}</p>
+            <p className="text-2xl font-bold">{f.n(data.sample.n)}</p>
+            <p className="text-xs text-muted-foreground">{t.marginConf(data.sample.margin, data.sample.confidence)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Disarankan disebar ke</p>
-            <p className="text-2xl font-bold text-primary">{data.sample.recommended.toLocaleString("id-ID")}</p>
-            <p className="text-xs text-muted-foreground">+20% cadangan jawaban tidak valid</p>
+            <p className="text-xs text-muted-foreground">{t.distribute}</p>
+            <p className="text-2xl font-bold text-primary">{f.n(data.sample.recommended)}</p>
+            <p className="text-xs text-muted-foreground">{t.reserve}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Kuesioner</p>
-            <p className="text-2xl font-bold">{total} pertanyaan</p>
-            <p className="text-xs text-muted-foreground">
-              + {data.screener.length} screener · insentif: {data.incentive}
-            </p>
+            <p className="text-xs text-muted-foreground">{t.questionnaire}</p>
+            <p className="text-2xl font-bold">{t.nQuestions(total)}</p>
+            <p className="text-xs text-muted-foreground">{t.screenerIncentive(data.screener.length, data.incentive)}</p>
           </div>
         </section>
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="Tujuan riset">
+        <SectionCard title={t.objectives}>
           <ul className="space-y-1.5 text-sm">{data.objectives.map((o, i) => <li key={i}>🎯 {o}</li>)}</ul>
         </SectionCard>
-        <SectionCard title="Hipotesis yang diuji">
+        <SectionCard title={t.hypotheses}>
           <ul className="space-y-1.5 text-sm">{data.hypotheses.map((o, i) => <li key={i}>H{i + 1}. {o}</li>)}</ul>
         </SectionCard>
       </div>
 
-      <SectionCard title={data.title} hint={<CopyButton text={asText(data)} label="Salin kuesioner" />}>
+      <SectionCard title={data.title} hint={<CopyButton text={asText(data, typeLabel)} label={t.copy} />}>
         <p className="mb-4 rounded-xl bg-muted/60 p-3 text-sm">{data.intro}</p>
         {!!data.screener.length && (
           <div className="mb-4 space-y-3 rounded-xl border border-dashed border-primary/40 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-primary">Screener (saring responden)</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t.screener}</p>
             {data.screener.map((s, i) => (
               <div key={i} className="space-y-1.5">
                 <p className="text-sm font-medium">
@@ -124,7 +124,7 @@ export function SurveyResult({ data }: { data: SurveyOutput }) {
                       <p className="text-sm font-medium">
                         {q.code}. {q.text}
                       </p>
-                      <Pill>{QUESTION_TYPE_LABEL[q.type]}</Pill>
+                      <Pill>{typeLabel(q.type)}</Pill>
                     </div>
                     <Answer q={q} />
                     {q.note && <p className="text-xs text-amber-700 dark:text-amber-300">↳ {q.note}</p>}
@@ -137,14 +137,14 @@ export function SurveyResult({ data }: { data: SurveyOutput }) {
       </SectionCard>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-        <SectionCard title="Kuota responden">
+        <SectionCard title={t.quotas}>
           <BarList
-            items={data.quotas.map((k) => ({ label: k.group, value: k.share_pct, hint: data.sample ? `≈ ${Math.ceil((k.share_pct / 100) * data.sample.recommended)} orang` : undefined }))}
+            items={data.quotas.map((k) => ({ label: k.group, value: k.share_pct, hint: data.sample ? t.approxPeople(Math.ceil((k.share_pct / 100) * data.sample.recommended)) : undefined }))}
             max={100}
             unit="%"
           />
         </SectionCard>
-        <SectionCard title="Rencana analisis">
+        <SectionCard title={t.analysis}>
           <div className="space-y-2">
             {data.analysis.map((a, i) => (
               <div key={i} className="rounded-xl border bg-background p-3 text-sm">
@@ -152,7 +152,7 @@ export function SurveyResult({ data }: { data: SurveyOutput }) {
                   <b>{a.objective}</b>
                   <Pill tone="primary">{a.questions}</Pill>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Metode: {a.method}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t.method(a.method)}</p>
                 <p className="text-xs">→ {a.output}</p>
               </div>
             ))}
@@ -160,11 +160,9 @@ export function SurveyResult({ data }: { data: SurveyOutput }) {
         </SectionCard>
       </div>
 
-      <SectionCard title="Tips menyebar survei">
+      <SectionCard title={t.fieldTips}>
         <ul className="space-y-1.5 text-sm">{data.fieldwork.map((f, i) => <li key={i}>✅ {f}</li>)}</ul>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Excel berisi kolom “Pilihan jawaban” yang bisa langsung disalin ke Google Form. Setelah data terkumpul, upload hasilnya ke chat Markethink untuk dianalisis.
-        </p>
+        <p className="mt-3 text-xs text-muted-foreground">{t.excelNote}</p>
       </SectionCard>
     </div>
   );

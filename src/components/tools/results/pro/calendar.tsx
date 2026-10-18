@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import type { CalendarOutput } from "@/lib/addons/pro/specs/calendar";
 import { cn } from "@/lib/utils";
-import { CopyCard, KeyValues, Pill, Points, SectionCard, StatGrid, Summary } from "./kit";
+import { CopyCard, KeyValues, Pill, Points, SectionCard, StatGrid, Summary, useResultsI18n } from "./kit";
 
 const COLORS = ["#2563eb", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6"];
-const DOW = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 
 export function CalendarResult({ data }: { data: CalendarOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.calendar;
   const color = (pillar: string) => COLORS[Math.max(0, data.pillars.findIndex((p) => p.name === pillar)) % COLORS.length];
   const month = data.posts[0]?.date.slice(0, 7) ?? "";
   const [selected, setSelected] = useState<string | null>(null);
@@ -32,24 +33,24 @@ export function CalendarResult({ data }: { data: CalendarOutput }) {
 
       <StatGrid
         items={[
-          { label: "Total posting", value: String(data.posts.length), tone: "primary" },
-          { label: "Pilar konten", value: String(data.pillars.length) },
-          { label: "Platform", value: String(platforms.length), note: platforms.join(", ") },
-          { label: "Momen penting", value: String(data.key_dates.length) },
+          { label: t.totalPosts, value: String(data.posts.length), tone: "primary" },
+          { label: t.pillars, value: String(data.pillars.length) },
+          { label: t.platform, value: String(platforms.length), note: platforms.join(", ") },
+          { label: t.moments, value: String(data.key_dates.length) },
         ]}
       />
 
-      <SectionCard title="Strategi bulan ini">
+      <SectionCard title={t.strategy}>
         <KeyValues
           items={[
-            { k: "Tujuan", v: data.strategy.objective },
-            { k: "Insight audiens", v: data.strategy.insight },
-            { k: "Sudut pandang", v: data.strategy.angle },
+            { k: t.objective, v: data.strategy.objective },
+            { k: t.insight, v: data.strategy.insight },
+            { k: t.angle, v: data.strategy.angle },
           ]}
         />
       </SectionCard>
 
-      <SectionCard title="Pilar konten">
+      <SectionCard title={t.pillars}>
         <div className="mb-3 flex h-3 overflow-hidden rounded-full">
           {data.pillars.map((p, i) => (
             <div key={p.name} style={{ width: `${p.share_pct}%`, background: COLORS[i % COLORS.length] }} title={`${p.name} ${p.share_pct}%`} />
@@ -72,10 +73,10 @@ export function CalendarResult({ data }: { data: CalendarOutput }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Kalender" hint={selected ? <button className="text-primary hover:underline" onClick={() => setSelected(null)}>Tampilkan semua</button> : "Klik tanggal untuk melihat isinya"}>
+      <SectionCard title={t.calendar} hint={selected ? <button className="text-primary hover:underline" onClick={() => setSelected(null)}>{tr.common.showAll}</button> : t.clickDate}>
         <div className="overflow-x-auto">
           <div className="grid min-w-[640px] grid-cols-7 gap-1 text-xs">
-            {DOW.map((d) => (
+            {t.dow.map((d) => (
               <div key={d} className="py-1 text-center font-medium text-muted-foreground">
                 {d}
               </div>
@@ -114,12 +115,12 @@ export function CalendarResult({ data }: { data: CalendarOutput }) {
       </SectionCard>
 
       {!!data.key_dates.length && (
-        <SectionCard title="Momen & tanggal penting">
+        <SectionCard title={t.keyDates}>
           <div className="grid gap-2 sm:grid-cols-2">
             {data.key_dates.map((k) => (
               <div key={k.date + k.moment} className="rounded-xl border bg-background p-3 text-sm">
                 <div className="flex items-center gap-2">
-                  <Pill tone="warn">{k.date.slice(8)}/{k.date.slice(5, 7)}</Pill>
+                  <Pill tone="warn">{f.dm(k.date)}</Pill>
                   <b>{k.moment}</b>
                 </div>
                 <p className="mt-1 text-muted-foreground">{k.idea}</p>
@@ -129,7 +130,7 @@ export function CalendarResult({ data }: { data: CalendarOutput }) {
         </SectionCard>
       )}
 
-      <SectionCard title={selected ? `Konten tanggal ${Number(selected.slice(8))}` : "Semua konten & caption"} hint={`${shown.length} posting`}>
+      <SectionCard title={selected ? t.contentOn(Number(selected.slice(8))) : t.allContent} hint={t.nPosts(shown.length)}>
         <div className="divide-y rounded-xl border">
           {shown.map((p, i) => (
             <details key={i} className="group p-3 print:break-inside-avoid" open={Boolean(selected)}>
@@ -138,14 +139,14 @@ export function CalendarResult({ data }: { data: CalendarOutput }) {
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                     <b className="text-foreground">
-                      {p.date.slice(8)}/{p.date.slice(5, 7)} · {p.time}
+                      {f.dm(p.date)} · {p.time}
                     </b>
                     · {p.platform} · {p.format} · {p.pillar}
                   </span>
                   <span className="mt-0.5 block font-medium">{p.title}</span>
-                  <span className="block text-sm text-muted-foreground">Hook: {p.hook}</span>
+                  <span className="block text-sm text-muted-foreground">{t.hook(p.hook)}</span>
                 </span>
-                <span className="shrink-0 text-xs text-primary group-open:hidden">Lihat caption</span>
+                <span className="shrink-0 text-xs text-primary group-open:hidden">{t.seeCaption}</span>
               </summary>
               <div className="mt-2 space-y-2 pl-4">
                 <p className="text-xs text-muted-foreground">🎬 {p.visual}</p>
@@ -160,7 +161,7 @@ export function CalendarResult({ data }: { data: CalendarOutput }) {
       </SectionCard>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="Target bulan ini">
+        <SectionCard title={t.targets}>
           <div className="space-y-2">
             {data.kpis.map((k) => (
               <div key={k.metric} className="flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
@@ -170,7 +171,7 @@ export function CalendarResult({ data }: { data: CalendarOutput }) {
             ))}
           </div>
         </SectionCard>
-        <SectionCard title="Alur kerja produksi">
+        <SectionCard title={t.workflow}>
           <Points items={data.workflow} />
         </SectionCard>
       </div>

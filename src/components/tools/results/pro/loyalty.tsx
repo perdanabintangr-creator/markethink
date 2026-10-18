@@ -3,16 +3,9 @@
 import { useMemo, useState } from "react";
 import { VERDICT_LABEL, calcRows, computeLoyalty, type LoyaltyEconomics, type LoyaltyOutput } from "@/lib/addons/pro/specs/loyalty";
 import { cn } from "@/lib/utils";
-import { CopyCard, DataTable, KeyValues, Pill, Points, SectionCard, StatGrid, Summary, Timeline, num, rp, shortRp } from "./kit";
+import { CopyCard, DataTable, KeyValues, Pill, Points, SectionCard, StatGrid, Summary, Timeline, useResultsI18n } from "./kit";
+import type { ResultFmt } from "../fmt";
 
-const TYPE_LABEL: Record<LoyaltyOutput["model"]["type"], string> = {
-  poin: "Poin",
-  tier: "Tier member",
-  stamp: "Stamp card",
-  referral: "Referral",
-  berbayar: "Member berbayar",
-  gabungan: "Poin + tier",
-};
 const TIER_STYLE = [
   "from-zinc-100 to-zinc-200 text-zinc-900 dark:from-zinc-800 dark:to-zinc-700 dark:text-zinc-50",
   "from-amber-100 to-amber-300 text-amber-950 dark:from-amber-900/70 dark:to-amber-700/70 dark:text-amber-50",
@@ -22,9 +15,54 @@ const TIER_STYLE = [
 /** Tier teratas selalu bergaya premium (gelap), sisanya naik bertahap. */
 const tierStyle = (i: number, n: number) => (n === 1 ? 1 : i === n - 1 ? 3 : Math.min(i, 2));
 const verdictTone = { untung: "good", tipis: "warn", rugi: "bad" } as const;
-const pct = (n: number | null) => (n === null ? "-" : `${num(n, 1)}%`);
+const pctOf = (num: ResultFmt["num"]) => (n: number | null) => (n === null ? "-" : `${num(n, 1)}%`);
+
+/** Baris rumus versi Inggris (padanan `calcRows` di spec, yang berbahasa Indonesia). */
+function calcRowsEN(e: LoyaltyEconomics, f: ResultFmt) {
+  const pct = pctOf(f.num);
+  const rpText = (n: number | null) => (n === null ? "-" : `${n < 0 ? "-" : ""}Rp${f.n(Math.abs(Math.round(n)))}`);
+  const verdict = { untung: "Profitable", tipis: "Thin profit", rugi: "Loss" }[e.verdict];
+  return [
+    { k: "Active customers", f: "Input", rp: null, v: f.n(e.customers) },
+    { k: "Average order value (AOV)", f: "Input", rp: e.aov, v: "" },
+    { k: "Purchase frequency per year", f: "Input", rp: null, v: `${e.frequency}×` },
+    { k: "Gross margin", f: "Input", rp: null, v: pct(e.margin_pct) },
+    { k: "Baseline annual revenue", f: "Customers × AOV × frequency", rp: e.base_revenue, v: "" },
+    { k: "Member participation", f: "Assumption", rp: null, v: pct(e.participation_pct) },
+    { k: "Number of members", f: "Customers × participation", rp: null, v: f.n(e.members) },
+    { k: "Member revenue (without program)", f: "Members × AOV × frequency", rp: e.member_revenue_base, v: "" },
+    { k: "Member frequency uplift", f: "Assumption", rp: null, v: pct(e.uplift_pct) },
+    { k: "Incremental revenue", f: "Member revenue × uplift", rp: e.incremental_revenue, v: "" },
+    {
+      k: "Effective earn rate",
+      f: `Value of 1 point (${rpText(e.point_value)}) ÷ spend per point (${rpText(e.spend_per_point)}) × tier multiplier ${e.avg_multiplier}`,
+      rp: null,
+      v: pct(e.earn_rate_pct),
+    },
+    { k: "Redemption rate", f: "Assumption", rp: null, v: pct(e.redemption_pct) },
+    { k: "Reward cost (full redemption value)", f: "(Member revenue + incremental revenue) × earn rate × redemption", rp: e.reward_cost, v: "" },
+    { k: "Fixed cost per year", f: "App/system, materials, training", rp: e.fixed_cost_year, v: "" },
+    { k: "Total program cost", f: "Reward cost + fixed cost", rp: e.total_cost, v: `${pct(e.cost_pct_of_member_revenue)} of member revenue` },
+    { k: "Incremental gross profit", f: "Incremental revenue × gross margin", rp: e.incremental_profit, v: "" },
+    { k: "Program net gain", f: "Incremental profit − total cost", rp: e.net_gain, v: verdict },
+    { k: "ROI", f: "Net gain ÷ total cost", rp: null, v: pct(e.roi_pct) },
+    {
+      k: "Break-even uplift",
+      f: "(B×earn×redemption + fixed cost) ÷ (B×(margin − earn×redemption)), B = member revenue",
+      rp: null,
+      v: e.breakeven_uplift_pct === null ? "Not reachable (reward cost ≥ margin)" : pct(e.breakeven_uplift_pct),
+    },
+    ...(e.reward_cost_real !== null
+      ? [{ k: "Real reward cost (est. COGS)", f: "Reward cost × average (reward COGS ÷ redemption value)", rp: e.reward_cost_real, v: "" }]
+      : []),
+  ];
+}
 
 export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
+  const { t: tr, f } = useResultsI18n();
+  const t = tr.loyalty;
+  const { num, rp, shortRp } = f;
+  const pct = pctOf(num);
   const e = data.economics;
   return (
     <div className="space-y-4">
@@ -32,35 +70,35 @@ export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
 
       <section className="rounded-2xl border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Model yang direkomendasikan</p>
-          <Pill tone="primary">{TYPE_LABEL[data.model.type] ?? data.model.type}</Pill>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t.model}</p>
+          <Pill tone="primary">{t.type[data.model.type] ?? data.model.type}</Pill>
         </div>
         <h2 className="mt-1 text-xl font-bold">{data.model.name}</h2>
         <p className="mt-2 text-sm">{data.model.why}</p>
-        <p className="mt-2 text-xs text-muted-foreground">Tidak dipilih: {data.model.not_chosen}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t.notChosen(data.model.not_chosen)}</p>
       </section>
 
       {e && (
         <>
           <StatGrid
             items={[
-              { label: "Omzet tahunan dasar", value: shortRp(e.base_revenue), note: `${num(e.customers)} pelanggan × ${shortRp(e.aov)} × ${num(e.frequency)}×` },
-              { label: "Biaya program / tahun", value: shortRp(e.total_cost), tone: "warn", note: `${pct(e.cost_pct_of_member_revenue)} dari omzet anggota` },
-              { label: "Untung bersih program", value: shortRp(e.net_gain), tone: e.net_gain < 0 ? "bad" : "good", note: `ROI ${pct(e.roi_pct)}` },
-              { label: "Uplift minimal agar impas", value: pct(e.breakeven_uplift_pct), tone: "primary", note: `Asumsi uplift ${pct(e.uplift_pct)}` },
+              { label: t.baseRevenue, value: shortRp(e.base_revenue), note: t.baseNote(num(e.customers), shortRp(e.aov), num(e.frequency)) },
+              { label: t.costYear, value: shortRp(e.total_cost), tone: "warn", note: t.costNote(pct(e.cost_pct_of_member_revenue)) },
+              { label: t.netGain, value: shortRp(e.net_gain), tone: e.net_gain < 0 ? "bad" : "good", note: `ROI ${pct(e.roi_pct)}` },
+              { label: t.breakeven, value: pct(e.breakeven_uplift_pct), tone: "primary", note: t.upliftNote(pct(e.uplift_pct)) },
             ]}
           />
           <Calculator e={e} rewards={data.rewards} />
         </>
       )}
 
-      <SectionCard title="Aturan dapat & tukar poin">
+      <SectionCard title={t.earnBurn}>
         <KeyValues
           items={[
-            { k: "Dapat poin", v: data.earn_burn.earn_rule },
-            { k: "Nilai 1 poin", v: <b>{rp(data.earn_burn.point_value)}</b> },
-            { k: "Tukar poin", v: data.earn_burn.burn_rule },
-            { k: "Masa berlaku", v: data.earn_burn.expiry },
+            { k: t.earn, v: data.earn_burn.earn_rule },
+            { k: t.pointValue, v: <b>{rp(data.earn_burn.point_value)}</b> },
+            { k: t.burn, v: data.earn_burn.burn_rule },
+            { k: t.expiry, v: data.earn_burn.expiry },
           ]}
         />
         {!!data.earn_burn.bonus_rules.length && (
@@ -74,11 +112,11 @@ export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
         )}
       </SectionCard>
 
-      <SectionCard title="Level member">
+      <SectionCard title={t.levels}>
         <div className={cn("grid gap-3", data.tiers.length >= 3 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
-          {data.tiers.map((t, i) => (
+          {data.tiers.map((tier, i) => (
             <div
-              key={t.name}
+              key={tier.name}
               className={cn(
                 "flex flex-col rounded-2xl bg-gradient-to-br p-4 shadow-sm print:break-inside-avoid",
                 TIER_STYLE[tierStyle(i, data.tiers.length)],
@@ -86,14 +124,14 @@ export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">Level {i + 1}</p>
-                  <p className="text-lg font-bold">{t.name}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70">{t.levelN(i + 1)}</p>
+                  <p className="text-lg font-bold">{tier.name}</p>
                 </div>
-                {t.multiplier !== null && <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs font-semibold dark:bg-white/15">{num(t.multiplier, 2)}× poin</span>}
+                {tier.multiplier !== null && <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs font-semibold dark:bg-white/15">{t.mult(num(tier.multiplier, 2))}</span>}
               </div>
-              <p className="mt-1 text-xs opacity-80">{t.requirement}</p>
+              <p className="mt-1 text-xs opacity-80">{tier.requirement}</p>
               <ul className="mt-3 space-y-1 text-sm">
-                {t.benefits.map((b) => (
+                {tier.benefits.map((b) => (
                   <li key={b}>✓ {b}</li>
                 ))}
               </ul>
@@ -102,9 +140,9 @@ export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Katalog hadiah" hint="Nilai ke pelanggan = poin × nilai 1 poin; biaya ke bisnis = HPP hadiah">
+      <SectionCard title={t.catalog} hint={t.catalogHint}>
         <DataTable
-          headers={["Hadiah", "Poin", "Nilai ke pelanggan", "Biaya ke bisnis", "Biaya / nilai"]}
+          headers={t.catalogHeaders}
           minWidth={640}
           rows={data.rewards.map((r) => {
             const face = r.face_value ?? r.points * data.earn_burn.point_value;
@@ -123,11 +161,11 @@ export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
         />
       </SectionCard>
 
-      <SectionCard title="Rencana peluncuran">
+      <SectionCard title={t.launch}>
         <Timeline items={data.launch.map((l) => ({ title: l.phase, when: l.when, body: l.actions }))} />
       </SectionCard>
 
-      <SectionCard title="Materi komunikasi siap pakai">
+      <SectionCard title={t.comms}>
         <div className="grid gap-3 md:grid-cols-2">
           {data.comms.map((c, i) => (
             <CopyCard key={i} title={c.title} meta={<Pill tone="primary">{c.channel}</Pill>} text={c.text} />
@@ -136,7 +174,7 @@ export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
       </SectionCard>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="KPI program">
+        <SectionCard title={t.kpis}>
           <div className="space-y-2">
             {data.kpis.map((k) => (
               <div key={k.metric} className="flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
@@ -146,7 +184,7 @@ export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
             ))}
           </div>
         </SectionCard>
-        <SectionCard title="🛡️ Risiko & pencegahan kecurangan">
+        <SectionCard title={t.risks}>
           <div className="space-y-2">
             {data.risks.map((r, i) => (
               <div key={i} className="rounded-xl bg-red-500/5 p-3 text-sm">
@@ -158,7 +196,7 @@ export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
         </SectionCard>
       </div>
 
-      <SectionCard title="Dasar asumsi">
+      <SectionCard title={t.assumptions}>
         <Points items={[data.assumptions.notes]} />
       </SectionCard>
     </div>
@@ -167,25 +205,29 @@ export function LoyaltyResult({ data }: { data: LoyaltyOutput }) {
 
 /** Kalkulator ringkas: hasil hitungan sistem + geser asumsi untuk melihat dampaknya. */
 function Calculator({ e, rewards }: { e: LoyaltyEconomics; rewards: LoyaltyOutput["rewards"] }) {
+  const { lang, t: tr, f } = useResultsI18n();
+  const t = tr.loyalty;
+  const { num, rp, shortRp } = f;
+  const pct = pctOf(num);
   const [p, setP] = useState({ participation_pct: e.participation_pct, redemption_pct: e.redemption_pct, uplift_pct: e.uplift_pct });
   const changed = p.participation_pct !== e.participation_pct || p.redemption_pct !== e.redemption_pct || p.uplift_pct !== e.uplift_pct;
   const live = useMemo(() => (changed ? computeLoyalty({ ...e, ...p }, rewards) : e), [changed, e, p, rewards]);
-  const rows = calcRows(live);
+  const rows = lang === "en" ? calcRowsEN(live, f) : calcRows(live);
   const maxAbs = Math.max(1, ...live.scenarios.map((s) => Math.abs(s.net_gain)));
   const sliders: { key: keyof typeof p; label: string; min: number; max: number }[] = [
-    { key: "participation_pct", label: "Partisipasi member", min: 5, max: 90 },
-    { key: "redemption_pct", label: "Redemption rate", min: 10, max: 100 },
-    { key: "uplift_pct", label: "Uplift frekuensi anggota", min: 0, max: 50 },
+    { key: "participation_pct", label: t.participation, min: 5, max: 90 },
+    { key: "redemption_pct", label: t.redemption, min: 10, max: 100 },
+    { key: "uplift_pct", label: t.uplift, min: 0, max: 50 },
   ];
   return (
     <SectionCard
-      title="Kalkulator biaya vs untung"
+      title={t.calcTitle}
       hint={
         <span className="flex items-center gap-2">
-          <Pill tone={verdictTone[live.verdict]}>{VERDICT_LABEL[live.verdict]}</Pill>
+          <Pill tone={verdictTone[live.verdict]}>{tr.labels.loyaltyVerdict[live.verdict] ?? VERDICT_LABEL[live.verdict]}</Pill>
           {changed && (
             <button type="button" className="text-primary hover:underline print:hidden" onClick={() => setP({ participation_pct: e.participation_pct, redemption_pct: e.redemption_pct, uplift_pct: e.uplift_pct })}>
-              Kembalikan asumsi awal
+              {t.reset}
             </button>
           )}
         </span>
@@ -213,24 +255,22 @@ function Calculator({ e, rewards }: { e: LoyaltyEconomics; rewards: LoyaltyOutpu
             ))}
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <Box label="Anggota" value={num(live.members)} />
-            <Box label="Omzet tambahan" value={shortRp(live.incremental_revenue)} />
-            <Box label="Laba kotor tambahan" value={shortRp(live.incremental_profit)} />
-            <Box label="Biaya program" value={shortRp(live.total_cost)} />
-            <Box label="Untung bersih" value={shortRp(live.net_gain)} tone={live.net_gain < 0 ? "bad" : "good"} />
-            <Box label="Impas bila uplift ≥" value={pct(live.breakeven_uplift_pct)} />
+            <Box label={t.members} value={num(live.members)} />
+            <Box label={t.incRevenue} value={shortRp(live.incremental_revenue)} />
+            <Box label={t.incProfit} value={shortRp(live.incremental_profit)} />
+            <Box label={t.programCost} value={shortRp(live.total_cost)} />
+            <Box label={t.net} value={shortRp(live.net_gain)} tone={live.net_gain < 0 ? "bad" : "good"} />
+            <Box label={t.breakevenIf} value={pct(live.breakeven_uplift_pct)} />
           </div>
           {live.reward_cost_real !== null && (
-            <p className="text-xs text-muted-foreground">
-              Biaya hadiah dihitung dengan nilai tukar penuh ({shortRp(live.reward_cost)}) agar konservatif. Bila hadiah berupa produk sendiri, biaya riilnya ±{shortRp(live.reward_cost_real)}.
-            </p>
+            <p className="text-xs text-muted-foreground">{t.rewardNote(shortRp(live.reward_cost), shortRp(live.reward_cost_real))}</p>
           )}
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Untung bersih per skenario uplift</p>
+            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{t.perScenario}</p>
             <div className="space-y-1.5">
               {live.scenarios.map((s) => (
                 <div key={s.uplift_pct} className="grid grid-cols-[64px_1fr_72px] items-center gap-2 text-xs">
-                  <span className={cn(s.uplift_pct === live.uplift_pct && "font-bold text-primary")}>Uplift {s.uplift_pct}%</span>
+                  <span className={cn(s.uplift_pct === live.uplift_pct && "font-bold text-primary")}>{t.upliftN(s.uplift_pct)}</span>
                   <div className="relative h-3 rounded-full bg-muted">
                     <span className="absolute inset-y-0 left-1/2 w-px bg-border" />
                     <span
@@ -245,10 +285,10 @@ function Calculator({ e, rewards }: { e: LoyaltyEconomics; rewards: LoyaltyOutpu
           </div>
         </div>
         <details className="rounded-xl border bg-background p-3 text-sm" open>
-          <summary className="cursor-pointer font-medium">Rincian rumus</summary>
+          <summary className="cursor-pointer font-medium">{t.formula}</summary>
           <dl className="mt-2 divide-y">
             {rows.map((r) => (
-              <div key={r.k} className={cn("grid grid-cols-[1fr_auto] gap-x-3 py-1.5", r.k === "Untung bersih program" && "font-semibold")}>
+              <div key={r.k} className={cn("grid grid-cols-[1fr_auto] gap-x-3 py-1.5", r.k === t.netRowKey && "font-semibold")}>
                 <dt>
                   {r.k}
                   <span className="block text-[11px] font-normal text-muted-foreground">{r.f}</span>
