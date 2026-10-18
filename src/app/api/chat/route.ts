@@ -84,9 +84,10 @@ export async function POST(req: Request) {
   const { supabase, user, profile } = await getSession();
   if (!user || !profile) return json(401, { error: "unauthorized" });
   if (profile.banned) return json(403, { error: "banned" });
+  const en = profile.language === "en";
   if (!(await hasAppAccess(profile))) return json(403, { error: "no_access" });
   if (!(await guardRequest(user.id, req.headers))) {
-    return json(429, { error: "rate_limited", message: "Terlalu banyak permintaan. Tunggu sebentar ya." });
+    return json(429, { error: "rate_limited", message: en ? "Too many requests. Please wait a moment." : "Terlalu banyak permintaan. Tunggu sebentar ya." });
   }
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
@@ -151,7 +152,7 @@ export async function POST(req: Request) {
   }
 
   // --- batas harian paket (mis. Free 20 chat/hari) ---
-  const chatLimit = await dailyLimitReached(dailyLimits, user.id, "chat");
+  const chatLimit = await dailyLimitReached(dailyLimits, user.id, "chat", profile.language);
   if (chatLimit) return json(429, { error: "daily_limit", kind: "chat", message: chatLimit });
 
   // --- kredit ---
@@ -260,13 +261,13 @@ export async function POST(req: Request) {
       let links: LinkRead[] = [];
       if (linkUrls.length) {
         const hosts = [...new Set(linkUrls.map((u) => new URL(u).hostname.replace(/^www\./, "")))].join(", ");
-        writer.write({ type: "data-status", data: { state: "reading", label: `Membaca tautan: ${truncate(hosts, 60)}…` }, transient: true });
+        writer.write({ type: "data-status", data: { state: "reading", label: en ? `Reading link: ${truncate(hosts, 60)}…` : `Membaca tautan: ${truncate(hosts, 60)}…` }, transient: true });
         links = await Promise.all(linkUrls.map(readLink));
         for (const l of links) writer.write({ type: "data-link", data: toLinkPart(l) });
         const okCount = links.filter((l) => l.ok).length;
         writer.write({
           type: "data-status",
-          data: { state: "done", label: okCount ? `${okCount} tautan terbaca` : "Tautan tidak bisa dibaca" },
+          data: { state: "done", label: okCount ? (en ? `${okCount} link(s) read` : `${okCount} tautan terbaca`) : en ? "Couldn't read the link" : "Tautan tidak bisa dibaca" },
           transient: true,
         });
       }
@@ -279,7 +280,7 @@ export async function POST(req: Request) {
       let apiSearches = 0;
       if (useTavily && lastText.trim()) {
         apiSearches++;
-        writer.write({ type: "data-status", data: { state: "searching", label: "Mencari di web…" }, transient: true });
+        writer.write({ type: "data-status", data: { state: "searching", label: en ? "Searching the web…" : "Mencari di web…" }, transient: true });
         try {
           sources = await webSearch(lastText);
           for (const s of sources) {
@@ -290,7 +291,7 @@ export async function POST(req: Request) {
         }
         writer.write({
           type: "data-status",
-          data: { state: "done", label: sources.length ? `${sources.length} sumber ditemukan` : "Riset web tidak tersedia" },
+          data: { state: "done", label: sources.length ? (en ? `${sources.length} sources found` : `${sources.length} sumber ditemukan`) : en ? "Web research unavailable" : "Riset web tidak tersedia" },
           transient: true,
         });
       }
@@ -395,7 +396,7 @@ export async function POST(req: Request) {
             userId: user.id,
             chatId,
             imageBlockedReason,
-            dailyLimit: (kind) => dailyLimitReached(dailyLimits, user.id, kind),
+            dailyLimit: (kind) => dailyLimitReached(dailyLimits, user.id, kind, profile.language),
             // Foto AI di PPT hanya untuk paket tanpa batas harian gambar (Pro/Promax/admin).
             // Visual bertingkat: foto AI di PPT Free 0, Starter 1 (cover), Pro 6, Promax 8; Pro & Promax arahan visual premium.
             deckImageMax: imageBlockedReason ? 0 : deckImageMaxFor(profile.plan_id, profile.role === "admin"),
@@ -415,7 +416,7 @@ export async function POST(req: Request) {
                   execute: async ({ query }) => {
                     if (apiSearches >= maxSearches + (useTavily ? 1 : 0)) return { error: "Batas pencarian untuk pesan ini tercapai. Jawab dari hasil yang ada." };
                     apiSearches++;
-                    writer.write({ type: "data-status", data: { state: "searching", label: `Mencari di web: ${truncate(query, 60)}` }, transient: true });
+                    writer.write({ type: "data-status", data: { state: "searching", label: en ? `Searching the web: ${truncate(query, 60)}` : `Mencari di web: ${truncate(query, 60)}` }, transient: true });
                     try {
                       const found = await webSearch(query, { maxResults: 6 });
                       // Baca isi 3 halaman teratas (gratis) agar jawaban tidak hanya dari cuplikan Google.
@@ -427,11 +428,11 @@ export async function POST(req: Request) {
                       });
                       const numbered = found.map((s) => ({ ...s, id: ++nextSourceId }));
                       for (const s of numbered) writer.write({ type: "source-url", sourceId: String(s.id), url: s.url, title: s.title });
-                      writer.write({ type: "data-status", data: { state: "done", label: `${numbered.length} sumber ditemukan` }, transient: true });
+                      writer.write({ type: "data-status", data: { state: "done", label: en ? `${numbered.length} sources found` : `${numbered.length} sumber ditemukan` }, transient: true });
                       return { results: formatSources(numbered) };
                     } catch (err) {
                       console.error("[serper] gagal", err);
-                      writer.write({ type: "data-status", data: { state: "done", label: "Riset web tidak tersedia" }, transient: true });
+                      writer.write({ type: "data-status", data: { state: "done", label: en ? "Web research unavailable" : "Riset web tidak tersedia" }, transient: true });
                       return { error: "Pencarian web sedang tidak tersedia. Jawab dari pengetahuan umum dan beri label perkiraan." };
                     }
                   },

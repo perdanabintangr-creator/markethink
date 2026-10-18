@@ -52,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return left;
   };
 
-  const ctx = agentCtx(admin, s.user.id, id, startedAt, run.tier ?? undefined);
+  const ctx = agentCtx(admin, s.user.id, id, startedAt, run.tier ?? undefined, s.profile.language);
   try {
     // Hasil langkah sebelumnya jadi bahan brief langkah ini (konsisten antar tools).
     const prevIds = plan.filter((p, i) => i < index && p.status === "ok" && p.run_id).map((p) => p.run_id!) as string[];

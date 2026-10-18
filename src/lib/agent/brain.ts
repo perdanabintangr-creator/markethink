@@ -2,7 +2,7 @@ import "server-only";
 import { generateText } from "ai";
 import { z } from "zod";
 import { toolInfo } from "@/lib/addons/catalog";
-import { aiObject, addCost, type ToolCtx } from "@/lib/addons/runtime";
+import { aiObject, addCost, langRule, type ToolCtx } from "@/lib/addons/runtime";
 import { EXPERT } from "@/lib/addons/helpers";
 import { RUNNERS } from "@/lib/addons/tools";
 import { PRO_FORMS } from "@/lib/addons/pro/forms";
@@ -152,7 +152,7 @@ Tabel 3 kolom (Kapan | Aksi | Hasil dari tool mana) berisi 6–10 langkah nyata,
 3–5 metrik + target awal yang wajar (beri label "perkiraan" bila asumsi).
 ## Catatan & risiko
 2–4 bullet jujur (data yang masih asumsi, hal yang perlu divalidasi).
-Jangan mengulang isi hasil panjang-panjang; rujuk saja. Jangan menulis kata pembuka/penutup basa-basi.`,
+Jangan mengulang isi hasil panjang-panjang; rujuk saja. Jangan menulis kata pembuka/penutup basa-basi.${langRule(ctx)}`,
     prompt: [
       `Tujuan user:\n${untrusted("tujuan", opts.goal)}`,
       `Judul misi: ${opts.title}`,

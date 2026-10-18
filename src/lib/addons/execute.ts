@@ -14,7 +14,7 @@ export type ExecResult =
 
 interface ExecOpts {
   admin: SupabaseClient;
-  profile: { id: string; role: string; plan_id: string };
+  profile: { id: string; role: string; plan_id: string; language?: string | null };
   tool: string;
   rawInput: unknown;
   /** Revisi: jalankan ulang dengan input yang sama + koreksi user, tanpa memotong kuota. */
@@ -29,6 +29,7 @@ interface ExecOpts {
 
 /** Jalankan tool add-on: cek kuota → catat run → AI terstruktur + file PPT/Excel → simpan hasil. Dipakai halaman tools & Agent. */
 export async function executeTool({ admin, profile, tool, rawInput, revise, startedAt, agentRunId, tier }: ExecOpts): Promise<ExecResult> {
+  const en = profile.language === "en";
   const info = toolInfo(tool);
   if (!info || !isAiTool(tool)) return { ok: false, status: 404, code: "unknown_tool" };
   const runner = RUNNERS[tool];
@@ -37,7 +38,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   let revision: { root: string; note: string; previous: unknown; source: string } | null = null;
   if (revise) {
     const note = String(revise.note ?? "").trim().slice(0, 3000);
-    if (note.length < 5) return { ok: false, status: 400, code: "invalid_input", message: "Tulis dulu apa yang perlu diperbaiki." };
+    if (note.length < 5) return { ok: false, status: 400, code: "invalid_input", message: en ? "Write what needs to be fixed first." : "Tulis dulu apa yang perlu diperbaiki." };
     const { data: orig } = await admin
       .from("tool_runs")
       .select("id, tool, status, input, output, source, revision_of")
@@ -64,7 +65,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   const useTier = tier ?? DEFAULT_TOOL_TIER;
   // Paket all-in-1: Tools Pro termasuk paket berbayar & memakai kredit bulanan (dipotong perkiraan, lalu disesuaikan ke biaya nyata).
   const access = await getToolAccess(admin, profile);
-  if (!access.allowed) return { ok: false, status: 402, code: "plan_required", message: "Tools Pro tersedia mulai paket Starter. Upgrade paket untuk memakainya." };
+  if (!access.allowed) return { ok: false, status: 402, code: "plan_required", message: en ? "Pro Tools are available from the Starter plan. Upgrade your plan to use them." : "Tools Pro tersedia mulai paket Starter. Upgrade paket untuk memakainya." };
   const estimate = revision ? revisionEstimate(useTier) : TOOL_CREDIT_ESTIMATE[useTier];
   const charge = await consumeCredits(userId, estimate, revision ? `tool_revise:${tool}` : `tool:${tool}`, { tier: useTier });
   if (!charge.ok)
@@ -72,7 +73,9 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
       ok: false,
       status: 402,
       code: "credits_low",
-      message: "Sisa kuota bulan ini tidak cukup untuk hasil ini. Kuota direset tiap tanggal 1, atau upgrade paket untuk kuota lebih besar.",
+      message: en
+        ? "Not enough quota left this month for this result. Quota resets on the 1st of each month, or upgrade for a bigger quota."
+        : "Sisa kuota bulan ini tidak cukup untuk hasil ini. Kuota direset tiap tanggal 1, atau upgrade paket untuk kuota lebih besar.",
     };
   const source = access.isAdmin ? "admin" : "paid";
   const units = 1;
@@ -104,6 +107,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
     cost: { usd: 0, model: null },
     startedAt: startedAt ?? Date.now(),
     tier: useTier,
+    lang: profile.language === "en" ? "en" : "id",
     ...(revision ? { revision: { note: revision.note, previous: revision.previous } } : {}),
   };
   const started = Date.now();

@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     .single();
   if (error || !row) return jsonError(500, "create_failed");
 
-  const ctx = agentCtx(admin, s.user.id, row.id, startedAt, tier);
+  const ctx = agentCtx(admin, s.user.id, row.id, startedAt, tier, s.profile.language);
   try {
     const planned = await planMission(ctx, { goal: parsed.data.goal, context: parsed.data.context, profileLine: profileLine(s.profile), quota });
     const plan = { ...planned, steps: planned.steps.slice(0, maxSteps) };

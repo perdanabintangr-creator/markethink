@@ -28,6 +28,20 @@ export interface ToolCtx {
   researchSources?: { title: string; url: string }[];
   /** Rincian biaya per tahap (disimpan di tool_runs.cost_breakdown). */
   breakdown?: CostStep[];
+  /** Bahasa user: "en" → seluruh isi hasil ditulis dalam bahasa Inggris. */
+  lang?: "id" | "en";
+}
+
+/** Instruksi bahasa tambahan untuk user berbahasa Inggris (prompt tool tetap berbahasa Indonesia). */
+export function langRule(ctx: Pick<ToolCtx, "lang">) {
+  return ctx.lang === "en"
+    ? `
+
+OUTPUT LANGUAGE (MANDATORY): The user reads English. Write every piece of text you produce in natural, professional English —
+even though these instructions are in Indonesian. Keep brand/product names, platform names and Indonesian place names as they are;
+keep amounts in Rupiah (IDR) unless the brief says otherwise. Consumer-facing copy may stay Indonesian ONLY if the brief explicitly
+asks for Indonesian copy.`
+    : "";
 }
 
 export interface CostStep {
@@ -99,7 +113,7 @@ FORMAT JAWABAN (WAJIB)
 Balas HANYA dengan satu objek JSON yang valid — tanpa teks pembuka/penutup dan tanpa \`\`\`. Ikuti JSON Schema berikut persis
 (nama field, tipe, dan pilihan enum). Semua field wajib diisi; pakai "" / [] / null hanya bila memang tidak ada datanya.
 Angka ditulis sebagai angka (mis. 1500000, bukan "Rp1,5 jt"). Jaga panjang teks secukupnya agar seluruh JSON selesai ditulis.
-JSON Schema: ${schemaForPrompt(opts.schema)}`;
+JSON Schema: ${schemaForPrompt(opts.schema)}${langRule(ctx)}`;
 
   // Batas waktu server (Vercel 300 dtk) — sisakan ruang untuk membuat file PPT/Excel.
   const deadline = (ctx.startedAt ?? Date.now()) + 250_000;

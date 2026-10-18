@@ -31,7 +31,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .map((r) => ({ name: toolInfo(r!.tool as string)?.name ?? (r!.tool as string), title: (r!.title as string) ?? "", markdown: resultToMarkdown(r!.output, 12_000) }));
   const failed = run.plan.filter((p) => p.status === "error").map((p) => toolInfo(p.tool)?.name ?? p.tool);
 
-  const ctx = agentCtx(admin, s.user.id, id, startedAt, run.tier ?? undefined);
+  const ctx = agentCtx(admin, s.user.id, id, startedAt, run.tier ?? undefined, s.profile.language);
   try {
     const summary = await summarizeMission(ctx, { goal: run.goal, title: run.title ?? "Misi Markethink Agent", results, failed });
     await admin.from("agent_runs").update({ summary, status: "done", updated_at: new Date().toISOString() }).eq("id", id);

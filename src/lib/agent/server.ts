@@ -32,8 +32,8 @@ export async function agentBudget(admin: SupabaseClient, profile: Profile, tier:
 }
 
 /** Konteks biaya AI untuk langkah perencanaan/pengisian brief/ringkasan Agent. */
-export function agentCtx(admin: SupabaseClient, userId: string, agentId: string, startedAt: number, tier?: ToolTier): ToolCtx {
-  return { admin, userId, runId: agentId, cost: { usd: 0, model: null }, startedAt, tier: tier ?? DEFAULT_TOOL_TIER };
+export function agentCtx(admin: SupabaseClient, userId: string, agentId: string, startedAt: number, tier?: ToolTier, lang?: string | null): ToolCtx {
+  return { admin, userId, runId: agentId, cost: { usd: 0, model: null }, startedAt, tier: tier ?? DEFAULT_TOOL_TIER, lang: lang === "en" ? "en" : "id" };
 }
 
 /** Catat biaya AI Agent (di luar biaya tiap tool) ke usage_logs & total misi, lalu potong kredit sesuai biaya nyata. */

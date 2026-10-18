@@ -24,6 +24,12 @@ export const LIMIT_LABEL: Record<DailyLimitKind, string> = {
   pptx: "PPT/carousel",
   search: "pencarian web berbayar",
 };
+const LIMIT_LABEL_EN: Record<DailyLimitKind, string> = {
+  chat: "chats",
+  image: "images",
+  pptx: "PPT/carousels",
+  search: "paid web searches",
+};
 
 /** Awal hari ini dalam WIB (UTC+7), sama dengan reset kredit harian. */
 export function wibDayStart(now = Date.now()) {
@@ -73,12 +79,15 @@ export async function dailyLimitReached(
   limits: Partial<Record<DailyLimitKind, number>>,
   userId: string,
   kind: DailyLimitKind,
+  lang?: string | null,
 ): Promise<string | null> {
   const limit = limits[kind];
   if (limit === undefined) return null;
-  if (limit <= 0) return `Fitur ${LIMIT_LABEL[kind]} tidak tersedia di paket Free.`;
+  const en = lang === "en";
+  if (limit <= 0) return en ? `${LIMIT_LABEL_EN[kind]} are not available on the Free plan.` : `Fitur ${LIMIT_LABEL[kind]} tidak tersedia di paket Free.`;
   const used = await countToday(userId, kind);
-  return used >= limit
-    ? `Batas ${limit} ${LIMIT_LABEL[kind]} per hari untuk paket Free sudah tercapai. Reset pukul 00.00 WIB, atau upgrade ke Pro.`
-    : null;
+  if (used < limit) return null;
+  return en
+    ? `You've reached the Free plan limit of ${limit} ${LIMIT_LABEL_EN[kind]} per day. It resets at 00:00 WIB (UTC+7), or upgrade to Pro.`
+    : `Batas ${limit} ${LIMIT_LABEL[kind]} per hari untuk paket Free sudah tercapai. Reset pukul 00.00 WIB, atau upgrade ke Pro.`;
 }

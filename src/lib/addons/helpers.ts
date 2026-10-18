@@ -4,7 +4,7 @@ import { DEFAULT_TOOL_TIER } from "./tool-tier";
 import { SERPER_COST_USD, fetchPageText, formatSources, serperEnabled, serperSearch } from "@/lib/ai/research";
 import { anthropic } from "@ai-sdk/anthropic";
 import { routeTier } from "@/lib/ai/router";
-import { addCost, addStepCost, type ToolCtx } from "./runtime";
+import { addCost, addStepCost, langRule, type ToolCtx } from "./runtime";
 
 /**
  * Standar penulisan semua Tools Pro: hasil harus terasa ditulis praktisi senior Indonesia, bukan "terdengar AI".
@@ -89,7 +89,7 @@ export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: 
   const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER);
   const research = await generateText({
     model: routed.model,
-    system: opts.system,
+    system: opts.system + langRule(ctx),
     prompt: opts.prompt,
     tools: { web_search: anthropic.tools.webSearch_20250305({ maxUses: opts.maxUses ?? 8 }) },
     maxOutputTokens: opts.maxOutputTokens ?? 6000,
@@ -172,7 +172,7 @@ Hasil pencarian Google sudah tersedia di bawah (cuplikan + isi halaman, bernomor
 - Tulis SEMUA fakta spesifik yang ditemukan: harga & paket, promo (dengan periode), lokasi/titik, kolaborasi & event, program
   loyalitas, kanal & gaya konten, ulasan/keluhan, angka pasar, tanggal. Detail kecil yang unik justru paling berharga.
 - Cantumkan nomor sumber [n] di setiap fakta. Jangan mengarang data yang tidak ada di hasil pencarian; bila memperkirakan, tulis
-  "perkiraan" + dasarnya. Akhiri dengan subjudul "### Belum ditemukan" berisi data penting yang belum ketemu.`,
+  "perkiraan" + dasarnya. Akhiri dengan subjudul "### Belum ditemukan" berisi data penting yang belum ketemu.${langRule(ctx)}`,
     prompt: `${opts.prompt}\n\nHasil pencarian:\n${formatSources(found)}`,
     maxOutputTokens: opts.maxOutputTokens ?? 6000,
     maxRetries: 1,
