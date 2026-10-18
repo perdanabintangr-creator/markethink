@@ -27,6 +27,8 @@ export type PlanIcon =
 export interface PlanDetail {
   headline: string;
   desc: string;
+  /** Besar kuota tanpa angka, mis. "Kuota lebih besar". */
+  quota: string;
   /** Judul daftar keunggulan, mis. "Semua di Starter, plus:". */
   includes?: string;
   features: { icon: PlanIcon; text: string }[];
@@ -45,18 +47,20 @@ const id = {
     beta: {
       headline: "Kenalan dengan Markethink",
       desc: "Coba asisten marketing AI untuk kebutuhan ringan sehari-hari.",
+      quota: "Kuota percobaan",
       features: [
-        { icon: "chat", text: "20 chat per hari dengan otak Junior" },
+        { icon: "chat", text: "Chat harian dengan otak Junior" },
         { icon: "web", text: "Riset web, baca file & link" },
-        { icon: "image", text: "2 gambar AI & 1 PPT/carousel per hari" },
-        { icon: "project", text: "5 project + Brand Kit" },
-        { icon: "quota", text: "Penyimpanan 50 MB" },
+        { icon: "image", text: "Coba gambar AI, PPT & carousel" },
+        { icon: "project", text: "Project & Brand Kit" },
+        { icon: "quota", text: "Penyimpanan file dasar" },
       ],
-      footnote: "Diproses Google Gemini (layanan gratis) — isi chat dapat dipakai Google untuk meningkatkan layanannya.",
+      footnote: "Diproses Google Gemini (layanan gratis), jadi isi chat dapat dipakai Google untuk meningkatkan layanannya.",
     },
     starter: {
       headline: "Asisten marketing harian",
       desc: "Untuk UMKM & freelancer yang butuh konten dan strategi rutin.",
+      quota: "Kuota bulanan standar",
       includes: "Semua di Free, plus:",
       features: [
         { icon: "brain", text: "Otak Junior & Senior, tanpa batas harian" },
@@ -64,30 +68,32 @@ const id = {
         { icon: "deck", text: "PPT, carousel & poster IG/TikTok" },
         { icon: "photo", text: "Gambar AI & Foto Produk Studio" },
         { icon: "privacy", text: "Otak Claude dengan privasi penuh" },
-        { icon: "project", text: "20 project · penyimpanan 1 GB" },
+        { icon: "project", text: "Lebih banyak project & penyimpanan" },
       ],
     },
     pro: {
       headline: "Untuk marketer profesional",
       desc: "Hasil lebih tajam & kerja otomatis untuk marketing officer dan agency kecil.",
+      quota: "Kuota lebih besar",
       includes: "Semua di Starter, plus:",
       features: [
         { icon: "sharp", text: "Otak Associate (lebih tajam)" },
         { icon: "agent", text: "Markethink Agent: satu tujuan, beberapa tools jalan otomatis" },
         { icon: "visual", text: "Visual premium: PPT penuh foto AI" },
-        { icon: "edit", text: "Edit gambar pintar — layout dirapikan otomatis" },
-        { icon: "project", text: "50 project · penyimpanan 5 GB" },
+        { icon: "edit", text: "Edit gambar pintar, layout dirapikan otomatis" },
+        { icon: "project", text: "Project & penyimpanan lebih lega" },
       ],
     },
     promax: {
       headline: "Kualitas setara agency",
       desc: "Untuk agency & tim yang presentasi ke klien setiap minggu.",
+      quota: "Kuota paling besar",
       includes: "Semua di Pro, plus:",
       features: [
         { icon: "crown", text: "Otak Director (paling cerdas)" },
         { icon: "signature", text: "PPT Signature: desain ala agency + PDF" },
-        { icon: "quota", text: "Kuota terbesar" },
-        { icon: "project", text: "200 project · penyimpanan 10 GB" },
+        { icon: "quota", text: "Kuota paling besar" },
+        { icon: "project", text: "Project & penyimpanan paling lega" },
       ],
     },
   } as Record<string, PlanDetail>,
@@ -119,18 +125,20 @@ const en: typeof id = {
     beta: {
       headline: "Meet Markethink",
       desc: "Try an AI marketing assistant for light everyday needs.",
+      quota: "Trial quota",
       features: [
-        { icon: "chat", text: "20 chats per day with the Junior brain" },
+        { icon: "chat", text: "Daily chats with the Junior brain" },
         { icon: "web", text: "Web research, read files & links" },
-        { icon: "image", text: "2 AI images & 1 PPT/carousel per day" },
-        { icon: "project", text: "5 projects + Brand Kit" },
-        { icon: "quota", text: "50 MB storage" },
+        { icon: "image", text: "Try AI images, PPT & carousels" },
+        { icon: "project", text: "Projects & Brand Kit" },
+        { icon: "quota", text: "Basic file storage" },
       ],
-      footnote: "Processed by Google Gemini (free service) — chats may be used by Google to improve its services.",
+      footnote: "Processed by Google Gemini (free service), so chats may be used by Google to improve its services.",
     },
     starter: {
       headline: "Your daily marketing assistant",
       desc: "For small businesses & freelancers who need content and strategy every day.",
+      quota: "Standard monthly quota",
       includes: "Everything in Free, plus:",
       features: [
         { icon: "brain", text: "Junior & Senior brains, no daily limits" },
@@ -138,30 +146,32 @@ const en: typeof id = {
         { icon: "deck", text: "PPT, carousels & IG/TikTok posters" },
         { icon: "photo", text: "AI images & Product Photo Studio" },
         { icon: "privacy", text: "Claude brain with full privacy" },
-        { icon: "project", text: "20 projects · 1 GB storage" },
+        { icon: "project", text: "More projects & storage" },
       ],
     },
     pro: {
       headline: "For professional marketers",
       desc: "Sharper results & automated work for marketing officers and small agencies.",
+      quota: "Bigger quota",
       includes: "Everything in Starter, plus:",
       features: [
         { icon: "sharp", text: "Associate brain (sharper)" },
         { icon: "agent", text: "Markethink Agent: one goal, several tools run automatically" },
         { icon: "visual", text: "Premium visuals: PPT full of AI photos" },
-        { icon: "edit", text: "Smart image editing — layout tidied automatically" },
-        { icon: "project", text: "50 projects · 5 GB storage" },
+        { icon: "edit", text: "Smart image editing that tidies the layout for you" },
+        { icon: "project", text: "Roomier projects & storage" },
       ],
     },
     promax: {
       headline: "Agency-grade quality",
       desc: "For agencies & teams presenting to clients every week.",
+      quota: "Largest quota",
       includes: "Everything in Pro, plus:",
       features: [
         { icon: "crown", text: "Director brain (smartest)" },
         { icon: "signature", text: "Signature PPT: agency-style design + PDF" },
         { icon: "quota", text: "Largest quota" },
-        { icon: "project", text: "200 projects · 10 GB storage" },
+        { icon: "project", text: "Most room for projects & storage" },
       ],
     },
   },

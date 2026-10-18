@@ -55,7 +55,7 @@ const ICONS: Record<PlanIcon, LucideIcon> = {
 
 /**
  * Kartu paket ala halaman harga ChatGPT/Claude: nama & slogan, tombol di atas harga, lalu "Semua di X, plus:" + keunggulan berikon.
- * Angka kredit tidak ditampilkan. Permintaan masuk ke back office → Calon pelanggan untuk dikirimi cara bayar.
+ * Angka kredit & batas tidak ditampilkan (besar kuota ditulis dengan kata). Permintaan masuk ke back office → Calon pelanggan untuk dikirimi cara bayar.
  * `showTeam` menampilkan tab Personal / Tim & Agency (halaman Paket & harga).
  */
 export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanOffer[]; currentPlan?: string; note: string; showTeam?: boolean }) {
@@ -73,15 +73,6 @@ export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanO
     if (!res.ok) return toast.error(T.sendFailed);
     setSentPlan(plan);
   }
-
-  // Besar kuota dibandingkan Starter (mis. "3,6× kuota Starter"), seperti cara Claude menyebut paket.
-  const base = plans.find((p) => p.id === "starter")?.credits ?? 0;
-  const quotaLabel = (p: PlanOffer) =>
-    !p.price
-      ? T.trialQuota
-      : p.id === "starter" || !base
-        ? T.standardQuota
-        : T.starterMultiple((p.credits / base).toLocaleString(T.numberLocale, { maximumFractionDigits: 1 }));
 
   return (
     <div className="space-y-5">
@@ -184,7 +175,7 @@ export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanO
                   <span className="text-3xl font-bold tracking-tight">{p.price ? p.price.toLocaleString("id-ID") : T.free}</span>
                   {p.price > 0 && <span className="text-sm text-muted-foreground">{P.monthly}</span>}
                 </p>
-                <p className="mt-1 text-sm font-medium text-primary">{quotaLabel(p)}</p>
+                {d && <p className="mt-1 text-sm font-medium text-primary">{d.quota}</p>}
 
                 {d && <FeatureList features={d.features} includes={d.includes} />}
                 {d?.footnote && <p className="mt-auto pt-5 text-xs text-muted-foreground">{d.footnote}</p>}
