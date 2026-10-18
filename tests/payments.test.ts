@@ -22,10 +22,10 @@ describe("pembayaran Midtrans", () => {
     expect(paymentStatusOf({ transaction_status: "cancel" })).toBe("canceled");
   });
 
-  it("mode otomatis dari awalan key", () => {
+  it("mode: sandbox kecuali MIDTRANS_IS_PRODUCTION=true (key sandbox baru tanpa awalan SB-)", () => {
+    expect(modeOf("Mid-server-abc", undefined)).toBe("sandbox");
     expect(modeOf("SB-Mid-server-abc", undefined)).toBe("sandbox");
-    expect(modeOf("Mid-server-abc", undefined)).toBe("production");
-    expect(modeOf("SB-Mid-server-abc", "true")).toBe("production");
+    expect(modeOf("Mid-server-abc", "true")).toBe("production");
   });
 
   it("order ID unik dan ≤ 50 karakter", () => {

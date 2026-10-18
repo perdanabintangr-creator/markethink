@@ -3,17 +3,18 @@ import { createHash } from "crypto";
 
 /**
  * Midtrans Snap (halaman bayar QRIS, VA, e-wallet). Alamat API sama dengan paket resmi `midtrans-client`.
- * Env: MIDTRANS_SERVER_KEY (wajib). Mode sandbox/live otomatis dari awalan key ("SB-" = sandbox).
+ * Env: MIDTRANS_SERVER_KEY (wajib), MIDTRANS_IS_PRODUCTION="true" untuk mode live (default sandbox).
  */
 const SNAP = { sandbox: "https://app.sandbox.midtrans.com/snap/v1", production: "https://app.midtrans.com/snap/v1" };
 const CORE = { sandbox: "https://api.sandbox.midtrans.com", production: "https://api.midtrans.com" };
 
 const serverKey = () => process.env.MIDTRANS_SERVER_KEY?.trim() ?? "";
-/** Mode mengikuti jenis key: "SB-Mid-server-…" = sandbox, "Mid-server-…" = production. Env MIDTRANS_IS_PRODUCTION memaksa bila diisi. */
-export function modeOf(key: string, flag = process.env.MIDTRANS_IS_PRODUCTION): "sandbox" | "production" {
-  if (flag === "true") return "production";
-  if (flag === "false") return "sandbox";
-  return key.startsWith("SB-") ? "sandbox" : "production";
+/**
+ * Mode: sandbox kecuali MIDTRANS_IS_PRODUCTION="true". Tidak ditebak dari awalan key: akun Midtrans baru memakai key
+ * sandbox tanpa awalan "SB-", jadi tebakan bisa salah dan mengirim transaksi uji ke server live.
+ */
+export function modeOf(_key: string, flag = process.env.MIDTRANS_IS_PRODUCTION): "sandbox" | "production" {
+  return flag === "true" ? "production" : "sandbox";
 }
 const mode = () => modeOf(serverKey());
 
