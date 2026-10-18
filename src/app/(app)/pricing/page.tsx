@@ -22,14 +22,14 @@ export default async function PricingPage() {
       .order("sort_order"),
     getCreditStatus(user.id),
   ]);
-  const plans = (rows ?? []).map(toPlanOffer);
+  const plans = (rows ?? []).map((r) => toPlanOffer(r));
   const unlimited = credits.monthLimit >= UNLIMITED_CREDITS;
   const t = settingsText(profile.language);
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-5xl space-y-8 px-4 py-8">
-        <div>
+      <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+        <div className="text-center">
           <h1 className="text-2xl font-bold sm:text-3xl">{t.pricingTitle}</h1>
           <p className="mt-1 text-muted-foreground">{t.pricingDesc}</p>
           <p className="mt-3 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-sm">
@@ -38,7 +38,7 @@ export default async function PricingPage() {
           </p>
         </div>
 
-        <PlanCards plans={plans} currentPlan={profile.plan_id} note="Dari halaman Paket & harga" />
+        <PlanCards plans={plans} currentPlan={profile.plan_id} note="Dari halaman Paket & harga" showTeam />
       </div>
     </div>
   );

@@ -39,7 +39,7 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
     locked && !info.noQuota
       ? await supabase.from("plans").select(PLAN_OFFER_COLUMNS).in("id", ["starter", "pro", "promax"]).order("sort_order")
       : { data: [] };
-  const plans = (planRows ?? []).map(toPlanOffer);
+  const plans = (planRows ?? []).map((r) => toPlanOffer(r));
   const { data: runs } = info.noQuota
     ? { data: [] }
     : await supabase

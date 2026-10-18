@@ -1,6 +1,5 @@
 import type { Lang } from "./dict";
 import { dateID } from "@/lib/addons/format";
-import { PLAN_FEATURES } from "@/lib/plan-offers";
 import { BIZ_MODEL_LABEL, KOL_TIER_LABEL, SURVEY_LENGTH, SURVEY_TOPIC_LABEL, WA_GOAL_LABEL } from "@/lib/addons/schemas";
 
 /**
@@ -243,8 +242,6 @@ const id = {
   currentPlan: "Paket kamu sekarang",
   sentContact: "Terkirim — tim kami segera menghubungi kamu.",
   choosePlan: (name: string) => `Pilih ${name}`,
-  planFeatures: PLAN_FEATURES,
-
   // request add-on
   buyAddon: "Beli add-on",
   requestSent: "Permintaan terkirim 🎉",
@@ -547,13 +544,6 @@ const en: typeof id = {
   currentPlan: "Your current plan",
   sentContact: "Sent — our team will contact you shortly.",
   choosePlan: (name: string) => `Choose ${name}`,
-  planFeatures: {
-    beta: ["AI chat with the Junior brain", "Web research, read files & links", "50 MB storage"],
-    starter: ["Junior & Senior brain chat", "All Pro Tools (Senior brain)", "Web research, AI images, PPT (cover photo)", "1 GB storage"],
-    pro: ["Everything in Starter", "Associate brain (sharper)", "Markethink Agent (automated work)", "Premium visuals: PPT full of AI photos", "5 GB storage"],
-    promax: ["Everything in Pro", "Director brain (smartest)", "Signature PPT: agency-style design + PDF", "Largest quota", "10 GB storage"],
-  },
-
   buyAddon: "Buy add-on",
   requestSent: "Request sent 🎉",
   requestSentDesc: (name: string) =>

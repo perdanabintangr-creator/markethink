@@ -5,7 +5,7 @@ import { addonInfo } from "@/lib/addons/catalog";
 
 const schema = z.object({
   addon: z.string().max(40).optional(),
-  plan: z.enum(["starter", "pro", "promax"]).optional(),
+  plan: z.enum(["starter", "pro", "promax", "team"]).optional(),
   note: z.string().max(500).optional(),
 });
 
