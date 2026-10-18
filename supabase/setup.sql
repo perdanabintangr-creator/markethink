@@ -2528,3 +2528,12 @@ alter table public.profiles
   add constraint profiles_response_style_check check (response_style in ('seimbang', 'santai', 'profesional', 'singkat')),
   drop constraint if exists profiles_custom_instructions_len,
   add constraint profiles_custom_instructions_len check (char_length(custom_instructions) <= 1500);
+
+
+-- ===== 20261018000042_plan_promo.sql =====
+-- Harga promo (harga coret) per paket, diatur owner di back office → Harga paket.
+-- Aktif bila promo_price_idr diisi, lebih murah dari harga normal, dan (promo_until kosong atau belum lewat).
+alter table public.plans
+  add column if not exists promo_price_idr integer check (promo_price_idr is null or promo_price_idr >= 0),
+  add column if not exists promo_label text,
+  add column if not exists promo_until timestamptz;

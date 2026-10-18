@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageTitle, SectionTitle, Stat } from "@/components/backoffice/stat";
 import { PLAN_NAME, USD_IDR, num } from "@/lib/admin-format";
 import { dateID, rupiah } from "@/lib/backoffice-format";
+import { activePromo, effectivePrice } from "@/lib/promo";
 import {
   IDR_PER_CREDIT,
   PNL_STATUS,
@@ -84,13 +85,14 @@ export default async function ProfitPage({ searchParams }: { searchParams: Promi
   const admin = createAdminClient();
   const [{ data, error }, { data: plans }] = await Promise.all([
     admin.rpc("bo_account_pnl", { p_days: RANGES[range].days }),
-    admin.from("plans").select("id, name, monthly_price_idr, monthly_credits, is_active, sort_order").order("sort_order"),
+    admin.from("plans").select("id, name, monthly_price_idr, monthly_credits, promo_price_idr, promo_until, is_active, sort_order").order("sort_order"),
   ]);
 
+  const priceNow = Object.fromEntries((plans ?? []).map((p) => [p.id, effectivePrice(p)]));
   const all = ((data ?? []) as Row[]).map((r) => {
     const revenue = Number(r.revenue_idr);
     const cost = Number(r.cost_usd) * USD_IDR;
-    const acc = { ...r, revenue, cost, profit: revenue - cost, credits_spent: Number(r.credits_spent), bonus_credits: Number(r.bonus_credits) };
+    const acc = { ...r, plan_price_idr: priceNow[r.plan_id] ?? Number(r.plan_price_idr), revenue, cost, profit: revenue - cost, credits_spent: Number(r.credits_spent), bonus_credits: Number(r.bonus_credits) };
     return { ...acc, status: pnlStatus(revenue, cost), risks: accountRisks(acc) };
   });
   const customers = all.filter((r) => !r.internal);
@@ -203,7 +205,8 @@ export default async function ProfitPage({ searchParams }: { searchParams: Promi
                 {(plans ?? [])
                   .filter((p) => p.is_active)
                   .map((p) => {
-                    const price = Number(p.monthly_price_idr);
+                    const promo = activePromo(p);
+                    const price = promo ?? Number(p.monthly_price_idr);
                     const credits = Number(p.monthly_credits);
                     const maxCost = credits * IDR_PER_CREDIT;
                     const gm = guaranteedMargin(price, credits);
@@ -211,7 +214,10 @@ export default async function ProfitPage({ searchParams }: { searchParams: Promi
                     const ok = gm !== null && gm >= TARGET_MARGIN;
                     return (
                       <tr key={p.id}>
-                        <td className="py-2 font-medium">{PLAN_NAME[p.id] ?? p.name}</td>
+                        <td className="py-2 font-medium">
+                          {PLAN_NAME[p.id] ?? p.name}
+                          {promo !== null && <span className="ml-1 text-xs font-normal text-destructive">(harga promo)</span>}
+                        </td>
                         <td className="text-right">{rupiah(price)}</td>
                         <td className="text-right">{num(credits)}</td>
                         <td className="text-right">{rupiah(maxCost)}</td>

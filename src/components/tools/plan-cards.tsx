@@ -52,11 +52,27 @@ export function PlanCards({ plans, currentPlan, note }: { plans: PlanOffer[]; cu
                 T.plan
               )}
             </p>
-            <p className="mt-1 font-semibold">{p.name}</p>
-            <p className="mt-1 text-2xl font-bold">
-              {p.price ? rupiah(p.price) : T.free}
-              {p.price > 0 && <span className="text-sm font-normal text-muted-foreground">{T.perMonth}</span>}
+            <p className="mt-1 flex flex-wrap items-center gap-1.5 font-semibold">
+              {p.name}
+              {p.originalPrice !== undefined && (
+                <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-semibold text-white">{p.promoLabel ?? T.promo}</span>
+              )}
             </p>
+            {p.originalPrice !== undefined && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                <span className="line-through">{rupiah(p.originalPrice)}</span>
+                <span className="ml-1.5 font-medium text-destructive">{T.save(Math.round((1 - p.price / p.originalPrice) * 100))}</span>
+              </p>
+            )}
+            <p className={cn("text-2xl font-bold", p.originalPrice === undefined && "mt-1")}>
+              {p.price ? rupiah(p.price) : T.free}
+              {(p.price > 0 || p.originalPrice !== undefined) && <span className="text-sm font-normal text-muted-foreground">{T.perMonth}</span>}
+            </p>
+            {p.promoUntil && (
+              <p className="text-xs text-muted-foreground">
+                {T.promoUntil(new Date(p.promoUntil).toLocaleDateString(T.numberLocale, { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" }))}
+              </p>
+            )}
             <p className="mt-1 text-sm font-medium text-primary">{quotaLabel(p)}</p>
             <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
               {(T.planFeatures[p.id] ?? []).map((f) => (

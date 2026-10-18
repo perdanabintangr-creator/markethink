@@ -19,6 +19,7 @@ import {
   verifySetupCode,
 } from "@/lib/backoffice";
 import { PAYMENT_METHODS } from "@/lib/backoffice-format";
+import { endOfDayWIB } from "@/lib/promo";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionState = { ok?: string; error?: string } | undefined;
@@ -155,6 +156,35 @@ export async function updatePlanPrice(planId: string, formData: FormData) {
   const price = z.coerce.number().int().min(0).max(100_000_000).safeParse(String(formData.get("price") ?? "").replace(/\D/g, ""));
   if (!price.success) return;
   await createAdminClient().from("plans").update({ monthly_price_idr: price.data }).eq("id", planId);
+  refresh();
+}
+
+/** Owner: pasang harga promo (harga coret) — otomatis tampil di halaman paket aplikasi AI. */
+export async function updatePlanPromo(planId: string, formData: FormData) {
+  const { isOwner } = await requireBackoffice();
+  if (!isOwner) return;
+  const fail = (msg: string) => redirect(`/sales/prices?error=${encodeURIComponent(msg)}#promo-${planId}`);
+  const admin = createAdminClient();
+  const { data: plan } = await admin.from("plans").select("monthly_price_idr").eq("id", planId).maybeSingle();
+  if (!plan) return;
+  const promo = z.coerce.number().int().min(1).max(100_000_000).safeParse(String(formData.get("promo_price") ?? "").replace(/\D/g, ""));
+  if (!promo.success) return fail("Isi harga promo dengan angka.");
+  if (promo.data >= Number(plan.monthly_price_idr)) return fail("Harga promo harus lebih murah dari harga normal.");
+  const until = String(formData.get("promo_until") ?? "").trim();
+  if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) return fail("Tanggal akhir promo tidak valid.");
+  const untilIso = until ? endOfDayWIB(until) : null;
+  if (untilIso && new Date(untilIso).getTime() <= Date.now()) return fail("Tanggal akhir promo sudah lewat.");
+  const label = String(formData.get("promo_label") ?? "").trim().slice(0, 30) || null;
+  await admin.from("plans").update({ promo_price_idr: promo.data, promo_label: label, promo_until: untilIso }).eq("id", planId);
+  refresh();
+  redirect(`/sales/prices?saved=${planId}#promo-${planId}`);
+}
+
+/** Owner: hentikan promo → harga kembali normal. */
+export async function clearPlanPromo(planId: string) {
+  const { isOwner } = await requireBackoffice();
+  if (!isOwner) return;
+  await createAdminClient().from("plans").update({ promo_price_idr: null, promo_label: null, promo_until: null }).eq("id", planId);
   refresh();
 }
 

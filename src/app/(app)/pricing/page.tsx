@@ -2,7 +2,7 @@ import { Zap } from "lucide-react";
 import { getSession, requireUser } from "@/lib/auth";
 import { getCreditStatus } from "@/lib/credits";
 import { UNLIMITED_CREDITS, quotaLeftPct } from "@/lib/addons/format";
-import { toPlanOffer } from "@/lib/plan-offers";
+import { PLAN_OFFER_COLUMNS, toPlanOffer } from "@/lib/plan-offers";
 import { PlanCards } from "@/components/tools/plan-cards";
 import { settingsText } from "@/lib/i18n/settings";
 
@@ -17,7 +17,7 @@ export default async function PricingPage() {
   const [{ data: rows }, credits] = await Promise.all([
     supabase
       .from("plans")
-      .select("id, name, monthly_price_idr, monthly_credits")
+      .select(PLAN_OFFER_COLUMNS)
       .in("id", ["beta", "starter", "pro", "promax"])
       .order("sort_order"),
     getCreditStatus(user.id),

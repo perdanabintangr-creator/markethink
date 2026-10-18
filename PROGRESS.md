@@ -45,3 +45,6 @@
 
 ## 16 Okt 2026 — Laba rugi per akun
 - ✅ Migrasi 0040 `bo_account_pnl` terpasang di production; halaman back office `/profit` + pengaman laba per paket.
+
+## 18 Okt 2026 — Harga promo paket
+- ✅ Migrasi 0042 (kolom promo di `plans`) terpasang; form promo di back office Harga paket; harga coret di aplikasi.
