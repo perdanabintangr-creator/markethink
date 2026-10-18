@@ -3,8 +3,8 @@ import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { consumeCredits, refundCredits } from "@/lib/credits";
-import { generateImage } from "@/lib/ai/image";
+import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/lib/credits";
+import { PREMIUM_EDIT_COST_USD, generateImage } from "@/lib/ai/image";
 import {
   buildPresentation,
   deckImageRequests,
@@ -209,7 +209,16 @@ export function createChatTools(ctx: ToolCtx) {
         if (ctx.imageBlockedReason) return { ok: false, error: ctx.imageBlockedReason };
         const imageLimit = await ctx.dailyLimit?.("image");
         if (imageLimit) return { ok: false, error: imageLimit, hint: "Jangan coba lagi hari ini; tawarkan prompt gambar siap pakai." };
-        const credit = await consumeCredits(ctx.userId, IMAGE_CREDIT_COST, "image", { chatId: ctx.chatId });
+        // Edit gambar acuan di Pro & Promax memakai model edit yang lebih pintar; kredit dipotong sesuai biaya nyata (lingkaran kuota ikut penuh).
+        // Sisa kuota tidak cukup untuk edit premium → tetap dikerjakan dengan model biasa.
+        let premiumEdit = Boolean(ctx.premiumVisuals && reference_ids?.length);
+        let charged = premiumEdit ? creditsForUsd(PREMIUM_EDIT_COST_USD) : IMAGE_CREDIT_COST;
+        let credit = await consumeCredits(ctx.userId, charged, premiumEdit ? "image_edit" : "image", { chatId: ctx.chatId });
+        if (!credit.ok && premiumEdit) {
+          premiumEdit = false;
+          charged = IMAGE_CREDIT_COST;
+          credit = await consumeCredits(ctx.userId, charged, "image", { chatId: ctx.chatId });
+        }
         if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat gambar. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
         try {
           const refs = await loadReferences(ctx, reference_ids ?? []);
@@ -217,14 +226,18 @@ export function createChatTools(ctx: ToolCtx) {
           const finalPrompt =
             (refs.length ? `${prompt}\n\n${EDIT_GUIDANCE}` : ctx.premiumVisuals ? `${prompt}\n\n${PREMIUM_ART_DIRECTION}` : prompt) +
             (brandColors && !refs.length ? `\nWhere it fits naturally, use the brand colors ${brandColors} as accent colors.` : "");
-          const img = await generateImage(finalPrompt, aspect_ratio, refs, { budget: ctx.budgetImages });
+          const img = await generateImage(finalPrompt, aspect_ratio, refs, { budget: ctx.budgetImages, premiumEdit: premiumEdit && refs.length > 0 });
           const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
           const saved = await storeFile(ctx, "images", `markethink-${Date.now()}.${ext}`, img.mime, img.bytes, `Gambar AI: ${prompt}`);
-          await logUsage(ctx, { tier: "image", provider: img.provider, model: img.model, credits: IMAGE_CREDIT_COST, cost: img.costUsd ?? IMAGE_COST_USD, note: img.notes });
+          const cost = img.costUsd ?? IMAGE_COST_USD;
+          // Edit premium: sesuaikan potongan ke biaya nyata (min. tarif gambar biasa); jatuh ke model biasa → tarif biasa.
+          const credits = premiumEdit ? Math.max(IMAGE_CREDIT_COST, creditsForUsd(cost)) : IMAGE_CREDIT_COST;
+          if (credits !== charged) await settleCredits(ctx.userId, charged, credits, "image_edit", { chatId: ctx.chatId });
+          await logUsage(ctx, { tier: "image", provider: img.provider, model: img.model, credits, cost, note: img.notes });
           return { ok: true, attachmentId: saved.id, url: saved.url, prompt, aspectRatio: aspect_ratio };
         } catch (err) {
           console.error("[image] gagal", err);
-          await refundCredits(ctx.userId, IMAGE_CREDIT_COST, "image_failed");
+          await refundCredits(ctx.userId, charged, "image_failed");
           await logUsage(ctx, { tier: "image", credits: 0, cost: 0, error: errText(err) });
           return { ok: false, ...friendlyImageError(errText(err)) };
         }

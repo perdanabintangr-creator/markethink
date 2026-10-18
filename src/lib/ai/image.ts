@@ -65,11 +65,21 @@ export async function generateImage(
   prompt: string,
   aspectRatio: string,
   references: Reference[] = [],
-  opts: { budget?: boolean } = {},
+  opts: { budget?: boolean; premiumEdit?: boolean } = {},
 ): Promise<GeneratedImage> {
   const { openrouter, google, imagen } = keys();
   if (!openrouter && !google && !imagen) throw new Error("Belum ada API key pembuat gambar (OPENROUTER_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY)");
   const errors: string[] = [];
+  // Edit gambar acuan (Pro & Promax): Nano Banana 2 yang mampu menyusun ulang tata letak & teks. Gagal → jalur biasa.
+  if (opts.premiumEdit && openrouter && references.length) {
+    try {
+      const models = await premiumEditModels(openrouter);
+      if (models.length) return await viaOpenRouter(openrouter, prompt, aspectRatio, references, models);
+      errors.push("premium-edit: model Flash Image tidak tersedia");
+    } catch (err) {
+      errors.push(`premium-edit: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
   // Model gambar hemat di OpenRouter dulu (semua paket) (saldo yang sama, ±$0,006–0,01/gambar vs ±$0,034). Gagal → jalur biasa.
   if (opts.budget && openrouter && !references.length) {
     for (const model of budgetImageModels()) {
@@ -144,6 +154,28 @@ export function imageModelScore(id: string) {
     (/pro/.test(id) ? 100 : 0) +
     versionOf(id)
   );
+}
+
+/** Perkiraan modal 1 edit premium (Nano Banana 2 / Gemini Flash Image) — potongan kredit awal sebelum biaya nyata diketahui. */
+export const PREMIUM_EDIT_COST_USD = Number(process.env.PREMIUM_EDIT_COST_USD) || 0.07;
+
+/** Model edit premium: env OPENROUTER_EDIT_IMAGE_MODEL (dipisah koma), atau Gemini Flash Image (bukan Lite) terbaru di OpenRouter. */
+export async function premiumEditModels(key: string): Promise<string[]> {
+  const env = process.env.OPENROUTER_EDIT_IMAGE_MODEL;
+  if (env) return env.split(",").map((s) => s.trim()).filter(Boolean);
+  const picked = pickPremiumEditModels(await openRouterImageModels(key));
+  // Daftar model dikunci lewat env (mis. hanya versi Lite) → pakai Nano Banana 2 langsung; tidak ada → jatuh ke jalur biasa.
+  return picked.length ? picked : [DEFAULT_EDIT_MODEL];
+}
+
+const DEFAULT_EDIT_MODEL = "google/gemini-3.1-flash-image";
+
+/** Nano Banana 2 = Gemini Flash Image versi penuh (Lite tidak sanggup menyusun ulang tata letak); stabil didahulukan dari preview. */
+export function pickPremiumEditModels(ids: string[]) {
+  return ids
+    .filter((id) => id.startsWith("google/") && /flash-image/.test(id) && !/lite/.test(id))
+    .sort((a, b) => versionOf(b) - versionOf(a) || Number(/preview/.test(a)) - Number(/preview/.test(b)))
+    .slice(0, 2);
 }
 
 /** Model gambar hemat untuk paket Free. Override: env OPENROUTER_BUDGET_IMAGE_MODEL (dipisah koma). */

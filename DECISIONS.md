@@ -328,3 +328,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Personalisasi: kolom `profiles.response_style` (seimbang/santai/profesional/singkat) + `custom_instructions` (≤1.500 karakter) → bagian "Preferensi jawaban user" di system prompt.
 - Ukuran teks & lebar chat disimpan per perangkat (localStorage, `src/lib/chat-prefs.ts`).
 - Tidak diambil: Pets, Parental controls, Voice, Claude Code/Chrome, Cloud computer. Ditunda: Notifikasi (butuh domain/Resend), Konektor (fase 2), Penagihan/invoice (butuh payment gateway).
+
+## 2026-10-18 — Edit gambar: Nano Banana 2 untuk Pro & Promax (ACC founder, opsi A)
+- Edit gambar dengan gambar acuan di paket Pro/Promax/admin memakai Gemini Flash Image penuh (Nano Banana 2), bukan Flash-Lite yang gagal menyusun ulang layout. Override: env `OPENROUTER_EDIT_IMAGE_MODEL`.
+- Kredit dipotong sesuai biaya nyata (perkiraan awal ±12 kredit, disesuaikan setelah selesai) → lingkaran kuota ikut penuh, membatasi edit berlebihan. Kuota tidak cukup → edit dengan model biasa (6 kredit).
+- Gambar baru (tanpa acuan) & paket Free/Starter tidak berubah. Setiap edit membawa panduan merapikan tata letak (EDIT_GUIDANCE).

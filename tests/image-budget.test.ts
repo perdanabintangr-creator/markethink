@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -61,4 +61,37 @@ it("paket berbayar: langsung Gemini", async () => {
   const { generateImage } = await import("@/lib/ai/image");
   expect((await generateImage("poster", "1:1")).model).toBe("google/gemini-flash-image");
   expect(calls).toEqual(["/chat/completions google/gemini-flash-image"]);
+});
+
+describe("model edit premium (Nano Banana 2)", () => {
+  it("memilih Gemini Flash Image penuh, bukan Lite/Pro, versi terbaru & stabil dulu", async () => {
+    const { pickPremiumEditModels } = await import("@/lib/ai/image");
+    const ids = [
+      "google/gemini-3.1-flash-lite-image",
+      "google/gemini-3-pro-image-preview",
+      "google/gemini-2.5-flash-image",
+      "google/gemini-3.1-flash-image-preview",
+      "google/gemini-3.1-flash-image",
+      "openai/gpt-image-2",
+    ];
+    expect(pickPremiumEditModels(ids)).toEqual(["google/gemini-3.1-flash-image", "google/gemini-3.1-flash-image-preview"]);
+  });
+  it("kosong bila tidak ada model Flash Image", async () => {
+    const { pickPremiumEditModels } = await import("@/lib/ai/image");
+    expect(pickPremiumEditModels(["google/gemini-3.1-flash-lite-image", "meta/muse-image"])).toEqual([]);
+  });
+});
+
+it("edit premium (Pro & Promax): Nano Banana 2 walau daftar model dikunci ke versi Lite", async () => {
+  const calls = setup((_url, body) =>
+    body.model === "google/gemini-3.1-flash-image"
+      ? new Response(JSON.stringify({ choices: [{ message: { images: [{ image_url: { url: png } }] } }], usage: { cost: 0.068 } }), { status: 200 })
+      : new Response("x", { status: 500 }),
+  );
+  vi.stubEnv("OPENROUTER_IMAGE_MODEL", "google/gemini-3.1-flash-lite-image");
+  const { generateImage } = await import("@/lib/ai/image");
+  const ref = [{ mime: "image/png", data: "iVBORw0KGgo=" }];
+  const img = await generateImage("hapus kartu 02", "16:9", ref, { premiumEdit: true });
+  expect(img).toMatchObject({ model: "google/gemini-3.1-flash-image", costUsd: 0.068 });
+  expect(calls).toEqual(["/chat/completions google/gemini-3.1-flash-image"]);
 });
