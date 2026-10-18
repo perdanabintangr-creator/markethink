@@ -3,6 +3,7 @@ import { getCreditStatus } from "@/lib/credits";
 import { getAllowedTiers } from "@/lib/plan";
 import { getDict } from "@/lib/i18n/dict";
 import { AppShell } from "@/components/app/app-shell";
+import { paymentsEnabled } from "@/lib/payments/midtrans";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, profile } = await requireUser();
@@ -37,6 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         personaRole: profile.persona_role ?? null,
         freeModels: profile.role !== "admin" && Boolean(flags?.find((f) => f.key === "free_models")?.enabled),
         researchAllowed: profile.role === "admin" || Boolean(flags?.find((f) => f.key === "research")?.enabled),
+        payEnabled: paymentsEnabled(),
       }}
     >
       {children}

@@ -356,3 +356,12 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
     Laporan + KOL & PR). Back office mengaktifkan semua add-on di dalamnya; uang dibagi sesuai kebutuhan modal tiap add-on
     (`splitBundleAmount`) sehingga batas 40% tetap berlaku per add-on.
   - Halaman **/tools/addons** (Toko Add-on); pembelian sementara lewat permintaan → tim kirim cara bayar → back office.
+
+## 2026-10-18 — Pembayaran otomatis Midtrans (ACC founder)
+- Midtrans Snap (QRIS, VA, e-wallet). Fee QRIS ±0,7% **ditanggung Markethink** (BI melarang surcharge ke pembeli, PBI 23/6/2021 ps. 52).
+- Env (diisi founder di Vercel): `MIDTRANS_SERVER_KEY`, opsional `MIDTRANS_IS_PRODUCTION=true` (default sandbox). Tanpa key → alur lama
+  "kirim permintaan" tetap dipakai.
+- Alur: `/api/pay/checkout` (harga dihitung ulang di server: promo + diskon member) → halaman bayar Midtrans → notifikasi ke
+  `/api/webhooks/midtrans` (tanda tangan dicek + status selalu diambil ulang dari API Midtrans, nominal harus sama) → aktivasi sekali
+  saja lewat `bo_record_sale` / `bo_record_addon_sale` (laporan penjualan back office ikut tercatat; bundel dibagi `splitBundleAmount`).
+  Halaman kembali (`?paid=<order>`) mengecek `/api/pay/status` dan ikut mengaktifkan bila notifikasi terlambat. Tabel `payments` (migrasi 0045).

@@ -31,6 +31,8 @@ import { RECOMMENDED_PLAN, type PlanOffer } from "@/lib/plan-offers";
 import { useApp } from "@/components/app/app-context";
 import { toolsText } from "@/lib/i18n/tools";
 import { plansText, type PlanDetail, type PlanIcon } from "@/lib/i18n/plans";
+import { paymentsText } from "@/lib/i18n/payments";
+import { startCheckout } from "./checkout";
 
 const ICONS: Record<PlanIcon, LucideIcon> = {
   chat: MessageSquare,
@@ -59,7 +61,8 @@ const ICONS: Record<PlanIcon, LucideIcon> = {
  * `showTeam` menampilkan tab Personal / Tim & Agency (halaman Paket & harga).
  */
 export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanOffer[]; currentPlan?: string; note: string; showTeam?: boolean }) {
-  const { lang } = useApp();
+  const { lang, payEnabled } = useApp();
+  const PAY = paymentsText(lang);
   const T = toolsText(lang);
   const P = plansText(lang);
   const [tab, setTab] = useState<"personal" | "team">("personal");
@@ -68,6 +71,11 @@ export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanO
 
   async function requestPlan(plan: string) {
     setBusy(plan);
+    // Pembayaran online aktif → langsung ke halaman bayar Midtrans (paket tim tetap daftar minat).
+    if (payEnabled && plan !== "team") {
+      if (!(await startCheckout("plan", plan, PAY.failed))) setBusy(null);
+      return;
+    }
     const res = await fetch("/api/tools/request", { method: "POST", body: JSON.stringify({ plan, note }) });
     setBusy(null);
     if (!res.ok) return toast.error(T.sendFailed);

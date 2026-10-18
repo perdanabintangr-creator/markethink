@@ -1,11 +1,13 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { BadgePercent, CheckCircle2, Package, Sparkles } from "lucide-react";
 import type { AddonOffer, BundleOffer } from "@/lib/addons/format";
 import { useApp } from "@/components/app/app-context";
 import { addonsStoreText } from "@/lib/i18n/addons-store";
 import { RequestAddonButton } from "./request-addon";
+import { PaymentReturn } from "./payment-return";
 
 const fmt = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
@@ -44,6 +46,10 @@ export function AddonStore({ addons, bundles, member, isAdmin }: { addons: Store
               </p>
             ))}
         </div>
+
+        <Suspense>
+          <PaymentReturn />
+        </Suspense>
 
         {bundles.length > 0 && (
           <section>

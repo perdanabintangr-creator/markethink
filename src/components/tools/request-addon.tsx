@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/input";
 import { rupiah } from "./common";
 import { useApp } from "@/components/app/app-context";
 import { toolsText } from "@/lib/i18n/tools";
+import { paymentsText } from "@/lib/i18n/payments";
+import { startCheckout } from "./checkout";
 
 /** Minta pembelian add-on → masuk antrean tim (back office) untuk dikirimi cara bayar. */
 export function RequestAddonButton({
@@ -38,13 +40,20 @@ export function RequestAddonButton({
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 } & ButtonProps) {
-  const T = toolsText(useApp().lang);
+  const { lang, payEnabled } = useApp();
+  const T = toolsText(lang);
+  const PAY = paymentsText(lang);
   const [innerOpen, setInnerOpen] = useState(false);
   const open = controlledOpen ?? innerOpen;
   const setOpen = onOpenChange ?? setInnerOpen;
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+
+  async function pay() {
+    setBusy(true);
+    if (!(await startCheckout(bundle ? "bundle" : "addon", (bundle ?? addon)!, PAY.failed))) setBusy(false);
+  }
 
   async function submit() {
     setBusy(true);
@@ -85,6 +94,20 @@ export function RequestAddonButton({
                   {originalPrice !== undefined && <span className="ml-1 line-through">{T.addonNormalPrice(rupiah(originalPrice))}</span>}
                 </DialogDescription>
               </DialogHeader>
+              {payEnabled ? (
+                <>
+                  <p className="text-sm text-muted-foreground">{PAY.methods}</p>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" onClick={() => setOpen(false)}>
+                      {T.cancel}
+                    </Button>
+                    <Button onClick={pay} disabled={busy}>
+                      {busy && <Loader2 className="animate-spin" />} {busy ? PAY.opening : PAY.payNow}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
               <ul className="space-y-1 text-sm text-muted-foreground">
                 <li>{T.addonStep1}</li>
                 <li>{T.addonStep2}</li>
@@ -105,6 +128,8 @@ export function RequestAddonButton({
                   {busy && <Loader2 className="animate-spin" />} {T.sendRequest}
                 </Button>
               </div>
+                </>
+              )}
             </>
           )}
         </DialogContent>

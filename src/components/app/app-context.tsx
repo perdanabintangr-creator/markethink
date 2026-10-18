@@ -22,6 +22,8 @@ export interface AppContextValue {
   freeModels: boolean;
   /** Riset Web (pencarian Google) termasuk paket — Free tidak. */
   researchAllowed: boolean;
+  /** Pembayaran otomatis (Midtrans) aktif: tombol beli langsung membuka halaman bayar. */
+  payEnabled?: boolean;
   /** Peran user dari onboarding (umkm_owner, marketing_pro, freelancer, …) — untuk template. */
   personaRole?: string | null;
 }

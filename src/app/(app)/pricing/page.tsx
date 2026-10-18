@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import { Zap } from "lucide-react";
 import { getSession, requireUser } from "@/lib/auth";
 import { getCreditStatus } from "@/lib/credits";
 import { UNLIMITED_CREDITS, quotaLeftPct } from "@/lib/addons/format";
 import { PLAN_OFFER_COLUMNS, toPlanOffer } from "@/lib/plan-offers";
 import { PlanCards } from "@/components/tools/plan-cards";
+import { PaymentReturn } from "@/components/tools/payment-return";
 import { settingsText } from "@/lib/i18n/settings";
 
 export async function generateMetadata() {
@@ -38,6 +40,9 @@ export default async function PricingPage() {
           </p>
         </div>
 
+        <Suspense>
+          <PaymentReturn />
+        </Suspense>
         <PlanCards plans={plans} currentPlan={profile.plan_id} note="Dari halaman Paket & harga" showTeam />
       </div>
     </div>
