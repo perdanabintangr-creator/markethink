@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
 const { creditsForUsd, IDR_PER_CREDIT, IDR_PER_USD } = await import("@/lib/credits");
 const { TOOL_CREDIT_ESTIMATE, revisionEstimate, creditText, quotaLeftPct, quotaShare } = await import("@/lib/addons/format");
-const { PLAN_FEATURES, toPlanOffer } = await import("@/lib/plan-offers");
+const { toPlanOffer } = await import("@/lib/plan-offers");
+const { plansText } = await import("@/lib/i18n/plans");
 
 describe("Kredit bulanan (1 kredit ≈ Rp100 modal AI)", () => {
   it("USD → kredit dibulatkan ke atas, minimal 1", () => {
@@ -44,6 +45,12 @@ describe("Kredit bulanan (1 kredit ≈ Rp100 modal AI)", () => {
 
   it("penawaran paket dari baris DB", () => {
     expect(toPlanOffer({ id: "pro", name: "Pro", monthly_price_idr: "200000", monthly_credits: 900 })).toEqual({ id: "pro", name: "Pro", price: 200000, credits: 900 });
-    for (const id of ["beta", "starter", "pro", "promax"]) expect(PLAN_FEATURES[id]?.length).toBeGreaterThan(0);
+    for (const lang of ["id", "en"] as const)
+      for (const id of ["beta", "starter", "pro", "promax"]) {
+        const d = plansText(lang).plans[id];
+        expect(d?.headline).toBeTruthy();
+        expect(d?.features.length).toBeGreaterThan(0);
+        expect(d?.features.length).toBe(plansText("id").plans[id].features.length);
+      }
   });
 });
