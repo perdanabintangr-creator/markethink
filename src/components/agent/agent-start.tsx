@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
 import { BrainPicker, useToolTier } from "@/components/tools/brain-picker";
-import { AGENT_EXAMPLES } from "@/lib/agent/catalog";
+import { agentExamples } from "@/lib/addons/i18n";
 import { TOOL_CREDIT_ESTIMATE, quotaShare } from "@/lib/addons/format";
 import { useApp } from "@/components/app/app-context";
 import { cn } from "@/lib/utils";
@@ -57,7 +57,7 @@ export function AgentStart({ locked }: { locked: boolean }) {
         placeholder={c.goalPlaceholder}
       />
       <div className="mt-2 flex flex-wrap gap-1.5">
-        {AGENT_EXAMPLES.map((ex) => (
+        {agentExamples(lang).map((ex) => (
           <button
             key={ex}
             type="button"

@@ -9,17 +9,13 @@ import { ResultView } from "@/components/tools/result-view";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
 import { ResearchNotes } from "@/components/tools/research-notes";
-import { toolInfo } from "@/lib/addons/catalog";
-import { dateID, type ToolFileLite } from "@/lib/addons/format";
+import { toolInfoL } from "@/lib/addons/i18n";
+import type { ToolFileLite } from "@/lib/addons/format";
+import { useApp } from "@/components/app/app-context";
+import { dateL, toolsText } from "@/lib/i18n/tools";
 
-export const REVISE_STEPS = [
-  "Membaca permintaanmu di chat",
-  "Menyesuaikan data & asumsi",
-  "Menulis ulang bagian yang berubah",
-  "Mengecek angka & konsistensi",
-  "Menyusun ulang PPT & Excel",
-  "Sentuhan akhir",
-];
+/** Tahapan saat membuat versi perbaikan (bahasa Indonesia; untuk tampilan per bahasa pakai `toolsText(lang).reviseSteps`). */
+export const REVISE_STEPS = toolsText("id").reviseSteps;
 
 interface RunData {
   run: { id: string; tool: string; title: string | null; input: Record<string, unknown>; output: unknown; files: ToolFileLite[]; created_at: string };
@@ -44,6 +40,8 @@ export function ToolRunPanel({
   onClose: () => void;
   onLoaded?: (d: RunData) => void;
 }) {
+  const { lang } = useApp();
+  const T = toolsText(lang);
   const [data, setData] = useState<RunData | null>(null);
   const [error, setError] = useState(false);
 
@@ -64,36 +62,36 @@ export function ToolRunPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rootId, refreshKey]);
 
-  const info = data ? toolInfo(data.run.tool) : null;
+  const info = data ? toolInfoL(data.run.tool, lang) : null;
 
   return (
     <div className="relative flex h-full flex-col bg-background">
       <div className="flex items-center gap-2 border-b px-3 py-2">
         {data && <ToolIcon id={data.run.tool} className="size-4 shrink-0 text-primary" />}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{data?.run.title ?? "Hasil Tools Pro"}</p>
+          <p className="truncate text-sm font-semibold">{data?.run.title ?? T.panelFallbackTitle}</p>
           {data && (
             <p className="text-[11px] text-muted-foreground">
-              {info?.name} · Versi {data.version}
-              {data.version > 1 ? " (terbaru)" : ""} · {dateID(data.run.created_at)}
+              {info?.name} · {T.version(data.version)}
+              {data.version > 1 ? T.latest : ""} · {dateL(data.run.created_at, lang)}
             </p>
           )}
         </div>
         {data && (
-          <Button asChild variant="ghost" size="icon" title="Buka halaman penuh">
+          <Button asChild variant="ghost" size="icon" title={T.openFullPage}>
             <Link href={`/tools/${data.run.tool}/${data.run.id}`}>
               <ExternalLink />
             </Link>
           </Button>
         )}
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Tutup panel">
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label={T.closePanel}>
           <X />
         </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
         {!data && !error && <Loader2 className="mx-auto mt-10 size-6 animate-spin text-muted-foreground" />}
-        {error && <p className="mt-10 text-center text-sm text-muted-foreground">Hasil tidak bisa dimuat.</p>}
+        {error && <p className="mt-10 text-center text-sm text-muted-foreground">{T.loadFailed}</p>}
         {data && (
           <div className="space-y-4">
             <FilesBar files={data.run.files ?? []} />
@@ -110,9 +108,9 @@ export function ToolRunPanel({
             tool={data?.run.tool}
             since={updating.since}
             typical={Math.max(90, info?.seconds ?? 90)}
-            title="Meracik versi baru untukmu…"
-            note="Versi baru (termasuk PPT/Excel) langsung muncul di sini."
-            steps={REVISE_STEPS}
+            title={T.craftingNew}
+            note={T.craftingNewNote}
+            steps={T.reviseSteps}
           />
         </div>
       )}

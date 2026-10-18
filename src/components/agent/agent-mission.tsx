@@ -11,13 +11,14 @@ import { FilesBar } from "@/components/tools/common";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
 import { toolInfo } from "@/lib/addons/catalog";
-import { PRO_FORMS } from "@/lib/addons/pro/forms";
+import { proFormSteps, toolInfoL } from "@/lib/addons/i18n";
 import { TOOL_CREDIT_ESTIMATE, quotaShare, type ToolFileLite } from "@/lib/addons/format";
 import { useApp } from "@/components/app/app-context";
 import type { AgentRunLite, AgentStep } from "@/lib/agent/catalog";
 import { emitChatsChanged } from "@/lib/events";
 import { cn } from "@/lib/utils";
 import { chatText, type ChatText } from "@/lib/i18n/chat";
+import type { Lang } from "@/lib/i18n/dict";
 
 interface ResultLite {
   id: string;
@@ -27,7 +28,7 @@ interface ResultLite {
   status: string;
 }
 
-const stepLabels = (tool: string, c: ChatText) => [...c.stepBaseLabels, ...(PRO_FORMS[tool]?.steps ?? c.stepDefaultLabels)];
+const stepLabels = (tool: string, c: ChatText, lang: Lang) => [...c.stepBaseLabels, ...(proFormSteps(tool, lang) ?? c.stepDefaultLabels)];
 
 /** Halaman misi Agent: rencana → jalankan langkah satu per satu (tiap langkah = satu Tools Pro) → ringkasan paket. */
 export function AgentMission({ initial, initialResults }: { initial: AgentRunLite; initialResults: ResultLite[] }) {
@@ -99,7 +100,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
             break;
           }
           if (data.done) break;
-          if (data.ok) toast.success(c.stepDone(toolInfo(current.plan[idx].tool)?.name));
+          if (data.ok) toast.success(c.stepDone(toolInfoL(current.plan[idx].tool, lang)?.name));
           else toast.error(data.error ?? c.stepFailed);
           emitChatsChanged();
           if (!data.more) break;
@@ -115,7 +116,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
         await finish();
       }
     },
-    [initial.id, refresh, finish, c],
+    [initial.id, refresh, finish, c, lang],
   );
 
   // Kembali ke halaman saat langkah masih diproses server → pantau sampai selesai.
@@ -182,7 +183,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
       <ol className="space-y-3">
         {run.plan.map((step, i) => {
           if (step.status === "skipped") return null;
-          const info = toolInfo(step.tool);
+          const info = toolInfoL(step.tool, lang);
           const result = resultFor(step);
           const isWorking = working?.index === i || (step.status === "running" && !working);
           const n = active.indexOf(step) + 1;
@@ -232,7 +233,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
                     typical={(info?.seconds ?? 90) + 20}
                     title={c.stepOf(n, active.length, info?.menu)}
                     note={c.keepPageOpen}
-                    steps={stepLabels(step.tool, c)}
+                    steps={stepLabels(step.tool, c, lang)}
                   />
                 </div>
               )}

@@ -5,23 +5,32 @@ import { Check, Lightbulb } from "lucide-react";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { cn } from "@/lib/utils";
 import { MARKETING_TIPS } from "@/lib/marketing-tips";
+import { MARKETING_TIPS_EN } from "@/lib/i18n/marketing-tips-en";
+import { useApp } from "@/components/app/app-context";
+import { toolsText } from "@/lib/i18n/tools";
+import type { Lang } from "@/lib/i18n/dict";
 
 const SEEN_KEY = "mt-tips-seen";
 
+const tipsFor = (lang: Lang) => (lang === "en" ? MARKETING_TIPS_EN : MARKETING_TIPS);
+const seenKeyFor = (lang: Lang) => (lang === "en" ? `${SEEN_KEY}-en` : SEEN_KEY);
+
 /** Pilih tips berikutnya yang belum pernah tampil (diingat di browser); setelah semua tampil, mulai ulang. */
-function nextTip(exclude?: number) {
+function nextTip(lang: Lang, exclude?: number) {
+  const tips = tipsFor(lang);
+  const key = seenKeyFor(lang);
   let seen: number[] = [];
   try {
-    seen = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]") as number[];
+    seen = JSON.parse(localStorage.getItem(key) ?? "[]") as number[];
   } catch {}
-  let pool = MARKETING_TIPS.map((_, i) => i).filter((i) => !seen.includes(i));
+  let pool = tips.map((_, i) => i).filter((i) => !seen.includes(i));
   if (!pool.length) {
     seen = [];
-    pool = MARKETING_TIPS.map((_, i) => i).filter((i) => i !== exclude);
+    pool = tips.map((_, i) => i).filter((i) => i !== exclude);
   }
   const pick = pool[Math.floor(Math.random() * pool.length)];
   try {
-    localStorage.setItem(SEEN_KEY, JSON.stringify([...seen, pick]));
+    localStorage.setItem(key, JSON.stringify([...seen, pick]));
   } catch {}
   return pick;
 }
@@ -53,6 +62,9 @@ export function WorkingShowcase({
   note?: string;
   compact?: boolean;
 }) {
+  const { lang } = useApp();
+  const T = toolsText(lang);
+  const tips = tipsFor(lang);
   const [start, setStart] = useState(since ?? 0);
   const [now, setNow] = useState(since ?? 0);
   const [tip, setTip] = useState(-1);
@@ -60,9 +72,9 @@ export function WorkingShowcase({
   useEffect(() => {
     if (!since) setStart(Date.now());
     setNow(Date.now());
-    setTip(nextTip());
+    setTip(nextTip(lang));
     const t = setInterval(() => setNow(Date.now()), 400);
-    const tt = setInterval(() => setTip((i) => nextTip(i)), 9000);
+    const tt = setInterval(() => setTip((i) => nextTip(lang, i)), 9000);
     return () => {
       clearInterval(t);
       clearInterval(tt);
@@ -91,7 +103,7 @@ export function WorkingShowcase({
       </div>
 
       <div className="space-y-1">
-        <p className="mt-shimmer-text text-base font-semibold">{title ?? "Otak Markethink sedang bekerja…"}</p>
+        <p className="mt-shimmer-text text-base font-semibold">{title ?? T.working}</p>
         {note && <p className="text-xs text-muted-foreground">{note}</p>}
       </div>
 
@@ -120,12 +132,12 @@ export function WorkingShowcase({
         })}
       </ul>
 
-      {!compact && tip >= 0 && (
+      {!compact && tip >= 0 && tip < tips.length && (
         <div key={tip} className="mt-rise flex w-full items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-left text-xs">
           <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-primary" />
           <span>
-            <span className="font-medium">Sambil menunggu: </span>
-            {MARKETING_TIPS[tip]}
+            <span className="font-medium">{T.whileWaiting}</span>
+            {tips[tip]}
           </span>
         </div>
       )}

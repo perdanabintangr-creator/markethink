@@ -7,6 +7,8 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/input";
 import { rupiah } from "./common";
+import { useApp } from "@/components/app/app-context";
+import { toolsText } from "@/lib/i18n/tools";
 
 /** Minta pembelian add-on → masuk antrean tim (back office) untuk dikirimi cara bayar. */
 export function RequestAddonButton({
@@ -14,7 +16,7 @@ export function RequestAddonButton({
   name,
   price,
   quota,
-  label = "Beli add-on",
+  label,
   open: controlledOpen,
   onOpenChange,
   ...props
@@ -27,6 +29,7 @@ export function RequestAddonButton({
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 } & ButtonProps) {
+  const T = toolsText(useApp().lang);
   const [innerOpen, setInnerOpen] = useState(false);
   const open = controlledOpen ?? innerOpen;
   const setOpen = onOpenChange ?? setInnerOpen;
@@ -38,7 +41,7 @@ export function RequestAddonButton({
     setBusy(true);
     const res = await fetch("/api/tools/request", { method: "POST", body: JSON.stringify({ addon, note }) });
     setBusy(false);
-    if (!res.ok) return toast.error("Gagal mengirim. Coba lagi.");
+    if (!res.ok) return toast.error(T.sendFailed);
     setSent(true);
   }
 
@@ -46,7 +49,7 @@ export function RequestAddonButton({
     <>
       {controlledOpen === undefined && (
         <Button size="sm" onClick={() => setOpen(true)} {...props}>
-          <ShoppingBag /> {label}
+          <ShoppingBag /> {label ?? T.buyAddon}
         </Button>
       )}
       <Dialog
@@ -60,38 +63,34 @@ export function RequestAddonButton({
           {sent ? (
             <div className="space-y-3 py-2 text-center">
               <CheckCircle2 className="mx-auto size-10 text-emerald-500" />
-              <DialogTitle>Permintaan terkirim 🎉</DialogTitle>
-              <DialogDescription>
-                Tim Markethink akan menghubungi kamu lewat email untuk cara pembayaran. Setelah bayar, add-on {name} langsung aktif 30 hari.
-              </DialogDescription>
-              <Button onClick={() => setOpen(false)}>Oke</Button>
+              <DialogTitle>{T.requestSent}</DialogTitle>
+              <DialogDescription>{T.requestSentDesc(name)}</DialogDescription>
+              <Button onClick={() => setOpen(false)}>{T.ok}</Button>
             </div>
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle>Beli add-on {name}</DialogTitle>
-                <DialogDescription>
-                  {rupiah(price)} / bulan · {quota}× pakai per bulan · hasil visual + file PPT/Excel.
-                </DialogDescription>
+                <DialogTitle>{T.buyAddonTitle(name)}</DialogTitle>
+                <DialogDescription>{T.addonSummary(rupiah(price), quota)}</DialogDescription>
               </DialogHeader>
               <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>1. Kirim permintaan ini.</li>
-                <li>2. Tim kami mengirim cara bayar (transfer/QRIS) ke email kamu.</li>
-                <li>3. Setelah bayar, add-on aktif otomatis 30 hari.</li>
+                <li>{T.addonStep1}</li>
+                <li>{T.addonStep2}</li>
+                <li>{T.addonStep3}</li>
               </ul>
               <Textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Catatan (opsional), mis. nomor WhatsApp atau pertanyaan"
+                placeholder={T.addonNotePh}
                 maxLength={500}
                 rows={3}
               />
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setOpen(false)}>
-                  Batal
+                  {T.cancel}
                 </Button>
                 <Button onClick={submit} disabled={busy}>
-                  {busy && <Loader2 className="animate-spin" />} Kirim permintaan
+                  {busy && <Loader2 className="animate-spin" />} {T.sendRequest}
                 </Button>
               </div>
             </>

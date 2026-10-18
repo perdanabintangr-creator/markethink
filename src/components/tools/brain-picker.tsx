@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { Brain, Crown, Lock, Zap } from "lucide-react";
 import { useApp } from "@/components/app/app-context";
-import { TOOL_TIERS, TOOL_TIER_INFO, TOOL_TIER_KEY, readToolTierPref, type ToolTier } from "@/lib/addons/tool-tier";
+import { TOOL_TIERS, TOOL_TIER_KEY, readToolTierPref, type ToolTier } from "@/lib/addons/tool-tier";
+import { toolTierInfo, toolTierLockedHint } from "@/lib/addons/i18n";
+import { toolsText } from "@/lib/i18n/tools";
 import { cn } from "@/lib/utils";
 
 /** Pilihan otak Tools Pro & Agent (Senior / Associate / Director). Pilihan diingat di browser. */
@@ -45,11 +47,13 @@ export function BrainPicker({
   allowed: (t: ToolTier) => boolean;
   disabled?: boolean;
 }) {
+  const { lang } = useApp();
+  const T = toolsText(lang);
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground">Otak:</span>
-        <div role="radiogroup" aria-label="Pilih otak" className="inline-flex flex-wrap rounded-lg bg-muted p-0.5">
+        <span className="text-xs font-medium text-muted-foreground">{T.brain}</span>
+        <div role="radiogroup" aria-label={T.chooseBrain} className="inline-flex flex-wrap rounded-lg bg-muted p-0.5">
           {TOOL_TIERS.map((t) => {
             const locked = !allowed(t);
             const active = value === t;
@@ -60,7 +64,7 @@ export function BrainPicker({
                 role="radio"
                 aria-checked={active}
                 disabled={disabled || locked}
-                title={locked ? (t === "director" ? "Director tersedia di paket Promax" : "Associate tersedia mulai paket Pro") : TOOL_TIER_INFO[t].hint}
+                title={locked ? toolTierLockedHint(t, lang) : toolTierInfo(t, lang).hint}
                 onClick={() => onChange(t)}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors",
@@ -70,7 +74,7 @@ export function BrainPicker({
                 )}
               >
                 {ICON[t]}
-                {TOOL_TIER_INFO[t].label}
+                {toolTierInfo(t, lang).label}
                 {locked && <Lock className="size-3" />}
               </button>
             );
@@ -78,7 +82,7 @@ export function BrainPicker({
         </div>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        {TOOL_TIER_INFO[value].hint}
+        {toolTierInfo(value, lang).hint}
       </p>
     </div>
   );

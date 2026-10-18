@@ -70,13 +70,15 @@ import { CHATS_CHANGED, emitChatsChanged } from "@/lib/events";
 import { isGenerating, type ChatSummary, type ToolRunSummary, type WorkspaceSummary } from "@/lib/types";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { MENU_GROUPS, TOOLS, toolInfo } from "@/lib/addons/catalog";
+import { menuGroupLabel, proToolsLabel, toolMenuL, toolNameL } from "@/lib/addons/i18n";
+import type { Lang } from "@/lib/i18n/dict";
 
 /** Item riwayat: chat biasa atau hasil Tools Pro (punya `toolRun`). */
 type HistoryItem = ChatSummary & { toolRun?: { tool: string } };
 
-const runToItem = (r: ToolRunSummary): HistoryItem => ({
+const runToItem = (r: ToolRunSummary, lang: Lang): HistoryItem => ({
   id: r.id,
-  title: r.title || toolInfo(r.tool)?.name || "Tools Pro",
+  title: r.title || (toolInfo(r.tool) ? toolNameL(r.tool, lang) : proToolsLabel(lang)),
   updated_at: r.created_at,
   workspace_id: null,
   share_token: null,
@@ -149,10 +151,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     if (res.ok) {
       const data = await res.json();
       setChats(data.chats);
-      setRuns(((data.toolRuns ?? []) as ToolRunSummary[]).map(runToItem));
+      setRuns(((data.toolRuns ?? []) as ToolRunSummary[]).map((r) => runToItem(r, lang)));
     }
     setLoaded(true);
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     void load();
@@ -880,7 +882,7 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
               className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-accent"
             >
               <ChevronRight className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", groupOpen && "rotate-90")} />
-              <span className="truncate">{g.label}</span>
+              <span className="truncate">{menuGroupLabel(g.addon, lang)}</span>
               <span className="ml-auto text-[11px] text-muted-foreground">{tools.length}</span>
             </button>
             {groupOpen && (
@@ -893,14 +895,14 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
                       key={tool.id}
                       href={href}
                       onClick={onNavigate}
-                      title={tool.name}
+                      title={toolNameL(tool.id, lang)}
                       className={cn(
                         "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground",
                         active && "bg-accent font-medium text-foreground",
                       )}
                     >
                       <ToolIcon id={tool.id} className="size-3.5 shrink-0" />
-                      <span className="truncate">{tool.menu}</span>
+                      <span className="truncate">{toolMenuL(tool.id, lang)}</span>
                       {lockedPlan && <Lock className="ml-auto size-3 shrink-0 opacity-60" aria-label={s.locked} />}
                     </Link>
                   );
@@ -1094,7 +1096,7 @@ function ChatItem({
     >
       <Link href={itemHref(chat)} onClick={onNavigate} draggable={false} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-sm">
         {chat.toolRun && (
-          <span className="flex size-5 shrink-0 items-center justify-center rounded bg-primary/15 text-primary" title={toolInfo(chat.toolRun.tool)?.name}>
+          <span className="flex size-5 shrink-0 items-center justify-center rounded bg-primary/15 text-primary" title={toolInfo(chat.toolRun.tool) ? toolNameL(chat.toolRun.tool, lang) : undefined}>
             <ToolIcon id={chat.toolRun.tool} className="size-3" />
           </span>
         )}

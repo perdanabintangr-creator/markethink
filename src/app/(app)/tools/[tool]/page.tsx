@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle2, CircleAlert, Clock } from "lucide-react";
-import { requireUser } from "@/lib/auth";
+import { getSession, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { addonInfo, toolInfo } from "@/lib/addons/catalog";
 import { getToolAccess } from "@/lib/addons/access";
-import { creditText, dateID } from "@/lib/addons/format";
+import { localizeAddonInfo, localizeToolInfo, localizedCreditText, noQuotaLabel, proToolsLabel } from "@/lib/addons/i18n";
+import { dateL, toolsText } from "@/lib/i18n/tools";
 import { toPlanOffer } from "@/lib/plan-offers";
 import { ToolRunner } from "@/components/tools/tool-runner";
 import { Calculators } from "@/components/tools/calculators";
@@ -16,15 +17,21 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ tool: string }> }) {
   const { tool } = await params;
-  return { title: toolInfo(tool)?.name ?? "Tools Pro" };
+  const { profile } = await getSession();
+  const info = toolInfo(tool);
+  return { title: info ? localizeToolInfo(info, profile?.language).name : proToolsLabel(profile?.language) };
 }
 
 export default async function ToolPage({ params }: { params: Promise<{ tool: string }> }) {
   const { tool } = await params;
-  const info = toolInfo(tool);
-  if (!info) notFound();
-  const addon = addonInfo(info.addon)!;
+  const baseInfo = toolInfo(tool);
+  if (!baseInfo) notFound();
   const { supabase, profile } = await requireUser();
+  const lang = profile.language;
+  const T = toolsText(lang);
+  // Teks tampilan sesuai bahasa user (id = objek asli).
+  const info = localizeToolInfo(baseInfo, lang);
+  const addon = localizeAddonInfo(addonInfo(baseInfo.addon)!, lang);
   const access = await getToolAccess(createAdminClient(), profile);
   // Terkunci (paket Free) → tampilkan pilihan upgrade paket, bukan form. Kalkulator tetap terlihat dengan overlay.
   const locked = !access.allowed;
@@ -46,7 +53,7 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:py-8">
         <Link href="/tools" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Tools Pro
+          <ArrowLeft className="size-4" /> {proToolsLabel(lang)}
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -57,7 +64,7 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
               <h1 className="text-xl font-bold sm:text-2xl">{info.name}</h1>
               <p className="text-sm text-muted-foreground">{info.short}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {addon.emoji} {addon.name} · {info.noQuota ? "Tidak memakai kuota" : creditText(access)}
+                {addon.emoji} {addon.name} · {info.noQuota ? noQuotaLabel(lang) : localizedCreditText(access, lang)}
               </p>
             </div>
           </div>
@@ -74,14 +81,14 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
         {info.noQuota ? (
           <Calculators locked={locked} />
         ) : locked ? (
-          <ToolLocked toolName={info.name} plans={plans} />
+          <ToolLocked toolName={info.name} noteName={baseInfo.name} plans={plans} />
         ) : (
           <ToolRunner tool={tool} access={access} />
         )}
 
         {!!runs?.length && (
           <section>
-            <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Riwayat</h2>
+            <h2 className="mb-2 text-sm font-semibold text-muted-foreground">{T.history}</h2>
             <ul className="divide-y rounded-xl border bg-card">
               {runs.map((r) => (
                 <li key={r.id}>
@@ -94,7 +101,7 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
                       <Clock className="size-4 text-muted-foreground" />
                     )}
                     <span className="min-w-0 flex-1 truncate">{r.title ?? info.name}</span>
-                    <span className="text-xs text-muted-foreground">{dateID(r.created_at)}</span>
+                    <span className="text-xs text-muted-foreground">{dateL(r.created_at, lang)}</span>
                   </Link>
                 </li>
               ))}

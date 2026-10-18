@@ -10,11 +10,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { emitChatsChanged } from "@/lib/events";
 import { readToolTierPref } from "@/lib/addons/tool-tier";
 import { WorkingShowcase } from "@/components/tools/working-showcase";
-import { REVISE_STEPS } from "@/components/tools/tool-run-panel";
+import { useApp } from "@/components/app/app-context";
+import { toolsText } from "@/lib/i18n/tools";
 
 /** Tombol melayang "Bahas di Chat": buka hasil ini di chat utama (otak, Riset Web, upload — seperti chat biasa). */
 export function DiscussInChat({ runId }: { runId: string }) {
   const router = useRouter();
+  const T = toolsText(useApp().lang);
   const [busy, setBusy] = useState(false);
 
   async function open() {
@@ -22,11 +24,11 @@ export function DiscussInChat({ runId }: { runId: string }) {
     try {
       const res = await fetch(`/api/tools/runs/${runId}/to-chat`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.chatId) return void toast.error("Gagal membuka chat. Coba lagi.");
+      if (!res.ok || !data.chatId) return void toast.error(T.openChatFailed);
       emitChatsChanged();
       router.push(`/chat/${data.chatId}`);
     } catch {
-      toast.error("Koneksi terputus. Coba lagi.");
+      toast.error(T.connectionLost);
     } finally {
       setBusy(false);
     }
@@ -39,7 +41,7 @@ export function DiscussInChat({ runId }: { runId: string }) {
       disabled={busy}
       className="fixed bottom-5 right-5 z-30 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg transition-transform hover:scale-[1.03] disabled:opacity-70 print:hidden"
     >
-      {busy ? <Loader2 className="size-4 animate-spin" /> : <MessageSquareText className="size-4" />} Bahas di Chat
+      {busy ? <Loader2 className="size-4 animate-spin" /> : <MessageSquareText className="size-4" />} {T.discussInChat}
     </button>
   );
 }
@@ -47,24 +49,25 @@ export function DiscussInChat({ runId }: { runId: string }) {
 /** "Perbaiki hasil": buat versi baru sesuai koreksi user (memakai kuota, lebih hemat dari membuat baru; terbatas per hasil). */
 export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; tool: string; revisionsLeft: number }) {
   const router = useRouter();
+  const T = toolsText(useApp().lang);
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit() {
-    if (note.trim().length < 5) return toast.error("Tulis dulu apa yang perlu diperbaiki.");
+    if (note.trim().length < 5) return toast.error(T.reviseNoteTooShort);
     setBusy(true);
     try {
       const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify({ __revise: { runId, note }, __tier: readToolTierPref() }) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) return void toast.error(data.message ?? "Gagal memperbaiki hasil. Coba lagi.");
-      toast.success("Versi perbaikan sudah jadi");
+      if (!res.ok) return void toast.error(data.message ?? T.reviseFailed);
+      toast.success(T.reviseDone);
       setOpen(false);
       emitChatsChanged();
       router.push(`/tools/${tool}/${data.runId}`);
       router.refresh();
     } catch {
-      toast.error("Koneksi terputus. Cek riwayat beberapa saat lagi.");
+      toast.error(T.connectionLostRevise);
     } finally {
       setBusy(false);
     }
@@ -73,20 +76,19 @@ export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; to
   return (
     <>
       <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} disabled={revisionsLeft <= 0} className="print:hidden">
-        <Wand2 /> Perbaiki hasil {revisionsLeft > 0 ? `(sisa ${revisionsLeft}×)` : "(batas tercapai)"}
+        <Wand2 /> {T.reviseResult} {revisionsLeft > 0 ? T.revisionsLeft(revisionsLeft) : T.revisionLimit}
       </Button>
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Perbaiki hasil</DialogTitle>
+            <DialogTitle>{T.reviseResult}</DialogTitle>
             <DialogDescription>
-              Tulis data yang salah atau maksud yang sebenarnya. Hasil baru (termasuk PPT & Excel) dibuat ulang tanpa riset ulang, jadi kuota yang terpakai lebih sedikit dari membuat baru.
-              Bingung mana yang perlu dikoreksi? Bahas dulu lewat “Bahas di Chat”.
+              {T.reviseDesc} {T.reviseDescChat}
             </DialogDescription>
           </DialogHeader>
           {busy ? (
             <div className="flex justify-center py-4">
-              <WorkingShowcase tool={tool} typical={90} title="Meracik versi perbaikan…" note="Jangan tutup halaman ini." steps={REVISE_STEPS} compact />
+              <WorkingShowcase tool={tool} typical={90} title={T.craftingRevision} note={T.dontClose} steps={T.reviseSteps} compact />
             </div>
           ) : (
           <Textarea
@@ -95,15 +97,15 @@ export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; to
             rows={6}
             maxLength={3000}
             autoFocus
-            placeholder={"mis.\n- Harga per sesi Rp25.000 (bukan Rp35.000)\n- Booth aktif 23\n- Tujuan utama: naikkan sesi di hari kerja, bukan buka titik baru"}
+            placeholder={T.revisePh}
           />
           )}
           <div className="flex items-center justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
-              Batal
+              {T.cancel}
             </Button>
             <Button type="button" onClick={submit} disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? "Memperbaiki…" : "Buat versi perbaikan"}
+              {busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? T.revising : T.createRevision}
             </Button>
           </div>
         </DialogContent>

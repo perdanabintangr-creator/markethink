@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CircleAlert, RotateCcw } from "lucide-react";
-import { requireUser } from "@/lib/auth";
-import { toolInfo } from "@/lib/addons/catalog";
+import { getSession, requireUser } from "@/lib/auth";
+import { toolInfoL } from "@/lib/addons/i18n";
+import { dateL, toolsText } from "@/lib/i18n/tools";
 import { Button } from "@/components/ui/button";
 import { FilesBar } from "@/components/tools/common";
-import { dateID, type ToolFileLite } from "@/lib/addons/format";
+import type { ToolFileLite } from "@/lib/addons/format";
 import { ResultView } from "@/components/tools/result-view";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { DiscussInChat, ReviseButton } from "@/components/tools/run-discussion";
@@ -13,16 +14,18 @@ import { ResearchNotes } from "@/components/tools/research-notes";
 import { MAX_REVISIONS } from "@/lib/addons/format";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Hasil Tools Pro" };
-
-const SOURCE_LABEL: Record<string, string> = { trial: "Percobaan gratis", promax: "Jatah Promax", paid: "Add-on", admin: "Admin" };
-
+export async function generateMetadata() {
+  const { profile } = await getSession();
+  return { title: toolsText(profile?.language).resultMetaTitle };
+}
 
 export default async function ToolResultPage({ params }: { params: Promise<{ tool: string; runId: string }> }) {
   const { tool, runId } = await params;
-  const info = toolInfo(tool);
+  const { supabase, profile } = await requireUser();
+  const lang = profile.language;
+  const T = toolsText(lang);
+  const info = toolInfoL(tool, lang);
   if (!info || !/^[0-9a-f-]{36}$/i.test(runId)) notFound();
-  const { supabase } = await requireUser();
   const { data: run } = await supabase
     .from("tool_runs")
     .select("id, tool, title, status, source, input, output, files, error, created_at, revision_of, revision_note")
@@ -46,7 +49,7 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
           </Link>
           <Button asChild variant="ghost" size="sm">
             <Link href={`/tools/${tool}`}>
-              <RotateCcw /> Buat baru
+              <RotateCcw /> {T.createNew}
             </Link>
           </Button>
         </div>
@@ -57,7 +60,7 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
           </span>
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">
-              {info.name} · {dateID(run.created_at)} · {run.revision_of ? "Versi perbaikan (gratis)" : (SOURCE_LABEL[run.source] ?? run.source)}
+              {info.name} · {dateL(run.created_at, lang)} · {run.revision_of ? T.revisionFree : (T.sourceLabel[run.source] ?? run.source)}
             </p>
             <h1 className="text-xl font-bold sm:text-2xl">{run.title ?? info.name}</h1>
           </div>
@@ -66,11 +69,11 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
         {run.revision_of && (
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm print:hidden">
             <p>
-              Versi perbaikan dari{" "}
+              {T.revisionOf}{" "}
               <Link href={`/tools/${tool}/${run.revision_of}`} className="font-medium text-primary hover:underline">
-                hasil sebelumnya
+                {T.previousResult}
               </Link>
-              . Yang dikoreksi:
+              {T.corrected}
             </p>
             <p className="mt-1 whitespace-pre-line text-muted-foreground">{run.revision_note}</p>
           </div>
@@ -85,20 +88,20 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
             </div>
             <ResultView tool={tool} output={run.output} input={(run.input ?? {}) as Record<string, unknown>} />
             <ResearchNotes output={run.output} />
-            <p className="pt-2 text-center text-xs text-muted-foreground">Dibuat dengan Markethink Tools Pro · cek ulang angka & klaim sebelum dipublikasikan.</p>
+            <p className="pt-2 text-center text-xs text-muted-foreground">{T.madeWith}</p>
           </>
         ) : run.status === "error" ? (
           <div className="flex items-start gap-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-4 text-sm">
             <CircleAlert className="mt-0.5 size-5 text-destructive" />
             <div>
-              <p className="font-medium">Hasil gagal dibuat — kuota kamu dikembalikan penuh.</p>
+              <p className="font-medium">{T.runFailed}</p>
               <Link href={`/tools/${tool}`} className="mt-1 inline-block text-primary hover:underline">
-                Coba lagi
+                {T.tryAgain}
               </Link>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Masih diproses… muat ulang halaman ini sebentar lagi.</p>
+          <p className="text-sm text-muted-foreground">{T.stillProcessing}</p>
         )}
       </div>
     </div>

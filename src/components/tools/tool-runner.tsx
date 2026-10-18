@@ -9,40 +9,18 @@ import { Input, Label, NativeSelect, Textarea } from "@/components/ui/input";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 import { emitChatsChanged } from "@/lib/events";
-import {
-  BIZ_MODEL_LABEL,
-  BIZ_MODELS,
-  KOL_TIER_LABEL,
-  KOL_TIERS,
-  PLATFORM_LABEL,
-  PLATFORMS,
-  SURVEY_LENGTH,
-  SURVEY_TOPIC_LABEL,
-  SURVEY_TOPICS,
-  WA_GOAL_LABEL,
-  WA_GOALS,
-} from "@/lib/addons/schemas";
+import { BIZ_MODELS, KOL_TIERS, PLATFORM_LABEL, PLATFORMS, SURVEY_LENGTH, SURVEY_TOPICS, WA_GOALS } from "@/lib/addons/schemas";
 import { sampleSize } from "@/lib/addons/sample";
 import { PRO_FORMS } from "@/lib/addons/pro/forms";
 import type { Field as ProField } from "@/lib/addons/pro/fields";
 import { toolInfo } from "@/lib/addons/catalog";
+import { localizeForm } from "@/lib/addons/i18n";
+import { useApp } from "@/components/app/app-context";
+import { toolsText, type ToolsText } from "@/lib/i18n/tools";
 import { WorkingShowcase } from "./working-showcase";
 import { BrainPicker, useToolTier } from "./brain-picker";
 import Link from "next/link";
 import { TOOL_CREDIT_ESTIMATE, quotaShare, type ToolAccessLite } from "@/lib/addons/format";
-
-const STEPS: Record<string, string[]> = {
-  listing: ["Mempelajari produkmu…", "Mencari kata kunci yang dicari pembeli…", "Menulis judul & deskripsi per platform…", "Menyusun file Excel…"],
-  live: ["Menyusun alur live…", "Menulis skrip host per segmen…", "Menyiapkan jawaban keberatan pembeli…", "Membuat PPT contekan & Excel…"],
-  whatsapp: ["Memahami bisnismu…", "Menulis template pesan…", "Menyusun tips anti-spam…", "Menyusun file Excel…"],
-  ads: ["Membaca laporan iklan…", "Menghitung performa tiap kampanye…", "Mendiagnosis iklan boros & bagus…", "Menyusun usulan budget…", "Membuat PPT & Excel…"],
-  competitor: ["Mencari data kompetitor di web…", "Membaca sumber-sumber…", "Membandingkan harga & positioning…", "Menyusun SWOT & celah konten…", "Membuat PPT & Excel…"],
-  sizing: ["Mencari data pasar & laporan industri…", "Membaca sumber-sumber…", "Menghitung TAM, SAM & SOM…", "Menyusun proyeksi, tren & PESTEL…", "Membuat PPT & Excel…"],
-  persona: ["Mencari riset perilaku konsumen…", "Membaca survei & ulasan pembeli…", "Menyusun segmen pasar…", "Menulis persona & customer journey…", "Membuat PPT & Excel…"],
-  entry: ["Riset pemain & harga pasar…", "Mengecek izin & regulasi…", "Menilai kekuatan persaingan…", "Menghitung unit economics & risiko…", "Menyusun rencana 90 hari…", "Membuat PPT & Excel…"],
-  survey: ["Merumuskan tujuan & hipotesis…", "Menyusun screener…", "Menulis pertanyaan per bagian…", "Menyusun rencana analisis…", "Membuat Excel kuesioner…"],
-  kol: ["Menyusun konsep kampanye…", "Menulis brief kreator…", "Menghitung estimasi fee…", "Membuat PPT & Excel…"],
-};
 
 function Field({ label, hint, children, className }: { label: string; hint?: string; children: React.ReactNode; className?: string }) {
   return (
@@ -139,57 +117,61 @@ function collect(tool: string, form: HTMLFormElement, attachmentIds: string[]) {
 }
 
 /** Form survei + pratinjau jumlah responden (dihitung langsung saat isian berubah). */
-function SurveyFields() {
+function SurveyFields({ T }: { T: ToolsText }) {
+  const L = T.lf;
   const [margin, setMargin] = useState(5);
   const [population, setPopulation] = useState("");
   const sample = sampleSize(margin, Number(population.replace(/\D/g, "") || 0));
   return (
     <>
-      <Field label="Apa yang ingin kamu ketahui? *" hint="Tulis tujuan riset / keputusan yang mau diambil.">
-        <Textarea name="objective" required maxLength={800} rows={3} placeholder="mis. Apakah pelanggan mau beli varian kopi gula aren 1 liter di harga Rp60rb, dan lewat kanal apa mereka biasa beli" />
+      <Field label={L.surveyObjective} hint={L.surveyObjectiveHint}>
+        <Textarea name="objective" required maxLength={800} rows={3} placeholder={L.surveyObjectivePh} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Target responden *">
-          <Input name="respondents" required maxLength={300} placeholder="mis. Pekerja 20-35 th di Jabodetabek, minum kopi ≥2×/minggu" />
+        <Field label={L.surveyRespondents}>
+          <Input name="respondents" required maxLength={300} placeholder={L.surveyRespondentsPh} />
         </Field>
-        <Field label="Produk / brand (opsional)">
-          <Input name="product" maxLength={200} placeholder="mis. Kopi Senja literan" />
+        <Field label={L.surveyProduct}>
+          <Input name="product" maxLength={200} placeholder={L.surveyProductPh} />
         </Field>
       </div>
-      <Field label="Topik yang ditanyakan *">
-        <Chips name="topics" options={SURVEY_TOPICS.map((t) => ({ value: t, label: SURVEY_TOPIC_LABEL[t] }))} defaults={["kebiasaan", "harga"]} />
+      <Field label={L.surveyTopics}>
+        <Chips name="topics" options={SURVEY_TOPICS.map((t) => ({ value: t, label: L.surveyTopicLabel[t] }))} defaults={["kebiasaan", "harga"]} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Cara sebar">
+        <Field label={L.surveyMethod}>
           <NativeSelect name="method" defaultValue="online">
-            <option value="online">Online (Google Form, WA, IG)</option>
-            <option value="tatap_muka">Tatap muka</option>
-            <option value="telepon">Telepon</option>
+            <option value="online">{L.surveyMethodOpt.online}</option>
+            <option value="tatap_muka">{L.surveyMethodOpt.tatap_muka}</option>
+            <option value="telepon">{L.surveyMethodOpt.telepon}</option>
           </NativeSelect>
         </Field>
-        <Field label="Panjang survei">
+        <Field label={L.surveyLength}>
           <NativeSelect name="length" defaultValue="sedang">
-            {Object.entries(SURVEY_LENGTH).map(([k, v]) => (
+            {Object.keys(SURVEY_LENGTH).map((k) => (
               <option key={k} value={k}>
-                {v}
+                {L.surveyLengthLabel[k]}
               </option>
             ))}
           </NativeSelect>
         </Field>
-        <Field label="Tingkat ketelitian">
+        <Field label={L.surveyMargin}>
           <NativeSelect name="margin" value={margin} onChange={(e) => setMargin(Number(e.target.value))}>
-            <option value={3}>Sangat teliti (±3%)</option>
-            <option value={5}>Standar riset (±5%)</option>
-            <option value={10}>Cepat & hemat (±10%)</option>
+            <option value={3}>{L.surveyMarginOpt[3]}</option>
+            <option value={5}>{L.surveyMarginOpt[5]}</option>
+            <option value={10}>{L.surveyMarginOpt[10]}</option>
           </NativeSelect>
         </Field>
-        <Field label="Jumlah populasi target (opsional)" hint="mis. jumlah pelanggan kamu. Kosongkan bila sangat besar.">
-          <Input name="population" inputMode="numeric" value={population} onChange={(e) => setPopulation(e.target.value)} placeholder="mis. 2000" />
+        <Field label={L.surveyPopulation} hint={L.surveyPopulationHint}>
+          <Input name="population" inputMode="numeric" value={population} onChange={(e) => setPopulation(e.target.value)} placeholder={L.surveyPopulationPh} />
         </Field>
       </div>
       <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
-        Kamu butuh minimal <b>{sample.n.toLocaleString("id-ID")} responden</b> — disarankan sebar ke{" "}
-        <b>{sample.recommended.toLocaleString("id-ID")}</b> (cadangan 20% untuk jawaban tidak valid).
+        {L.sampleA}
+        <b>{L.sampleN(sample.n.toLocaleString(T.numberLocale))}</b>
+        {L.sampleB}{" "}
+        <b>{sample.recommended.toLocaleString(T.numberLocale)}</b>
+        {L.sampleC}
       </div>
     </>
   );
@@ -252,12 +234,17 @@ interface UploadedFile {
 
 export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessLite }) {
   const router = useRouter();
+  const { lang } = useApp();
+  const T = toolsText(lang);
+  const L = T.lf;
   const [busy, setBusy] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const pro = PRO_FORMS[tool];
-  const steps = pro?.steps ?? STEPS[tool] ?? ["Memproses…"];
+  // Teks tampilan saja; pengiriman form tetap memakai PRO_FORMS asli (nama field & value opsi tidak berubah).
+  const proView = pro ? localizeForm(tool, pro, lang) : undefined;
+  const steps = proView?.steps ?? T.legacySteps[tool] ?? [T.processing];
   const typical = toolInfo(tool)?.seconds ?? 60;
   const brain = useToolTier();
   const estimate = TOOL_CREDIT_ESTIMATE[brain.tier];
@@ -269,7 +256,7 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
       setUploading((n) => n + 1);
       try {
         const data = await uploadFile<{ id: string; name: string }>(file, { scope: "chat" });
-        if ("error" in data) toast.error(`${file.name}: ${("message" in data && data.message) || UPLOAD_ERRORS[data.error] || "Upload gagal."}`);
+        if ("error" in data) toast.error(`${file.name}: ${("message" in data && data.message) || T.uploadErrors[data.error] || UPLOAD_ERRORS[data.error] || T.uploadFailed}`);
         else setFiles((f) => [...f, { id: data.id, name: data.name }]);
       } finally {
         setUploading((n) => n - 1);
@@ -281,26 +268,26 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!canRun) return router.push("/pricing");
-    if (tool === "ads" && !files.length) return toast.error("Upload dulu file laporan iklannya.");
-    if (pro?.fields.some((f) => f.type === "files" && f.required) && !files.length) return toast.error("Upload dulu filenya, ya.");
+    if (tool === "ads" && !files.length) return toast.error(T.uploadAdsFirst);
+    if (pro?.fields.some((f) => f.type === "files" && f.required) && !files.length) return toast.error(T.uploadFirst);
     const input = collect(tool, e.currentTarget, files.map((f) => f.id));
     setBusy(true);
     try {
       const res = await fetch(`/api/tools/${tool}`, { method: "POST", body: JSON.stringify({ ...input, __tier: brain.tier }) });
       const data = await res.json().catch(() => ({}));
       if (res.status === 402) {
-        toast.error(data.message ?? "Kuota tidak cukup.", { action: { label: "Lihat paket", onClick: () => router.push("/pricing") } });
+        toast.error(data.message ?? T.quotaNotEnough, { action: { label: T.seePlans, onClick: () => router.push("/pricing") } });
         return;
       }
       if (!res.ok) {
-        toast.error(data.message ?? (res.status === 429 ? "Terlalu cepat, tunggu sebentar." : "Gagal memproses. Coba lagi."));
+        toast.error(data.message ?? (res.status === 429 ? T.tooFast : T.processFailed));
         return;
       }
       emitChatsChanged();
       router.push(`/tools/${tool}/${data.runId}`);
       router.refresh();
     } catch {
-      toast.error("Koneksi terputus. Cek riwayat di bawah beberapa saat lagi.");
+      toast.error(T.connectionLostHistory);
     } finally {
       setBusy(false);
     }
@@ -311,7 +298,7 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
       <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border bg-card p-4 sm:p-6">
         {pro && (
           <div className="grid gap-4 sm:grid-cols-2">
-            {pro.fields.map((f) => (
+            {(proView ?? pro).fields.map((f) => (
               <ProFieldInput
                 key={f.name}
                 field={f}
@@ -327,22 +314,22 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
                     >
                       <input ref={fileRef} type="file" hidden multiple accept={f.accept ?? ".csv,.xlsx,.pdf,.png,.jpg,.jpeg,.webp"} onChange={(e) => upload(e.target.files)} />
                       <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={files.length >= (f.max ?? 5)}>
-                        <Paperclip /> Pilih file
+                        <Paperclip /> {T.chooseFile}
                       </Button>
-                      <p className="mt-2 text-xs text-muted-foreground">atau seret file ke sini · CSV, Excel, PDF, PNG/JPG</p>
+                      <p className="mt-2 text-xs text-muted-foreground">{T.dropHint}</p>
                       {(files.length > 0 || uploading > 0) && (
                         <div className="mt-3 flex flex-wrap justify-center gap-2">
                           {files.map((x) => (
                             <span key={x.id} className="inline-flex items-center gap-1.5 rounded-lg border bg-background py-1 pl-2 pr-1 text-xs">
                               <FileText className="size-3.5" /> <span className="max-w-40 truncate">{x.name}</span>
-                              <button type="button" aria-label="Hapus" onClick={() => setFiles((list) => list.filter((y) => y.id !== x.id))}>
+                              <button type="button" aria-label={T.remove} onClick={() => setFiles((list) => list.filter((y) => y.id !== x.id))}>
                                 <X className="size-3.5" />
                               </button>
                             </span>
                           ))}
                           {uploading > 0 && (
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                              <Loader2 className="size-3.5 animate-spin" /> Mengunggah…
+                              <Loader2 className="size-3.5 animate-spin" /> {T.uploading}
                             </span>
                           )}
                         </div>
@@ -358,26 +345,26 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
         {tool === "listing" && (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nama produk *">
-                <Input name="product" required maxLength={120} placeholder="mis. Kopi Susu Gula Aren Literan 1L" />
+              <Field label={L.productName}>
+                <Input name="product" required maxLength={120} placeholder={L.productNamePh} />
               </Field>
-              <Field label="Kategori">
-                <Input name="category" maxLength={80} placeholder="mis. Minuman siap minum" />
+              <Field label={L.category}>
+                <Input name="category" maxLength={80} placeholder={L.categoryPh} />
               </Field>
-              <Field label="Harga">
-                <Input name="price" maxLength={40} placeholder="mis. Rp45.000" />
+              <Field label={L.price}>
+                <Input name="price" maxLength={40} placeholder={L.pricePh} />
               </Field>
-              <Field label="Target pembeli">
-                <Input name="audience" maxLength={200} placeholder="mis. pekerja kantoran 22-35 th di Jabodetabek" />
+              <Field label={L.audience}>
+                <Input name="audience" maxLength={200} placeholder={L.audiencePh} />
               </Field>
             </div>
-            <Field label="Keunggulan & spesifikasi *" hint="Bahan, ukuran, varian, manfaat, isi paket, garansi — makin lengkap makin bagus.">
-              <Textarea name="features" required minLength={10} maxLength={2000} rows={5} placeholder="mis. Pakai gula aren asli, tanpa pengawet, tahan 5 hari di kulkas, varian: original & less sugar…" />
+            <Field label={L.features} hint={L.featuresHint}>
+              <Textarea name="features" required minLength={10} maxLength={2000} rows={5} placeholder={L.featuresPh} />
             </Field>
-            <Field label="Judul produk sekarang (opsional)" hint="Isi bila ingin dibandingkan sebelum vs sesudah.">
+            <Field label={L.currentTitle} hint={L.currentTitleHint}>
               <Input name="current_title" maxLength={255} />
             </Field>
-            <Field label="Platform *">
+            <Field label={L.platformReq}>
               <Chips name="platforms" options={PLATFORMS.map((p) => ({ value: p, label: PLATFORM_LABEL[p] }))} defaults={["shopee", "tiktok"]} />
             </Field>
           </>
@@ -385,31 +372,31 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
 
         {tool === "live" && (
           <>
-            <Field label="Produk yang dijual saat live *" hint="Tulis nama, harga, dan keunggulan tiap produk.">
-              <Textarea name="products" required minLength={5} maxLength={2000} rows={5} placeholder="mis. 1) Serum Vit C 20ml Rp89rb — mencerahkan 14 hari…" />
+            <Field label={L.liveProducts} hint={L.liveProductsHint}>
+              <Textarea name="products" required minLength={5} maxLength={2000} rows={5} placeholder={L.liveProductsPh} />
             </Field>
-            <Field label="Promo khusus live">
-              <Input name="promo" maxLength={500} placeholder="mis. Diskon 30% + gratis ongkir, beli 2 gratis 1 jam 20.00" />
+            <Field label={L.livePromo}>
+              <Input name="promo" maxLength={500} placeholder={L.livePromoPh} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Durasi">
+              <Field label={L.duration}>
                 <NativeSelect name="duration" defaultValue="60">
                   {[30, 60, 90, 120].map((d) => (
                     <option key={d} value={d}>
-                      {d} menit
+                      {L.minutes(d)}
                     </option>
                   ))}
                 </NativeSelect>
               </Field>
-              <Field label="Gaya host">
+              <Field label={L.hostStyle}>
                 <NativeSelect name="host_style" defaultValue="energik">
-                  <option value="energik">Energik</option>
-                  <option value="santai">Santai</option>
-                  <option value="edukatif">Edukatif</option>
-                  <option value="lucu">Lucu</option>
+                  <option value="energik">{L.hostStyleOpt.energik}</option>
+                  <option value="santai">{L.hostStyleOpt.santai}</option>
+                  <option value="edukatif">{L.hostStyleOpt.edukatif}</option>
+                  <option value="lucu">{L.hostStyleOpt.lucu}</option>
                 </NativeSelect>
               </Field>
-              <Field label="Platform">
+              <Field label={L.platform}>
                 <NativeSelect name="platform" defaultValue="tiktok">
                   <option value="tiktok">TikTok Live</option>
                   <option value="shopee">Shopee Live</option>
@@ -423,33 +410,33 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
         {tool === "whatsapp" && (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Nama bisnis *">
-                <Input name="business" required maxLength={200} placeholder="mis. Toko Hijab Annisa" />
+              <Field label={L.businessName}>
+                <Input name="business" required maxLength={200} placeholder={L.businessNamePh} />
               </Field>
-              <Field label="Nada bicara">
+              <Field label={L.tone}>
                 <NativeSelect name="tone" defaultValue="ramah">
-                  <option value="ramah">Ramah</option>
-                  <option value="profesional">Profesional</option>
-                  <option value="santai">Santai</option>
-                  <option value="lucu">Lucu</option>
+                  <option value="ramah">{L.toneOpt.ramah}</option>
+                  <option value="profesional">{L.toneOpt.profesional}</option>
+                  <option value="santai">{L.toneOpt.santai}</option>
+                  <option value="lucu">{L.toneOpt.lucu}</option>
                 </NativeSelect>
               </Field>
             </div>
-            <Field label="Produk / layanan">
-              <Textarea name="products" maxLength={1000} rows={3} placeholder="mis. Hijab voal motif, pashmina, ciput — harga 35-89rb" />
+            <Field label={L.waProducts}>
+              <Textarea name="products" maxLength={1000} rows={3} placeholder={L.waProductsPh} />
             </Field>
-            <Field label="Promo yang sedang berjalan">
-              <Input name="promo" maxLength={500} placeholder="mis. Payday sale 25-28: diskon 20% semua produk" />
+            <Field label={L.waPromo}>
+              <Input name="promo" maxLength={500} placeholder={L.waPromoPh} />
             </Field>
-            <Field label="Jenis pesan *">
-              <Chips name="goals" options={WA_GOALS.map((g) => ({ value: g, label: WA_GOAL_LABEL[g] }))} defaults={["broadcast_promo", "follow_up", "abandoned_cart", "faq"]} />
+            <Field label={L.waGoals}>
+              <Chips name="goals" options={WA_GOALS.map((g) => ({ value: g, label: L.waGoalLabel[g] }))} defaults={["broadcast_promo", "follow_up", "abandoned_cart", "faq"]} />
             </Field>
           </>
         )}
 
         {tool === "ads" && (
           <>
-            <Field label="File laporan iklan *" hint="Export dari Ads Manager (Excel/CSV) atau screenshot tabel laporan. Maks 5 file.">
+            <Field label={L.adsFile} hint={L.adsFileHint}>
               <div
                 className="rounded-xl border border-dashed p-4 text-center"
                 onDragOver={(e) => e.preventDefault()}
@@ -460,22 +447,22 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
               >
                 <input ref={fileRef} type="file" hidden multiple accept=".csv,.xlsx,.pdf,.png,.jpg,.jpeg,.webp" onChange={(e) => upload(e.target.files)} />
                 <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={files.length >= 5}>
-                  <Paperclip /> Pilih file
+                  <Paperclip /> {T.chooseFile}
                 </Button>
-                <p className="mt-2 text-xs text-muted-foreground">atau seret file ke sini · CSV, Excel, PDF, PNG/JPG</p>
+                <p className="mt-2 text-xs text-muted-foreground">{T.dropHint}</p>
                 {(files.length > 0 || uploading > 0) && (
                   <div className="mt-3 flex flex-wrap justify-center gap-2">
                     {files.map((f) => (
                       <span key={f.id} className="inline-flex items-center gap-1.5 rounded-lg border bg-background py-1 pl-2 pr-1 text-xs">
                         <FileText className="size-3.5" /> <span className="max-w-40 truncate">{f.name}</span>
-                        <button type="button" aria-label="Hapus" onClick={() => setFiles((x) => x.filter((y) => y.id !== f.id))}>
+                        <button type="button" aria-label={T.remove} onClick={() => setFiles((x) => x.filter((y) => y.id !== f.id))}>
                           <X className="size-3.5" />
                         </button>
                       </span>
                     ))}
                     {uploading > 0 && (
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Loader2 className="size-3.5 animate-spin" /> Mengunggah…
+                        <Loader2 className="size-3.5 animate-spin" /> {T.uploading}
                       </span>
                     )}
                   </div>
@@ -483,29 +470,29 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
               </div>
             </Field>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Platform iklan">
+              <Field label={L.adsPlatform}>
                 <NativeSelect name="platform" defaultValue="meta">
                   <option value="meta">Meta (FB/IG)</option>
                   <option value="tiktok">TikTok Ads</option>
                   <option value="shopee">Shopee Ads</option>
                   <option value="google">Google Ads</option>
-                  <option value="lainnya">Lainnya</option>
+                  <option value="lainnya">{L.adsPlatformOther}</option>
                 </NativeSelect>
               </Field>
-              <Field label="Tujuan iklan">
+              <Field label={L.adsGoal}>
                 <NativeSelect name="goal" defaultValue="penjualan">
-                  <option value="penjualan">Penjualan</option>
-                  <option value="leads">Leads / chat</option>
-                  <option value="traffic">Traffic</option>
-                  <option value="awareness">Awareness</option>
+                  <option value="penjualan">{L.adsGoalOpt.penjualan}</option>
+                  <option value="leads">{L.adsGoalOpt.leads}</option>
+                  <option value="traffic">{L.adsGoalOpt.traffic}</option>
+                  <option value="awareness">{L.adsGoalOpt.awareness}</option>
                 </NativeSelect>
               </Field>
-              <Field label="Target (opsional)">
-                <Input name="target" maxLength={120} placeholder="mis. ROAS 3 / CPA Rp25rb" />
+              <Field label={L.adsTarget}>
+                <Input name="target" maxLength={120} placeholder={L.adsTargetPh} />
               </Field>
             </div>
-            <Field label="Catatan (opsional)">
-              <Textarea name="notes" maxLength={1000} rows={2} placeholder="mis. periode 1-30 Sept, produk utama skincare, budget harian Rp500rb" />
+            <Field label={L.notes}>
+              <Textarea name="notes" maxLength={1000} rows={2} placeholder={L.adsNotesPh} />
             </Field>
           </>
         )}
@@ -513,21 +500,21 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
         {tool === "competitor" && (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Brand kamu *">
-                <Input name="brand" required maxLength={100} placeholder="mis. Kopi Senja" />
+              <Field label={L.yourBrand}>
+                <Input name="brand" required maxLength={100} placeholder={L.yourBrandPh} />
               </Field>
-              <Field label="Pasar / kota / segmen">
-                <Input name="market" maxLength={120} placeholder="mis. Jakarta, kopi literan online" />
+              <Field label={L.market}>
+                <Input name="market" maxLength={120} placeholder={L.marketPh} />
               </Field>
             </div>
-            <Field label="Produk / kategori *">
-              <Input name="product" required maxLength={300} placeholder="mis. Kopi susu literan siap minum" />
+            <Field label={L.productCategory}>
+              <Input name="product" required maxLength={300} placeholder={L.productCategoryPh} />
             </Field>
-            <Field label="Kompetitor *" hint="Tulis 1-6 nama brand (boleh dengan link website/Instagram), pisahkan koma atau baris baru.">
-              <Textarea name="competitors" required maxLength={600} rows={3} placeholder="mis. Kopi Kenangan, Fore Coffee, Tuku" />
+            <Field label={L.competitors} hint={L.competitorsHint}>
+              <Textarea name="competitors" required maxLength={600} rows={3} placeholder={L.competitorsPh} />
             </Field>
-            <Field label="Fokus riset (opsional)">
-              <Input name="focus" maxLength={300} placeholder="mis. harga & promo, konten TikTok, strategi marketplace" />
+            <Field label={L.focus}>
+              <Input name="focus" maxLength={300} placeholder={L.focusPh} />
             </Field>
           </>
         )}
@@ -535,129 +522,129 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
         {(tool === "sizing" || tool === "persona") && (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Produk / kategori *">
-                <Input name="product" required maxLength={200} placeholder="mis. Kopi susu literan siap minum" />
+              <Field label={L.productCategory}>
+                <Input name="product" required maxLength={200} placeholder={L.productCategoryPh} />
               </Field>
-              <Field label="Wilayah pasar" hint="Kosongkan = seluruh Indonesia">
-                <Input name="area" maxLength={120} placeholder="mis. Jabodetabek, Surabaya, Indonesia" />
+              <Field label={L.area} hint={L.areaHint}>
+                <Input name="area" maxLength={120} placeholder={L.areaPh} />
               </Field>
               {tool === "sizing" ? (
-                <Field label="Bisnis kamu (opsional)">
-                  <Input name="business" maxLength={300} placeholder="mis. Kopi Senja, jual online via Shopee & TikTok" />
+                <Field label={L.yourBusiness}>
+                  <Input name="business" maxLength={300} placeholder={L.yourBusinessPh} />
                 </Field>
               ) : (
-                <Field label="Brand (opsional)">
-                  <Input name="brand" maxLength={100} placeholder="mis. Kopi Senja" />
+                <Field label={L.brandOpt}>
+                  <Input name="brand" maxLength={100} placeholder={L.brandOptPh} />
                 </Field>
               )}
-              <Field label="Harga rata-rata (opsional)">
-                <Input name="price" maxLength={80} placeholder="mis. Rp45.000 / liter" />
+              <Field label={L.avgPrice}>
+                <Input name="price" maxLength={80} placeholder={L.avgPricePh} />
               </Field>
-              <Field label="Model bisnis">
+              <Field label={L.bizModel}>
                 <NativeSelect name="model" defaultValue="b2c">
                   {BIZ_MODELS.map((m) => (
                     <option key={m} value={m}>
-                      {BIZ_MODEL_LABEL[m]}
+                      {L.bizModelLabel[m]}
                     </option>
                   ))}
                 </NativeSelect>
               </Field>
               {tool === "sizing" && (
-                <Field label="Target pembeli (opsional)">
-                  <Input name="target" maxLength={300} placeholder="mis. pekerja kantoran 22-35 th" />
+                <Field label={L.targetBuyerOpt}>
+                  <Input name="target" maxLength={300} placeholder={L.targetBuyerOptPh} />
                 </Field>
               )}
             </div>
             {tool === "persona" && (
-              <Field label="Yang sudah kamu tahu tentang pelanggan (opsional)" hint="Makin banyak info, makin tajam persona-nya.">
-                <Textarea name="known" maxLength={800} rows={3} placeholder="mis. kebanyakan pembeli perempuan, beli saat promo gajian, sering tanya soal kadar gula" />
+              <Field label={L.known} hint={L.knownHint}>
+                <Textarea name="known" maxLength={800} rows={3} placeholder={L.knownPh} />
               </Field>
             )}
-            <Field label="Untuk keputusan apa riset ini? (opsional)">
-              <Input name="goal" maxLength={300} placeholder={tool === "sizing" ? "mis. cari investor / buka cabang / tentukan target omzet" : "mis. bikin konten & iklan yang lebih kena"} />
+            <Field label={L.goal}>
+              <Input name="goal" maxLength={300} placeholder={tool === "sizing" ? L.goalPhSizing : L.goalPhPersona} />
             </Field>
           </>
         )}
 
         {tool === "entry" && (
           <>
-            <Field label="Rencana bisnis / produk *" hint="Ceritakan produk, cara jualan, dan target pembelinya.">
-              <Textarea name="idea" required maxLength={1200} rows={4} placeholder="mis. Mau jual frozen food dimsum premium untuk keluarga muda, dijual online di Shopee & reseller ibu-ibu" />
+            <Field label={L.idea} hint={L.ideaHint}>
+              <Textarea name="idea" required maxLength={1200} rows={4} placeholder={L.ideaPh} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Brand (opsional)">
+              <Field label={L.brandOpt}>
                 <Input name="brand" maxLength={100} />
               </Field>
-              <Field label="Wilayah pasar" hint="Kosongkan = seluruh Indonesia">
-                <Input name="area" maxLength={120} placeholder="mis. Bandung" />
+              <Field label={L.area} hint={L.areaHint}>
+                <Input name="area" maxLength={120} placeholder={L.entryAreaPh} />
               </Field>
-              <Field label="Model bisnis">
+              <Field label={L.bizModel}>
                 <NativeSelect name="model" defaultValue="b2c">
                   {BIZ_MODELS.map((m) => (
                     <option key={m} value={m}>
-                      {BIZ_MODEL_LABEL[m]}
+                      {L.bizModelLabel[m]}
                     </option>
                   ))}
                 </NativeSelect>
               </Field>
-              <Field label="Rencana harga (opsional)">
-                <Input name="price" maxLength={80} placeholder="mis. Rp55.000 / pack" />
+              <Field label={L.plannedPrice}>
+                <Input name="price" maxLength={80} placeholder={L.plannedPricePh} />
               </Field>
-              <Field label="Modal yang tersedia (opsional)">
-                <Input name="budget" maxLength={80} placeholder="mis. Rp30 juta" />
+              <Field label={L.capital}>
+                <Input name="budget" maxLength={80} placeholder={L.capitalPh} />
               </Field>
             </div>
-            <Field label="Kekuatan / aset yang kamu punya (opsional)">
-              <Textarea name="assets" maxLength={600} rows={2} placeholder="mis. punya dapur sendiri, 5rb followers IG, jaringan reseller" />
+            <Field label={L.assets}>
+              <Textarea name="assets" maxLength={600} rows={2} placeholder={L.assetsPh} />
             </Field>
           </>
         )}
 
-        {tool === "survey" && <SurveyFields />}
+        {tool === "survey" && <SurveyFields T={T} />}
 
         {tool === "kol" && (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Brand *">
+              <Field label={L.brandReq}>
                 <Input name="brand" required maxLength={100} />
               </Field>
-              <Field label="Produk *">
+              <Field label={L.productReq}>
                 <Input name="product" required maxLength={300} />
               </Field>
-              <Field label="Tujuan kampanye">
+              <Field label={L.campaignGoal}>
                 <NativeSelect name="objective" defaultValue="penjualan">
-                  <option value="awareness">Awareness</option>
-                  <option value="penjualan">Penjualan / affiliate</option>
-                  <option value="launching">Launching produk</option>
-                  <option value="review">Review produk</option>
+                  <option value="awareness">{L.kolObjectiveOpt.awareness}</option>
+                  <option value="penjualan">{L.kolObjectiveOpt.penjualan}</option>
+                  <option value="launching">{L.kolObjectiveOpt.launching}</option>
+                  <option value="review">{L.kolObjectiveOpt.review}</option>
                 </NativeSelect>
               </Field>
-              <Field label="Platform">
+              <Field label={L.platform}>
                 <NativeSelect name="platform" defaultValue="tiktok">
                   <option value="tiktok">TikTok</option>
                   <option value="instagram">Instagram</option>
                   <option value="youtube">YouTube</option>
-                  <option value="campuran">Campuran</option>
+                  <option value="campuran">{L.kolPlatformMixed}</option>
                 </NativeSelect>
               </Field>
-              <Field label="Jumlah kreator">
+              <Field label={L.creators}>
                 <Input name="creators" type="number" min={1} max={50} defaultValue={5} />
               </Field>
-              <Field label="Budget (opsional)">
-                <Input name="budget" maxLength={60} placeholder="mis. Rp10 juta" />
+              <Field label={L.budgetOpt}>
+                <Input name="budget" maxLength={60} placeholder={L.budgetOptPh} />
               </Field>
             </div>
-            <Field label="Tier kreator *">
-              <Chips name="tiers" options={KOL_TIERS.map((t) => ({ value: t, label: KOL_TIER_LABEL[t] }))} defaults={["nano", "micro"]} />
+            <Field label={L.creatorTiers}>
+              <Chips name="tiers" options={KOL_TIERS.map((t) => ({ value: t, label: L.kolTierLabel[t] }))} defaults={["nano", "micro"]} />
             </Field>
-            <Field label="Timeline (opsional)">
-              <Input name="timeline" maxLength={120} placeholder="mis. tayang 1-14 Desember" />
+            <Field label={L.timeline}>
+              <Input name="timeline" maxLength={120} placeholder={L.timelinePh} />
             </Field>
-            <Field label="Pesan utama (opsional)">
+            <Field label={L.keyMessage}>
               <Textarea name="key_message" maxLength={500} rows={2} />
             </Field>
-            <Field label="Aturan khusus (opsional)">
-              <Textarea name="rules" maxLength={800} rows={2} placeholder="mis. wajib tag @brand, tidak boleh menyebut kompetitor" />
+            <Field label={L.rules}>
+              <Textarea name="rules" maxLength={800} rows={2} placeholder={L.rulesPh} />
             </Field>
           </>
         )}
@@ -665,21 +652,16 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
         <BrainPicker value={brain.tier} onChange={brain.setTier} allowed={brain.allowed} disabled={busy} />
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <p className="text-xs text-muted-foreground">
-            {access.isAdmin
-              ? "Mode admin (tanpa batas)."
-              : canRun
-                ? `Memakai ${quotaShare(estimate, access.monthLimit) ?? "sebagian"} kuota bulanan kamu.`
-                : "Sisa kuota bulan ini tidak cukup untuk hasil ini."}{" "}
-            Kalau gagal, kuota kembali penuh.
+            {access.isAdmin ? T.adminMode : canRun ? T.usesQuota(quotaShare(estimate, access.monthLimit)) : T.notEnoughQuota} {T.refundNote}
           </p>
           {canRun ? (
             <Button type="submit" disabled={busy || uploading > 0}>
-              <Sparkles /> Buat sekarang
+              <Sparkles /> {T.createNow}
             </Button>
           ) : (
             <Button asChild variant="outline">
               <Link href="/pricing">
-                <Lock /> Kuota kurang — lihat paket
+                <Lock /> {T.lowQuotaSeePlans}
               </Link>
             </Button>
           )}
@@ -689,7 +671,7 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
       {busy && (
         <div className="absolute inset-0 z-10 flex items-start justify-center rounded-2xl bg-background/90 p-6 pt-16 backdrop-blur-sm">
           <div className="sticky top-24 flex w-full justify-center">
-            <WorkingShowcase tool={tool} steps={steps} typical={typical} note="Jangan tutup halaman ini — hasilnya langsung terbuka begitu siap." />
+            <WorkingShowcase tool={tool} steps={steps} typical={typical} note={T.dontCloseRunner} />
           </div>
         </div>
       )}

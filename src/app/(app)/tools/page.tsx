@@ -1,40 +1,43 @@
 import Link from "next/link";
 import { ArrowRight, Zap } from "lucide-react";
-import { requireUser } from "@/lib/auth";
+import { getSession, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ADDONS, TOOLS } from "@/lib/addons/catalog";
 import { getToolAccess } from "@/lib/addons/access";
-import { creditText } from "@/lib/addons/format";
+import { localizedAddons, localizedCreditText, localizedTools, proToolsLabel } from "@/lib/addons/i18n";
+import { toolsText } from "@/lib/i18n/tools";
 import { ToolIcon } from "@/components/tools/tool-icon";
 
-export const metadata = { title: "Tools Pro" };
+export async function generateMetadata() {
+  const { profile } = await getSession();
+  return { title: proToolsLabel(profile?.language) };
+}
 export const dynamic = "force-dynamic";
 
 export default async function ToolsHub() {
   const { profile } = await requireUser();
   const access = await getToolAccess(createAdminClient(), profile);
+  const lang = profile.language;
+  const T = toolsText(lang);
+  const ADDONS = localizedAddons(lang);
+  const TOOLS = localizedTools(lang);
 
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl space-y-8 px-4 py-8">
         <div>
-          <h1 className="text-2xl font-bold sm:text-3xl">Tools Pro</h1>
-          <p className="mt-1 text-muted-foreground">
-            Dikelompokkan per peran di tim marketing. Hasilnya setara deliverable konsultan & agency: halaman visual + file PPT/Excel siap presentasi.
-          </p>
+          <h1 className="text-2xl font-bold sm:text-3xl">{proToolsLabel(lang)}</h1>
+          <p className="mt-1 text-muted-foreground">{T.hubDesc}</p>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-4">
             <p className="flex items-center gap-2 text-sm">
               <Zap className="size-4 text-primary" />
               <span>
-                <span className="font-medium">{creditText(access)}</span>
-                <span className="block text-xs text-muted-foreground">
-                  Semua tools memakai kuota bulanan paket kamu. Kalau hasil gagal dibuat, kuota kembali penuh.
-                </span>
+                <span className="font-medium">{localizedCreditText(access, lang)}</span>
+                <span className="block text-xs text-muted-foreground">{T.hubQuotaNote}</span>
               </span>
             </p>
             {!access.isAdmin && (
               <Link href="/pricing" className="text-sm font-medium text-primary hover:underline">
-                {access.allowed ? "Tambah kuota / upgrade" : "Buka Tools Pro"} →
+                {access.allowed ? T.addQuota : T.unlockTools} →
               </Link>
             )}
           </div>
@@ -46,8 +49,8 @@ export default async function ToolsHub() {
               <ToolIcon id="agent" className="size-5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-semibold">Markethink Agent · Baru</span>
-              <span className="block text-sm text-muted-foreground">Beri satu tujuan, Agent menjalankan beberapa tools berurutan sampai paket kerjanya lengkap.</span>
+              <span className="block font-semibold">{T.agentCardTitle}</span>
+              <span className="block text-sm text-muted-foreground">{T.agentCardDesc}</span>
             </span>
             <ArrowRight className="size-4 shrink-0 text-primary" />
           </Link>
@@ -68,7 +71,10 @@ export default async function ToolsHub() {
                   <span aria-hidden>{addon.emoji}</span> {addon.name}
                 </h2>
                 <p className="text-sm text-muted-foreground">{addon.tagline}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">Untuk: {addon.role}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {T.forRole}
+                  {addon.role}
+                </p>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {TOOLS.filter((t) => t.addon === addon.id).map((t) => (
@@ -92,7 +98,7 @@ export default async function ToolsHub() {
                       ))}
                     </div>
                     <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
-                      Buka <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                      {T.open} <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                     </span>
                   </Link>
                 ))}
