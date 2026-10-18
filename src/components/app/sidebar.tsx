@@ -29,6 +29,7 @@ import {
   BrainCircuit,
   Wrench,
   ChevronRight,
+  Crown,
   Folder,
   FolderInput,
   FolderOpen,
@@ -127,7 +128,7 @@ import { shellText } from "@/lib/i18n/shell";
 import { useApp } from "./app-context";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const { t, user, lang, workspaces } = useApp();
+  const { t, user, lang, workspaces, planName, planId } = useApp();
   const s = shellText(lang);
   const pathname = usePathname();
   const router = useRouter();
@@ -695,11 +696,29 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">{user.name ?? "User"}</span>
-              <span className="block truncate text-xs text-muted-foreground">{user.email}</span>
+              <span className="mt-0.5 flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-px text-[11px] font-semibold",
+                    user.role === "admin"
+                      ? "bg-foreground/10 text-foreground"
+                      : planId === "beta"
+                        ? "bg-muted text-muted-foreground ring-1 ring-border"
+                        : planId === "promax"
+                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                          : "bg-primary/15 text-primary",
+                  )}
+                >
+                  {planId === "promax" && <Crown className="size-3" />}
+                  {user.role === "admin" ? "Admin" : planName}
+                </span>
+              </span>
             </span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-60">
+          <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">{user.email}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <Link href="/settings" onClick={onNavigate}>
               <Settings /> {t.settings}
