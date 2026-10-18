@@ -33,7 +33,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         .join("\n");
   const resultUrl = `/tools/${run.tool}/${run.id}`;
   const text = [
-    `📎 **Hasil Tools Pro: ${info?.name ?? run.tool}**`,
+    `📎 **Hasil Smart Tools: ${info?.name ?? run.tool}**`,
     `### ${run.title ?? info?.name ?? "Hasil"}`,
     brief && `**Isian awal:**\n${brief
       .split("\n")
@@ -52,7 +52,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const admin = createAdminClient();
   const { data: chat, error } = await admin
     .from("chats")
-    .insert({ user_id: s.user.id, title: `Bahas: ${run.title ?? info?.name ?? "hasil Tools Pro"}`.slice(0, 80), source_run_id: run.id })
+    .insert({ user_id: s.user.id, title: `Bahas: ${run.title ?? info?.name ?? "hasil Smart Tools"}`.slice(0, 80), source_run_id: run.id })
     .select("id")
     .single();
   if (error || !chat) return jsonError(500, "chat_failed");

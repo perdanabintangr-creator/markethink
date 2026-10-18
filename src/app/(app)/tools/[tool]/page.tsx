@@ -42,7 +42,7 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
       : { data: [] };
   const plans = (planRows ?? []).map((r) => toPlanOffer(r));
   // Paket belum membuka Tools Pro → tawarkan juga add-on kelompok ini saja (harga coret bila promo).
-  const addonOffer = !access.allowed && !info.noQuota ? ((await getAddonOffers(admin))[baseInfo.addon] ?? null) : null;
+  const addonOffer = !access.allowed && !info.noQuota ? ((await getAddonOffers(admin, profile.plan_id))[baseInfo.addon] ?? null) : null;
   const { data: runs } = info.noQuota
     ? { data: [] }
     : await supabase

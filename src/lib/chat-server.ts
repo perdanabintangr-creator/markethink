@@ -112,7 +112,7 @@ export function summarizeToolParts(m: MtMessage): MtMessage {
     if (tp.type === "tool-generate_image") {
       parts.push({ type: "text", text: `[Kamu sudah membuat gambar — id: ${String(tp.output.attachmentId)}; prompt: ${truncate(String(tp.input?.prompt ?? ""), 300)}]` });
     } else if (tp.type === "tool-read_tool_result") {
-      parts.push({ type: "text", text: `[Kamu sudah membaca hasil Tools Pro "${String(tp.output.title)}" (id ${String(tp.input?.run_id ?? "")}). Baca lagi bila butuh detailnya.]` });
+      parts.push({ type: "text", text: `[Kamu sudah membaca hasil Smart Tools "${String(tp.output.title)}" (id ${String(tp.input?.run_id ?? "")}). Baca lagi bila butuh detailnya.]` });
     } else if (tp.type === "tool-create_carousel") {
       parts.push({ type: "text", text: `[Kamu sudah membuat carousel/poster "${String(tp.output.title)}" (${String(tp.output.slideCount)} slide, ${String(tp.output.format)})]` });
     } else if (tp.type === "tool-product_photo") {

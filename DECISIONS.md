@@ -345,3 +345,14 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   hasil riset berat (data nyata: Market Research ±Rp8rb/hasil, maks Rp18rb). Revisi tidak memotong hasil, hanya modal.
   Tawaran tampil di halaman Tools Pro (per kelompok) & halaman tool terkunci (di atas pilihan upgrade paket).
   **Harga coret add-on** sama seperti paket (`addons.promo_*`, migrasi 0043). Logika di `src/lib/addons/addon-quota.ts`.
+- (18 Okt, founder) **Smart Tools** = nama baru "Tools Pro" di semua tampilan (kode/DB tetap `tools_pro`).
+- (18 Okt, founder ACC) **Add-on untuk semua paket + bundel + diskon member**:
+  - Add-on bisa dibeli Free, Starter, Pro & Promax. Kuota add-on terpisah dan dipakai **lebih dulu** sebelum kuota paket
+    (otak Senior). Pilih Associate/Director → kuota paket (bila paket membuka Smart Tools).
+  - **Laba minimal 40%**: modal AI per pembelian dibatasi 60% dari uang yang dibayar (`ADDON_COST_SHARE = 0.6`). Kuota hasil
+    per bulan disesuaikan: Riset, Jualan, CRM, KOL & PR 3×; Strategi, Konten, Iklan, Laporan 6× (migrasi 0044).
+  - **Diskon member Pro/Promax 15%** untuk semua add-on & bundel (setelah harga promo); Free & Starter harga normal.
+  - **Bundel** (`addon_bundles`): Bundel UMKM Rp99rb (Jualan + Konten + CRM), Bundel Agency Rp189rb (Strategi + Riset +
+    Laporan + KOL & PR). Back office mengaktifkan semua add-on di dalamnya; uang dibagi sesuai kebutuhan modal tiap add-on
+    (`splitBundleAmount`) sehingga batas 40% tetap berlaku per add-on.
+  - Halaman **/tools/addons** (Toko Add-on); pembelian sementara lewat permintaan → tim kirim cara bayar → back office.

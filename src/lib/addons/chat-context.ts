@@ -27,7 +27,7 @@ export async function toolRunChatPrompt(db: SupabaseClient, rootId: string) {
   const info = toolInfo(latest.tool as string);
   const revisable = isAiTool(latest.tool as string);
   const parts = [
-    `KONTEKS HASIL TOOLS PRO
+    `KONTEKS HASIL SMART TOOLS
 Chat ini membahas hasil "${info?.name ?? latest.tool}" milik user. Hasilnya tampil di panel kanan layar user.`,
   ];
   if (latest.id !== rootId) {
@@ -75,10 +75,10 @@ export async function toolRunsIndexPrompt(db: SupabaseClient, userId: string) {
     const name = toolInfo(r.tool)?.name ?? r.tool;
     return `- id=${r.id} · "${(r.title ?? name).replace(/"/g, "'")}" · ${name} · ${dateWIB(r.created_at)}${r.versions > 1 ? ` · versi ${r.versions}` : ""}`;
   });
-  return `HASIL TOOLS PRO MILIK USER
-User juga memakai Markethink Tools Pro (mode terpisah di sidebar). Hasil terbarunya (terbaru di atas):
+  return `HASIL SMART TOOLS MILIK USER
+User juga memakai Markethink Smart Tools (mode terpisah di sidebar). Hasil terbarunya (terbaru di atas):
 ${lines.join("\n")}
-Bila user menyinggung hasil yang dibuat di Tools Pro (mis. "yang sudah saya buat di Tools Pro", "persona tadi", "kalender kontenku", menyebut brand/judulnya),
+Bila user menyinggung hasil yang dibuat di Smart Tools (mis. "yang sudah saya buat di Smart Tools", "persona tadi", "kalender kontenku", menyebut brand/judulnya),
 panggil tool \`read_tool_result\` dengan id yang paling cocok SEBELUM menjawab, lalu jawab berdasarkan isinya (sebut judulnya). Jangan mengarang isi hasil.
 Hemat: baca MAKSIMAL 3 hasil yang paling relevan dengan permintaan (bukan semua hasil brand itu). Versi ringkas biasanya cukup;
 pakai lengkap=true hanya bila butuh detail yang tidak ada di versi ringkas.
@@ -89,7 +89,7 @@ membuka hasil itu dan klik "Bahas di Chat" agar versinya bisa diperbarui otomati
 /** Isi hasil Tools Pro (versi terbaru) milik user — dipanggil AI di chat biasa. */
 export async function readToolResult(db: SupabaseClient, userId: string, runId: string, maxChars = 7_000) {
   const { data: run } = await db.from("tool_runs").select("id, revision_of").eq("id", runId).eq("user_id", userId).maybeSingle();
-  if (!run) return { ok: false as const, error: "Hasil tidak ditemukan. Cek id-nya di daftar hasil Tools Pro." };
+  if (!run) return { ok: false as const, error: "Hasil tidak ditemukan. Cek id-nya di daftar hasil Smart Tools." };
   const latest = await latestRunInChain(db, (run.revision_of as string | null) ?? (run.id as string));
   if (!latest) return { ok: false as const, error: "Hasil belum selesai atau gagal dibuat." };
   const name = toolInfo(latest.tool as string)?.name ?? (latest.tool as string);

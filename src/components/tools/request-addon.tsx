@@ -13,6 +13,8 @@ import { toolsText } from "@/lib/i18n/tools";
 /** Minta pembelian add-on → masuk antrean tim (back office) untuk dikirimi cara bayar. */
 export function RequestAddonButton({
   addon,
+  bundle,
+  summary,
   name,
   price,
   originalPrice,
@@ -22,7 +24,11 @@ export function RequestAddonButton({
   onOpenChange,
   ...props
 }: {
-  addon: string;
+  addon?: string;
+  /** Beli bundel (beberapa add-on sekaligus) alih-alih satu add-on. */
+  bundle?: string;
+  /** Ganti kalimat ringkasan harga/kuota (mis. untuk bundel). */
+  summary?: string;
   name: string;
   price: number;
   /** Harga normal yang dicoret saat promo. */
@@ -42,7 +48,7 @@ export function RequestAddonButton({
 
   async function submit() {
     setBusy(true);
-    const res = await fetch("/api/tools/request", { method: "POST", body: JSON.stringify({ addon, note }) });
+    const res = await fetch("/api/tools/request", { method: "POST", body: JSON.stringify(bundle ? { bundle, note } : { addon, note }) });
     setBusy(false);
     if (!res.ok) return toast.error(T.sendFailed);
     setSent(true);
@@ -75,7 +81,7 @@ export function RequestAddonButton({
               <DialogHeader>
                 <DialogTitle>{T.buyAddonTitle(name)}</DialogTitle>
                 <DialogDescription>
-                  {T.addonSummary(rupiah(price), quota)}
+                  {summary ?? T.addonSummary(rupiah(price), quota)}
                   {originalPrice !== undefined && <span className="ml-1 line-through">{T.addonNormalPrice(rupiah(originalPrice))}</span>}
                 </DialogDescription>
               </DialogHeader>

@@ -5,6 +5,7 @@ import { addonInfo } from "@/lib/addons/catalog";
 
 const schema = z.object({
   addon: z.string().max(40).optional(),
+  bundle: z.string().max(40).optional(),
   plan: z.enum(["starter", "pro", "promax", "team"]).optional(),
   note: z.string().max(500).optional(),
 });
@@ -15,12 +16,15 @@ export async function POST(req: Request) {
   if (s.error) return s.error;
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "invalid_body");
-  const { addon, plan, note } = parsed.data;
-  if (addon ? !addonInfo(addon) : !plan) return jsonError(400, "invalid_body");
+  const { addon, bundle, plan, note } = parsed.data;
+  if (bundle) {
+    const { data: b } = await s.supabase.from("addon_bundles").select("id").eq("id", bundle).eq("is_active", true).maybeSingle();
+    if (!b) return jsonError(400, "invalid_body");
+  } else if (addon ? !addonInfo(addon) : !plan) return jsonError(400, "invalid_body");
   const { error } = await s.supabase.from("waitlist").insert({
     user_id: s.user.id,
     email: s.profile.email ?? s.user.email ?? "",
-    plan_interest: addon ? `addon:${addon}` : plan,
+    plan_interest: bundle ? `bundle:${bundle}` : addon ? `addon:${addon}` : plan,
     note: note?.trim() || null,
   });
   if (error) return jsonError(400, "save_failed");

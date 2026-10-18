@@ -19,7 +19,7 @@ import {
   verifySetupCode,
 } from "@/lib/backoffice";
 import { PAYMENT_METHODS } from "@/lib/backoffice-format";
-import { endOfDayWIB } from "@/lib/promo";
+import { endOfDayWIB, splitBundleAmount } from "@/lib/promo";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionState = { ok?: string; error?: string } | undefined;
@@ -440,7 +440,8 @@ const ADDON_IDS = ["strategi_pro", "riset_pro", "konten_pro", "dokter_iklan", "j
 
 const addonSaleSchema = z.object({
   user_id: z.string().uuid(),
-  addon_id: z.enum(ADDON_IDS),
+  /** "addon:<id>" atau "bundle:<id>". */
+  item: z.string().regex(/^(addon|bundle):[a-z_]{2,40}$/),
   months: z.coerce.number().int().min(1).max(36),
   amount: z.coerce.number().int().min(0).max(1_000_000_000),
   method: z.enum(PAYMENT_METHODS),
@@ -454,19 +455,42 @@ export async function recordAddonSale(_prev: ActionState, formData: FormData): P
   const parsed = addonSaleSchema.safeParse(Object.fromEntries([...formData].filter(([, v]) => v !== "")));
   if (!parsed.success) return { error: "Data add-on belum lengkap / tidak valid." };
   const d = parsed.data;
-  const { error } = await createAdminClient().rpc("bo_record_addon_sale", {
-    p_user: d.user_id,
-    p_addon: d.addon_id,
-    p_months: d.months,
-    p_amount: d.amount,
-    p_method: d.method,
-    p_note: d.note ?? null,
-    p_actor: user.id,
-    p_paid_at: d.paid_at ? new Date(`${d.paid_at}T12:00:00+07:00`).toISOString() : null,
-  });
-  if (error) return { error: "Gagal menyimpan add-on. Coba lagi." };
+  const admin = createAdminClient();
+  const [kind, itemId] = d.item.split(":") as ["addon" | "bundle", string];
+  const record = (addonId: string, amount: number, note: string | null) =>
+    admin.rpc("bo_record_addon_sale", {
+      p_user: d.user_id,
+      p_addon: addonId,
+      p_months: d.months,
+      p_amount: amount,
+      p_method: d.method,
+      p_note: note,
+      p_actor: user.id,
+      p_paid_at: d.paid_at ? new Date(`${d.paid_at}T12:00:00+07:00`).toISOString() : null,
+    });
+  if (kind === "addon") {
+    if (!(ADDON_IDS as readonly string[]).includes(itemId)) return { error: "Add-on tidak dikenal." };
+    const { error } = await record(itemId, d.amount, d.note ?? null);
+    if (error) return { error: "Gagal menyimpan add-on. Coba lagi." };
+    refresh(d.user_id);
+    return { ok: "Add-on aktif & penjualan tercatat." };
+  }
+  // Bundel: tiap add-on di dalamnya diaktifkan, uangnya dibagi sesuai kebutuhan modal (batas modal 60% tiap add-on tetap cukup).
+  const { data: bundle } = await admin.from("addon_bundles").select("id, name, addon_ids").eq("id", itemId).maybeSingle();
+  if (!bundle) return { error: "Bundel tidak dikenal." };
+  const { data: rows } = await admin.from("addons").select("id, monthly_quota").in("id", bundle.addon_ids as string[]);
+  const parts = splitBundleAmount(
+    d.amount,
+    (bundle.addon_ids as string[]).map((id) => ({ id, quota: Number(rows?.find((r) => r.id === id)?.monthly_quota ?? 1) })),
+  );
+  const note = [`${bundle.name}`, d.note].filter(Boolean).join(" · ");
+  for (const p of parts) {
+    const { data: saleId, error } = await record(p.id, p.amount, note);
+    if (error) return { error: "Gagal menyimpan sebagian bundel. Cek riwayat add-on pelanggan." };
+    if (saleId) await admin.from("addon_subscriptions").update({ bundle_id: bundle.id }).eq("id", saleId);
+  }
   refresh(d.user_id);
-  return { ok: "Add-on aktif & penjualan tercatat." };
+  return { ok: `${bundle.name} aktif (${parts.length} add-on) & penjualan tercatat.` };
 }
 
 /** Batalkan pembelian add-on (salah catat/refund): tidak dihitung pendapatan & periodenya ditutup. */

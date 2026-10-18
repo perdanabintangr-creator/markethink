@@ -175,10 +175,10 @@ export default async function PricesPage({ searchParams }: { searchParams: Promi
         berhenti setelah tanggal akhirnya.
       </p>
 
-      <h2 className="mt-8 mb-1 text-lg font-semibold">Add-on Tools Pro</h2>
+      <h2 className="mt-8 mb-1 text-lg font-semibold">Add-on Smart Tools</h2>
       <p className="mb-3 text-sm text-muted-foreground">
-        Dijual terpisah untuk user yang paketnya belum membuka Tools Pro (mis. Free): satu kelompok tool, aktif 30 hari per pembelian. Tawaran
-        tampil di halaman Tools Pro & halaman tool yang terkunci. Pengaman laba otomatis: biaya AI tiap pembelian dibatasi 70% dari uang yang
+        Dijual terpisah untuk user yang paketnya belum membuka Smart Tools (mis. Free): satu kelompok tool, aktif 30 hari per pembelian. Tawaran
+        tampil di halaman Smart Tools & halaman tool yang terkunci. Pengaman laba otomatis: biaya AI tiap pembelian dibatasi 70% dari uang yang
         dibayar, jadi laba minimal 30% walau semua hasil dipakai.
       </p>
       <Card>

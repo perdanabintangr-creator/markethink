@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ADDON_COST_SHARE, addonWindowStart, computeAddonQuota } from "@/lib/addons/addon-quota";
+import { ADDON_COST_SHARE, addonWindowStart, computeAddonQuota, memberPrice, minPriceForQuota, splitBundleAmount } from "@/lib/addons/addon-quota";
 import { promoPrice } from "@/lib/plan-offers";
 
 const DAY = 86_400_000;
@@ -21,11 +21,11 @@ describe("kuota add-on", () => {
     expect(q.remaining).toBe(0);
   });
 
-  it("batas modal = 70% uang yang dibayar per bulan → laba minimal 30%", () => {
+  it("batas modal = 60% uang yang dibayar per bulan → laba minimal 40%", () => {
     const q = computeAddonQuota({ addonId: "konten_pro", quota: 15, listPrice: 50_000, current: sub, paidUntil: sub.period_end, runs: [] }, now);
     expect(q.budgetIdr).toBe(50_000 * ADDON_COST_SHARE);
-    // 35.000 / 5.000 = 7 hasil (lebih kecil dari kuota 15)
-    expect(q.remaining).toBe(7);
+    // 30.000 / 5.000 = 6 hasil (lebih kecil dari kuota 15)
+    expect(q.remaining).toBe(6);
   });
 
   it("harga promo / beli beberapa bulan: modal ikut uang per bulan", () => {
@@ -33,7 +33,7 @@ describe("kuota add-on", () => {
       { addonId: "konten_pro", quota: 15, listPrice: 50_000, current: { ...sub, amount_idr: 90_000, months: 3 }, paidUntil: sub.period_end, runs: [] },
       now,
     );
-    expect(q.budgetIdr).toBe(21_000);
+    expect(q.budgetIdr).toBe(18_000);
   });
 
   it("hasil & biaya nyata mengurangi sisa; error tidak dihitung; revisi hanya memakai modal", () => {
@@ -75,5 +75,27 @@ describe("kuota add-on", () => {
   it("harga coret add-on memakai aturan promo yang sama", () => {
     expect(promoPrice(50_000, 35_000, null)).toBe(35_000);
     expect(promoPrice(50_000, 60_000, null)).toBeNull();
+  });
+});
+
+describe("harga add-on & bundel (laba minimal 40%)", () => {
+  it("diskon member Pro/Promax 15%, dibulatkan ke ratusan", () => {
+    expect(memberPrice(50_000)).toBe(42_500);
+    expect(memberPrice(99_000)).toBe(84_200);
+  });
+  it("bundel dibagi sesuai kebutuhan modal tiap add-on, totalnya sama dengan yang dibayar", () => {
+    const parts = splitBundleAmount(99_000, [
+      { id: "jualan_kit", quota: 3 },
+      { id: "konten_pro", quota: 6 },
+      { id: "crm_pro", quota: 3 },
+    ]);
+    expect(parts.reduce((s, p) => s + p.amount, 0)).toBe(99_000);
+    expect(parts[1].amount).toBe(49_500);
+    // tiap bagian cukup untuk kuotanya di batas modal 60%
+    for (const p of parts) expect(p.amount).toBeGreaterThanOrEqual(minPriceForQuota(p.id, p.id === "konten_pro" ? 6 : 3) * 0.99);
+  });
+  it("harga minimal kuota mengikuti batas modal 60%", () => {
+    expect(minPriceForQuota("riset_pro", 3)).toBe(50_000);
+    expect(minPriceForQuota("konten_pro", 6)).toBe(50_000);
   });
 });

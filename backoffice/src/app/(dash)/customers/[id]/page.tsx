@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { addonEffectivePrice, effectivePrice } from "@/lib/promo";
+import { MEMBER_DISCOUNT_PLANS, addonEffectivePrice, effectivePrice, memberPrice } from "@/lib/promo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
@@ -51,7 +51,8 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       .order("paid_at", { ascending: false }),
     admin.from("addons").select("id, name, price_idr, promo_price_idr, promo_until").order("sort_order"),
     admin.from("tool_runs").select("tool, status, source, created_at").eq("user_id", id).gte("created_at", new Date(Date.now() - 30 * 86_400_000).toISOString()),
-      ]);
+  ]);
+  const { data: bundleRows } = await admin.from("addon_bundles").select("id, name, price_idr, promo_price_idr, promo_until, is_active").order("sort_order");
   if (!u) notFound();
   // Info akun login (Supabase Auth). Password tidak pernah bisa dilihat — hanya disimpan dalam bentuk hash.
   const { data: authData } = await admin.auth.admin.getUserById(id);
@@ -261,7 +262,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Add-on Tools Pro</CardTitle>
+          <CardTitle className="text-base">Add-on Smart Tools</CardTitle>
           <p className="text-xs text-muted-foreground">
             Aktif:{" "}
             {(() => {
@@ -275,7 +276,16 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <AddonSaleForm userId={u.id} addons={(addonRows ?? []).map((a) => ({ id: a.id, name: a.name, price: addonEffectivePrice(a) }))} />
+          {(() => {
+            // Member Pro/Promax: harga add-on & bundel diskon 15% (setelah promo).
+            const member = MEMBER_DISCOUNT_PLANS.includes(u.plan_id);
+            const pay = (p: number) => (member ? memberPrice(p) : p);
+            const items = [
+              ...(bundleRows ?? []).filter((b) => b.is_active).map((b) => ({ id: `bundle:${b.id}`, name: `📦 ${b.name}`, price: pay(addonEffectivePrice(b)) })),
+              ...(addonRows ?? []).map((a) => ({ id: `addon:${a.id}`, name: a.name, price: pay(addonEffectivePrice(a)) })),
+            ];
+            return <AddonSaleForm userId={u.id} addons={items} member={member} />;
+          })()}
           {!!addonSubs?.length && (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[620px] text-sm">

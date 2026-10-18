@@ -42,7 +42,7 @@ const id = {
   getFree: "Pakai gratis",
   monthly: "/ bulan",
   footer:
-    "Satu kuota bulanan untuk semua fitur (chat, riset, gambar, PPT, Tools Pro & Agent), dihitung dari pemakaian nyata dan direset tiap tanggal 1.",
+    "Satu kuota bulanan untuk semua fitur (chat, riset, gambar, PPT, Smart Tools & Agent), dihitung dari pemakaian nyata dan direset tiap tanggal 1.",
   plans: {
     beta: {
       headline: "Kenalan dengan Markethink",
@@ -64,7 +64,7 @@ const id = {
       includes: "Semua di Free, plus:",
       features: [
         { icon: "brain", text: "Otak Junior & Senior, tanpa batas harian" },
-        { icon: "tools", text: "Semua Tools Pro: strategi, riset, konten, iklan & laporan" },
+        { icon: "tools", text: "Semua Smart Tools: strategi, riset, konten, iklan & laporan" },
         { icon: "deck", text: "PPT, carousel & poster IG/TikTok" },
         { icon: "photo", text: "Gambar AI & Foto Produk Studio" },
         { icon: "privacy", text: "Otak Claude dengan privasi penuh" },
@@ -120,7 +120,7 @@ const en: typeof id = {
   getFree: "Use for free",
   monthly: "/ month",
   footer:
-    "One monthly quota for everything (chat, research, images, PPT, Pro Tools & Agent), based on actual usage and reset on the 1st of each month.",
+    "One monthly quota for everything (chat, research, images, PPT, Smart Tools & Agent), based on actual usage and reset on the 1st of each month.",
   plans: {
     beta: {
       headline: "Meet Markethink",
@@ -142,7 +142,7 @@ const en: typeof id = {
       includes: "Everything in Free, plus:",
       features: [
         { icon: "brain", text: "Junior & Senior brains, no daily limits" },
-        { icon: "tools", text: "All Pro Tools: strategy, research, content, ads & reports" },
+        { icon: "tools", text: "All Smart Tools: strategy, research, content, ads & reports" },
         { icon: "deck", text: "PPT, carousels & IG/TikTok posters" },
         { icon: "photo", text: "AI images & Product Photo Studio" },
         { icon: "privacy", text: "Claude brain with full privacy" },

@@ -302,7 +302,7 @@ export function sanitizeDeck(deck: { slides: AnySlide[] } & Record<string, unkno
     }
     if (s) fixed.push(s);
   }
-  while (fixed.length < 3) fixed.push({ layout: "closing", title: "Terima kasih", bullets: ["Dibuat dengan Markethink Tools Pro"] });
+  while (fixed.length < 3) fixed.push({ layout: "closing", title: "Terima kasih", bullets: ["Dibuat dengan Markethink Smart Tools"] });
   return { ...deck, slides: fixed.slice(0, 20) };
 }
 

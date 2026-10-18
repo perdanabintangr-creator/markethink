@@ -178,7 +178,7 @@ export default async function BackofficeOverview() {
       </section>
 
       <section className="space-y-3">
-        <SectionTitle hint={<Link href="/sales/prices" className="underline">Atur harga & kuota add-on →</Link>}>Add-on Tools Pro</SectionTitle>
+        <SectionTitle hint={<Link href="/sales/prices" className="underline">Atur harga & kuota add-on →</Link>}>Add-on Smart Tools</SectionTitle>
         <div className="grid gap-3 md:grid-cols-3">
           {addons.map((a) => (
             <Card key={a.addon_id}>

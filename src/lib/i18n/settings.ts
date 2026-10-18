@@ -59,7 +59,7 @@ const id = {
     image: "Gambar & foto produk",
     pptx: "PPT",
     carousel: "Carousel & poster",
-    tools: "Tools Pro",
+    tools: "Smart Tools",
     agent: "Agent",
   } as Record<UsageGroupId, string>,
 
@@ -182,7 +182,7 @@ const id = {
   // ── Paket & harga ──
   pricingTitle: "Paket & harga",
   pricingDesc:
-    "Satu paket untuk semuanya: chat, riset, gambar, Tools Pro & Agent memakai kuota bulanan yang sama. Kuota direset tiap tanggal 1.",
+    "Satu paket untuk semuanya: chat, riset, gambar, Smart Tools & Agent memakai kuota bulanan yang sama. Kuota direset tiap tanggal 1.",
   pricingQuotaUnlimited: "Kuota kamu: tanpa batas (admin)",
   pricingQuotaLeft: (pct: number) => `Kuota bulan ini tersisa ${pct}%`,
 
@@ -298,7 +298,7 @@ const en: typeof id = {
     image: "Images & product photos",
     pptx: "PPT",
     carousel: "Carousels & posters",
-    tools: "Tools Pro",
+    tools: "Smart Tools",
     agent: "Agent",
   },
 
@@ -412,7 +412,7 @@ const en: typeof id = {
 
   pricingTitle: "Plans & pricing",
   pricingDesc:
-    "One plan for everything: chat, research, images, Tools Pro & Agent all share the same monthly quota. Quota resets on the 1st of each month.",
+    "One plan for everything: chat, research, images, Smart Tools & Agent all share the same monthly quota. Quota resets on the 1st of each month.",
   pricingQuotaUnlimited: "Your quota: unlimited (admin)",
   pricingQuotaLeft: (pct) => `${pct}% of this month's quota left`,
 

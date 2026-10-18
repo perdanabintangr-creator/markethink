@@ -173,11 +173,11 @@ export function createChatTools(ctx: ToolCtx) {
   return {
     read_tool_result: tool({
       description:
-        "Baca hasil Markethink Tools Pro milik user (versi terbaru), mis. persona, kalender konten, marketing plan, riset pasar. " +
-        "Pakai id dari daftar HASIL TOOLS PRO MILIK USER di instruksi sistem, setiap kali user menyinggung hasil yang dibuat di Tools Pro. " +
+        "Baca hasil Markethink Smart Tools milik user (versi terbaru), mis. persona, kalender konten, marketing plan, riset pasar. " +
+        "Pakai id dari daftar HASIL SMART TOOLS MILIK USER di instruksi sistem, setiap kali user menyinggung hasil yang dibuat di Smart Tools. " +
         `Maksimal ${MAX_TOOL_READS} hasil per pesan — pilih yang paling relevan. Default versi ringkas; lengkap=true bila butuh detail (mis. temuan riset).`,
       inputSchema: z.object({
-        run_id: z.string().uuid().describe("id hasil dari daftar HASIL TOOLS PRO MILIK USER"),
+        run_id: z.string().uuid().describe("id hasil dari daftar HASIL SMART TOOLS MILIK USER"),
         lengkap: z.boolean().optional().describe("true = versi lengkap (lebih panjang). Default ringkas."),
       }),
       execute: async ({ run_id, lengkap }) => {

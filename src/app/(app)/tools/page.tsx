@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Zap } from "lucide-react";
+import { ArrowRight, ShoppingBag, Zap } from "lucide-react";
 import { getSession, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAddonOffers, getAddonQuotas, getToolAccess } from "@/lib/addons/access";
@@ -9,6 +9,7 @@ import type { AddonQuota } from "@/lib/addons/addon-quota";
 import { localizedAddons, localizedCreditText, localizedTools, proToolsLabel } from "@/lib/addons/i18n";
 import { dateL, toolsText } from "@/lib/i18n/tools";
 import { ToolIcon } from "@/components/tools/tool-icon";
+import { addonsStoreText } from "@/lib/i18n/addons-store";
 
 export async function generateMetadata() {
   const { profile } = await getSession();
@@ -20,10 +21,12 @@ export default async function ToolsHub() {
   const { profile } = await requireUser();
   const admin = createAdminClient();
   const access = await getToolAccess(admin, profile);
-  // Paket belum membuka Tools Pro → tiap kelompok bisa dibeli sebagai add-on (status aktif / harga, coret bila promo).
-  const [offers, quotas]: [Record<string, AddonOffer>, Record<string, AddonQuota>] = access.allowed
-    ? [{}, {}]
-    : await Promise.all([getAddonOffers(admin), getAddonQuotas(admin, profile.id)]);
+  // Add-on bisa dibeli semua paket (status aktif tampil per kelompok); paket tanpa Smart Tools melihat harga tiap kelompok.
+  const [offers, quotas]: [Record<string, AddonOffer>, Record<string, AddonQuota>] = await Promise.all([
+    access.allowed ? Promise.resolve({}) : getAddonOffers(admin, profile.plan_id),
+    getAddonQuotas(admin, profile.id),
+  ]);
+  const S = addonsStoreText(profile.language);
   const lang = profile.language;
   const T = toolsText(lang);
   const ADDONS = localizedAddons(lang);
@@ -59,6 +62,19 @@ export default async function ToolsHub() {
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">{T.agentCardTitle}</span>
               <span className="block text-sm text-muted-foreground">{T.agentCardDesc}</span>
+            </span>
+            <ArrowRight className="size-4 shrink-0 text-primary" />
+          </Link>
+          <Link
+            href="/tools/addons"
+            className="mt-3 flex items-center gap-3 rounded-2xl border p-4 transition-colors hover:border-primary/60 hover:bg-accent/40"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <ShoppingBag className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">{S.storeLink}</span>
+              <span className="block text-sm text-muted-foreground">{S.storeLinkDesc}</span>
             </span>
             <ArrowRight className="size-4 shrink-0 text-primary" />
           </Link>

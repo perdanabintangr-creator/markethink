@@ -73,11 +73,12 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
       code: "plan_required",
       addon: info.addon,
       message: en
-        ? `Pro Tools are available from the Starter plan${offered ? ", or buy just this add-on" : ""}.`
-        : `Tools Pro tersedia mulai paket Starter${offered ? ", atau beli add-on ini saja" : ""}.`,
+        ? `Smart Tools are available from the Starter plan${offered ? ", or buy just this add-on" : ""}.`
+        : `Smart Tools tersedia mulai paket Starter${offered ? ", atau beli add-on ini saja" : ""}.`,
     };
   }
-  const viaAddon = access.via === "addon";
+  // Otak di atas Senior (Associate/Director) dipilih → pakai kuota paket bila paket membuka Smart Tools (add-on selalu otak Senior).
+  const viaAddon = access.via === "addon" && !(access.planAllowed && tier && tier !== DEFAULT_TOOL_TIER);
   if (viaAddon && !(revision ? access.addon?.canRevise : (access.addon?.remaining ?? 0) > 0)) {
     return {
       ok: false,

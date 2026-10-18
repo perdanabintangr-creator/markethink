@@ -39,6 +39,8 @@ export interface ToolAccessLite {
   allowed: boolean;
   /** Sumber hak pakai: paket (kredit bulanan) atau add-on yang dibeli terpisah. */
   via?: "plan" | "addon";
+  /** Paket sendiri membuka Smart Tools (kredit bulanan), terlepas dari add-on. */
+  planAllowed?: boolean;
   /** Status add-on untuk tool ini (diisi bila paket belum membuka Tools Pro). */
   addon?: AddonAccessLite;
   agent: boolean;
@@ -68,7 +70,17 @@ export interface AddonOffer {
   originalPrice?: number;
   promoLabel?: string;
   promoUntil?: string;
+  /** Harga sudah termasuk diskon member Pro/Promax 15%. */
+  memberDiscount?: boolean;
   quota: number;
+}
+
+/** Bundel beberapa add-on dalam satu pembelian. */
+export interface BundleOffer extends Omit<AddonOffer, "quota"> {
+  tagline: string;
+  addons: { id: string; quota: number }[];
+  /** Jumlah harga eceran add-on di dalamnya (untuk "hemat X%"). */
+  retailPrice: number;
 }
 
 /** Perkiraan kredit per hasil Tools Pro per otak (dipotong di awal, lalu disesuaikan ke biaya nyata). 1 kredit ≈ Rp100 modal. */

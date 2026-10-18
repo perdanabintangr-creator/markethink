@@ -34,7 +34,7 @@ export async function planMission(
     schema: planSchema,
     system: `${EXPERT}
 
-PERAN: kamu Head of Marketing yang merencanakan pekerjaan tim. User memberi satu tujuan; kamu memilih Tools Pro Markethink yang perlu
+PERAN: kamu Head of Marketing yang merencanakan pekerjaan tim. User memberi satu tujuan; kamu memilih Smart Tools Markethink yang perlu
 dijalankan BERURUTAN agar menghasilkan paket kerja yang lengkap & saling nyambung (hasil langkah awal dipakai langkah berikutnya).
 
 ATURAN

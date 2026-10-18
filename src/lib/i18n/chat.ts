@@ -50,7 +50,7 @@ const id = {
   quotaTitle: "Kuota bulan ini sudah habis",
   dailyLimitDesc: (notice: string) => `${notice} Paket berbayar tidak punya batas harian, cukup kuota bulanan.`,
   tierLockedDesc:
-    "Starter membuka Senior (strategi & campaign) + semua Tools Pro. Pro menambah Associate (sekelas konsultan) & Markethink Agent. Promax membuka Director, otak paling cerdas.",
+    "Starter membuka Senior (strategi & campaign) + semua Smart Tools. Pro menambah Associate (sekelas konsultan) & Markethink Agent. Promax membuka Director, otak paling cerdas.",
   quotaDesc:
     "Kuota direset otomatis tiap tanggal 1 pukul 00.00 WIB. Butuh lebih banyak sekarang? Upgrade paket untuk kuota bulanan yang lebih besar.",
   seePlansPricing: "Lihat paket & harga",
@@ -105,8 +105,8 @@ const id = {
   downloadPpt: "Unduh PPT",
   downloadPdf: "Unduh PDF",
   updateBlockNote: "\n\n> 🔄 **Hasil di panel kanan diperbarui** sesuai permintaan ini.",
-  readingToolResult: "Membaca hasil Tools Pro…",
-  readToolResult: "Membaca hasil Tools Pro: ",
+  readingToolResult: "Membaca hasil Smart Tools…",
+  readToolResult: "Membaca hasil Smart Tools: ",
   readingLink: "Membaca tautan: ",
   linkUnreadable: "Tidak terbaca: ",
 
@@ -122,7 +122,7 @@ const id = {
   previewFailed: "Pratinjau gagal dimuat. Silakan unduh filenya.",
 
   // Agent: form misi
-  planSteps: ["Memahami tujuanmu", "Memetakan pekerjaan tim marketing", "Memilih Tools Pro yang dibutuhkan", "Mengatur urutan kerja", "Mengecek kuota"],
+  planSteps: ["Memahami tujuanmu", "Memetakan pekerjaan tim marketing", "Memilih Smart Tools yang dibutuhkan", "Mengatur urutan kerja", "Mengecek kuota"],
   goalTooShort: "Ceritakan tujuannya sedikit lebih lengkap, ya.",
   planFailed: "Agent gagal menyusun rencana. Coba lagi.",
   offlineRetry: "Koneksi terputus. Coba lagi.",
@@ -211,7 +211,7 @@ const en: typeof id = {
   quotaTitle: "This month's quota is used up",
   dailyLimitDesc: (notice) => `${notice} Paid plans have no daily limit, just a monthly quota.`,
   tierLockedDesc:
-    "Starter unlocks Senior (strategy & campaigns) + all Tools Pro. Pro adds Associate (consultant-level) & Markethink Agent. Promax unlocks Director, the smartest brain.",
+    "Starter unlocks Senior (strategy & campaigns) + all Smart Tools. Pro adds Associate (consultant-level) & Markethink Agent. Promax unlocks Director, the smartest brain.",
   quotaDesc:
     "Your quota resets automatically on the 1st of every month at 00:00 WIB. Need more now? Upgrade your plan for a bigger monthly quota.",
   seePlansPricing: "See plans & pricing",
@@ -262,8 +262,8 @@ const en: typeof id = {
   downloadPpt: "Download PPT",
   downloadPdf: "Download PDF",
   updateBlockNote: "\n\n> 🔄 **The result in the right panel was updated** based on this request.",
-  readingToolResult: "Reading Tools Pro result…",
-  readToolResult: "Reading Tools Pro result: ",
+  readingToolResult: "Reading Smart Tools result…",
+  readToolResult: "Reading Smart Tools result: ",
   readingLink: "Reading link: ",
   linkUnreadable: "Couldn't read: ",
 
@@ -277,7 +277,7 @@ const en: typeof id = {
   sceneCarouselNote: "The JPEGs & PDF look exactly like this, ready to upload to Instagram/TikTok.",
   previewFailed: "Preview failed to load. Please download the file.",
 
-  planSteps: ["Understanding your goal", "Mapping the marketing team's work", "Picking the Tools Pro you need", "Ordering the workflow", "Checking your quota"],
+  planSteps: ["Understanding your goal", "Mapping the marketing team's work", "Picking the Smart Tools you need", "Ordering the workflow", "Checking your quota"],
   goalTooShort: "Tell us a bit more about your goal.",
   planFailed: "The Agent couldn't build a plan. Try again.",
   offlineRetry: "Connection lost. Try again.",

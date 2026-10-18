@@ -43,7 +43,7 @@ export function ToolLocked({
         </div>
       )}
       <div className={addon ? "mt-3" : "mt-5"}>
-        <PlanCards plans={plans} note={`Dari Tools Pro: ${noteName ?? toolName}`} />
+        <PlanCards plans={plans} note={`Dari Smart Tools: ${noteName ?? toolName}`} />
       </div>
     </section>
   );

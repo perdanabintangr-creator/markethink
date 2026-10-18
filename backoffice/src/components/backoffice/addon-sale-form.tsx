@@ -10,8 +10,11 @@ import { PAYMENT_METHODS, rupiah } from "@/lib/backoffice-format";
 
 const today = () => new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
 
-/** Catat pembelian add-on untuk satu pelanggan. Nominal otomatis = harga × bulan (bisa diubah). */
-export function AddonSaleForm({ userId, addons }: { userId: string; addons: { id: string; name: string; price: number }[] }) {
+/**
+ * Catat pembelian add-on atau bundel untuk satu pelanggan. Nominal otomatis = harga (promo & diskon member Pro/Promax sudah dihitung) × bulan, bisa diubah.
+ * `addons[].id` = "addon:<id>" atau "bundle:<id>".
+ */
+export function AddonSaleForm({ userId, addons, member }: { userId: string; addons: { id: string; name: string; price: number }[]; member?: boolean }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(recordAddonSale, undefined);
   const [addon, setAddon] = useState(addons[0]?.id ?? "");
   const [months, setMonths] = useState(1);
@@ -36,8 +39,8 @@ export function AddonSaleForm({ userId, addons }: { userId: string; addons: { id
     <form action={action} className="grid gap-3 sm:grid-cols-3">
       <input type="hidden" name="user_id" value={userId} />
       <div className="space-y-1.5">
-        <Label>Add-on</Label>
-        <NativeSelect name="addon_id" value={addon} onChange={(e) => setAddon(e.target.value)}>
+        <Label>Add-on / bundel{member ? " (harga member -15%)" : ""}</Label>
+        <NativeSelect name="item" value={addon} onChange={(e) => setAddon(e.target.value)}>
           {addons.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name} ({rupiah(a.price)})
@@ -85,7 +88,7 @@ export function AddonSaleForm({ userId, addons }: { userId: string; addons: { id
       </div>
       <div className="sm:col-span-3">
         <Button type="submit" variant="outline" disabled={pending}>
-          {pending && <Loader2 className="animate-spin" />} Aktifkan add-on & catat penjualan
+          {pending && <Loader2 className="animate-spin" />} Aktifkan & catat penjualan
         </Button>
       </div>
     </form>

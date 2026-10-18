@@ -3,14 +3,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getCreditStatus, IDR_PER_USD } from "@/lib/credits";
 import { promoPrice } from "@/lib/plan-offers";
 import { ADDONS, addonInfo } from "./catalog";
-import { computeAddonQuota, type AddonQuota } from "./addon-quota";
-import type { AddonAccessLite, AddonOffer, ToolAccessLite } from "./format";
+import { computeAddonQuota, hasMemberDiscount, memberPrice, type AddonQuota } from "./addon-quota";
+import type { AddonAccessLite, AddonOffer, BundleOffer, ToolAccessLite } from "./format";
 
 type Profile = { id: string; role: string; plan_id: string };
 
 /**
- * Hak pakai Tools Pro & Markethink Agent: ditentukan paket (feature flag `tools_pro` / `agent`) dan saldo kredit bulanan.
- * Bila paket belum membuka Tools Pro, add-on yang dibeli terpisah (untuk `addonId`) membuka tool kelompok itu.
+ * Hak pakai Smart Tools & Markethink Agent: ditentukan paket (feature flag `tools_pro` / `agent`) dan saldo kredit bulanan.
+ * Add-on yang dibeli terpisah (untuk `addonId`) dipakai lebih dulu di semua paket; untuk Free, add-on satu-satunya pembuka tool.
  * Admin selalu boleh.
  */
 export async function getToolAccess(admin: SupabaseClient, profile: Profile, addonId?: string): Promise<ToolAccessLite> {
@@ -29,10 +29,12 @@ export async function getToolAccess(admin: SupabaseClient, profile: Profile, add
     remaining: credits.remaining,
     monthLimit: credits.monthLimit,
   };
-  if (base.allowed) return { ...base, via: "plan" };
-  if (!addonId || !addonInfo(addonId)) return base;
+  if (!addonId || !addonInfo(addonId) || isAdmin) return base.allowed ? { ...base, via: "plan", planAllowed: true } : base;
+  // Add-on yang dibeli dipakai dulu (semua paket); habis → kuota paket (bila paket membuka Smart Tools).
   const q = (await getAddonQuotas(admin, profile.id, [addonId]))[addonId];
   const addon = toAddonLite(addonId, q);
+  if (addon.active && addon.remaining > 0) return { ...base, allowed: true, via: "addon", addon, planAllowed: base.allowed };
+  if (base.allowed) return { ...base, via: "plan", addon, planAllowed: true };
   return addon.active ? { ...base, allowed: true, via: "addon", addon } : { ...base, addon };
 }
 
@@ -102,26 +104,54 @@ export async function getAddonQuotas(admin: SupabaseClient, userId: string, addo
   return out;
 }
 
-/** Harga add-on yang ditawarkan (harga coret saat promo aktif). Add-on nonaktif tidak ditawarkan. */
-export async function getAddonOffers(admin: SupabaseClient): Promise<Record<string, AddonOffer>> {
+type PromoRow = { price_idr: number | string; promo_price_idr: number | null; promo_label: string | null; promo_until: string | null };
+
+/** Harga yang dibayar: harga promo (bila aktif), lalu diskon member Pro/Promax. Harga normal dicoret bila ada potongan. */
+function priceOf(r: PromoRow, planId?: string): Pick<AddonOffer, "price" | "originalPrice" | "promoLabel" | "promoUntil" | "memberDiscount"> {
+  const price = Number(r.price_idr);
+  const promo = promoPrice(price, r.promo_price_idr, r.promo_until);
+  const member = hasMemberDiscount(planId);
+  const paid = member ? memberPrice(promo ?? price) : (promo ?? price);
+  return {
+    price: paid,
+    ...(paid < price && { originalPrice: price }),
+    ...(promo !== null && {
+      ...(r.promo_label?.trim() && { promoLabel: r.promo_label.trim() }),
+      ...(r.promo_until && { promoUntil: r.promo_until }),
+    }),
+    ...(member && { memberDiscount: true }),
+  };
+}
+
+/** Harga add-on yang ditawarkan ke user (promo + diskon member Pro/Promax). Add-on nonaktif tidak ditawarkan. */
+export async function getAddonOffers(admin: SupabaseClient, planId?: string): Promise<Record<string, AddonOffer>> {
   const { data } = await admin.from("addons").select("id, name, price_idr, monthly_quota, is_active, promo_price_idr, promo_label, promo_until");
   const out: Record<string, AddonOffer> = {};
   for (const r of data ?? []) {
     if (!r.is_active || !addonInfo(r.id)) continue;
-    const price = Number(r.price_idr);
-    if (price <= 0) continue;
-    const promo = promoPrice(price, r.promo_price_idr, r.promo_until);
-    out[r.id] = {
-      id: r.id,
-      name: r.name,
-      price: promo ?? price,
-      quota: Number(r.monthly_quota),
-      ...(promo !== null && {
-        originalPrice: price,
-        ...(r.promo_label?.trim() && { promoLabel: r.promo_label.trim() }),
-        ...(r.promo_until && { promoUntil: r.promo_until }),
-      }),
-    };
+    if (Number(r.price_idr) <= 0) continue;
+    out[r.id] = { id: r.id, name: r.name, quota: Number(r.monthly_quota), ...priceOf(r, planId) };
   }
   return out;
+}
+
+/** Bundel add-on yang ditawarkan (harga lebih murah dari jumlah eceran; promo + diskon member berlaku). */
+export async function getBundleOffers(admin: SupabaseClient, planId?: string): Promise<BundleOffer[]> {
+  const [{ data: bundles }, offers] = await Promise.all([
+    admin.from("addon_bundles").select("id, name, tagline, addon_ids, price_idr, promo_price_idr, promo_label, promo_until, is_active").order("sort_order"),
+    getAddonOffers(admin),
+  ]);
+  return (bundles ?? [])
+    .filter((b) => b.is_active && (b.addon_ids as string[]).every((id) => offers[id]))
+    .map((b) => {
+      const ids = b.addon_ids as string[];
+      return {
+        id: b.id,
+        name: b.name,
+        tagline: b.tagline ?? "",
+        addons: ids.map((id) => ({ id, quota: offers[id].quota })),
+        retailPrice: ids.reduce((sum, id) => sum + (offers[id].originalPrice ?? offers[id].price), 0),
+        ...priceOf(b, planId),
+      };
+    });
 }

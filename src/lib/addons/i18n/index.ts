@@ -132,8 +132,9 @@ export function menuGroupLabel(addonIdOrLabel: string, lang: Lang | null | undef
 export const localizedMenuGroups = (lang: Lang | null | undefined) =>
   MENU_GROUPS.map((g) => ({ addon: g.addon, label: menuGroupLabel(g.addon, lang) }));
 
-/** Section name "Tools Pro" / "Pro Tools". */
-export const proToolsLabel = (lang: Lang | null | undefined) => (isEn(lang) ? "Pro Tools" : "Tools Pro");
+/** Section name "Smart Tools" (same in both languages). */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const proToolsLabel = (_lang?: Lang | null) => "Smart Tools";
 
 // ------------------------------------------------------------------ agent
 
