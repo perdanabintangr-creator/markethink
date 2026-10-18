@@ -44,3 +44,18 @@ describe("laba rugi per akun", () => {
     expect(keys({ cost: 250_000 })).toContain("loss");
   });
 });
+
+describe("harga promo (back office)", async () => {
+  const { activePromo, effectivePrice, endOfDayWIB, dateInputWIB } = await import("@/lib/promo");
+  const row = { monthly_price_idr: 200000 };
+  it("harga efektif ikut promo yang aktif", () => {
+    expect(effectivePrice(row)).toBe(200000);
+    expect(effectivePrice({ ...row, promo_price_idr: 149000 })).toBe(149000);
+    expect(activePromo({ ...row, promo_price_idr: 149000, promo_until: new Date(Date.now() - 1000).toISOString() })).toBeNull();
+  });
+  it("tanggal akhir promo = akhir hari WIB", () => {
+    const iso = endOfDayWIB("2026-11-11");
+    expect(iso).toBe("2026-11-11T16:59:59.000Z");
+    expect(dateInputWIB(iso)).toBe("2026-11-11");
+  });
+});

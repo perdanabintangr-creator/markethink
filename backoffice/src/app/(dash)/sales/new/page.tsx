@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { effectivePrice } from "@/lib/promo";
 import { Card, CardContent } from "@/components/ui/card";
 import { SaleForm } from "@/components/backoffice/sale-form";
 import { PageTitle } from "@/components/backoffice/stat";
@@ -7,8 +8,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Catat penjualan" };
 
 export default async function NewSalePage() {
-  const { data: plans } = await createAdminClient().from("plans").select("id, monthly_price_idr");
-  const prices = Object.fromEntries((plans ?? []).map((p) => [p.id, Number(p.monthly_price_idr)]));
+  const { data: plans } = await createAdminClient().from("plans").select("id, monthly_price_idr, promo_price_idr, promo_until");
+  const prices = Object.fromEntries((plans ?? []).map((p) => [p.id, effectivePrice(p)]));
   return (
     <div className="max-w-3xl">
       <PageTitle

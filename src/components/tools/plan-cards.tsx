@@ -135,7 +135,12 @@ export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanO
                 )}
               >
                 <div className="flex min-h-6 items-center justify-between gap-2">
-                  <p className="text-lg font-semibold">{p.name}</p>
+                  <p className="flex flex-wrap items-center gap-1.5 text-lg font-semibold">
+                    {p.name}
+                    {p.originalPrice !== undefined && (
+                      <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-semibold text-white">{p.promoLabel ?? T.promo}</span>
+                    )}
+                  </p>
                   {best && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                       <Crown className="size-3" /> {T.bestFit}
@@ -170,11 +175,24 @@ export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanO
                   )}
                 </div>
 
-                <p className="mt-5 flex items-baseline gap-1.5">
+                {p.originalPrice !== undefined && (
+                  <p className="mt-5 text-sm text-muted-foreground">
+                    <span className="line-through">Rp{p.originalPrice.toLocaleString("id-ID")}</span>
+                    <span className="ml-1.5 font-medium text-destructive">{T.save(Math.round((1 - p.price / p.originalPrice) * 100))}</span>
+                  </p>
+                )}
+                <p className={cn("flex items-baseline gap-1.5", p.originalPrice === undefined && "mt-5")}>
                   {p.price > 0 && <span className="text-sm text-muted-foreground">Rp</span>}
                   <span className="text-3xl font-bold tracking-tight">{p.price ? p.price.toLocaleString("id-ID") : T.free}</span>
                   {p.price > 0 && <span className="text-sm text-muted-foreground">{P.monthly}</span>}
                 </p>
+{p.promoUntil && (
+                  <p className="text-xs text-muted-foreground">
+                    {T.promoUntil(
+                      new Date(p.promoUntil).toLocaleDateString(T.numberLocale, { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" }),
+                    )}
+                  </p>
+                )}
                 {d && <p className="mt-1 text-sm font-medium text-primary">{d.quota}</p>}
 
                 {d && <FeatureList features={d.features} includes={d.includes} />}

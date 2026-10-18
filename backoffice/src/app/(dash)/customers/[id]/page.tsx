@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { effectivePrice } from "@/lib/promo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
@@ -42,7 +43,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       .order("created_at", { ascending: false })
       .limit(50),
     admin.rpc("admin_user_usage", { p_user_ids: [id], p_days: 30 }),
-    admin.from("plans").select("id, monthly_price_idr"),
+    admin.from("plans").select("id, monthly_price_idr, promo_price_idr, promo_until"),
     admin
       .from("addon_subscriptions")
       .select("id, addon_id, period_start, period_end, amount_idr, months, payment_method, paid_at, refunded_at, note")
@@ -69,7 +70,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
     .reduce<string | null>((a, s) => (!a || s.current_period_end > a ? s.current_period_end : a), null);
   const left = daysUntil(activeUntil);
   const use = (usage ?? [])[0] as { messages: number; images: number; pptx: number; cost_usd: number; last_active: string } | undefined;
-  const prices = Object.fromEntries((plans ?? []).map((p) => [p.id, Number(p.monthly_price_idr)]));
+  const prices = Object.fromEntries((plans ?? []).map((p) => [p.id, effectivePrice(p)]));
   const paid = u.plan_id !== "beta";
   const internal = u.role !== "user";
 

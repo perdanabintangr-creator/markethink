@@ -333,3 +333,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Edit gambar dengan gambar acuan di paket Pro/Promax/admin memakai Gemini Flash Image penuh (Nano Banana 2), bukan Flash-Lite yang gagal menyusun ulang layout. Override: env `OPENROUTER_EDIT_IMAGE_MODEL`.
 - Kredit dipotong sesuai biaya nyata (perkiraan awal ±12 kredit, disesuaikan setelah selesai) → lingkaran kuota ikut penuh, membatasi edit berlebihan. Kuota tidak cukup → edit dengan model biasa (6 kredit).
 - Gambar baru (tanpa acuan) & paket Free/Starter tidak berubah. Setiap edit membawa panduan merapikan tata letak (EDIT_GUIDANCE).
+- (18 Okt, founder) **Harga promo (harga coret) per paket**: owner mengisi harga promo + label (opsional) + tanggal akhir
+  (opsional, akhir hari WIB) di back office → Harga paket. Kolom `plans.promo_price_idr/promo_label/promo_until` (migrasi 0042).
+  Promo aktif bila > 0, lebih murah dari harga normal, dan belum lewat → halaman Paket & kartu upgrade di aplikasi menampilkan
+  harga normal dicoret + "Hemat X%"; otomatis kembali normal setelah tanggal akhir. Nominal otomatis saat catat penjualan &
+  pengaman laba di /profit ikut harga promo (peringatan bila laba minimum < 30%).

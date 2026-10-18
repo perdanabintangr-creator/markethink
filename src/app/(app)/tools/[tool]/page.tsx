@@ -7,7 +7,7 @@ import { addonInfo, toolInfo } from "@/lib/addons/catalog";
 import { getToolAccess } from "@/lib/addons/access";
 import { localizeAddonInfo, localizeToolInfo, localizedCreditText, noQuotaLabel, proToolsLabel } from "@/lib/addons/i18n";
 import { dateL, toolsText } from "@/lib/i18n/tools";
-import { toPlanOffer } from "@/lib/plan-offers";
+import { PLAN_OFFER_COLUMNS, toPlanOffer } from "@/lib/plan-offers";
 import { ToolRunner } from "@/components/tools/tool-runner";
 import { Calculators } from "@/components/tools/calculators";
 import { ToolIcon } from "@/components/tools/tool-icon";
@@ -37,9 +37,9 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
   const locked = !access.allowed;
   const { data: planRows } =
     locked && !info.noQuota
-      ? await supabase.from("plans").select("id, name, monthly_price_idr, monthly_credits").in("id", ["starter", "pro", "promax"]).order("sort_order")
+      ? await supabase.from("plans").select(PLAN_OFFER_COLUMNS).in("id", ["starter", "pro", "promax"]).order("sort_order")
       : { data: [] };
-  const plans = (planRows ?? []).map(toPlanOffer);
+  const plans = (planRows ?? []).map((r) => toPlanOffer(r));
   const { data: runs } = info.noQuota
     ? { data: [] }
     : await supabase
