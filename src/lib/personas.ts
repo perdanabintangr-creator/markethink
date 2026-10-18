@@ -25,7 +25,7 @@ export const INDUSTRIES = [
 
 export const EXPERIENCE = [
   { id: "beginner", label: "Pemula", desc: "Baru mulai belajar marketing", labelEn: "Beginner", descEn: "Just starting to learn marketing" },
-  { id: "intermediate", label: "Menengah", desc: "1–3 tahun praktik", labelEn: "Intermediate", descEn: "1–3 years of practice" },
+  { id: "intermediate", label: "Menengah", desc: "1-3 tahun praktik", labelEn: "Intermediate", descEn: "1-3 years of practice" },
   { id: "advanced", label: "Mahir", desc: "3+ tahun / memimpin tim", labelEn: "Advanced", descEn: "3+ years / leading a team" },
 ] as const;
 

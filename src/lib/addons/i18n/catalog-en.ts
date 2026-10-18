@@ -78,7 +78,7 @@ export const TOOLS_EN: Record<ToolId, ToolTextEn> = {
   plan: {
     name: "Marketing Plan",
     menu: "Marketing Plan",
-    short: "A 3–12 month marketing plan: goals & KPIs, target market, channel strategy, activity calendar and budget allocation.",
+    short: "A 3-12 month marketing plan: goals & KPIs, target market, channel strategy, activity calendar and budget allocation.",
     outputs: ["Executive summary", "Goals & KPIs", "Channel strategy", "Roadmap & calendar", "Budget allocation", "Presentation PPT", "Budget Excel"],
   },
   brand: {
@@ -141,7 +141,7 @@ export const TOOLS_EN: Record<ToolId, ToolTextEn> = {
     name: "Short Video Scripts",
     menu: "Video Scripts",
     short: "Second-by-second Reels/TikTok/Shorts scripts: 3-second hook, scenes, on-screen text, voice-over, CTA & shooting directions.",
-    outputs: ["3–5 scene-by-scene scripts", "Hook variations", "Shot list", "Captions & hashtags", "Script Excel"],
+    outputs: ["3-5 scene-by-scene scripts", "Hook variations", "Shot list", "Captions & hashtags", "Script Excel"],
   },
   audit: {
     name: "Social Media Account Audit",
@@ -154,7 +154,7 @@ export const TOOLS_EN: Record<ToolId, ToolTextEn> = {
     name: "Ad Variation Generator",
     menu: "Ad Variations",
     short: "Ready-to-run ad concepts & copy for Meta/TikTok/Google: distinct angles, headlines, primary text, visuals & an A/B test structure.",
-    outputs: ["6–10 ad variations", "Angles & audiences", "Visual direction", "A/B test plan", "Upload-ready Excel"],
+    outputs: ["6-10 ad variations", "Angles & audiences", "Visual direction", "A/B test plan", "Upload-ready Excel"],
   },
   ads: {
     name: "Ad Report Analyst",
@@ -184,7 +184,7 @@ export const TOOLS_EN: Record<ToolId, ToolTextEn> = {
   promo: {
     name: "Marketplace Promo Calendar",
     menu: "Promo Calendar",
-    short: "A 1–3 month promo plan around double dates, payday & shopping seasons: mechanics, vouchers, targets & stock prep.",
+    short: "A 1-3 month promo plan around double dates, payday & shopping seasons: mechanics, vouchers, targets & stock prep.",
     outputs: ["Campaign calendar", "Mechanics & vouchers", "Promo margin calculation", "Prep checklist", "Calendar Excel"],
   },
   // ------------------------------------------------ CRM & Retention
@@ -236,14 +236,14 @@ export const TOOLS_EN: Record<ToolId, ToolTextEn> = {
 
 /** English counterpart of `AGENT_EXAMPLES` (same order). */
 export const AGENT_EXAMPLES_EN = [
-  "Prepare a Ramadan campaign for my online hijab store, targeting women aged 20–35, with an ad budget of Rp5 million.",
+  "Prepare a Ramadan campaign for my online hijab store, targeting women aged 20-35, with an ad budget of Rp5 million.",
   "I'm launching a liter-size iced milk coffee in Bandung next month. Prepare the launch strategy all the way to a month of content.",
   "Market research & personas for a photobox business in Jakarta, then create a TikTok content plan that can go viral.",
   "Increase repeat orders for my beauty clinic: a loyalty program, a WhatsApp follow-up flow, and promos.",
 ];
 
 export const TOOL_TIER_INFO_EN: Record<ToolTier, { label: string; hint: string }> = {
-  senior: { label: "Senior", hint: "Balanced — fast & sharp for most work." },
-  associate: { label: "Associate", hint: "Deep reasoning — deeper analysis (Pro/Promax plans). Takes a bit longer." },
-  director: { label: "Director", hint: "The smartest brain (Promax plan) — uses 2 quota units per result. Slowest to process." },
+  senior: { label: "Senior", hint: "Balanced, fast & sharp for most work." },
+  associate: { label: "Associate", hint: "Deep reasoning: deeper analysis (Pro/Promax plans). Takes a bit longer." },
+  director: { label: "Director", hint: "The smartest brain (Promax plan). Uses 2 quota units per result and is the slowest to process." },
 };

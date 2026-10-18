@@ -78,7 +78,7 @@ export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: 
   // Revisi tidak riset ulang (lebih cepat & hemat): pakai data & sumber dari hasil sebelumnya.
   if (ctx.revision) {
     const prev = ctx.revision.previous as { sources?: { title: string; url: string }[] } | null;
-    return { text: "(Revisi — tidak ada riset web baru. Pakai data & sumber dari hasil sebelumnya.)", sources: prev?.sources ?? [], webNote: "" };
+    return { text: "(Revisi: tidak ada riset web baru. Pakai data & sumber dari hasil sebelumnya.)", sources: prev?.sources ?? [], webNote: "" };
   }
   // Serper terpasang → riset lewat pencarian Google Serper (±10× lebih murah dari pencarian bawaan Claude).
   if (serperEnabled()) {

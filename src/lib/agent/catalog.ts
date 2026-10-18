@@ -37,7 +37,7 @@ export interface AgentRunLite {
 
 /** Contoh misi di halaman Agent. */
 export const AGENT_EXAMPLES = [
-  "Siapkan kampanye Ramadan untuk toko hijab online saya, target perempuan 20–35 tahun, budget iklan Rp5 juta.",
+  "Siapkan kampanye Ramadan untuk toko hijab online saya, target perempuan 20-35 tahun, budget iklan Rp5 juta.",
   "Saya mau launching produk kopi susu literan bulan depan di Bandung. Siapkan strategi peluncuran sampai konten sebulan.",
   "Riset pasar & persona untuk bisnis photobox di Jakarta, lalu buatkan rencana konten TikTok yang bisa viral.",
   "Naikkan repeat order pelanggan klinik kecantikan saya: program loyalitas, alur follow-up WhatsApp, dan promo.",

@@ -62,7 +62,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       business: {
         label: "Product & target buyers *",
         placeholder:
-          "e.g. Liter-size palm sugar iced milk coffee at Rp45k, sold on Shopee & TikTok Shop. Targeting 22–35 y/o workers in Greater Jakarta who drink coffee daily but want to save money.",
+          "e.g. Liter-size palm sugar iced milk coffee at Rp45k, sold on Shopee & TikTok Shop. Targeting 22-35 y/o workers in Greater Jakarta who drink coffee daily but want to save money.",
       },
       platforms: { label: "Platforms *", options: PLATFORMS_EN },
       goal: {
@@ -80,7 +80,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       resources: { label: "Production capacity (optional)", placeholder: "e.g. 1 person, phone only, no talent" },
       agenda: {
         label: "Promos / agenda that month (optional)",
-        placeholder: "e.g. Payday sale on the 25th–28th, new variant launch on the 10th",
+        placeholder: "e.g. Payday sale on the 25th-28th, new variant launch on the 10th",
       },
     },
   },
@@ -99,7 +99,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       period: { label: "Report period *", placeholder: "e.g. September 2026" },
       attachment_ids: {
         label: "This month's data",
-        hint: "Upload Ads Manager exports, Instagram/TikTok insights, marketplace sales reports, or dashboard screenshots. CSV, Excel, PDF, PNG/JPG — max 5 files.",
+        hint: "Upload Ads Manager exports, Instagram/TikTok insights, marketplace sales reports, or dashboard screenshots. CSV, Excel, PDF, PNG/JPG, max 5 files.",
       },
       data: {
         label: "Or type the key numbers",
@@ -149,7 +149,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       },
       business: {
         label: "Business & current situation *",
-        hint: "Products, price range, sales channels, and current numbers (revenue, orders/customers) if you have them — the more complete, the sharper the plan.",
+        hint: "Products, price range, sales channels, and current numbers (revenue, orders/customers) if you have them. The more complete, the sharper the plan.",
         placeholder:
           "e.g. Liter-size palm sugar iced milk coffee at Rp45k & Rp85k (2 liters). Sold on Shopee, TikTok Shop and 2 takeaway outlets in Bekasi. Revenue ~Rp70M/month, ~1,500 orders, 35% repeat buyers. Gross margin ~55%.",
       },
@@ -161,7 +161,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       team: { label: "Marketing team", placeholder: "e.g. 1 social media admin, 1 freelance designer, owner runs the ads" },
       channels: {
         label: "Channels already in use",
-        hint: "Leave empty if none yet — channels will be recommended.",
+        hint: "Leave empty if none yet, and channels will be recommended.",
         options: CHANNELS_EN,
       },
       challenges: {
@@ -187,14 +187,14 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       business: {
         label: "What you sell & to whom *",
         placeholder:
-          "e.g. Premium instant cooking spice pastes made from real spices (rendang, opor, soto) at Rp28–45k, sold on Shopee, TikTok Shop & supermarkets across Java.",
+          "e.g. Premium instant cooking spice pastes made from real spices (rendang, opor, soto) at Rp28-45k, sold on Shopee, TikTok Shop & supermarkets across Java.",
       },
       audience: {
         label: "Target audience *",
         placeholder:
-          "e.g. Working mothers & young couples aged 25–38 in big cities who want tasty home cooking but don't have time to grind spices.",
+          "e.g. Working mothers & young couples aged 25-38 in big cities who want tasty home cooking but don't have time to grind spices.",
       },
-      personality: { label: "Desired personality (3–5 adjectives)", placeholder: "e.g. warm, authentic, efficient, a bit playful" },
+      personality: { label: "Desired personality (3-5 adjectives)", placeholder: "e.g. warm, authentic, efficient, a bit playful" },
       competitors: { label: "Competitors (optional)", placeholder: "e.g. Bamboe, Sasa bumbu, Indofood Racik" },
       visual_now: {
         label: "Existing logo / colors (optional)",
@@ -220,23 +220,23 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       objective: {
         label: "Campaign objective",
         options: {
-          awareness: "Awareness — reach more people",
-          consideration: "Consideration — get considered & tried",
+          awareness: "Awareness: reach more people",
+          consideration: "Consideration: get considered & tried",
           sales: "Sales",
           launch: "New product/variant launch",
-          retention: "Retention — repeat purchases & loyalty",
+          retention: "Retention: repeat purchases & loyalty",
         },
       },
       product: {
         label: "Product / service being promoted *",
         placeholder:
-          "e.g. Niacinamide 10% Serum 20ml Rp89k — a new variant for oily skin & acne marks, lightweight texture, BPOM-registered.",
+          "e.g. Niacinamide 10% Serum 20ml Rp89k, a new variant for oily skin & acne marks, lightweight texture, BPOM-registered.",
       },
       audience: {
         label: "Target audience",
-        placeholder: "e.g. Women aged 18–27, students & first jobbers, oily skin, buy skincare on TikTok Shop & Shopee",
+        placeholder: "e.g. Women aged 18-27, students & first jobbers, oily skin, buy skincare on TikTok Shop & Shopee",
       },
-      period: { label: "Campaign period", placeholder: "e.g. 1–30 November 2026 (6 weeks including teaser)" },
+      period: { label: "Campaign period", placeholder: "e.g. 1-30 November 2026 (6 weeks including teaser)" },
       budget: { label: "Campaign budget (total)", placeholder: "e.g. Rp60M total (media + KOL + production)" },
       channels: { label: "Channels you want to use", hint: "Leave empty to get recommendations.", options: CHANNELS_EN },
       context: {
@@ -272,7 +272,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       market: {
         label: "Target buyers *",
         placeholder:
-          "e.g. Women aged 20–30, office workers & students in big cities, active outdoors, already use sunscreen but rarely reapply",
+          "e.g. Women aged 20-30, office workers & students in big cities, active outdoors, already use sunscreen but rarely reapply",
       },
       price: { label: "Planned price", placeholder: "e.g. Rp79k (COGS Rp24k)" },
       budget: { label: "Launch budget (total)", placeholder: "e.g. Rp50M for 3 months" },
@@ -299,7 +299,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       topic: {
         label: "Product / topic & key message *",
         placeholder:
-          "e.g. Niacinamide 5% serum Rp89k (30 ml) for acne marks. Message: acne marks fade within 4 weeks of regular use, safe for oily skin. Targeting girls aged 18–28 who often wear heavy concealer.",
+          "e.g. Niacinamide 5% serum Rp89k (30 ml) for acne marks. Message: acne marks fade within 4 weeks of regular use, safe for oily skin. Targeting girls aged 18-28 who often wear heavy concealer.",
       },
       duration: {
         label: "Video length",
@@ -320,7 +320,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
           talking_head: "Talking head",
           pov: "POV",
           tutorial: "Tutorial / how-to",
-          before_after: "Before–after",
+          before_after: "Before & after",
           storytelling: "Storytelling",
           review_ugc: "Review / UGC",
           trend: "Ride a trend",
@@ -348,20 +348,20 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       niche: {
         label: "Brand & what you sell *",
         placeholder:
-          "e.g. Kopi Senja — liter-size palm sugar iced milk coffee at Rp45k, sold on Shopee & TikTok Shop, targeting office workers aged 22–35 in Greater Jakarta.",
+          "e.g. Kopi Senja: liter-size palm sugar iced milk coffee at Rp45k, sold on Shopee & TikTok Shop, targeting office workers aged 22-35 in Greater Jakarta.",
       },
       bio: { label: "Current bio (copy as is)", placeholder: "e.g. Liter-size iced coffee ☕ | Order via Shopee 👇 | linktr.ee/kopisenja" },
       followers: { label: "Follower count", placeholder: "e.g. 3,240" },
-      frequency: { label: "Posts per week", placeholder: "e.g. 2–3x, irregular" },
+      frequency: { label: "Posts per week", placeholder: "e.g. 2-3x, irregular" },
       data: {
-        label: "Data from your last / best 5–10 posts",
+        label: "Data from your last / best 5-10 posts",
         hint: "One line per post: format, topic, views/reach, likes, comments, saves/shares. The more complete, the sharper the audit.",
         placeholder:
-          "e.g.\nReels 12/9 — liter coffee brewing tutorial — 8,400 views, 210 likes, 14 comments, 96 saves\nCarousel 10/9 — 9.9 promo — 900 reach, 31 likes, 2 comments\nProduct photo 7/9 — 640 reach, 22 likes",
+          "e.g.\nReels 12/9, liter coffee brewing tutorial: 8,400 views, 210 likes, 14 comments, 96 saves\nCarousel 10/9, 9.9 promo: 900 reach, 31 likes, 2 comments\nProduct photo 7/9: 640 reach, 22 likes",
       },
       attachment_ids: {
         label: "Profile & insight screenshots (optional)",
-        hint: "Screenshots of your profile page, grid, and 30-day insights/analytics. PNG/JPG/PDF — max 5 files.",
+        hint: "Screenshots of your profile page, grid, and 30-day insights/analytics. PNG/JPG/PDF, max 5 files.",
       },
       goal: {
         label: "Account goal",
@@ -416,7 +416,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       count: { label: "Number of variations", suffix: "variations" },
       audience: {
         label: "Target audience (optional)",
-        placeholder: "e.g. Office workers aged 22–35 in Greater Jakarta, drink coffee daily, often buy Rp25k coffees",
+        placeholder: "e.g. Office workers aged 22-35 in Greater Jakarta, drink coffee daily, often buy Rp25k coffees",
       },
       usp: {
         label: "Advantages & proof (optional)",
@@ -464,7 +464,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
         label: "Main products, selling price & COGS/margin *",
         hint: "One product per line. The more complete the COGS, the more accurate the promo margin math.",
         placeholder:
-          "e.g.\nNiacinamide Serum 30ml — sells at Rp149,000, COGS Rp38,000 (~60 sold/day)\nMoisturizer Gel 50g — sells at Rp119,000, COGS Rp31,000\nSunscreen SPF50 — sells at Rp89,000, COGS Rp27,000",
+          "e.g.\nNiacinamide Serum 30ml: sells at Rp149,000, COGS Rp38,000 (~60 sold/day)\nMoisturizer Gel 50g: sells at Rp119,000, COGS Rp31,000\nSunscreen SPF50: sells at Rp89,000, COGS Rp27,000",
       },
       budget: {
         label: "Discount subsidy capacity & ad budget (optional)",
@@ -491,7 +491,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       business: {
         label: "Business, products, prices & how to order *",
         placeholder:
-          "e.g. Dimsum Laras — frozen dimsum, 20 pcs Rp65,000, value pack of 3 Rp180,000. Orders via WhatsApp admin & website, instant delivery in Greater Jakarta, frozen courier across Java. Buyers are mostly housewives aged 28–40.",
+          "e.g. Dimsum Laras: frozen dimsum, 20 pcs Rp65,000, value pack of 3 Rp180,000. Orders via WhatsApp admin & website, instant delivery in Greater Jakarta, frozen courier across Java. Buyers are mostly housewives aged 28-40.",
       },
       channel: { label: "Follow-up channel", options: { whatsapp: "WhatsApp", email: "Email", both: "WhatsApp + email" } },
       cycle: { label: "Repurchase cycle", hint: "Average time before a customer buys again.", suffix: "days" },
@@ -525,7 +525,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       business: {
         label: "Business & customers *",
         placeholder:
-          "e.g. Kopi Tepi Kota — 3 iced milk coffee outlets in Bandung + GrabFood/GoFood. Best seller: iced milk coffee Rp28k. Customers are students & workers aged 20–30; the cashier uses Moka POS.",
+          "e.g. Kopi Tepi Kota: 3 iced milk coffee outlets in Bandung + GrabFood/GoFood. Best seller: iced milk coffee Rp28k. Customers are students & workers aged 20-30; the cashier uses Moka POS.",
       },
       aov: { label: "Average spend per transaction (Rp)" },
       margin: { label: "Gross margin", suffix: "%" },
@@ -557,7 +557,7 @@ export const FORMS_EN: Record<string, FormTextEn> = {
       "Building the PPT & Excel…",
     ],
     fields: {
-      campaign: { label: "Campaign name *", placeholder: "e.g. Glow Up 10.10 — Niacinamide Serum" },
+      campaign: { label: "Campaign name *", placeholder: "e.g. Glow Up 10.10: Niacinamide Serum" },
       brand: { label: "Brand / client", placeholder: "e.g. Skinfaa" },
       objective: {
         label: "Campaign objective",
@@ -568,10 +568,10 @@ export const FORMS_EN: Record<string, FormTextEn> = {
           install: "Installs / sign-ups",
         },
       },
-      period: { label: "Posting period", placeholder: "e.g. 1–15 October 2026" },
+      period: { label: "Posting period", placeholder: "e.g. 1-15 October 2026" },
       attachment_ids: {
         label: "Creator results data",
-        hint: "Upload your team's recap, TikTok Shop Affiliate / Shopee Affiliate exports, or insight screenshots for each post. CSV, Excel, PDF, PNG/JPG — max 5 files.",
+        hint: "Upload your team's recap, TikTok Shop Affiliate / Shopee Affiliate exports, or insight screenshots for each post. CSV, Excel, PDF, PNG/JPG, max 5 files.",
       },
       data: {
         label: "Or type the data per creator",

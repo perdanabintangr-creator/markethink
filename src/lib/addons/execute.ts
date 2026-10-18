@@ -168,7 +168,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
           ? "File laporan tidak ditemukan. Upload ulang filenya."
           : msg === "FILE_UNREADABLE"
             ? "Isi file tidak terbaca. Upload export Excel/CSV, atau screenshot/PDF tabel yang jelas. Kuota tidak terpakai."
-            : "Maaf, tool sedang bermasalah. Kuota kamu tidak terpotong — coba lagi sebentar lagi.",
+            : "Maaf, tool sedang bermasalah. Kuota kamu tidak terpotong, coba lagi sebentar lagi.",
     };
   }
 }

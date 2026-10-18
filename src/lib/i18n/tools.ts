@@ -44,8 +44,8 @@ const id = {
   notEnoughQuota: "Sisa kuota bulan ini tidak cukup untuk hasil ini.",
   refundNote: "Kalau gagal, kuota kembali penuh.",
   createNow: "Buat sekarang",
-  lowQuotaSeePlans: "Kuota kurang — lihat paket",
-  dontCloseRunner: "Jangan tutup halaman ini — hasilnya langsung terbuka begitu siap.",
+  lowQuotaSeePlans: "Kuota kurang, lihat paket",
+  dontCloseRunner: "Jangan tutup halaman ini. Hasilnya langsung terbuka begitu siap.",
 
   /** Form khusus tool lama (label/hint/placeholder/opsi — `value` opsi tidak pernah diterjemahkan). */
   lf: {
@@ -68,7 +68,7 @@ const id = {
     surveyPopulationPh: "mis. 2000",
     sampleA: "Kamu butuh minimal ",
     sampleN: (n: string) => `${n} responden`,
-    sampleB: " — disarankan sebar ke",
+    sampleB: ". Disarankan sebar ke",
     sampleC: " (cadangan 20% untuk jawaban tidak valid).",
     surveyTopicLabel: SURVEY_TOPIC_LABEL as Record<string, string>,
     surveyLengthLabel: SURVEY_LENGTH as Record<string, string>,
@@ -82,7 +82,7 @@ const id = {
     audience: "Target pembeli",
     audiencePh: "mis. pekerja kantoran 22-35 th di Jabodetabek",
     features: "Keunggulan & spesifikasi *",
-    featuresHint: "Bahan, ukuran, varian, manfaat, isi paket, garansi — makin lengkap makin bagus.",
+    featuresHint: "Bahan, ukuran, varian, manfaat, isi paket, garansi. Makin lengkap makin bagus.",
     featuresPh: "mis. Pakai gula aren asli, tanpa pengawet, tahan 5 hari di kulkas, varian: original & less sugar…",
     currentTitle: "Judul produk sekarang (opsional)",
     currentTitleHint: "Isi bila ingin dibandingkan sebelum vs sesudah.",
@@ -90,7 +90,7 @@ const id = {
     // live
     liveProducts: "Produk yang dijual saat live *",
     liveProductsHint: "Tulis nama, harga, dan keunggulan tiap produk.",
-    liveProductsPh: "mis. 1) Serum Vit C 20ml Rp89rb — mencerahkan 14 hari…",
+    liveProductsPh: "mis. 1) Serum Vit C 20ml Rp89rb, mencerahkan 14 hari…",
     livePromo: "Promo khusus live",
     livePromoPh: "mis. Diskon 30% + gratis ongkir, beli 2 gratis 1 jam 20.00",
     duration: "Durasi",
@@ -104,7 +104,7 @@ const id = {
     tone: "Nada bicara",
     toneOpt: { ramah: "Ramah", profesional: "Profesional", santai: "Santai", lucu: "Lucu" } as Record<string, string>,
     waProducts: "Produk / layanan",
-    waProductsPh: "mis. Hijab voal motif, pashmina, ciput — harga 35-89rb",
+    waProductsPh: "mis. Hijab voal motif, pashmina, ciput, harga 35-89rb",
     waPromo: "Promo yang sedang berjalan",
     waPromoPh: "mis. Payday sale 25-28: diskon 20% semua produk",
     waGoals: "Jenis pesan *",
@@ -240,7 +240,7 @@ const id = {
   save: (pct: number) => `Hemat ${pct}%`,
   promoUntil: (date: string) => `Berlaku s.d. ${date}`,
   currentPlan: "Paket kamu sekarang",
-  sentContact: "Terkirim — tim kami segera menghubungi kamu.",
+  sentContact: "Terkirim. Tim kami segera menghubungi kamu.",
   choosePlan: (name: string) => `Pilih ${name}`,
   // request add-on
   buyAddon: "Beli add-on",
@@ -259,7 +259,7 @@ const id = {
   // tool locked
   lockedTitle: (name: string) => `${name} tersedia mulai paket Starter`,
   lockedDesc:
-    "Tools Pro menghasilkan dokumen setara konsultan & agency (halaman visual + PPT/Excel). Semua paket berbayar sudah termasuk Tools Pro — pemakaiannya memakai kuota bulanan paket.",
+    "Tools Pro menghasilkan dokumen setara konsultan & agency (halaman visual + PPT/Excel). Semua paket berbayar sudah termasuk Tools Pro, dan pemakaiannya memakai kuota bulanan paket.",
 
   // ---------------------------------------------------------------- halaman /tools
   hubDesc: "Dikelompokkan per peran di tim marketing. Hasilnya setara deliverable konsultan & agency: halaman visual + file PPT/Excel siap presentasi.",
@@ -283,15 +283,15 @@ const id = {
   previousResult: "hasil sebelumnya",
   corrected: ". Yang dikoreksi:",
   madeWith: "Dibuat dengan Markethink Tools Pro · cek ulang angka & klaim sebelum dipublikasikan.",
-  runFailed: "Hasil gagal dibuat — kuota kamu dikembalikan penuh.",
+  runFailed: "Hasil gagal dibuat. Kuota kamu dikembalikan penuh.",
   tryAgain: "Coba lagi",
   stillProcessing: "Masih diproses… muat ulang halaman ini sebentar lagi.",
 
   // /tools/agent
   newBadge: "Baru",
-  agentDesc: "Beri satu tujuan — Agent menjalankan beberapa Tools Pro berurutan sampai paket kerjanya lengkap.",
+  agentDesc: "Beri satu tujuan, lalu Agent menjalankan beberapa Tools Pro berurutan sampai paket kerjanya lengkap.",
   agentHow: [
-    { t: "1. Ceritakan tujuanmu", d: "Satu kalimat cukup — mis. kampanye Ramadan, launching produk, naikkan repeat order." },
+    { t: "1. Ceritakan tujuanmu", d: "Satu kalimat cukup, mis. kampanye Ramadan, launching produk, naikkan repeat order." },
     { t: "2. Agent menyusun rencana", d: "Memilih Tools Pro yang dibutuhkan & urutannya, seperti Head of Marketing membagi tugas tim." },
     { t: "3. Dikerjakan berurutan", d: "Setiap hasil jadi bahan langkah berikutnya, jadi persona, strategi, dan konten saling nyambung." },
     { t: "4. Terima satu paket", d: "Semua hasil + PPT/Excel + ringkasan eksekutif & rencana eksekusi, siap dibahas di chat." },
@@ -345,8 +345,8 @@ const en: typeof id = {
   notEnoughQuota: "This month's remaining quota isn't enough for this result.",
   refundNote: "If it fails, your quota is fully refunded.",
   createNow: "Create now",
-  lowQuotaSeePlans: "Low quota — see plans",
-  dontCloseRunner: "Don't close this page — the result opens as soon as it's ready.",
+  lowQuotaSeePlans: "Low quota, see plans",
+  dontCloseRunner: "Don't close this page. The result opens as soon as it's ready.",
 
   lf: {
     surveyObjective: "What do you want to find out? *",
@@ -367,7 +367,7 @@ const en: typeof id = {
     surveyPopulationPh: "e.g. 2000",
     sampleA: "You need at least ",
     sampleN: (n: string) => `${n} respondents`,
-    sampleB: " — we recommend sending it to",
+    sampleB: ". We recommend sending it to",
     sampleC: " (20% buffer for invalid answers).",
     surveyTopicLabel: {
       awareness: "Brand awareness",
@@ -387,14 +387,14 @@ const en: typeof id = {
     audience: "Target buyers",
     audiencePh: "e.g. office workers aged 22-35 in Greater Jakarta",
     features: "Benefits & specifications *",
-    featuresHint: "Ingredients, size, variants, benefits, package contents, warranty — the more complete the better.",
+    featuresHint: "Ingredients, size, variants, benefits, package contents, warranty. The more complete the better.",
     featuresPh: "e.g. Made with real palm sugar, no preservatives, keeps 5 days in the fridge, variants: original & less sugar…",
     currentTitle: "Current product title (optional)",
     currentTitleHint: "Fill in if you want a before vs after comparison.",
     platformReq: "Platform *",
     liveProducts: "Products sold during the live *",
     liveProductsHint: "Write the name, price, and key benefits of each product.",
-    liveProductsPh: "e.g. 1) Vit C Serum 20ml Rp89k — brightens in 14 days…",
+    liveProductsPh: "e.g. 1) Vit C Serum 20ml Rp89k, brightens in 14 days…",
     livePromo: "Live-only promo",
     livePromoPh: "e.g. 30% off + free shipping, buy 2 get 1 free at 8 PM",
     duration: "Duration",
@@ -407,7 +407,7 @@ const en: typeof id = {
     tone: "Tone of voice",
     toneOpt: { ramah: "Friendly", profesional: "Professional", santai: "Relaxed", lucu: "Funny" },
     waProducts: "Products / services",
-    waProductsPh: "e.g. Patterned voile hijabs, pashminas, inner caps — Rp35-89k",
+    waProductsPh: "e.g. Patterned voile hijabs, pashminas, inner caps, Rp35-89k",
     waPromo: "Current promo",
     waPromoPh: "e.g. Payday sale 25-28: 20% off all products",
     waGoals: "Message types *",
@@ -479,7 +479,7 @@ const en: typeof id = {
     budgetOpt: "Budget (optional)",
     budgetOptPh: "e.g. Rp10 million",
     creatorTiers: "Creator tiers *",
-    kolTierLabel: { nano: "Nano (1k–10k)", micro: "Micro (10k–100k)", macro: "Macro (100k–1M)", mega: "Mega (>1M)" },
+    kolTierLabel: { nano: "Nano (1k-10k)", micro: "Micro (10k-100k)", macro: "Macro (100k-1M)", mega: "Mega (>1M)" },
     timeline: "Timeline (optional)",
     timelinePh: "e.g. goes live December 1-14",
     keyMessage: "Key message (optional)",
@@ -542,7 +542,7 @@ const en: typeof id = {
   save: (pct: number) => `Save ${pct}%`,
   promoUntil: (date: string) => `Ends ${date}`,
   currentPlan: "Your current plan",
-  sentContact: "Sent — our team will contact you shortly.",
+  sentContact: "Sent. Our team will contact you shortly.",
   choosePlan: (name: string) => `Choose ${name}`,
   buyAddon: "Buy add-on",
   requestSent: "Request sent 🎉",
@@ -559,7 +559,7 @@ const en: typeof id = {
 
   lockedTitle: (name: string) => `${name} is available from the Starter plan`,
   lockedDesc:
-    "Pro Tools produce consultant- & agency-grade documents (visual page + PPT/Excel). Every paid plan includes Pro Tools — usage draws from the plan's monthly quota.",
+    "Pro Tools produce consultant- & agency-grade documents (visual page + PPT/Excel). Every paid plan includes Pro Tools, and usage draws from the plan's monthly quota.",
 
   hubDesc: "Grouped by role in a marketing team. Results match consultant & agency deliverables: a visual page + presentation-ready PPT/Excel files.",
   hubQuotaNote: "All tools use your plan's monthly quota. If a result fails, your quota is fully refunded.",
@@ -580,14 +580,14 @@ const en: typeof id = {
   previousResult: "previous result",
   corrected: ". What was corrected:",
   madeWith: "Made with Markethink Pro Tools · double-check numbers & claims before publishing.",
-  runFailed: "The result couldn't be created — your quota has been fully refunded.",
+  runFailed: "The result couldn't be created. Your quota has been fully refunded.",
   tryAgain: "Try again",
   stillProcessing: "Still processing… reload this page in a moment.",
 
   newBadge: "New",
-  agentDesc: "Give it one goal — the Agent runs several Pro Tools in sequence until the work package is complete.",
+  agentDesc: "Give it one goal, and the Agent runs several Pro Tools in sequence until the work package is complete.",
   agentHow: [
-    { t: "1. Describe your goal", d: "One sentence is enough — e.g. a Ramadan campaign, a product launch, more repeat orders." },
+    { t: "1. Describe your goal", d: "One sentence is enough, e.g. a Ramadan campaign, a product launch, more repeat orders." },
     { t: "2. The Agent makes a plan", d: "Picks the Pro Tools needed and their order, like a Head of Marketing assigning team tasks." },
     { t: "3. Executed in sequence", d: "Each result feeds the next step, so personas, strategy, and content all connect." },
     { t: "4. Get one package", d: "All results + PPT/Excel + an executive summary & execution plan, ready to discuss in chat." },

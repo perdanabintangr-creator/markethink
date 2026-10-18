@@ -28,7 +28,7 @@ const id = {
   } as Record<SettingsTabId, string>,
   descGeneral: "Tampilan & bahasa aplikasi.",
   descProfile: "Markethink menyesuaikan contoh, istilah, dan saran dengan peran & industrimu.",
-  descPersonalization: "Atur cara Markethink menjawab di semua chat — seperti punya asisten yang sudah hafal kebiasaanmu.",
+  descPersonalization: "Atur cara Markethink menjawab di semua chat, seperti punya asisten yang sudah hafal kebiasaanmu.",
   descMemory: "Hal yang diingat Markethink tentang kamu (gaya bahasa, industri, brand). Dipakai untuk personalisasi semua chat.",
   descProject:
     "Tiap project punya Brand Kit sendiri (logo, warna, gaya desain, tone, target audience). Semua chat, PPT, carousel & foto produk di project itu otomatis mengikuti Brand Kit-nya.",
@@ -129,13 +129,13 @@ const id = {
     "Contoh: Saya social media officer brand skincare lokal. Jawab pakai bahasa santai, selalu kasih 3 opsi hook, dan sertakan hashtag.",
   customExamples: [
     "Selalu sertakan contoh caption siap posting.",
-    "Target saya ibu muda 25–35 th di Jabodetabek.",
+    "Target saya ibu muda 25-35 th di Jabodetabek.",
     "Hindari emoji berlebihan.",
     "Kalau membuat strategi, sertakan estimasi budget dalam Rupiah.",
   ],
   charLimit: "1.500",
   savePersonalization: "Simpan personalisasi",
-  personalizationSaved: "Personalisasi tersimpan — berlaku di chat berikutnya",
+  personalizationSaved: "Personalisasi tersimpan, berlaku di chat berikutnya",
 
   // ── Memori ──
   memoryPlaceholder: "Tambah memory, mis. 'Saya suka jawaban singkat pakai bullet'",
@@ -188,7 +188,7 @@ const id = {
 
   // ── Projects ──
   projectsDesc:
-    "Satu project per brand/klien. Isi Brand Kit & upload dokumen — semua chat di project otomatis memakai konteks project itu saja, terpisah dari project lain (termasuk memory-nya).",
+    "Satu project per brand/klien. Isi Brand Kit & upload dokumen. Semua chat di project otomatis memakai konteks project itu saja, terpisah dari project lain (termasuk memory-nya).",
   newProjectPlaceholder: "Nama project (brand / klien) baru",
   create: "Buat",
   brandKitFilledOf: (n: number) => `Brand Kit: ${n}/8 terisi`,
@@ -225,7 +225,7 @@ const id = {
     usp: { label: "USP", placeholder: "Kenapa orang harus pilih brand ini" },
     competitors: { label: "Kompetitor", placeholder: "Nama kompetitor & bedanya" },
     channels: { label: "Channel aktif", placeholder: "IG, TikTok, Shopee, WhatsApp, website" },
-    budget_range: { label: "Budget range", placeholder: "mis. Rp5–15 juta/bulan" },
+    budget_range: { label: "Budget range", placeholder: "mis. Rp5-15 juta/bulan" },
     notes: { label: "Catatan lain", placeholder: "Do & don't, momen penting, dll" },
   } as Record<BrandKitFieldKey, { label: string; placeholder: string }>,
   visualIdentity: "Identitas visual",
@@ -244,7 +244,7 @@ const id = {
   logoAlt: "Logo brand",
   logoMustBeImage: "Logo harus berupa gambar (PNG/JPG/WebP).",
   logoUploadFailed: "Gagal upload logo.",
-  logoUploaded: "Logo terunggah — klik Simpan Brand Kit.",
+  logoUploaded: "Logo terunggah. Klik Simpan Brand Kit.",
   changeLogo: "Ganti logo",
   uploadLogo: "Upload logo",
   remove: "Hapus",
@@ -270,7 +270,7 @@ const en: typeof id = {
   },
   descGeneral: "App appearance & language.",
   descProfile: "Markethink tailors its examples, terms, and suggestions to your role & industry.",
-  descPersonalization: "Set how Markethink answers in every chat — like an assistant who already knows your habits.",
+  descPersonalization: "Set how Markethink answers in every chat, like an assistant who already knows your habits.",
   descMemory: "What Markethink remembers about you (writing style, industry, brand). Used to personalize every chat.",
   descProject:
     "Each project has its own Brand Kit (logo, colors, design style, tone, target audience). All chats, decks, carousels & product photos in that project automatically follow its Brand Kit.",
@@ -363,13 +363,13 @@ const en: typeof id = {
     "Example: I'm a social media officer for a local skincare brand. Answer in a casual tone, always give 3 hook options, and include hashtags.",
   customExamples: [
     "Always include a ready-to-post caption example.",
-    "My target audience is young moms aged 25–35 in Greater Jakarta.",
+    "My target audience is young moms aged 25-35 in Greater Jakarta.",
     "Avoid excessive emojis.",
     "When creating a strategy, include a budget estimate in Rupiah.",
   ],
   charLimit: "1,500",
   savePersonalization: "Save personalization",
-  personalizationSaved: "Personalization saved — applies from your next chat",
+  personalizationSaved: "Personalization saved. It applies from your next chat",
 
   memoryPlaceholder: "Add a memory, e.g. 'I prefer short answers with bullet points'",
   add: "Add",
@@ -417,7 +417,7 @@ const en: typeof id = {
   pricingQuotaLeft: (pct) => `${pct}% of this month's quota left`,
 
   projectsDesc:
-    "One project per brand/client. Fill in the Brand Kit & upload documents — every chat in a project automatically uses only that project's context, kept separate from other projects (including its memory).",
+    "One project per brand/client. Fill in the Brand Kit & upload documents. Every chat in a project automatically uses only that project's context, kept separate from other projects (including its memory).",
   newProjectPlaceholder: "New project name (brand / client)",
   create: "Create",
   brandKitFilledOf: (n) => `Brand Kit: ${n}/8 filled`,
@@ -459,7 +459,7 @@ const en: typeof id = {
     usp: { label: "USP", placeholder: "Why people should choose this brand" },
     competitors: { label: "Competitors", placeholder: "Competitor names & how you differ" },
     channels: { label: "Active channels", placeholder: "IG, TikTok, Shopee, WhatsApp, website" },
-    budget_range: { label: "Budget range", placeholder: "e.g. Rp5–15 million/month" },
+    budget_range: { label: "Budget range", placeholder: "e.g. Rp5-15 million/month" },
     notes: { label: "Other notes", placeholder: "Do's & don'ts, key moments, etc." },
   },
   visualIdentity: "Visual identity",
@@ -490,7 +490,7 @@ const en: typeof id = {
   logoAlt: "Brand logo",
   logoMustBeImage: "Logo must be an image (PNG/JPG/WebP).",
   logoUploadFailed: "Couldn't upload logo.",
-  logoUploaded: "Logo uploaded — click Save Brand Kit.",
+  logoUploaded: "Logo uploaded. Click Save Brand Kit.",
   changeLogo: "Change logo",
   uploadLogo: "Upload logo",
   remove: "Remove",

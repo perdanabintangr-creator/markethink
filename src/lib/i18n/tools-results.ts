@@ -43,7 +43,7 @@ const id = {
     copied: "Tersalin",
     copyFailed: "Gagal menyalin. Salin manual ya.",
     printPdf: "Cetak / simpan PDF",
-    noWebResearch: "Riset web tidak tersedia saat ini — analisis memakai pengetahuan umum AI.",
+    noWebResearch: "Riset web tidak tersedia saat ini, jadi analisis memakai pengetahuan umum AI.",
     researchSources: "Sumber riset",
     nSources: (n: number) => `${n} sumber`,
     recommendations: "Rekomendasi",
@@ -72,7 +72,7 @@ const id = {
 
   researchNotes: {
     title: "Temuan riset lengkap",
-    desc: (n: number) => `Semua fakta detail dari riset web${n ? ` · ${n} sumber` : ""} — klik nomor [n] untuk membuka sumbernya.`,
+    desc: (n: number) => `Semua fakta detail dari riset web${n ? ` · ${n} sumber` : ""}. Klik nomor [n] untuk membuka sumbernya.`,
   },
 
   labels: {
@@ -153,7 +153,7 @@ const id = {
   },
 
   live: {
-    segmentOf: (i: number, n: number, s: number, e: number) => `Segmen ${i}/${n} · menit ${s}–${e}`,
+    segmentOf: (i: number, n: number, s: number, e: number) => `Segmen ${i}/${n} · menit ${s}-${e}`,
     close: "Tutup",
     actions: (s: string) => `Aksi: ${s}`,
     prev: "Sebelumnya",
@@ -214,7 +214,7 @@ const id = {
     timeline: "📅 Timeline",
     kpi: "🎯 KPI",
     fee: "💰 Estimasi fee kreator",
-    feeHint: "Perkiraan pasar — sesuaikan dengan rate card kreator",
+    feeHint: "Perkiraan pasar, sesuaikan dengan rate card kreator",
     thTier: "Tier",
     thFollowers: "Followers",
     thFee: "Fee / konten",
@@ -314,7 +314,7 @@ const id = {
   },
 
   entry: {
-    verdict: { go: "LAYAK — jalan", go_bersyarat: "LAYAK BERSYARAT", tunda: "TUNDA DULU", no_go: "TIDAK LAYAK" } as Labels,
+    verdict: { go: "LAYAK, jalan", go_bersyarat: "LAYAK BERSYARAT", tunda: "TUNDA DULU", no_go: "TIDAK LAYAK" } as Labels,
     scoreAria: (s: number) => `Skor ${s}`,
     impactAxis: "Dampak →",
     likelihoodAxis: "Peluang terjadi →",
@@ -346,7 +346,7 @@ const id = {
     riskMap: "Peta risiko",
     plan90: "Rencana 90 hari",
     barriers: "Hambatan masuk",
-    note: "Catatan: angka adalah perkiraan berbasis riset publik — validasi dengan uji pasar kecil (mis. pre-order / tes iklan) sebelum investasi besar.",
+    note: "Catatan: angka adalah perkiraan berbasis riset publik. Validasi dengan uji pasar kecil (mis. pre-order / tes iklan) sebelum investasi besar.",
   },
 
   report: {
@@ -426,7 +426,7 @@ const id = {
     copyEmail: "Salin email + naskah",
     pitchNote: "Kirim personal per wartawan (ganti [Nama wartawan]); tempel naskah di badan email, lampirkan foto via tautan.",
     targets: "Daftar media sasaran",
-    targetsHint: "Isi nama wartawan dari kontak tim sendiri — tidak kami karang",
+    targetsHint: "Isi nama wartawan dari kontak tim sendiri (tidak kami karang)",
     priority: (v: string) => `prioritas ${v}`,
     angle: "Angle · ",
     social: "Versi singkat media sosial",
@@ -742,7 +742,7 @@ const id = {
     margins: "Hitung margin setelah promo",
     marginsHint: "Dihitung ulang sistem: harga promo − HPP − biaya platform − biaya lain",
     marginHeaders: ["Produk · skenario", "Harga → promo", "HPP", "Biaya platform", "Biaya lain", "Margin/unit", "Status"],
-    marginNote: "Status: rugi bila margin < 0, tipis bila < 10% dari harga promo, aman bila ≥ 10%. Biaya platform adalah perkiraan — cek tarif terbaru di Seller Centre.",
+    marginNote: "Status: rugi bila margin < 0, tipis bila < 10% dari harga promo, aman bila ≥ 10%. Biaya platform adalah perkiraan, jadi cek tarif terbaru di Seller Centre.",
     stock: "Persiapan stok",
     stockHeaders: ["Produk", "Event puncak", "Unit dibutuhkan", "Siap di gudang", "Dasar hitungan"],
     checklist: "Checklist persiapan event besar",
@@ -858,7 +858,7 @@ const en: ResultsText = {
     copied: "Copied",
     copyFailed: "Couldn't copy. Please copy it manually.",
     printPdf: "Print / save as PDF",
-    noWebResearch: "Web research isn't available right now — the analysis uses the AI's general knowledge.",
+    noWebResearch: "Web research isn't available right now, so the analysis uses the AI's general knowledge.",
     researchSources: "Research sources",
     nSources: (n) => `${n} ${n === 1 ? "source" : "sources"}`,
     recommendations: "Recommendations",
@@ -887,7 +887,7 @@ const en: ResultsText = {
 
   researchNotes: {
     title: "Full research findings",
-    desc: (n) => `All detailed facts from the web research${n ? ` · ${n} ${n === 1 ? "source" : "sources"}` : ""} — click a number [n] to open its source.`,
+    desc: (n) => `All detailed facts from the web research${n ? ` · ${n} ${n === 1 ? "source" : "sources"}` : ""}. Click a number [n] to open its source.`,
   },
 
   labels: {
@@ -991,7 +991,7 @@ const en: ResultsText = {
   },
 
   live: {
-    segmentOf: (i, n, s, e) => `Segment ${i}/${n} · minute ${s}–${e}`,
+    segmentOf: (i, n, s, e) => `Segment ${i}/${n} · minute ${s}-${e}`,
     close: "Close",
     actions: (s) => `Actions: ${s}`,
     prev: "Previous",
@@ -1052,7 +1052,7 @@ const en: ResultsText = {
     timeline: "📅 Timeline",
     kpi: "🎯 KPIs",
     fee: "💰 Creator fee estimate",
-    feeHint: "Market estimate — adjust to each creator's rate card",
+    feeHint: "Market estimate, adjust to each creator's rate card",
     thTier: "Tier",
     thFollowers: "Followers",
     thFee: "Fee / content",
@@ -1152,7 +1152,7 @@ const en: ResultsText = {
   },
 
   entry: {
-    verdict: { go: "VIABLE — go", go_bersyarat: "VIABLE WITH CONDITIONS", tunda: "HOLD FOR NOW", no_go: "NOT VIABLE" },
+    verdict: { go: "VIABLE, go", go_bersyarat: "VIABLE WITH CONDITIONS", tunda: "HOLD FOR NOW", no_go: "NOT VIABLE" },
     scoreAria: (s) => `Score ${s}`,
     impactAxis: "Impact →",
     likelihoodAxis: "Likelihood →",
@@ -1184,7 +1184,7 @@ const en: ResultsText = {
     riskMap: "Risk map",
     plan90: "90-day plan",
     barriers: "Barriers to entry",
-    note: "Note: figures are estimates based on public research — validate with a small market test (e.g. pre-orders / ad tests) before investing heavily.",
+    note: "Note: figures are estimates based on public research. Validate with a small market test (e.g. pre-orders / ad tests) before investing heavily.",
   },
 
   report: {
@@ -1264,7 +1264,7 @@ const en: ResultsText = {
     copyEmail: "Copy email + release",
     pitchNote: "Send it personally to each journalist (replace the name placeholder); paste the release into the email body and share photos via a link.",
     targets: "Target media list",
-    targetsHint: "Fill in journalist names from your own contacts — we don't make them up",
+    targetsHint: "Fill in journalist names from your own contacts (we don't make them up)",
     priority: (v) => `${v} priority`,
     angle: "Angle · ",
     social: "Short social media versions",
@@ -1307,7 +1307,7 @@ const en: ResultsText = {
 
   audit: {
     scoreLabel: (total) =>
-      total >= 80 ? "Healthy — just optimize" : total >= 65 ? "Fair — some big gaps" : total >= 50 ? "Needs serious work" : "Critical — fix the foundations first",
+      total >= 80 ? "Healthy, just optimize" : total >= 65 ? "Fair, with some big gaps" : total >= 50 ? "Needs serious work" : "Critical: fix the foundations first",
     auditOf: (p) => `${p} audit results`,
     aspects: "Score by aspect",
     aspectsHint: "Total score = average of 7 aspects × 10",
@@ -1581,7 +1581,7 @@ const en: ResultsText = {
     margins: "Margin after promo",
     marginsHint: "Recalculated by the system: promo price − COGS − platform fee − other costs",
     marginHeaders: ["Product · scenario", "Price → promo", "COGS", "Platform fee", "Other costs", "Margin/unit", "Status"],
-    marginNote: "Status: loss if margin < 0, thin if < 10% of the promo price, safe if ≥ 10%. Platform fees are estimates — check the latest rates in Seller Centre.",
+    marginNote: "Status: loss if margin < 0, thin if < 10% of the promo price, safe if ≥ 10%. Platform fees are estimates, so check the latest rates in Seller Centre.",
     stock: "Stock preparation",
     stockHeaders: ["Product", "Peak event", "Units needed", "In warehouse by", "Basis"],
     checklist: "Major event prep checklist",

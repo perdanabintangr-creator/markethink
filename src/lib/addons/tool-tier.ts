@@ -9,9 +9,9 @@ export const quotaUnits = (tier: ToolTier) => (tier === "director" ? 2 : 1);
 export const TOOL_TIER_KEY = "mt_tool_tier";
 
 export const TOOL_TIER_INFO: Record<ToolTier, { label: string; hint: string }> = {
-  senior: { label: "Senior", hint: "Seimbang — cepat & tajam untuk kebanyakan pekerjaan." },
-  associate: { label: "Associate", hint: "Deep reasoning — analisis lebih dalam (paket Pro/Promax). Sedikit lebih lama." },
-  director: { label: "Director", hint: "Otak paling pintar (paket Promax) — memakai 2 kuota per hasil. Paling lama diproses." },
+  senior: { label: "Senior", hint: "Seimbang, cepat & tajam untuk kebanyakan pekerjaan." },
+  associate: { label: "Associate", hint: "Deep reasoning: analisis lebih dalam (paket Pro/Promax). Sedikit lebih lama." },
+  director: { label: "Director", hint: "Otak paling pintar (paket Promax). Memakai 2 kuota per hasil dan paling lama diproses." },
 };
 
 /** Pilihan user → otak yang boleh dipakai sesuai tier yang dibuka paketnya; selain itu Senior. */

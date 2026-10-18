@@ -63,7 +63,7 @@ const id = {
   resetIn: (days: number, date: string) => `Reset dalam ${days} hari · ${date}`,
   usageNote:
     "Satu kuota untuk chat, riset, gambar, Tools Pro & Agent. Otak yang lebih pintar dan hasil yang lebih panjang memakai kuota lebih banyak.",
-  addQuota: "Tambah kuota — lihat paket",
+  addQuota: "Tambah kuota: lihat paket",
   seePlans: "Lihat paket",
   dateLocale: "id-ID",
   // Notifikasi versi baru
@@ -134,7 +134,7 @@ const en: typeof id = {
   resetIn: (days: number, date: string) => `Resets in ${days} days · ${date}`,
   usageNote:
     "One quota covers chat, research, images, Pro Tools & Agent. Smarter brains and longer outputs use more quota.",
-  addQuota: "Get more quota — see plans",
+  addQuota: "Get more quota: see plans",
   seePlans: "See plans",
   dateLocale: "en-US",
   // Notifikasi versi baru

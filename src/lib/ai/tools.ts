@@ -724,12 +724,12 @@ function friendlyImageError(msg: string): { error: string; hint?: string } {
     return { error: "Pembuat gambar belum aktif: billing akun Google AI admin belum aktif. Kredit sudah dikembalikan.", hint: adminOnly };
   }
   if (/429|RESOURCE_EXHAUSTED|quota/i.test(msg)) {
-    return { error: "Layanan pembuat gambar sedang penuh. Kredit sudah dikembalikan — coba lagi beberapa menit lagi." };
+    return { error: "Layanan pembuat gambar sedang penuh. Kredit sudah dikembalikan, coba lagi beberapa menit lagi." };
   }
   if (/SAFETY|blocked|PROHIBITED|moderation/i.test(msg)) {
     return { error: "Permintaan gambar ditolak oleh filter keamanan. Coba ubah deskripsinya." };
   }
-  return { error: "Pembuat gambar sedang bermasalah. Kredit sudah dikembalikan — coba lagi sebentar lagi." };
+  return { error: "Pembuat gambar sedang bermasalah. Kredit sudah dikembalikan, coba lagi sebentar lagi." };
 }
 
 /** Instruksi kemampuan untuk system prompt — supaya model tidak pernah bilang "tidak bisa". */

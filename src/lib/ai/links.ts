@@ -192,7 +192,7 @@ async function readVideo(url: URL): Promise<Omit<LinkRead, "url" | "host">> {
     meta?.title && `${yt ? "Judul" : "Caption"}: ${meta.title}`,
     meta?.author_name && `Kreator/akun: ${meta.author_name}`,
     description && `Deskripsi: ${description}`,
-    "Catatan: isi/ucapan di dalam video (transkrip) TIDAK terbaca — hanya judul & keterangan.",
+    "Catatan: isi/ucapan di dalam video (transkrip) TIDAK terbaca, hanya judul & keterangan.",
   ]
     .filter(Boolean)
     .join("\n");
