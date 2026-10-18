@@ -159,33 +159,58 @@ export async function updatePlanPrice(planId: string, formData: FormData) {
   refresh();
 }
 
-/** Owner: pasang harga promo (harga coret) — otomatis tampil di halaman paket aplikasi AI. */
-export async function updatePlanPromo(planId: string, formData: FormData) {
+/** Owner: pasang harga promo (harga coret) — otomatis tampil di aplikasi AI (halaman Paket / Tools Pro). */
+async function savePromo(kind: "plan" | "addon", id: string, formData: FormData) {
   const { isOwner } = await requireBackoffice();
   if (!isOwner) return;
-  const fail = (msg: string) => redirect(`/sales/prices?error=${encodeURIComponent(msg)}#promo-${planId}`);
+  const anchor = `promo-${kind}-${id}`;
+  const fail = (msg: string) => redirect(`/sales/prices?error=${encodeURIComponent(msg)}#${anchor}`);
   const admin = createAdminClient();
-  const { data: plan } = await admin.from("plans").select("monthly_price_idr").eq("id", planId).maybeSingle();
-  if (!plan) return;
+  const normal =
+    kind === "plan"
+      ? (await admin.from("plans").select("monthly_price_idr").eq("id", id).maybeSingle()).data?.monthly_price_idr
+      : (await admin.from("addons").select("price_idr").eq("id", id).maybeSingle()).data?.price_idr;
+  if (normal === undefined || normal === null) return;
   const promo = z.coerce.number().int().min(1).max(100_000_000).safeParse(String(formData.get("promo_price") ?? "").replace(/\D/g, ""));
   if (!promo.success) return fail("Isi harga promo dengan angka.");
-  if (promo.data >= Number(plan.monthly_price_idr)) return fail("Harga promo harus lebih murah dari harga normal.");
+  if (promo.data >= Number(normal)) return fail("Harga promo harus lebih murah dari harga normal.");
   const until = String(formData.get("promo_until") ?? "").trim();
   if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) return fail("Tanggal akhir promo tidak valid.");
   const untilIso = until ? endOfDayWIB(until) : null;
   if (untilIso && new Date(untilIso).getTime() <= Date.now()) return fail("Tanggal akhir promo sudah lewat.");
   const label = String(formData.get("promo_label") ?? "").trim().slice(0, 30) || null;
-  await admin.from("plans").update({ promo_price_idr: promo.data, promo_label: label, promo_until: untilIso }).eq("id", planId);
+  await admin
+    .from(kind === "plan" ? "plans" : "addons")
+    .update({ promo_price_idr: promo.data, promo_label: label, promo_until: untilIso })
+    .eq("id", id);
   refresh();
-  redirect(`/sales/prices?saved=${planId}#promo-${planId}`);
+  redirect(`/sales/prices?saved=${kind}:${id}#${anchor}`);
 }
 
 /** Owner: hentikan promo → harga kembali normal. */
-export async function clearPlanPromo(planId: string) {
+async function stopPromo(kind: "plan" | "addon", id: string) {
   const { isOwner } = await requireBackoffice();
   if (!isOwner) return;
-  await createAdminClient().from("plans").update({ promo_price_idr: null, promo_label: null, promo_until: null }).eq("id", planId);
+  await createAdminClient()
+    .from(kind === "plan" ? "plans" : "addons")
+    .update({ promo_price_idr: null, promo_label: null, promo_until: null })
+    .eq("id", id);
   refresh();
+}
+
+export async function updatePlanPromo(planId: string, formData: FormData) {
+  return savePromo("plan", planId, formData);
+}
+export async function clearPlanPromo(planId: string) {
+  return stopPromo("plan", planId);
+}
+export async function updateAddonPromo(addonId: string, formData: FormData) {
+  if (!(ADDON_IDS as readonly string[]).includes(addonId)) return;
+  return savePromo("addon", addonId, formData);
+}
+export async function clearAddonPromo(addonId: string) {
+  if (!(ADDON_IDS as readonly string[]).includes(addonId)) return;
+  return stopPromo("addon", addonId);
 }
 
 // ---------------------------------------------------------------- Akun tim

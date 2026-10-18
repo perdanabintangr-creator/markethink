@@ -2,9 +2,12 @@ import Link from "next/link";
 import { ArrowRight, Zap } from "lucide-react";
 import { getSession, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getToolAccess } from "@/lib/addons/access";
+import { getAddonOffers, getAddonQuotas, getToolAccess } from "@/lib/addons/access";
+import { AddonOfferCard } from "@/components/tools/addon-offer-card";
+import type { AddonOffer } from "@/lib/addons/format";
+import type { AddonQuota } from "@/lib/addons/addon-quota";
 import { localizedAddons, localizedCreditText, localizedTools, proToolsLabel } from "@/lib/addons/i18n";
-import { toolsText } from "@/lib/i18n/tools";
+import { dateL, toolsText } from "@/lib/i18n/tools";
 import { ToolIcon } from "@/components/tools/tool-icon";
 
 export async function generateMetadata() {
@@ -15,7 +18,12 @@ export const dynamic = "force-dynamic";
 
 export default async function ToolsHub() {
   const { profile } = await requireUser();
-  const access = await getToolAccess(createAdminClient(), profile);
+  const admin = createAdminClient();
+  const access = await getToolAccess(admin, profile);
+  // Paket belum membuka Tools Pro → tiap kelompok bisa dibeli sebagai add-on (status aktif / harga, coret bila promo).
+  const [offers, quotas]: [Record<string, AddonOffer>, Record<string, AddonQuota>] = access.allowed
+    ? [{}, {}]
+    : await Promise.all([getAddonOffers(admin), getAddonQuotas(admin, profile.id)]);
   const lang = profile.language;
   const T = toolsText(lang);
   const ADDONS = localizedAddons(lang);
@@ -75,6 +83,15 @@ export default async function ToolsHub() {
                   {T.forRole}
                   {addon.role}
                 </p>
+                {quotas[addon.id]?.active ? (
+                  <p className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400">
+                    ✓ {T.addonActive(quotas[addon.id].remaining, quotas[addon.id].quota, dateL(quotas[addon.id].paidUntil, lang))}
+                  </p>
+                ) : offers[addon.id] ? (
+                  <div className="mt-3 rounded-lg border border-dashed p-3">
+                    <AddonOfferCard offer={{ ...offers[addon.id], name: addon.name }} compact />
+                  </div>
+                ) : null}
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {TOOLS.filter((t) => t.addon === addon.id).map((t) => (

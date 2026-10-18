@@ -248,7 +248,8 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
   const typical = toolInfo(tool)?.seconds ?? 60;
   const brain = useToolTier();
   const estimate = TOOL_CREDIT_ESTIMATE[brain.tier];
-  const canRun = access.allowed && (access.isAdmin || access.remaining >= estimate);
+  const viaAddon = access.via === "addon";
+  const canRun = access.allowed && (access.isAdmin || (viaAddon ? (access.addon?.remaining ?? 0) > 0 : access.remaining >= estimate));
 
   async function upload(list: FileList | null) {
     if (!list?.length) return;
@@ -649,10 +650,19 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
           </>
         )}
 
-        <BrainPicker value={brain.tier} onChange={brain.setTier} allowed={brain.allowed} disabled={busy} />
+        {!viaAddon && <BrainPicker value={brain.tier} onChange={brain.setTier} allowed={brain.allowed} disabled={busy} />}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <p className="text-xs text-muted-foreground">
-            {access.isAdmin ? T.adminMode : canRun ? T.usesQuota(quotaShare(estimate, access.monthLimit)) : T.notEnoughQuota} {T.refundNote}
+            {access.isAdmin
+              ? T.adminMode
+              : viaAddon
+                ? canRun
+                  ? T.addonUsesOne
+                  : T.addonUsedUp
+                : canRun
+                  ? T.usesQuota(quotaShare(estimate, access.monthLimit))
+                  : T.notEnoughQuota}{" "}
+            {T.refundNote}
           </p>
           {canRun ? (
             <Button type="submit" disabled={busy || uploading > 0}>

@@ -257,6 +257,15 @@ const id = {
   sendRequest: "Kirim permintaan",
 
   // tool locked
+  addonOnlyTitle: (name: string) => `Atau beli add-on ${name} saja`,
+  addonOnlyDesc: "Cocok bila hanya butuh tool di kelompok ini. Aktif 30 hari, tanpa ganti paket.",
+  addonQuota: (n: number) => `${n} hasil per bulan`,
+  addonIncludes: "Termasuk: ",
+  addonActive: (left: number, quota: number, until: string) => `Add-on aktif s.d. ${until} · sisa ${left} dari ${quota} hasil bulan ini`,
+  addonUsedUp: "Kuota add-on bulan ini sudah habis. Terisi lagi di tanggal yang sama bulan depan.",
+  addonUsesOne: "Memakai 1 hasil dari kuota add-on.",
+  orUpgradePlan: "Atau upgrade paket: semua Tools Pro + chat AI lebih lengkap.",
+  addonNormalPrice: (price: string) => `normal ${price}`,
   lockedTitle: (name: string) => `${name} tersedia mulai paket Starter`,
   lockedDesc:
     "Tools Pro menghasilkan dokumen setara konsultan & agency (halaman visual + PPT/Excel). Semua paket berbayar sudah termasuk Tools Pro, dan pemakaiannya memakai kuota bulanan paket.",
@@ -557,6 +566,15 @@ const en: typeof id = {
   addonNotePh: "Note (optional), e.g. WhatsApp number or a question",
   sendRequest: "Send request",
 
+  addonOnlyTitle: (name: string) => `Or buy just the ${name} add-on`,
+  addonOnlyDesc: "Great if you only need the tools in this group. Active for 30 days, no plan change.",
+  addonQuota: (n: number) => `${n} results per month`,
+  addonIncludes: "Includes: ",
+  addonActive: (left: number, quota: number, until: string) => `Add-on active until ${until} · ${left} of ${quota} results left this month`,
+  addonUsedUp: "This month's add-on quota is used up. It refills on the same date next month.",
+  addonUsesOne: "Uses 1 result from your add-on quota.",
+  orUpgradePlan: "Or upgrade your plan: all Pro Tools + a fuller AI chat.",
+  addonNormalPrice: (price: string) => `normally ${price}`,
   lockedTitle: (name: string) => `${name} is available from the Starter plan`,
   lockedDesc:
     "Pro Tools produce consultant- & agency-grade documents (visual page + PPT/Excel). Every paid plan includes Pro Tools, and usage draws from the plan's monthly quota.",

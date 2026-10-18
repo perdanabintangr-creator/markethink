@@ -62,22 +62,48 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   const parsed = runner.input.safeParse(rawInput);
   if (!parsed.success) return { ok: false, status: 400, code: "invalid_input", message: parsed.error.issues[0]?.message ?? "Data belum lengkap." };
 
-  const useTier = tier ?? DEFAULT_TOOL_TIER;
   // Paket all-in-1: Tools Pro termasuk paket berbayar & memakai kredit bulanan (dipotong perkiraan, lalu disesuaikan ke biaya nyata).
-  const access = await getToolAccess(admin, profile);
-  if (!access.allowed) return { ok: false, status: 402, code: "plan_required", message: en ? "Pro Tools are available from the Starter plan. Upgrade your plan to use them." : "Tools Pro tersedia mulai paket Starter. Upgrade paket untuk memakainya." };
-  const estimate = revision ? revisionEstimate(useTier) : TOOL_CREDIT_ESTIMATE[useTier];
-  const charge = await consumeCredits(userId, estimate, revision ? `tool_revise:${tool}` : `tool:${tool}`, { tier: useTier });
-  if (!charge.ok)
+  // Paket yang belum membuka Tools Pro: add-on yang dibeli terpisah (kuota hasil + batas modal, tanpa kredit, otak Senior).
+  const access = await getToolAccess(admin, profile, info.addon);
+  if (!access.allowed) {
+    const offered = Boolean(access.addon);
     return {
       ok: false,
       status: 402,
-      code: "credits_low",
+      code: "plan_required",
+      addon: info.addon,
       message: en
-        ? "Not enough quota left this month for this result. Quota resets on the 1st of each month, or upgrade for a bigger quota."
-        : "Sisa kuota bulan ini tidak cukup untuk hasil ini. Kuota direset tiap tanggal 1, atau upgrade paket untuk kuota lebih besar.",
+        ? `Pro Tools are available from the Starter plan${offered ? ", or buy just this add-on" : ""}.`
+        : `Tools Pro tersedia mulai paket Starter${offered ? ", atau beli add-on ini saja" : ""}.`,
     };
-  const source = access.isAdmin ? "admin" : "paid";
+  }
+  const viaAddon = access.via === "addon";
+  if (viaAddon && !(revision ? access.addon?.canRevise : (access.addon?.remaining ?? 0) > 0)) {
+    return {
+      ok: false,
+      status: 402,
+      code: "addon_quota_used",
+      addon: info.addon,
+      message: en
+        ? "This month's add-on quota is used up. It resets on the same date next month, or upgrade your plan for a bigger quota."
+        : "Kuota add-on bulan ini sudah habis. Kuota terisi lagi di tanggal yang sama bulan depan, atau upgrade paket untuk kuota lebih besar.",
+    };
+  }
+  const useTier = viaAddon ? DEFAULT_TOOL_TIER : (tier ?? DEFAULT_TOOL_TIER);
+  const estimate = viaAddon ? 0 : revision ? revisionEstimate(useTier) : TOOL_CREDIT_ESTIMATE[useTier];
+  if (!viaAddon) {
+    const charge = await consumeCredits(userId, estimate, revision ? `tool_revise:${tool}` : `tool:${tool}`, { tier: useTier });
+    if (!charge.ok)
+      return {
+        ok: false,
+        status: 402,
+        code: "credits_low",
+        message: en
+          ? "Not enough quota left this month for this result. Quota resets on the 1st of each month, or upgrade for a bigger quota."
+          : "Sisa kuota bulan ini tidak cukup untuk hasil ini. Kuota direset tiap tanggal 1, atau upgrade paket untuk kuota lebih besar.",
+      };
+  }
+  const source = access.isAdmin ? "admin" : viaAddon ? "addon" : "paid";
   const units = 1;
 
   const { data: run, error: runErr } = await admin
@@ -135,8 +161,9 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
         finished_at: new Date().toISOString(),
       })
       .eq("id", run.id);
-    const credits = creditsForUsd(ctx.cost.usd);
-    await settleCredits(userId, estimate, credits, `tool_settle:${tool}`, { runId: run.id });
+    // Add-on tidak memakai kredit paket; biaya nyatanya tercatat di tool_runs.cost_usd (batas modal add-on).
+    const credits = viaAddon ? 0 : creditsForUsd(ctx.cost.usd);
+    if (!viaAddon) await settleCredits(userId, estimate, credits, `tool_settle:${tool}`, { runId: run.id });
     await admin.from("usage_logs").insert({
       user_id: userId,
       tier: `tool:${tool}`,

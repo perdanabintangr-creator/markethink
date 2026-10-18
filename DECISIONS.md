@@ -338,3 +338,10 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   Promo aktif bila > 0, lebih murah dari harga normal, dan belum lewat → halaman Paket & kartu upgrade di aplikasi menampilkan
   harga normal dicoret + "Hemat X%"; otomatis kembali normal setelah tanggal akhir. Nominal otomatis saat catat penjualan &
   pengaman laba di /profit ikut harga promo (peringatan bila laba minimum < 30%).
+- (18 Okt, founder) **Add-on Tools Pro dijual lagi** (terpisah dari paket) untuk user yang paketnya belum membuka Tools Pro (Free).
+  Satu add-on = satu kelompok tool, aktif per pembelian (dicatat tim di detail pelanggan). Hasil dari add-on: source `addon`
+  di `tool_runs`, tidak memakai kredit paket, otak Senior. **Dua batas per bulan pemakaian** (sejak tanggal mulai beli):
+  jumlah hasil (`addons.monthly_quota`) dan **modal AI = 70% dari uang yang dibayar per bulan** → laba minimal 30% walau semua
+  hasil riset berat (data nyata: Market Research ±Rp8rb/hasil, maks Rp18rb). Revisi tidak memotong hasil, hanya modal.
+  Tawaran tampil di halaman Tools Pro (per kelompok) & halaman tool terkunci (di atas pilihan upgrade paket).
+  **Harga coret add-on** sama seperti paket (`addons.promo_*`, migrasi 0043). Logika di `src/lib/addons/addon-quota.ts`.

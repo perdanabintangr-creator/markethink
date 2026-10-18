@@ -158,6 +158,14 @@ export function toolTierLockedHint(tier: ToolTier, lang: Lang | null | undefined
 export function localizedCreditText(a: ToolAccessLite, lang: Lang | null | undefined) {
   const en = isEn(lang);
   if (a.isAdmin) return en ? "Admin · unlimited" : "Admin · tanpa batas";
+  if (a.via === "addon" && a.addon) {
+    const until = a.addon.paidUntil
+      ? new Date(a.addon.paidUntil).toLocaleDateString(en ? "en-US" : "id-ID", { day: "numeric", month: "short", timeZone: "Asia/Jakarta" })
+      : "-";
+    return en
+      ? `Add-on until ${until} · ${a.addon.remaining} of ${a.addon.quota} results left this month`
+      : `Add-on s.d. ${until} · sisa ${a.addon.remaining} dari ${a.addon.quota} hasil bulan ini`;
+  }
   if (!a.allowed) {
     if (a.isFree) return en ? "🔒 Locked on the Free plan" : "🔒 Terkunci di paket Free";
     return en ? "🔒 Not included in your plan" : "🔒 Tidak termasuk paket kamu";

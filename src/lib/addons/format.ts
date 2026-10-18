@@ -37,12 +37,38 @@ export const dateID = (iso: string | null | undefined) =>
 /** Hak pakai Tools Pro (paket all-in-1, memakai kredit bulanan). Aman dikirim ke client. */
 export interface ToolAccessLite {
   allowed: boolean;
+  /** Sumber hak pakai: paket (kredit bulanan) atau add-on yang dibeli terpisah. */
+  via?: "plan" | "addon";
+  /** Status add-on untuk tool ini (diisi bila paket belum membuka Tools Pro). */
+  addon?: AddonAccessLite;
   agent: boolean;
   isAdmin: boolean;
   isFree: boolean;
   planId: string;
   remaining: number;
   monthLimit: number;
+}
+
+/** Status add-on yang aman dikirim ke client (angka modal tidak ikut). */
+export interface AddonAccessLite {
+  id: string;
+  active: boolean;
+  remaining: number;
+  quota: number;
+  paidUntil: string | null;
+  canRevise: boolean;
+}
+
+/** Penawaran add-on (harga + promo) untuk ditampilkan ke user. */
+export interface AddonOffer {
+  id: string;
+  name: string;
+  price: number;
+  /** Harga normal yang dicoret, hanya saat promo aktif. */
+  originalPrice?: number;
+  promoLabel?: string;
+  promoUntil?: string;
+  quota: number;
 }
 
 /** Perkiraan kredit per hasil Tools Pro per otak (dipotong di awal, lalu disesuaikan ke biaya nyata). 1 kredit ≈ Rp100 modal. */

@@ -48,3 +48,6 @@
 
 ## 18 Okt 2026 — Harga promo paket
 - ✅ Migrasi 0042 (kolom promo di `plans`) terpasang; form promo di back office Harga paket; harga coret di aplikasi.
+
+## 18 Okt 2026 — Add-on dijual lagi + harga coret add-on
+- ✅ Migrasi 0043 terpasang; beli add-on dari halaman Tools Pro / tool terkunci → Calon pelanggan; kuota + batas modal 70%.

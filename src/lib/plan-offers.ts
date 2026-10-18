@@ -28,14 +28,24 @@ export interface PlanRow {
 /** Kolom `plans` yang dibutuhkan penawaran (termasuk promo). */
 export const PLAN_OFFER_COLUMNS = "id, name, monthly_price_idr, monthly_credits, promo_price_idr, promo_label, promo_until";
 
-/** Promo aktif: diisi, lebih murah dari harga normal, dan belum lewat tanggal akhirnya. */
-export function activePromo(row: Pick<PlanRow, "monthly_price_idr" | "promo_price_idr" | "promo_until">, now = Date.now()) {
-  const price = Number(row.monthly_price_idr ?? 0);
-  if (row.promo_price_idr === null || row.promo_price_idr === undefined || row.promo_price_idr === "") return null;
-  const promo = Number(row.promo_price_idr);
+/** Harga promo bila aktif: diisi, > 0, lebih murah dari harga normal, dan belum lewat tanggal akhirnya (paket & add-on). */
+export function promoPrice(
+  normal: number | string | null | undefined,
+  promoRaw: number | string | null | undefined,
+  until: string | null | undefined,
+  now = Date.now(),
+) {
+  const price = Number(normal ?? 0);
+  if (promoRaw === null || promoRaw === undefined || promoRaw === "") return null;
+  const promo = Number(promoRaw);
   if (!Number.isFinite(promo) || promo <= 0 || promo >= price) return null;
-  if (row.promo_until && new Date(row.promo_until).getTime() <= now) return null;
+  if (until && new Date(until).getTime() <= now) return null;
   return promo;
+}
+
+/** Promo paket yang sedang aktif (lihat promoPrice). */
+export function activePromo(row: Pick<PlanRow, "monthly_price_idr" | "promo_price_idr" | "promo_until">, now = Date.now()) {
+  return promoPrice(row.monthly_price_idr, row.promo_price_idr, row.promo_until, now);
 }
 
 /** Paket yang direkomendasikan di halaman harga. */

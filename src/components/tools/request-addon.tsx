@@ -15,6 +15,7 @@ export function RequestAddonButton({
   addon,
   name,
   price,
+  originalPrice,
   quota,
   label,
   open: controlledOpen,
@@ -24,6 +25,8 @@ export function RequestAddonButton({
   addon: string;
   name: string;
   price: number;
+  /** Harga normal yang dicoret saat promo. */
+  originalPrice?: number;
   quota: number;
   label?: string;
   open?: boolean;
@@ -71,7 +74,10 @@ export function RequestAddonButton({
             <>
               <DialogHeader>
                 <DialogTitle>{T.buyAddonTitle(name)}</DialogTitle>
-                <DialogDescription>{T.addonSummary(rupiah(price), quota)}</DialogDescription>
+                <DialogDescription>
+                  {T.addonSummary(rupiah(price), quota)}
+                  {originalPrice !== undefined && <span className="ml-1 line-through">{T.addonNormalPrice(rupiah(originalPrice))}</span>}
+                </DialogDescription>
               </DialogHeader>
               <ul className="space-y-1 text-sm text-muted-foreground">
                 <li>{T.addonStep1}</li>

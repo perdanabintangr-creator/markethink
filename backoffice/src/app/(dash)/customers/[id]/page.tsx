@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { effectivePrice } from "@/lib/promo";
+import { addonEffectivePrice, effectivePrice } from "@/lib/promo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
@@ -49,7 +49,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       .select("id, addon_id, period_start, period_end, amount_idr, months, payment_method, paid_at, refunded_at, note")
       .eq("user_id", id)
       .order("paid_at", { ascending: false }),
-    admin.from("addons").select("id, name, price_idr").order("sort_order"),
+    admin.from("addons").select("id, name, price_idr, promo_price_idr, promo_until").order("sort_order"),
     admin.from("tool_runs").select("tool, status, source, created_at").eq("user_id", id).gte("created_at", new Date(Date.now() - 30 * 86_400_000).toISOString()),
       ]);
   if (!u) notFound();
@@ -275,7 +275,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <AddonSaleForm userId={u.id} addons={(addonRows ?? []).map((a) => ({ id: a.id, name: a.name, price: Number(a.price_idr) }))} />
+          <AddonSaleForm userId={u.id} addons={(addonRows ?? []).map((a) => ({ id: a.id, name: a.name, price: addonEffectivePrice(a) }))} />
           {!!addonSubs?.length && (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[620px] text-sm">
