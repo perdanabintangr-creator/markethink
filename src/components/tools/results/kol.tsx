@@ -86,7 +86,7 @@ export function KolResult({ data }: { data: KolOutput }) {
             {data.timeline.map((x, i) => (
               <li key={i}>
                 <span className="absolute -left-1.5 mt-1.5 size-3 rounded-full bg-primary" />
-                <b>{x.when}</b> — {x.task}
+                <b>{x.when}</b>: {x.task}
               </li>
             ))}
           </ol>
@@ -130,7 +130,7 @@ export function KolResult({ data }: { data: KolOutput }) {
                   <td className="py-2 font-medium">{r.tier}</td>
                   <td>{r.followers}</td>
                   <td>
-                    {rupiah(r.fee_min)} – {rupiah(r.fee_max)}
+                    {rupiah(r.fee_min)}-{rupiah(r.fee_max)}
                   </td>
                   <td className="text-right">{numID(r.qty, 0)}</td>
                 </tr>
@@ -139,7 +139,7 @@ export function KolResult({ data }: { data: KolOutput }) {
                 <td className="py-2">{t.total}</td>
                 <td />
                 <td>
-                  {rupiah(data.fee_estimate.total_min)} – {rupiah(data.fee_estimate.total_max)}
+                  {rupiah(data.fee_estimate.total_min)}-{rupiah(data.fee_estimate.total_max)}
                 </td>
                 <td />
               </tr>

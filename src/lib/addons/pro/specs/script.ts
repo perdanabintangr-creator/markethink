@@ -6,7 +6,7 @@ export const SCRIPT_STYLES: [string, string][] = [
   ["talking_head", "Talking head"],
   ["pov", "POV"],
   ["tutorial", "Tutorial / how-to"],
-  ["before_after", "Before–after"],
+  ["before_after", "Before-after"],
   ["storytelling", "Storytelling"],
   ["review_ugc", "Review / UGC"],
   ["trend", "Ikut tren"],
@@ -128,7 +128,7 @@ export function scriptText(s: ScriptItem) {
     `Gaya: ${s.style} · Angle: ${s.angle}`,
     "",
     "PILIHAN HOOK (0-3 dtk)",
-    ...s.hooks.map((h, i) => `${i + 1}. "${h.text}" — visual: ${h.visual}`),
+    ...s.hooks.map((h, i) => `${i + 1}. "${h.text}" (visual: ${h.visual})`),
     "",
     "ADEGAN",
     ...s.scenes.flatMap((sc) => [

@@ -222,9 +222,9 @@ export const competitorOutput = z.object({
 
 export const KOL_TIERS = ["nano", "micro", "macro", "mega"] as const;
 export const KOL_TIER_LABEL: Record<(typeof KOL_TIERS)[number], string> = {
-  nano: "Nano (1rb–10rb)",
-  micro: "Micro (10rb–100rb)",
-  macro: "Macro (100rb–1jt)",
+  nano: "Nano (1rb-10rb)",
+  micro: "Micro (10rb-100rb)",
+  macro: "Macro (100rb-1jt)",
   mega: "Mega (>1jt)",
 };
 

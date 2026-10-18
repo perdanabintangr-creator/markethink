@@ -20,10 +20,10 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { getTiers, PLAN_LABEL } from "@/lib/ai/models.config";
 
 const features = [
-  { icon: Brain, title: "Chat otak marketing", desc: "Ngobrol seperti dengan CMO: strategi, analisis, dan copy — dijawab dengan konteks brand kamu." },
+  { icon: Brain, title: "Chat otak marketing", desc: "Ngobrol seperti dengan CMO: strategi, analisis, dan copy, dijawab dengan konteks brand kamu." },
   { icon: Search, title: "Riset Web ber-sitasi", desc: "Tren, data pasar, dan kompetitor dengan sumber bernomor yang bisa diklik." },
   { icon: Sparkles, title: "16+ Marketing Agents", desc: "Campaign plan, buyer persona, SWOT, ads copy, script TikTok, copy marketplace, dan lainnya." },
-  { icon: BookOpen, title: "Projects per brand", desc: "Satu project per brand/klien: Brand Kit, dokumen & memory terpisah — jawaban fokus ke project itu saja." },
+  { icon: BookOpen, title: "Projects per brand", desc: "Satu project per brand/klien: Brand Kit, dokumen & memory terpisah, jadi jawaban fokus ke project itu saja." },
   { icon: FileText, title: "Canvas", desc: "Output panjang terbuka di panel editor dengan versioning & export DOCX, PDF, Markdown, CSV." },
   { icon: CalendarDays, title: "Content Calendar", desc: "Kalender konten rapi dalam tabel, siap export ke spreadsheet." },
 ];
@@ -62,7 +62,7 @@ export default async function LandingPage() {
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--accent),transparent_60%)]" />
         <div className="mx-auto max-w-4xl px-4 pb-16 pt-16 text-center sm:pt-24">
           <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs font-medium">
-            <Sparkles className="size-3.5 text-primary" /> Mulai gratis — upgrade mulai Rp60 ribu/bulan
+            <Sparkles className="size-3.5 text-primary" /> Mulai gratis, upgrade mulai Rp60 ribu/bulan
           </span>
           <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-6xl">
             Otak marketing kamu,{" "}
@@ -70,7 +70,7 @@ export default async function LandingPage() {
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
             Dari ide sampai eksekusi: riset → strategi → konten → kalender → KPI. Chat seperti ChatGPT, riset ber-sitasi
-            seperti Perplexity — tapi semuanya dikhususkan untuk marketing di Indonesia.
+            seperti Perplexity, tapi semuanya dikhususkan untuk marketing di Indonesia.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild size="lg"><Link href={user ? "/chat" : "/register"}>Mulai gratis sekarang</Link></Button>
@@ -134,7 +134,7 @@ export default async function LandingPage() {
       <section className="mx-auto max-w-4xl px-4 py-20 text-center">
         <Globe className="mx-auto size-8 text-primary" />
         <h2 className="mt-4 text-2xl font-bold sm:text-3xl">Siap bikin marketing yang lebih tajam?</h2>
-        <p className="mt-2 text-muted-foreground">Daftar beta gratis — tanpa kartu kredit.</p>
+        <p className="mt-2 text-muted-foreground">Daftar beta gratis, tanpa kartu kredit.</p>
         <Button asChild size="lg" className="mt-6"><Link href={user ? "/chat" : "/register"}>Coba Markethink</Link></Button>
       </section>
 

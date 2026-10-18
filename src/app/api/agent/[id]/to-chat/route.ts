@@ -22,10 +22,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const list = ids
     .map((rid) => (runs ?? []).find((r) => r.id === rid))
     .filter(Boolean)
-    .map((r) => `- [${r!.title ?? toolInfo(r!.tool as string)?.name}](/tools/${r!.tool}/${r!.id}) — ${toolInfo(r!.tool as string)?.name} (id=${r!.id})`)
+    .map((r) => `- [${r!.title ?? toolInfo(r!.tool as string)?.name}](/tools/${r!.tool}/${r!.id}) · ${toolInfo(r!.tool as string)?.name} (id=${r!.id})`)
     .join("\n");
   const text = [
-    `🤖 **Paket Markethink Agent — ${run.title ?? "Misi"}**`,
+    `🤖 **Paket Markethink Agent: ${run.title ?? "Misi"}**`,
     `**Tujuan:**\n> ${run.goal.replace(/\n/g, "\n> ")}`,
     "---",
     run.summary,

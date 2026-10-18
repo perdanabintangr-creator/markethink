@@ -80,7 +80,7 @@ export function PressResult({ data }: { data: PressOutput }) {
             {pressParagraphs(data).map((p, i) =>
               p.kind === "lead" ? (
                 <p key={i}>
-                  <b>{data.dateline.replace(/\s*[–—-]\s*$/, "")}</b> – <Marked text={data.lead} />
+                  <b>{data.dateline.replace(/\s*[–—-]\s*$/, "")}</b>: <Marked text={data.lead} />
                 </p>
               ) : (
                 <p key={i} className={cn(p.kind === "quote" && "border-l-2 border-zinc-300 pl-3")}>

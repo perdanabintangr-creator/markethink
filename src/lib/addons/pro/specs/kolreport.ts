@@ -4,7 +4,7 @@ import { t } from "./common";
 
 export const kolreportForm: ToolForm = {
   fields: [
-    { type: "text", name: "campaign", label: "Nama kampanye *", required: true, max: 100, placeholder: "mis. Glow Up 10.10 — Serum Niacinamide", half: true },
+    { type: "text", name: "campaign", label: "Nama kampanye *", required: true, max: 100, placeholder: "mis. Glow Up 10.10 Serum Niacinamide", half: true },
     { type: "text", name: "brand", label: "Brand / klien", max: 100, placeholder: "mis. Skinfaa", half: true },
     {
       type: "select",
@@ -19,12 +19,12 @@ export const kolreportForm: ToolForm = {
       default: "penjualan",
       half: true,
     },
-    { type: "text", name: "period", label: "Periode tayang", max: 60, placeholder: "mis. 1–15 Oktober 2026", half: true },
+    { type: "text", name: "period", label: "Periode tayang", max: 60, placeholder: "mis. 1-15 Oktober 2026", half: true },
     {
       type: "files",
       name: "attachment_ids",
       label: "Data hasil kreator",
-      hint: "Upload rekap tim, export TikTok Shop Affiliate / Shopee Affiliate, atau screenshot insight tiap konten. CSV, Excel, PDF, PNG/JPG — maks 5 file.",
+      hint: "Upload rekap tim, export TikTok Shop Affiliate / Shopee Affiliate, atau screenshot insight tiap konten. CSV, Excel, PDF, PNG/JPG, maks 5 file.",
       accept: ".csv,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp",
       max: 5,
     },

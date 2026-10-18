@@ -87,9 +87,9 @@ export function AgentForm({ agent }: { agent: Omit<Agent, "instructions" | "is_a
               <NativeSelect id="tier" value={tier} onChange={(e) => setTier(e.target.value as TierId)}>
                 {(
                   [
-                    ["junior", "Markethink Junior — cepat"],
-                    ["senior", "Markethink Senior — seimbang"],
-                    ["associate", "Markethink Associate — paling mendalam"],
+                    ["junior", "Markethink Junior (cepat)"],
+                    ["senior", "Markethink Senior (seimbang)"],
+                    ["associate", "Markethink Associate (paling mendalam)"],
                   ] as const
                 ).map(([id, label]) => (
                   <option key={id} value={id} disabled={!allowedTiers.includes(id)}>

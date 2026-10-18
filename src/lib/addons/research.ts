@@ -118,9 +118,9 @@ ${research.webNote}`,
           title: "TAM · SAM · SOM per tahun",
           subtitle: clip(out.market_definition, 160),
           stats: [
-            { value: clip(shortRp(out.tam.value_idr), 12), label: "TAM — total pasar", note: clip(out.tam.buyers, 80) },
-            { value: clip(shortRp(out.sam.value_idr), 12), label: "SAM — pasar terlayani", note: clip(out.sam.buyers, 80) },
-            { value: clip(shortRp(out.som.value_idr), 12), label: "SOM — target realistis", note: clip(out.som.buyers, 80) },
+            { value: clip(shortRp(out.tam.value_idr), 12), label: "TAM (total pasar)", note: clip(out.tam.buyers, 80) },
+            { value: clip(shortRp(out.sam.value_idr), 12), label: "SAM (pasar terlayani)", note: clip(out.sam.buyers, 80) },
+            { value: clip(shortRp(out.som.value_idr), 12), label: "SOM (target realistis)", note: clip(out.som.buyers, 80) },
             { value: clip(`${fmt(out.cagr_pct, 1)}%`, 12), label: "Pertumbuhan per tahun", note: clip(`Fase ${out.lifecycle}`, 80) },
           ],
         },
@@ -134,7 +134,7 @@ ${research.webNote}`,
           layout: "chart",
           kicker: "PROYEKSI",
           title: "Proyeksi SAM 5 tahun",
-          subtitle: "Nilai dalam miliar Rupiah per tahun — 3 skenario",
+          subtitle: "Nilai dalam miliar Rupiah per tahun, 3 skenario",
           chart: {
             type: "line",
             labels: proj.map((p) => String(p.year)),
@@ -185,7 +185,7 @@ ${research.webNote}`,
     const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Ukuran pasar",
-        title: `Ukuran pasar ${input.product} — ${area}`,
+        title: `Ukuran pasar ${input.product} di ${area}`,
         columns: [
           { header: "Level", key: "level", width: 12 },
           { header: "Nilai per tahun", key: "value", width: 22, money: true },
@@ -238,7 +238,7 @@ ${research.webNote}`,
       storeMaybe(ctx, `ukuran-pasar-${slug}.pptx`, "pptx", pptx, "PPT laporan pasar"),
       storeToolFile(ctx, `ukuran-pasar-${slug}.xlsx`, "xlsx", xlsx, "Excel model pasar"),
     ]);
-    return { title: `Ukuran pasar — ${input.product}`, output: out, files };
+    return { title: `Ukuran pasar: ${input.product}`, output: out, files };
   },
 };
 
@@ -304,7 +304,7 @@ Susun laporan SEGMENTASI & PERSONA dari catatan riset. Aturan:
           layout: "comparison" as const,
           kicker: clip(`PERSONA · ${p.segment}`, 40),
           title: clip(p.name, 90),
-          subtitle: clip(`${p.age} · ${p.occupation} · ${p.location} — “${p.quote}”`, 160),
+          subtitle: clip(`${p.age} · ${p.occupation} · ${p.location} · “${p.quote}”`, 160),
           columns: [
             { heading: "Masalah & keberatan", bullets: [...p.pains.slice(0, 3), ...p.objections.slice(0, 2)].map((x) => clip(x, 110)) },
             { heading: "Tujuan & pemicu beli", bullets: [...p.goals.slice(0, 3), ...p.triggers.slice(0, 2)].map((x) => clip(x, 110)) },
@@ -404,13 +404,13 @@ Susun laporan SEGMENTASI & PERSONA dari catatan riset. Aturan:
       storeMaybe(ctx, `persona-${slug}.pptx`, "pptx", pptx, "PPT persona & segmen"),
       storeToolFile(ctx, `persona-${slug}.xlsx`, "xlsx", xlsx, "Excel persona"),
     ]);
-    return { title: `Persona konsumen — ${input.brand || input.product}`, output: out, files };
+    return { title: `Persona konsumen: ${input.brand || input.product}`, output: out, files };
   },
 };
 
 // ============================================================ Kelayakan & Strategi Masuk Pasar
 
-const VERDICT_LABEL: Record<EntryOutput["verdict"], string> = { go: "LAYAK — jalan", go_bersyarat: "LAYAK BERSYARAT", tunda: "TUNDA dulu", no_go: "TIDAK LAYAK" };
+const VERDICT_LABEL: Record<EntryOutput["verdict"], string> = { go: "LAYAK, jalan", go_bersyarat: "LAYAK BERSYARAT", tunda: "TUNDA dulu", no_go: "TIDAK LAYAK" };
 
 const entry: Runner<typeof entryInput> = {
   addon: "riset_pro",
@@ -540,7 +540,7 @@ ${research.webNote}`,
     const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Scorecard",
-        title: `Skor kelayakan: ${out.weighted_score}/100 — ${VERDICT_LABEL[out.verdict]}`,
+        title: `Skor kelayakan: ${out.weighted_score}/100 (${VERDICT_LABEL[out.verdict]})`,
         columns: [
           { header: "Kriteria", key: "criterion", width: 30 },
           { header: "Bobot (%)", key: "weight_pct", width: 10 },
@@ -615,7 +615,7 @@ ${research.webNote}`,
       storeMaybe(ctx, `studi-kelayakan-${slug}.pptx`, "pptx", pptx, "PPT studi kelayakan"),
       storeToolFile(ctx, `studi-kelayakan-${slug}.xlsx`, "xlsx", xlsx, "Excel studi kelayakan"),
     ]);
-    return { title: `Studi kelayakan — ${input.brand || clip(input.idea, 40)}`, output: out, files };
+    return { title: `Studi kelayakan: ${input.brand || clip(input.idea, 40)}`, output: out, files };
   },
 };
 
@@ -688,7 +688,7 @@ Kamu research director lembaga riset (standar ESOMAR, gaya kuesioner Nielsen/Kan
       },
       {
         name: "Sampel & kuota",
-        title: `Minimal ${sample.n} responden (margin ±${sample.margin}%, keyakinan ${sample.confidence}%) — disarankan ${sample.recommended}`,
+        title: `Minimal ${sample.n} responden (margin ±${sample.margin}%, keyakinan ${sample.confidence}%), disarankan ${sample.recommended}`,
         columns: [
           { header: "Kelompok", key: "group", width: 34 },
           { header: "Porsi (%)", key: "share_pct", width: 12 },

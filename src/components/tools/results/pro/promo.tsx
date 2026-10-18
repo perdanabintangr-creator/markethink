@@ -15,7 +15,7 @@ const SCALE_STYLE: Record<Campaign["scale"], { bar: string; dot: string; tone: "
 const STATUS_TONE = { aman: "good", tipis: "warn", rugi: "bad" } as const;
 
 const dm = (s: string, months: string[]) => `${Number(s.slice(8, 10))} ${months[Number(s.slice(5, 7)) - 1]?.slice(0, 3) ?? ""}`;
-const range = (c: Campaign, months: string[]) => (c.start === c.end ? dm(c.start, months) : `${dm(c.start, months)} – ${dm(c.end, months)}`);
+const range = (c: Campaign, months: string[]) => (c.start === c.end ? dm(c.start, months) : `${dm(c.start, months)}-${dm(c.end, months)}`);
 
 export function PromoResult({ data }: { data: PromoOutput }) {
   const { t: tr, f } = useResultsI18n();

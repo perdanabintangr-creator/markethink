@@ -72,7 +72,7 @@ export function PlanResult({ data }: { data: PlanOutput }) {
           { label: t.monthlyBudget, value: idr(monthly), note: data.budget.basis === "rekomendasi" ? t.recNotFilled : c0.asProvided, tone: "primary" },
           { label: t.smart, value: String(data.objectives.length), note: t.nBizGoals(data.objectives.filter((o) => o.level === "bisnis").length) },
           { label: t.channels, value: String(data.channels.length), note: t.nPaid(paid) },
-          { label: t.roadmapPeriods, value: String(data.roadmap.length), note: data.roadmap.length ? `${data.roadmap[0].period} – ${data.roadmap[data.roadmap.length - 1].period}` : "" },
+          { label: t.roadmapPeriods, value: String(data.roadmap.length), note: data.roadmap.length ? `${data.roadmap[0].period}-${data.roadmap[data.roadmap.length - 1].period}` : "" },
         ]}
       />
 
@@ -165,7 +165,7 @@ export function PlanResult({ data }: { data: PlanOutput }) {
               <div key={st} className={cn("rounded-xl border p-2.5 text-xs", STAGE_TONE[st])}>
                 <p className="font-semibold uppercase tracking-wide">{FUNNEL_LABEL[st]}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1">
-                  {list.length ? list.map((c) => <Pill key={c.channel}>{c.channel}</Pill>) : <span className="text-muted-foreground">—</span>}
+                  {list.length ? list.map((c) => <Pill key={c.channel}>{c.channel}</Pill>) : <span className="text-muted-foreground">-</span>}
                 </div>
               </div>
             );

@@ -235,7 +235,7 @@ export async function POST(req: Request) {
     onError: (err) => {
       console.error("[chat] error", err);
       errors.push(err instanceof Error ? err.message : String(err));
-      return "Maaf, otak marketing sedang sibuk. Kreditmu sudah dikembalikan — coba lagi sebentar lagi.";
+      return "Maaf, otak marketing sedang sibuk. Kreditmu sudah dikembalikan, coba lagi sebentar lagi.";
     },
     execute: async ({ writer }) => {
       // Satu "start" dengan ID tetap di awal: status/sumber/tautan ditulis sebelum jawaban AI, dan kalau ID berganti

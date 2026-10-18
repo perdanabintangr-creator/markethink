@@ -141,7 +141,7 @@ export function buildCarouselScene(input: CarouselInput, images: Dims, extras: {
       case "quote": {
         y += c.text("“", "head", x, y, 2, { size: 110, color: pal.accent, lh: 0.85 }) - 0.2;
         y += c.text(s.body ?? s.title, "head", x, y, w, { size: 28 * big, min: 18, maxLines: 7, lh: 1.2 }) + 0.25;
-        if (s.body) c.text(`— ${s.title}`, "strong", x, y, w, { size: 13, ls: 1.5, upper: true, color: pal.accent2, maxLines: 1 });
+        if (s.body) c.text(s.title, "strong", x, y, w, { size: 13, ls: 1.5, upper: true, color: pal.accent2, maxLines: 1 });
         break;
       }
     }

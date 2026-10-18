@@ -33,7 +33,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         .join("\n");
   const resultUrl = `/tools/${run.tool}/${run.id}`;
   const text = [
-    `📎 **Hasil Tools Pro — ${info?.name ?? run.tool}**`,
+    `📎 **Hasil Tools Pro: ${info?.name ?? run.tool}**`,
     `### ${run.title ?? info?.name ?? "Hasil"}`,
     brief && `**Isian awal:**\n${brief
       .split("\n")
@@ -42,7 +42,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     "---",
     resultToMarkdown(run.output),
     "---",
-    `Hasil di atas sudah saya pegang sebagai konteks. Silakan tanya alasannya, koreksi data yang keliru, atau jelaskan maksud & tujuanmu — kita bahas dan kembangkan di sini.${
+    `Hasil di atas sudah saya pegang sebagai konteks. Silakan tanya alasannya, koreksi data yang keliru, atau jelaskan maksud & tujuanmu. Kita bahas dan kembangkan di sini.${
       form ? ` Untuk membuat ulang file PPT/Excel yang sudah dikoreksi, buka [halaman hasil](${resultUrl}) lalu klik **Perbaiki hasil**.` : ""
     }`,
   ]

@@ -149,8 +149,8 @@ const LABELS: Record<string, string> = {
   level: "Level",
   likelihood: "Peluang terjadi",
   likes: "Likes",
-  logo_do: "Logo — lakukan",
-  logo_dont: "Logo — hindari",
+  logo_do: "Logo: lakukan",
+  logo_dont: "Logo: hindari",
   mandatories: "Wajib",
   margin_pct: "Margin (%)",
   margin_rp: "Margin (Rp)",
@@ -367,5 +367,5 @@ export function resultToMarkdown(output: unknown, maxChars = 24_000) {
       .map((s, i) => `${i + 1}. [${s.title || s.url}](${s.url})`)
       .join("\n")}`;
   }
-  return md.length > maxChars ? `${md.slice(0, maxChars)}\n\n_(dipotong — lihat halaman hasil untuk versi lengkap)_` : md;
+  return md.length > maxChars ? `${md.slice(0, maxChars)}\n\n_(dipotong, lihat halaman hasil untuk versi lengkap)_` : md;
 }

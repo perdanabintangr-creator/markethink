@@ -76,7 +76,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       step.error =
         res.code === "addon_required"
           ? "Kuota add-on untuk tool ini habis. Beli add-on/upgrade lalu ulangi langkah ini."
-          : (res.message ?? "Tool sedang bermasalah. Kuota tidak terpotong — coba ulangi.");
+          : (res.message ?? "Tool sedang bermasalah. Kuota tidak terpotong, silakan coba ulangi.");
     }
     const more = await save();
     return NextResponse.json({ index, ok: res.ok, runId: res.ok ? res.runId : null, error: step.error, more });
@@ -85,7 +85,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     console.error(`[agent] langkah ${step.tool} gagal`, msg);
     await logAgentCost(admin, s.user.id, id, ctx, run.cost_usd, msg);
     step.status = "error";
-    step.error = "Agent gagal menyiapkan brief untuk langkah ini. Kuota tidak terpotong — coba ulangi.";
+    step.error = "Agent gagal menyiapkan brief untuk langkah ini. Kuota tidak terpotong, silakan coba ulangi.";
     const more = await save();
     return NextResponse.json({ index, ok: false, runId: null, error: step.error, more });
   }

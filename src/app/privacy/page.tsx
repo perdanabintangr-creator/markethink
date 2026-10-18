@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <h2>1. Data yang kami kumpulkan</h2>
       <ul>
         <li>Data akun: nama, email, foto profil (jika login dengan Google).</li>
-        <li>Data profil: peran, industri, level pengalaman, tujuan — untuk personalisasi jawaban.</li>
+        <li>Data profil: peran, industri, level pengalaman, dan tujuan, untuk personalisasi jawaban.</li>
         <li>Konten: pesan chat, Brand Kit, file yang kamu unggah, canvas, dan memory.</li>
         <li>Data teknis: log pemakaian (jumlah token, model, waktu), alamat IP untuk pencegahan penyalahgunaan, serta analitik produk.</li>
       </ul>

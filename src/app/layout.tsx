@@ -5,7 +5,7 @@ import { resolveAppUrl } from "@/lib/env";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Markethink — Otak Marketing Berbasis AI", template: "%s · Markethink" },
+  title: { default: "Markethink: Otak Marketing Berbasis AI", template: "%s · Markethink" },
   description:
     "Partner AI untuk marketing: riset ber-sitasi, strategi, konten, kalender, sampai KPI. Dibuat untuk marketer, UMKM, mahasiswa, dan freelancer Indonesia.",
   metadataBase: new URL(resolveAppUrl()),

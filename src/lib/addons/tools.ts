@@ -78,7 +78,7 @@ Aturan:
     const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Kata kunci",
-        title: `Kata kunci — ${input.product}`,
+        title: `Kata kunci: ${input.product}`,
         columns: [
           { header: "Kata kunci", key: "keyword", width: 34 },
           { header: "Jenis", key: "type", width: 14 },
@@ -89,7 +89,7 @@ Aturan:
       },
       ...out.listings.map((l) => ({
         name: PLATFORM_LABEL[l.platform],
-        title: `Listing ${PLATFORM_LABEL[l.platform]} — ${input.product}`,
+        title: `Listing ${PLATFORM_LABEL[l.platform]}: ${input.product}`,
         columns: [
           { header: "Bagian", key: "k", width: 18 },
           { header: "Isi", key: "v", width: 100 },
@@ -142,7 +142,7 @@ Aturan:
         .filter(Boolean);
     const segSlides = out.segments.slice(0, 13).map((sg) => ({
       layout: "bullets" as const,
-      kicker: clip(`MENIT ${sg.start_min}–${sg.end_min}`, 40),
+      kicker: clip(`MENIT ${sg.start_min}-${sg.end_min}`, 40),
       title: clip(sg.name, 90),
       subtitle: clip(sg.goal, 160),
       bullets: [...sentences(sg.script).slice(0, 4), `CTA: ${sg.cta}`].map((b) => clip(b, 140)).slice(0, 6),
@@ -238,7 +238,7 @@ Aturan:
     const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Template WA",
-        title: `Template WhatsApp — ${input.business}`,
+        title: `Template WhatsApp: ${input.business}`,
         columns: [
           { header: "Jenis", key: "cat", width: 24 },
           { header: "Judul", key: "title", width: 26 },
@@ -250,7 +250,7 @@ Aturan:
       },
     ]));
     const file = await storeToolFile(ctx, `template-wa-${fileSlug(input.business)}.xlsx`, "xlsx", xlsx, "Excel template WhatsApp");
-    return { title: `Template WA — ${input.business}`, output: out, files: [file] };
+    return { title: `Template WA: ${input.business}`, output: out, files: [file] };
   },
 };
 
@@ -406,7 +406,7 @@ Aturan:
     const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Rapor kampanye",
-        title: `Rapor ${PLATFORM_ADS[input.platform]} — skor ${out.score}/100`,
+        title: `Rapor ${PLATFORM_ADS[input.platform]}, skor ${out.score}/100`,
         columns: [
           { header: "Kampanye", key: "name", width: 34 },
           { header: "Biaya", key: "spend", width: 16, money: true },
@@ -569,7 +569,7 @@ Susun laporan riset kompetitor dari catatan riset. Aturan:
     const xlsx = await makeWorkbook(withNotes(ctx, [
       {
         name: "Kompetitor",
-        title: `Riset kompetitor — ${input.brand}`,
+        title: `Riset kompetitor: ${input.brand}`,
         columns: [
           { header: "Brand", key: "name", width: 22 },
           { header: "Harga", key: "price_range", width: 20 },
@@ -610,7 +610,7 @@ Susun laporan riset kompetitor dari catatan riset. Aturan:
       storeMaybe(ctx, `riset-kompetitor-${fileSlug(input.brand)}.pptx`, "pptx", pptx, "PPT laporan riset"),
       storeToolFile(ctx, `riset-kompetitor-${fileSlug(input.brand)}.xlsx`, "xlsx", xlsx, "Excel data riset"),
     ])).filter((f): f is ToolFile => Boolean(f));
-    return { title: `Riset kompetitor — ${input.brand}`, output: out, files };
+    return { title: `Riset kompetitor: ${input.brand}`, output: out, files };
   },
 };
 
@@ -679,8 +679,8 @@ Aturan:
           table: {
             headers: ["Tier", "Followers", "Fee/konten", "Jumlah"],
             rows: [
-              ...out.fee_estimate.rows.map((r) => [clip(r.tier, 60), clip(r.followers, 60), `${shortRp(r.fee_min)}–${shortRp(r.fee_max)}`, String(r.qty)]),
-              ["Total", "", `${shortRp(out.fee_estimate.total_min)}–${shortRp(out.fee_estimate.total_max)}`, ""],
+              ...out.fee_estimate.rows.map((r) => [clip(r.tier, 60), clip(r.followers, 60), `${shortRp(r.fee_min)}-${shortRp(r.fee_max)}`, String(r.qty)]),
+              ["Total", "", `${shortRp(out.fee_estimate.total_min)}-${shortRp(out.fee_estimate.total_max)}`, ""],
             ].slice(0, 7),
           },
         },
@@ -723,7 +723,7 @@ Aturan:
       storeMaybe(ctx, `brief-kol-${fileSlug(input.brand)}.pptx`, "pptx", pptx, "PPT brief kreator"),
       storeToolFile(ctx, `brief-kol-${fileSlug(input.brand)}.xlsx`, "xlsx", xlsx, "Excel fee & timeline"),
     ])).filter((f): f is ToolFile => Boolean(f));
-    return { title: out.campaign_name || `Brief KOL — ${input.brand}`, output: out, files };
+    return { title: out.campaign_name || `Brief KOL: ${input.brand}`, output: out, files };
   },
 };
 

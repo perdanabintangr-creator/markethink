@@ -10,7 +10,7 @@ export const reportForm: ToolForm = {
       type: "files",
       name: "attachment_ids",
       label: "Data bulan ini",
-      hint: "Upload export Ads Manager, insight Instagram/TikTok, laporan penjualan marketplace, atau screenshot dashboard. CSV, Excel, PDF, PNG/JPG — maks 5 file.",
+      hint: "Upload export Ads Manager, insight Instagram/TikTok, laporan penjualan marketplace, atau screenshot dashboard. CSV, Excel, PDF, PNG/JPG, maks 5 file.",
       accept: ".csv,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp",
       max: 5,
     },

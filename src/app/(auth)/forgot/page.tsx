@@ -34,7 +34,7 @@ export default function ForgotPage() {
           Kalau <b className="text-foreground">{sentTo}</b> terdaftar di Markethink, link untuk membuat password baru sudah kami kirim. Link bisa dibuka di HP
           maupun laptop dan berlaku 1 jam.
         </p>
-        <p className="text-xs text-muted-foreground">Tidak ada di kotak masuk? Cek folder Spam/Promosi, tunggu 1–2 menit.</p>
+        <p className="text-xs text-muted-foreground">Tidak ada di kotak masuk? Cek folder Spam/Promosi, tunggu 1-2 menit.</p>
         <Button variant="outline" className="w-full" disabled={loading} onClick={() => send(sentTo)}>
           {loading && <Loader2 className="animate-spin" />} Kirim ulang
         </Button>
@@ -55,7 +55,7 @@ export default function ForgotPage() {
     >
       <div className="space-y-1 text-center">
         <h1 className="text-xl font-semibold">Lupa password?</h1>
-        <p className="text-sm text-muted-foreground">Masukkan email akun kamu — kami kirim link untuk membuat password baru.</p>
+        <p className="text-sm text-muted-foreground">Masukkan email akun kamu, nanti kami kirim link untuk membuat password baru.</p>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
@@ -64,7 +64,7 @@ export default function ForgotPage() {
       <Button className="w-full" disabled={loading}>
         {loading && <Loader2 className="animate-spin" />} Kirim link reset
       </Button>
-      <p className="text-center text-xs text-muted-foreground">Daftar pakai Google? Cukup masuk lagi dengan tombol Google — tidak perlu password.</p>
+      <p className="text-center text-xs text-muted-foreground">Daftar pakai Google? Cukup masuk lagi dengan tombol Google, tidak perlu password.</p>
       <p className="text-center text-sm">
         <Link href="/login" className="text-primary hover:underline">Kembali</Link>
       </p>

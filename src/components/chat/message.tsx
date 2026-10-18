@@ -734,7 +734,7 @@ function LinkChip({ link }: { link: LinkPart }) {
       <span className="truncate">
         {link.ok ? c.readingLink : c.linkUnreadable}
         <span className="font-medium">{link.title ? `${link.title.slice(0, 60)} · ${link.host}` : link.host}</span>
-        {!link.ok && link.note ? ` — ${link.note}` : ""}
+        {!link.ok && link.note ? ` (${link.note})` : ""}
       </span>
     </a>
   );

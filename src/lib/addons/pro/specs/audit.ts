@@ -24,7 +24,7 @@ export const auditForm: ToolForm = {
       min: 10,
       max: 800,
       rows: 3,
-      placeholder: "mis. Kopi Senja — kopi susu literan gula aren Rp45rb, jualan di Shopee & TikTok Shop, target pekerja kantoran Jabodetabek 22-35 th.",
+      placeholder: "mis. Kopi Senja, kopi susu literan gula aren Rp45rb, jualan di Shopee & TikTok Shop, target pekerja kantoran Jabodetabek 22-35 th.",
     },
     { type: "textarea", name: "bio", label: "Bio sekarang (salin apa adanya)", max: 300, rows: 2, placeholder: "mis. Kopi susu literan ☕ | Order via Shopee 👇 | linktr.ee/kopisenja" },
     { type: "text", name: "followers", label: "Jumlah followers", max: 40, placeholder: "mis. 3.240", half: true },
@@ -37,13 +37,13 @@ export const auditForm: ToolForm = {
       rows: 6,
       hint: "Satu baris per konten: format, topik, views/reach, likes, komentar, saves/share. Makin lengkap, makin tajam auditnya.",
       placeholder:
-        "mis.\nReels 12/9 — tutorial seduh kopi literan — 8.400 views, 210 likes, 14 komen, 96 saves\nCarousel 10/9 — promo 9.9 — 900 reach, 31 likes, 2 komen\nFoto produk 7/9 — 640 reach, 22 likes",
+        "mis.\nReels 12/9: tutorial seduh kopi literan, 8.400 views, 210 likes, 14 komen, 96 saves\nCarousel 10/9: promo 9.9, 900 reach, 31 likes, 2 komen\nFoto produk 7/9: 640 reach, 22 likes",
     },
     {
       type: "files",
       name: "attachment_ids",
       label: "Screenshot profil & insight (opsional)",
-      hint: "Screenshot halaman profil, grid, dan insight/analitik 30 hari. PNG/JPG/PDF — maks 5 file.",
+      hint: "Screenshot halaman profil, grid, dan insight/analitik 30 hari. PNG/JPG/PDF, maks 5 file.",
       accept: ".png,.jpg,.jpeg,.webp,.pdf,.csv,.xlsx",
       max: 5,
     },
@@ -123,4 +123,4 @@ export const scoreTone = (s: number, max = 10) => {
 };
 
 export const scoreLabel = (total: number) =>
-  total >= 80 ? "Sehat — tinggal dioptimalkan" : total >= 65 ? "Cukup — ada celah besar" : total >= 50 ? "Perlu perbaikan serius" : "Kritis — benahi fondasi dulu";
+  total >= 80 ? "Sehat, tinggal dioptimalkan" : total >= 65 ? "Cukup, tapi ada celah besar" : total >= 50 ? "Perlu perbaikan serius" : "Kritis, benahi fondasi dulu";

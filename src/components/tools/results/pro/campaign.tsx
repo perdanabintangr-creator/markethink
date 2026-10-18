@@ -20,25 +20,25 @@ function briefText(d: CampaignOutput, tr: ResultsText, idr: ResultFmt["idr"]) {
   const L = (title: string, body: string) => `${title.toUpperCase()}\n${body}\n`;
   const list = (xs: string[]) => xs.map((x) => `- ${x}`).join("\n");
   return [
-    `CAMPAIGN BRIEF — ${d.name}\n`,
+    `CAMPAIGN BRIEF: ${d.name}\n`,
     L(B.background, d.background),
     L(B.problem, d.problem),
     L(B.objective, `${d.objective}\n${list(d.kpis.map((k) => `${k.metric}: ${k.target} (${k.note})`))}`),
     L(B.audience, `${d.audience.profile}\n${B.now} ${d.audience.current}\n${B.after} ${d.audience.desired}`),
     L(B.insight, d.audience.insight),
     L(B.smp, d.proposition),
-    L(`${B.bigIdea} — ${d.big_idea.title}`, d.big_idea.description),
+    L(`${B.bigIdea}: ${d.big_idea.title}`, d.big_idea.description),
     L(B.keyMessage, d.key_message),
     L(B.taglines, list(d.taglines.map((x) => x.line))),
     L(B.rtb, list(d.rtb)),
-    L(B.tone, `${d.tone.words.join(", ")} — ${d.tone.note}`),
+    L(B.tone, `${d.tone.words.join(", ")}. ${d.tone.note}`),
     L(B.channels, list(d.channels.map((c) => `${c.channel} (${c.timing}): ${c.execution}`))),
-    L(B.deliverables, list(d.deliverables.map((x) => `${x.qty}× ${x.item} — ${x.spec} · ${x.owner} · ${x.deadline}`))),
+    L(B.deliverables, list(d.deliverables.map((x) => `${x.qty}× ${x.item} (${x.spec}) · ${x.owner} · ${x.deadline}`))),
     L(B.timeline, list(d.phases.map((p) => `${phase(p.phase)} (${p.period}): ${p.goal}`))),
     L(`${B.budget} ${d.budget.total !== null ? idr(d.budget.total) : ""}`, list(d.budget.items.map((b) => `${b.item}: ${b.pct}%${b.amount !== null ? ` (${idr(b.amount)})` : ""}`))),
     L(B.must, list(d.mandatories.must)),
     L(B.avoid, list(d.mandatories.avoid)),
-    L(B.success, list(d.success.map((s) => `[${tr.campaign.level[s.level]}] ${s.metric}: ${s.target} — ${s.how}`))),
+    L(B.success, list(d.success.map((s) => `[${tr.campaign.level[s.level]}] ${s.metric}: ${s.target} (${s.how})`))),
   ].join("\n");
 }
 

@@ -50,7 +50,7 @@ export const promoForm: ToolForm = {
       rows: 4,
       hint: "Satu produk per baris. Makin lengkap HPP-nya, makin akurat hitungan margin promo.",
       placeholder:
-        "mis.\nSerum Niacinamide 30ml — jual Rp149.000, HPP Rp38.000 (terjual ±60/hari)\nMoisturizer Gel 50g — jual Rp119.000, HPP Rp31.000\nSunscreen SPF50 — jual Rp89.000, HPP Rp27.000",
+        "mis.\nSerum Niacinamide 30ml: jual Rp149.000, HPP Rp38.000 (terjual ±60/hari)\nMoisturizer Gel 50g: jual Rp119.000, HPP Rp31.000\nSunscreen SPF50: jual Rp89.000, HPP Rp27.000",
     },
     {
       type: "textarea",

@@ -342,7 +342,7 @@ function SlideBody({ s, t, image, gallery }: { s: Slide; t: DeckTheme; image?: s
           <p className="font-semibold leading-snug" style={{ fontSize: "3cqw" }}>
             {s.quote ?? s.title}
           </p>
-          {s.attribution && <p style={{ color: hex(t.muted) }}>— {s.attribution}</p>}
+          {s.attribution && <p style={{ color: hex(t.muted) }}>{s.attribution}</p>}
         </div>
       );
     case "image_text":

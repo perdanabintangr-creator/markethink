@@ -109,7 +109,7 @@ export function SizingResult({ data }: { data: SizingOutput }) {
                   </span>
                   <span className="text-xl font-bold">{shortRp(l.d.value_idr)}</span>
                 </div>
-                <p className="text-xs opacity-80">{l.d.buyers} — {l.d.definition}</p>
+                <p className="text-xs opacity-80">{l.d.buyers}. {l.d.definition}</p>
                 <p className="mt-1 font-mono text-[11px] opacity-80">{l.d.formula}</p>
               </div>
             ))}

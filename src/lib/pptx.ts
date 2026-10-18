@@ -867,13 +867,13 @@ export function imageSize(bytes: Uint8Array): { width: number; height: number } 
 /** Ringkasan teks presentasi (disimpan untuk konteks & ditampilkan di kartu chat). */
 export function presentationOutline(input: PresentationInput) {
   return [
-    `# ${input.title}${input.subtitle ? ` — ${input.subtitle}` : ""}`,
+    `# ${input.title}${input.subtitle ? `: ${input.subtitle}` : ""}`,
     ...input.slides.map((s, i) => {
       const body = [
         ...(s.bullets ?? []),
         ...(s.cards ?? []).map((cd) => `${cd.title}: ${cd.text}`),
         ...(s.columns ?? []).flatMap((col) => [col.heading, ...col.bullets.map((b) => `  ${b}`)]),
-        ...(s.stats ?? []).map((st) => `${st.value} — ${st.label}`),
+        ...(s.stats ?? []).map((st) => `${st.value} (${st.label})`),
         ...(s.steps ?? []).map((st, j) => `${j + 1}. ${st.title}: ${st.text}`),
         ...(s.chart ? [`Grafik ${s.chart.type}: ${s.chart.labels.join(", ")}`] : []),
         ...(s.table ? [`Tabel: ${s.table.headers.join(" | ")}`] : []),

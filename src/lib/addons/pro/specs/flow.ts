@@ -23,7 +23,7 @@ export const flowForm: ToolForm = {
       max: 1500,
       rows: 4,
       placeholder:
-        "mis. Dimsum Laras — dimsum frozen isi 20 Rp65.000, paket hemat 3 pack Rp180.000. Order lewat WA admin & website, kirim instan Jabodetabek, ekspedisi frozen ke Jawa. Pembeli kebanyakan ibu rumah tangga 28-40 th.",
+        "mis. Dimsum Laras, dimsum frozen isi 20 Rp65.000, paket hemat 3 pack Rp180.000. Order lewat WA admin & website, kirim instan Jabodetabek, ekspedisi frozen ke Jawa. Pembeli kebanyakan ibu rumah tangga 28-40 th.",
     },
     {
       type: "select",

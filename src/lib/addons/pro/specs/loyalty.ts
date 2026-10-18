@@ -22,7 +22,7 @@ export const loyaltyForm: ToolForm = {
       max: 1500,
       rows: 4,
       placeholder:
-        "mis. Kopi Tepi Kota — 3 outlet kopi susu di Bandung + GrabFood/GoFood. Menu andalan es kopi susu Rp28 rb. Pelanggan mahasiswa & pekerja 20-30 th, kasir pakai Moka POS.",
+        "mis. Kopi Tepi Kota, 3 outlet kopi susu di Bandung + GrabFood/GoFood. Menu andalan es kopi susu Rp28 rb. Pelanggan mahasiswa & pekerja 20-30 th, kasir pakai Moka POS.",
     },
     { type: "number", name: "aov", label: "Rata-rata nilai belanja per transaksi (Rp)", min: 5000, max: 50_000_000, default: 75000, half: true },
     { type: "number", name: "margin", label: "Gross margin", min: 1, max: 95, default: 50, suffix: "%", half: true },

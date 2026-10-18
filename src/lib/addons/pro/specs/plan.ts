@@ -111,7 +111,7 @@ export const planForm: ToolForm = {
       min: 20,
       max: 2000,
       rows: 4,
-      hint: "Produk, kisaran harga, kanal jual, dan angka saat ini (omzet, jumlah order/pelanggan) bila ada — makin lengkap, makin tajam rencananya.",
+      hint: "Produk, kisaran harga, kanal jual, dan angka saat ini (omzet, jumlah order/pelanggan) bila ada. Makin lengkap, makin tajam rencananya.",
       placeholder:
         "mis. Kopi susu literan gula aren Rp45rb & Rp85rb (2 liter). Jual di Shopee, TikTok Shop, dan 2 outlet takeaway di Bekasi. Omzet ±Rp70 jt/bulan, ±1.500 order, 35% pembeli repeat. Margin kotor ±55%.",
     },
@@ -131,7 +131,7 @@ export const planForm: ToolForm = {
       type: "chips",
       name: "channels",
       label: "Kanal yang sudah dipakai",
-      hint: "Kosongkan bila belum ada — kanal akan direkomendasikan.",
+      hint: "Kosongkan bila belum ada, nanti kanal direkomendasikan.",
       options: opts(CHANNEL_OPTIONS),
       defaults: ["instagram", "marketplace"],
       min: 0,

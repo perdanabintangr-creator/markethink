@@ -60,7 +60,7 @@ describe("pembuat PPT", () => {
   it("outline berisi semua judul slide", () => {
     const outline = presentationOutline(input);
     expect(outline).toContain("Sebelum vs Sesudah");
-    expect(outline).toContain("2x — ROAS");
+    expect(outline).toContain("2x (ROAS)");
   });
 
   it("ukuran gambar PNG terbaca", () => {

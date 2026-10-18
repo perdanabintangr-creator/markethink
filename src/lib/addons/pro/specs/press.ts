@@ -107,7 +107,7 @@ export const wordCount = (s: string) => s.trim().split(/\s+/).filter(Boolean).le
 
 /** Urutan paragraf siaran pers: lead → badan berita dengan kutipan disisipkan di posisinya. */
 export function pressParagraphs(data: PressOutput) {
-  const out: { kind: "lead" | "body" | "quote"; text: string }[] = [{ kind: "lead", text: `${data.dateline.replace(/\s*[–—-]\s*$/, "")} – ${data.lead}` }];
+  const out: { kind: "lead" | "body" | "quote"; text: string }[] = [{ kind: "lead", text: `${data.dateline.replace(/\s*[–—-]\s*$/, "")}: ${data.lead}` }];
   const quotes = [...data.quotes].sort((a, b) => (a.after ?? 1) - (b.after ?? 1));
   data.body.forEach((p, i) => {
     out.push({ kind: "body", text: p });

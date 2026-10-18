@@ -4,11 +4,11 @@ import { t } from "./common";
 import { CHANNEL_OPTIONS, budgetBasis } from "./plan";
 
 export const CAMPAIGN_OBJECTIVES: [string, string][] = [
-  ["awareness", "Awareness — dikenal lebih banyak orang"],
-  ["consideration", "Consideration — dipertimbangkan & dicoba"],
+  ["awareness", "Awareness: dikenal lebih banyak orang"],
+  ["consideration", "Consideration: dipertimbangkan & dicoba"],
   ["sales", "Penjualan"],
   ["launch", "Launching produk/varian baru"],
-  ["retention", "Retensi — pembelian ulang & loyalitas"],
+  ["retention", "Retensi: pembelian ulang & loyalitas"],
 ];
 
 export const campaignForm: ToolForm = {
@@ -23,7 +23,7 @@ export const campaignForm: ToolForm = {
       min: 10,
       max: 1200,
       rows: 3,
-      placeholder: "mis. Serum Niacinamide 10% 20ml Rp89rb — varian baru untuk kulit berminyak & bekas jerawat, tekstur ringan, sudah BPOM.",
+      placeholder: "mis. Serum Niacinamide 10% 20ml Rp89rb, varian baru untuk kulit berminyak & bekas jerawat, tekstur ringan, sudah BPOM.",
     },
     {
       type: "textarea",

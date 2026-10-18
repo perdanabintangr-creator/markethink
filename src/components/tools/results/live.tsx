@@ -96,7 +96,7 @@ export function LiveResult({ data }: { data: LiveOutput }) {
                 <details className="group rounded-xl border bg-background p-3 open:bg-accent/30" open={i === 0}>
                   <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2">
                     <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary tabular-nums">
-                      {s.start_min}–{s.end_min}′
+                      {s.start_min}-{s.end_min}′
                     </span>
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs text-muted-foreground">· {s.goal}</span>

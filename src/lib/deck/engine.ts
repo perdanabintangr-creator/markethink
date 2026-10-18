@@ -951,7 +951,7 @@ function quote(c: Composer, s: SlideInput, i: number) {
   let y = 1.25;
   y += c.text("“", "head", c.ax, y, 2, { size: 110, color: c.pal.accent, lh: 0.9, o: 0.9 }) - 0.3;
   y += c.text(s.quote ?? s.title, "head", c.ax, y, Math.min(8.6, c.aw), { size: 30, min: 18, maxLines: 6, lh: 1.22, upper: false }) + 0.3;
-  if (s.attribution) c.text(`— ${s.attribution}`, "strong", c.ax, y, Math.min(8, c.aw), { size: 10.5, ls: 2, upper: true, color: c.pal.accent2, maxLines: 1 });
+  if (s.attribution) c.text(s.attribution, "strong", c.ax, y, Math.min(8, c.aw), { size: 10.5, ls: 2, upper: true, color: c.pal.accent2, maxLines: 1 });
 }
 
 function closing(c: Composer, s: SlideInput, i: number, presenter?: string) {
