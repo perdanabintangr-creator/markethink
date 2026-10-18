@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { describe, expect, it } from "vitest";
-import { newOrderId, paymentStatusOf, validSignature } from "@/lib/payments/midtrans";
+import { modeOf, newOrderId, paymentStatusOf, validSignature } from "@/lib/payments/midtrans";
 
 describe("pembayaran Midtrans", () => {
   it("tanda tangan notifikasi: SHA512(order_id + status_code + gross_amount + server key)", () => {
@@ -20,6 +20,12 @@ describe("pembayaran Midtrans", () => {
     expect(paymentStatusOf({ transaction_status: "expire" })).toBe("expired");
     expect(paymentStatusOf({ transaction_status: "deny" })).toBe("failed");
     expect(paymentStatusOf({ transaction_status: "cancel" })).toBe("canceled");
+  });
+
+  it("mode otomatis dari awalan key", () => {
+    expect(modeOf("SB-Mid-server-abc", undefined)).toBe("sandbox");
+    expect(modeOf("Mid-server-abc", undefined)).toBe("production");
+    expect(modeOf("SB-Mid-server-abc", "true")).toBe("production");
   });
 
   it("order ID unik dan ≤ 50 karakter", () => {

@@ -359,7 +359,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 
 ## 2026-10-18 — Pembayaran otomatis Midtrans (ACC founder)
 - Midtrans Snap (QRIS, VA, e-wallet). Fee QRIS ±0,7% **ditanggung Markethink** (BI melarang surcharge ke pembeli, PBI 23/6/2021 ps. 52).
-- Env (diisi founder di Vercel): `MIDTRANS_SERVER_KEY`, opsional `MIDTRANS_IS_PRODUCTION=true` (default sandbox). Tanpa key → alur lama
+- Env (diisi founder di Vercel): `MIDTRANS_SERVER_KEY`; mode otomatis dari awalan key (`SB-` = sandbox), `MIDTRANS_IS_PRODUCTION` hanya pemaksa. Tanpa key → alur lama
   "kirim permintaan" tetap dipakai.
 - Alur: `/api/pay/checkout` (harga dihitung ulang di server: promo + diskon member) → halaman bayar Midtrans → notifikasi ke
   `/api/webhooks/midtrans` (tanda tangan dicek + status selalu diambil ulang dari API Midtrans, nominal harus sama) → aktivasi sekali
