@@ -8,6 +8,7 @@ import { embedQuery, embeddingsEnabled } from "@/lib/ai/embeddings";
 import { ATTACHMENT_URL_PREFIX, type MtMessage } from "@/lib/types";
 import { truncate } from "@/lib/utils";
 import { isScannedPdf } from "@/lib/files";
+import { attachmentIdFromUrl } from "@/lib/connectors/apps";
 
 export function messageText(m: MtMessage) {
   return m.parts
@@ -114,13 +115,22 @@ export function summarizeToolParts(m: MtMessage): MtMessage {
     } else if (tp.type === "tool-read_tool_result") {
       parts.push({ type: "text", text: `[Kamu sudah membaca hasil Smart Tools "${String(tp.output.title)}" (id ${String(tp.input?.run_id ?? "")}). Baca lagi bila butuh detailnya.]` });
     } else if (tp.type === "tool-create_carousel") {
-      parts.push({ type: "text", text: `[Kamu sudah membuat carousel/poster "${String(tp.output.title)}" (${String(tp.output.slideCount)} slide, ${String(tp.output.format)})]` });
+      const pdfId = attachmentIdFromUrl(tp.output.pdfUrl);
+      parts.push({
+        type: "text",
+        text: `[Kamu sudah membuat carousel/poster "${String(tp.output.title)}" (${String(tp.output.slideCount)} slide, ${String(tp.output.format)})${pdfId ? `; id PDF: ${pdfId}` : ""}]`,
+      });
     } else if (tp.type === "tool-product_photo") {
       const imgs = (tp.output.images as { attachmentId: string }[] | undefined) ?? [];
       parts.push({ type: "text", text: `[Kamu sudah membuat ${imgs.length} foto produk (style ${String(tp.output.style)}) — id: ${imgs.map((x) => x.attachmentId).join(", ")}]` });
     } else if (tp.type === "tool-create_presentation") {
       const titles = (tp.output.slideTitles as string[] | undefined) ?? [];
-      parts.push({ type: "text", text: `[Kamu sudah membuat file PPT "${String(tp.output.title)}" (${titles.length} slide): ${truncate(titles.join(" | "), 600)}]` });
+      parts.push({
+        type: "text",
+        text: `[Kamu sudah membuat file PPT "${String(tp.output.title)}" (${titles.length} slide; id file: ${String(tp.output.attachmentId)}): ${truncate(titles.join(" | "), 600)}]`,
+      });
+    } else if (tp.type === "tool-send_to_canva") {
+      parts.push({ type: "text", text: `[Kamu sudah mengirim "${String(tp.output.title ?? "")}" ke Canva; user sudah mendapat tombol Buka di Canva]` });
     }
   }
   return { ...m, parts };

@@ -11,6 +11,10 @@ import { cn } from "@/lib/utils";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 import { buildQuotedMessage } from "@/lib/quote";
 import { chatText } from "@/lib/i18n/chat";
+import { CONNECTOR_APPS, filterApps, findMention, insertMention, type ConnectorApp } from "@/lib/connectors/apps";
+import { connectorsText } from "@/lib/i18n/connectors";
+import { AppIcon } from "@/components/connectors/app-icon";
+import { useConnectorReturnNotice, useConnectors } from "@/components/connectors/use-connectors";
 
 export interface PendingAttachment {
   id: string;
@@ -59,6 +63,42 @@ export function Composer({
   const [uploading, setUploading] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Mention aplikasi: ketik "@" di awal kata → daftar aplikasi (mis. Canva).
+  const cx = connectorsText(lang);
+  const connectors = useConnectors();
+  useConnectorReturnNotice(lang);
+  const [mention, setMention] = useState<{ start: number; caret: number; query: string } | null>(null);
+  const [mentionIdx, setMentionIdx] = useState(0);
+  const [mentionDismissed, setMentionDismissed] = useState<number | null>(null);
+  const availableApps = CONNECTOR_APPS.filter((a) => connectors === null || connectors.some((s) => s.id === a.id && s.enabled));
+  const mentionApps = mention && mention.start !== mentionDismissed ? filterApps(mention.query, availableApps) : [];
+  const mentionOpen = mentionApps.length > 0;
+
+  function updateMention(value: string, caret: number | null, selectionEnd?: number | null) {
+    const m = caret !== null && caret === (selectionEnd ?? caret) ? findMention(value, caret) : null;
+    if (!m || caret === null) {
+      if (mention) setMention(null);
+      if (mentionDismissed !== null) setMentionDismissed(null);
+      return;
+    }
+    if (mention?.start === m.start && mention.query === m.query && mention.caret === caret) return;
+    if (mention?.start !== m.start || mention.query !== m.query) setMentionIdx(0);
+    setMention({ ...m, caret });
+  }
+
+  function pickApp(app: ConnectorApp) {
+    if (!mention) return;
+    const next = insertMention(text, mention.start, mention.caret, app.mention);
+    setMention(null);
+    if (next.text === text) {
+      // Teks tidak berubah (mention sudah lengkap): cukup pindahkan kursor.
+      taRef.current?.setSelectionRange(next.caret, next.caret);
+      return;
+    }
+    pendingSelect.current = [next.caret, next.caret];
+    setText(next.text);
+  }
 
   // Saat user memilih "Tanyakan", langsung fokus ke kotak ketik.
   useEffect(() => {
@@ -113,13 +153,14 @@ export function Composer({
     onSend(quote ? buildQuotedMessage(quote, message) : message, attachments);
     onClearQuote?.();
     setText("");
+    setMention(null);
     setAttachments([]);
     if (taRef.current) taRef.current.style.height = "auto";
   }
 
   return (
     <div
-      className="rounded-2xl border bg-card shadow-sm focus-within:ring-2 focus-within:ring-ring"
+      className="relative rounded-2xl border bg-card shadow-sm focus-within:ring-2 focus-within:ring-ring"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
@@ -163,6 +204,47 @@ export function Composer({
           </button>
         </div>
       )}
+      {mentionOpen && (
+        <div
+          role="listbox"
+          aria-label={cx.mentionTitle}
+          className="absolute bottom-full left-2 z-30 mb-2 w-72 max-w-[calc(100%-1rem)] overflow-hidden rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg"
+        >
+          <p className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{cx.mentionTitle}</p>
+          {mentionApps.map((app, i) => {
+            const status = connectors?.find((s) => s.id === app.id);
+            return (
+              <button
+                key={app.id}
+                type="button"
+                role="option"
+                aria-selected={i === mentionIdx}
+                // mousedown: pilih sebelum textarea kehilangan fokus.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  pickApp(app);
+                }}
+                onMouseEnter={() => setMentionIdx(i)}
+                className={cn("flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left", i === mentionIdx ? "bg-accent" : "hover:bg-accent/60")}
+              >
+                <AppIcon id={app.icon} className="size-7 text-xs" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-sm font-medium">
+                    {app.name}
+                    {status && (
+                      <span className={cn("text-[10px] font-normal", status.connected ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                        {status.connected ? cx.connected : cx.notConnected}
+                      </span>
+                    )}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">{app.description[lang === "en" ? "en" : "id"]}</span>
+                </span>
+              </button>
+            );
+          })}
+          <p className="px-2.5 pb-1 pt-1 text-[10px] text-muted-foreground">{cx.mentionHint}</p>
+        </div>
+      )}
       <textarea
         ref={taRef}
         value={text}
@@ -170,8 +252,29 @@ export function Composer({
           setText(e.target.value);
           e.target.style.height = "auto";
           e.target.style.height = `${Math.min(e.target.scrollHeight, 240)}px`;
+          updateMention(e.target.value, e.target.selectionStart, e.target.selectionEnd);
         }}
+        onSelect={(e) => updateMention(e.currentTarget.value, e.currentTarget.selectionStart, e.currentTarget.selectionEnd)}
+        onBlur={() => setMention(null)}
         onKeyDown={(e) => {
+          if (mentionOpen && !e.nativeEvent.isComposing) {
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              e.preventDefault();
+              const n = mentionApps.length;
+              setMentionIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : (i - 1 + n) % n));
+              return;
+            }
+            if ((e.key === "Enter" && !e.shiftKey) || e.key === "Tab") {
+              e.preventDefault();
+              pickApp(mentionApps[Math.min(mentionIdx, mentionApps.length - 1)]);
+              return;
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              setMentionDismissed(mention?.start ?? null);
+              return;
+            }
+          }
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
             e.preventDefault();
             submit();

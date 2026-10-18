@@ -5,7 +5,7 @@ import { MOOD_LABELS, type MoodId } from "@/lib/deck/moods";
 /** Teks halaman Pengaturan, Paket & harga, dan Projects/Brand Kit (ID + EN). */
 
 type BrandKitFieldKey = "products" | "target_audience" | "brand_voice" | "usp" | "competitors" | "channels" | "budget_range" | "notes";
-type SettingsTabId = "umum" | "profil" | "personalisasi" | "memori" | "project" | "paket" | "penyimpanan" | "link" | "akun";
+type SettingsTabId = "umum" | "profil" | "personalisasi" | "memori" | "project" | "aplikasi" | "paket" | "penyimpanan" | "link" | "akun";
 type UsageGroupId = "chat" | "image" | "pptx" | "carousel" | "tools" | "agent";
 
 const id = {
@@ -21,6 +21,7 @@ const id = {
     personalisasi: "Personalisasi",
     memori: "Memori",
     project: "Brand & project",
+    aplikasi: "Aplikasi terhubung",
     paket: "Paket & penggunaan",
     penyimpanan: "Penyimpanan",
     link: "Link dibagikan",
@@ -263,6 +264,7 @@ const en: typeof id = {
     personalisasi: "Personalization",
     memori: "Memory",
     project: "Brands & projects",
+    aplikasi: "Connected apps",
     paket: "Plan & usage",
     penyimpanan: "Storage",
     link: "Shared links",

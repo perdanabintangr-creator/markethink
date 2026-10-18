@@ -365,3 +365,11 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   `/api/webhooks/midtrans` (tanda tangan dicek + status selalu diambil ulang dari API Midtrans, nominal harus sama) → aktivasi sekali
   saja lewat `bo_record_sale` / `bo_record_addon_sale` (laporan penjualan back office ikut tercatat; bundel dibagi `splitBundleAmount`).
   Halaman kembali (`?paid=<order>`) mengecek `/api/pay/status` dan ikut mengaktifkan bila notifikasi terlambat. Tabel `payments` (migrasi 0045).
+
+## 2026-10-18 — "@" aplikasi terhubung, mulai dari Canva (ACC founder)
+- Ketik "@" di kotak chat → pilih Canva → AI memanggil tool `send_to_canva`; juga tombol "Edit di Canva" di hasil PPT, carousel (PDF) & gambar.
+- Canva Connect API (OAuth PKCE; scope `asset:read asset:write design:content:write profile:read`): PPT/PDF lewat design import,
+  gambar lewat asset upload + buat desain. Endpoint diverifikasi ke OpenAPI resmi canva-connect-api-starter-kit.
+- Env founder: `CANVA_CLIENT_ID`, `CANVA_CLIENT_SECRET`; redirect URI `https://markethink-pi.vercel.app/api/connectors/canva/callback`.
+  Tanpa env, fitur tersembunyi. Token di tabel `user_connectors` (migrasi 0046), hanya service role. Sebelum direview Canva,
+  hanya akun developer yang bisa memakai.

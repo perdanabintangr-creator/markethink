@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Brain, FolderOpen, Gauge, HardDrive, Link2, Settings, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { Blocks, Brain, FolderOpen, Gauge, HardDrive, Link2, Settings, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Lang } from "@/lib/i18n/dict";
 import { settingsText } from "@/lib/i18n/settings";
@@ -10,6 +10,7 @@ export const SETTINGS_TABS = [
   { id: "personalisasi", icon: Sparkles },
   { id: "memori", icon: Brain },
   { id: "project", icon: FolderOpen },
+  { id: "aplikasi", icon: Blocks },
   { id: "paket", icon: Gauge },
   { id: "penyimpanan", icon: HardDrive },
   { id: "link", icon: Link2 },

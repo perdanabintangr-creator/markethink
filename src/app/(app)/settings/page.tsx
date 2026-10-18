@@ -15,6 +15,9 @@ import { PersonalizationForm } from "./personalization-form";
 import { PasswordForm, SignOutEverywhere } from "./security-form";
 import { SharedLinks, type SharedItem } from "./shared-links";
 import { SETTINGS_TABS, SettingRow, SettingsNav, settingsTabOf } from "./settings-nav";
+import { ConnectedApps } from "@/components/connectors/connected-apps";
+import { connectorStatuses } from "@/lib/connectors/canva";
+import { connectorsText } from "@/lib/i18n/connectors";
 
 export async function generateMetadata() {
   const { profile } = await getSession();
@@ -81,6 +84,8 @@ async function Section({ tab, t, supabase, user, profile }: { tab: string; t: Se
       return <MemorySection t={t} supabase={supabase} />;
     case "project":
       return <ProjectSection t={t} supabase={supabase} />;
+    case "aplikasi":
+      return <AppsSection user={user} profile={profile} />;
     case "paket":
       return <UsageSection t={t} supabase={supabase} user={user} profile={profile} />;
     case "penyimpanan":
@@ -167,6 +172,16 @@ async function ProjectSection({ t, supabase }: { t: SettingsText; supabase: Supa
           {t.noProjectsSettings}
         </p>
       )}
+    </>
+  );
+}
+
+async function AppsSection({ user, profile }: { user: User; profile: Prof }) {
+  const statuses = await connectorStatuses(user.id);
+  return (
+    <>
+      <Desc>{connectorsText(profile.language).settingsDesc}</Desc>
+      <ConnectedApps statuses={statuses} />
     </>
   );
 }

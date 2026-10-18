@@ -23,6 +23,9 @@ import { sanitizeFileName } from "@/lib/files";
 import type { BrandVisual } from "@/lib/ai/prompt";
 import { MOOD_IDS, type MoodId } from "@/lib/deck/moods";
 import { readToolResult } from "@/lib/addons/chat-context";
+import { canvaEnabled, importAttachmentToCanva } from "@/lib/connectors/canva";
+import { attachmentIdFromUrl, connectUrlFor } from "@/lib/connectors/apps";
+import { connectorsText } from "@/lib/i18n/connectors";
 
 export const IMAGE_CREDIT_COST = 6; // ±Rp555 modal per gambar (1 kredit ≈ Rp100)
 export const PPTX_CREDIT_COST = 2;
@@ -85,6 +88,14 @@ const PRODUCT_ANGLES = ["front three-quarter view", "slightly elevated angle wit
 export type ImageToolOutput =
   | { ok: true; attachmentId: string; url: string; prompt: string; aspectRatio: string }
   | { ok: false; error: string; hint?: string };
+
+export type SendToCanvaOutput =
+  | { ok: true; editUrl: string; viewUrl?: string; title: string; hint?: string }
+  | { ok: false; needsConnect: true; connectUrl: string; error: string }
+  | { ok: false; error: string; code?: string };
+
+/** Maks kirim ke Canva per pesan. */
+const MAX_CANVA_SENDS = 3;
 
 export type PresentationToolOutput =
   | {
@@ -170,6 +181,7 @@ export const MAX_TOOL_READS = 3;
 
 export function createChatTools(ctx: ToolCtx) {
   const read = new Set<string>();
+  let canvaSends = 0;
   return {
     read_tool_result: tool({
       description:
@@ -422,6 +434,40 @@ export function createChatTools(ctx: ToolCtx) {
         return { ok: true, images: ok, style, failed };
       },
     }),
+
+    ...(canvaEnabled()
+      ? {
+          send_to_canva: tool({
+            description:
+              "Kirim file hasil Markethink (PPT, carousel/poster, gambar AI, foto produk) atau gambar dari user ke akun Canva milik user " +
+              "sebagai desain yang bisa diedit, lalu dapat link 'Buka di Canva'. Pakai saat user menyebut @Canva atau minta hasil diedit/dibuka/dikirim ke Canva. " +
+              "attachment_id: PPT = id file PPT; carousel/poster = id PDF-nya (atau id ZIP-nya); gambar = id gambar. Tidak memotong kuota user.",
+            inputSchema: z.object({
+              attachment_id: z.string().min(8).max(300).describe("ID file (uuid) atau URL /api/attachments/<id> dari hasil sebelumnya"),
+              title: z.string().max(100).optional().describe("Judul desain di Canva (opsional)"),
+            }),
+            execute: async ({ attachment_id, title }): Promise<SendToCanvaOutput> => {
+              const id = attachmentIdFromUrl(attachment_id);
+              if (!id) return { ok: false, error: "ID file tidak valid. Pakai id file dari hasil PPT/carousel/gambar sebelumnya." };
+              if (canvaSends >= MAX_CANVA_SENDS) return { ok: false, error: `Batas ${MAX_CANVA_SENDS} kiriman ke Canva per pesan tercapai.` };
+              canvaSends++;
+              const res = await importAttachmentToCanva(ctx.userId, id, title);
+              const c = connectorsText("id");
+              if (res.ok) {
+                return {
+                  ok: true,
+                  editUrl: res.editUrl,
+                  viewUrl: res.viewUrl,
+                  title: res.title,
+                  hint: "Kartu dengan tombol 'Buka di Canva' sudah tampil untuk user. Balas 1 kalimat saja; jangan menulis ulang URL.",
+                };
+              }
+              if (res.needsConnect) return { ok: false, needsConnect: true, connectUrl: connectUrlFor("canva", `/chat/${ctx.chatId}`), error: c.errors.needs_connect };
+              return { ok: false, error: c.errors[res.code], code: res.code };
+            },
+          }),
+        }
+      : {}),
   };
 }
 
@@ -747,6 +793,9 @@ export function capabilitiesPrompt(imageBlockedReason: string | null, opts: { we
       : "- **Membuat gambar:** bila user minta dibuatkan gambar/desain/visual/poster/konten feed, panggil tool `generate_image` (jangan hanya mendeskripsikan). Untuk edit/variasi gambar sebelumnya atau gambar dari user, isi `reference_ids` dengan id gambarnya. Gambar persis sesuai permintaan user — jangan menambahkan brand/logo/produk user ke gambar kecuali diminta. Setelah gambar jadi, cukup 1–2 kalimat singkat (mis. konsep visualnya); jangan menambahkan caption atau konten lain kecuali diminta, dan jangan menulis ulang URL gambar.",
     "- **Membuat PPT/slide:** bila user minta presentasi/PPT/deck/slide, panggil tool `create_presentation` dengan isi lengkap dan berkualitas (8–14 slide kecuali diminta lain) dan ikuti aturan desain di deskripsi tool: layout bervariasi (agenda, section, cards+ikon, stats, chart, timeline, comparison, table, quote, closing), teks ringkas, gambar cover, dan speaker notes. Bila ada dokumen terlampir, rangkum & susun slide dari dokumen itu seperti NotebookLM. Setelah file jadi, balas SINGKAT (maks 4 baris): 1 kalimat asumsi utama + 2–3 poin yang perlu user sesuaikan. JANGAN membuat tabel atau mengulang daftar/isi slide (sudah tampil di kartu PPT).",
     "- **Carousel & poster:** bila user minta carousel IG/TikTok/LinkedIn, poster, flyer, atau konten feed berisi teks, panggil `create_carousel` (bukan generate_image) — hasilnya file JPEG per slide + PDF + caption siap posting.",
+    canvaEnabled()
+      ? "- **Canva (@Canva):** bila user menyebut @Canva atau minta hasil diedit/dibuka di Canva, panggil `send_to_canva` dengan id file hasil Markethink (PPT: id file PPT; carousel/poster: id PDF; gambar: id gambar) atau gambar dari user. Bila belum ada hasil yang cocok, buat dulu (create_presentation / create_carousel / generate_image) lalu kirim. Bila hasilnya needsConnect, minta user menekan tombol Hubungkan Canva di kartu, lalu minta lagi. Setelah berhasil cukup 1 kalimat; jangan menulis ulang URL."
+      : "",
     imageBlockedReason
       ? ""
       : "- **Foto Produk Studio:** bila user mengirim foto produk dan minta foto katalog/marketplace/iklan/ganti background, panggil `product_photo` dengan id fotonya (produk dijaga sama persis).",

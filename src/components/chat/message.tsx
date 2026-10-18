@@ -7,6 +7,7 @@ import {
   Check,
   Copy,
   Download,
+  ExternalLink,
   FileText,
   Globe,
   Image as ImageIcon,
@@ -37,6 +38,10 @@ import { Markdown } from "./markdown";
 import { DeckPreviewButton, type DeckInput } from "./deck-preview";
 import { ScenePreviewButton } from "./scene-preview";
 import { SelectionAsk } from "./selection-ask";
+import { EditInCanvaButton, goConnectCanva } from "@/components/connectors/canva-button";
+import { AppIcon } from "@/components/connectors/app-icon";
+import { attachmentIdFromUrl } from "@/lib/connectors/apps";
+import { connectorsText } from "@/lib/i18n/connectors";
 
 const TIER_LABEL = Object.fromEntries(getTiers({}).map((t) => [t.id, t.label]));
 /** Nilai alasan yang disimpan (selalu versi Indonesia); labelnya mengikuti bahasa UI. */
@@ -61,6 +66,7 @@ const RENDERED_TOOLS = new Set([
   "tool-read_tool_result",
   "tool-create_carousel",
   "tool-product_photo",
+  "tool-send_to_canva",
 ]);
 
 /** Urutan tampilan jawaban: teks (potongan bersebelahan digabung) diselingi hasil gambar/PPT. */
@@ -279,6 +285,8 @@ export function ChatMessage({
             <CarouselResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
           ) : b.part.type === "tool-product_photo" ? (
             <ProductPhotoResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
+          ) : b.part.type === "tool-send_to_canva" ? (
+            <SendToCanvaResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
           ) : (
             <DeckResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
           ),
@@ -446,9 +454,12 @@ function ImageResult({ part, streaming }: { part: ToolPart; streaming: boolean }
           />
         </a>
       )}
-      <a href={`${url}?download=1`} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-        <Download className="size-3.5" /> {t.download}
-      </a>
+      <div className="flex flex-wrap items-center gap-3">
+        <a href={`${url}?download=1`} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          <Download className="size-3.5" /> {t.download}
+        </a>
+        <EditInCanvaButton attachmentId={attachmentIdFromUrl(part.output.attachmentId)} title={String(part.output.prompt ?? "").slice(0, 50).trim() || c.imageAlt} size="xs" />
+      </div>
     </figure>
   );
 }
@@ -497,6 +508,7 @@ function CarouselResult({ part, streaming }: { part: ToolPart; streaming: boolea
               title={String(o.title)}
             />
           ) : null}
+          <EditInCanvaButton attachmentId={attachmentIdFromUrl(o.pdfUrl) ?? attachmentIdFromUrl(o.attachmentId)} title={String(o.title)} />
           <Button asChild size="sm" variant="outline">
             <a href={`${String(o.pdfUrl)}?download=1`}>
               <FileText /> PDF
@@ -553,6 +565,44 @@ function ProductPhotoResult({ part, streaming }: { part: ToolPart; streaming: bo
           </a>
         </figure>
       ))}
+    </div>
+  );
+}
+
+/** Hasil tool send_to_canva: tombol "Buka di Canva", atau "Hubungkan Canva" bila akun belum terhubung. */
+function SendToCanvaResult({ part, streaming }: { part: ToolPart; streaming: boolean }) {
+  const { lang } = useApp();
+  const c = connectorsText(lang);
+  if (part.state === "output-error") return <ToolError message={c.canvaFailed} />;
+  if (part.state !== "output-available" || !part.output) return <ToolPending label={c.sendingToCanva} streaming={streaming} />;
+  const o = part.output;
+  const needsConnect = Boolean(o.needsConnect);
+  if (!o.ok && !needsConnect) {
+    const code = typeof o.code === "string" && o.code in c.errors ? (o.code as keyof typeof c.errors) : null;
+    return <ToolError message={code ? c.errors[code] : (o.error ?? c.canvaFailed)} />;
+  }
+  const editUrl = typeof o.editUrl === "string" && /^https:\/\//.test(o.editUrl) ? o.editUrl : null;
+  return (
+    <div className="flex max-w-xl flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3">
+      <AppIcon id="canva" className="size-9 text-sm" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{needsConnect ? c.connectCanva : c.sentToCanva}</p>
+        <p className="text-xs text-muted-foreground">
+          {needsConnect ? c.needsConnectDesc : c.sentToCanvaDesc(typeof o.title === "string" ? o.title : "")}
+        </p>
+        {!needsConnect && <p className="mt-0.5 text-[11px] text-muted-foreground/80">{c.canvaLinkNote}</p>}
+      </div>
+      {needsConnect ? (
+        <Button size="sm" onClick={goConnectCanva}>
+          {c.connectCanva}
+        </Button>
+      ) : editUrl ? (
+        <Button asChild size="sm">
+          <a href={editUrl} target="_blank" rel="noopener noreferrer">
+            <ExternalLink /> {c.openInCanva}
+          </a>
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -620,6 +670,7 @@ function DeckResult({ part, streaming }: { part: ToolPart; streaming: boolean })
               downloadUrl={`${String(part.output.url)}?download=1`}
             />
           ) : null}
+          <EditInCanvaButton attachmentId={attachmentIdFromUrl(part.output.attachmentId)} title={String(part.output.title)} />
           {part.output.pdfUrl ? (
             <Button asChild size="sm" variant="outline">
               <a href={`${String(part.output.pdfUrl)}?download=1`}>

@@ -2587,3 +2587,55 @@ alter table public.addon_subscriptions add column if not exists bundle_id text r
 -- Kuota hasil per bulan disesuaikan supaya modal AI (perkiraan per hasil) muat di 60% harga normal.
 update public.addons set monthly_quota = 3, updated_at = now() where id in ('riset_pro', 'jualan_kit', 'crm_pro', 'kolpr_pro');
 update public.addons set monthly_quota = 6, updated_at = now() where id in ('konten_pro', 'dokter_iklan', 'laporan_pro', 'strategi_pro');
+
+
+-- ===== 20261018000045_payments.sql =====
+-- Pembayaran otomatis lewat Midtrans (Snap: QRIS, VA, e-wallet). Bayar sukses → paket/add-on/bundel aktif otomatis
+-- lewat fungsi pencatatan yang sama dengan back office (bo_record_sale / bo_record_addon_sale).
+create table if not exists public.payments (
+  id uuid primary key default gen_random_uuid(),
+  order_id text not null unique,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  kind text not null check (kind in ('plan', 'addon', 'bundle')),
+  item_id text not null,
+  item_name text,
+  months integer not null default 1 check (months between 1 and 12),
+  amount_idr integer not null check (amount_idr > 0),
+  status text not null default 'pending' check (status in ('pending', 'paid', 'failed', 'expired', 'canceled')),
+  provider text not null default 'midtrans',
+  payment_type text,
+  redirect_url text,
+  raw jsonb,
+  paid_at timestamptz,
+  fulfilled_at timestamptz,
+  fulfill_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists payments_user_idx on public.payments (user_id, created_at desc);
+alter table public.payments enable row level security;
+create policy "own payments" on public.payments for select using (user_id = auth.uid());
+
+
+-- ===== 20261018000046_connectors.sql =====
+-- Aplikasi terhubung (mulai dari Canva): user menghubungkan akun Canva-nya sendiri lewat OAuth (PKCE),
+-- lalu hasil Markethink (PPT, carousel/poster, gambar AI) bisa dikirim ke Canva sebagai desain yang bisa diedit.
+-- Token HANYA dibaca/ditulis server (service role). Sengaja tanpa policy: user biasa tidak bisa membaca token lewat API publik.
+-- State OAuth + code_verifier disimpan di cookie httpOnly bertanda tangan (umur 10 menit), bukan di tabel.
+
+create table if not exists public.user_connectors (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  provider text not null check (provider in ('canva')),
+  access_token text not null,
+  refresh_token text not null,
+  expires_at timestamptz not null,
+  scope text,
+  account_name text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, provider)
+);
+
+alter table public.user_connectors enable row level security;
+-- Tidak ada policy select/insert/update/delete untuk anon/authenticated: akses hanya lewat service role.
+revoke all on public.user_connectors from anon, authenticated;
