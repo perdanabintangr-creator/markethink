@@ -373,3 +373,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Env founder: `CANVA_CLIENT_ID`, `CANVA_CLIENT_SECRET`; redirect URI `https://markethink-pi.vercel.app/api/connectors/canva/callback`.
   Tanpa env, fitur tersembunyi. Token di tabel `user_connectors` (migrasi 0046), hanya service role. Sebelum direview Canva,
   hanya akun developer yang bisa memakai.
+
+## 2026-10-19 · Urutan metode bayar Midtrans
+- Snap memakai `enabled_payments`: QRIS umum (`other_qris`, lewat GoPay QRIS, 0,7%) paling atas, lalu Virtual Account. GoPay e-money (4% untuk produk digital) disembunyikan; pengguna GoPay tetap bisa scan QRIS. ACC founder.
