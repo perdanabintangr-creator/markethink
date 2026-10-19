@@ -205,6 +205,9 @@
 }
 
 /* Pengaturan → Umum: ukuran teks & lebar kolom chat (atribut dipasang dari localStorage, lihat src/lib/chat-prefs.ts). */
+/* Font pilihan user (Pengaturan → Umum), lihat src/lib/fonts.ts. */
+html[data-font] body { font-family: var(--user-font), ui-sans-serif, system-ui, sans-serif; }
+
 html[data-chat-text="sm"] .chat-thread .prose { font-size: 0.8125rem; }
 html[data-chat-text="lg"] .chat-thread .prose { font-size: 1rem; }
 html[data-chat-text="sm"] .chat-thread .user-bubble { font-size: 0.8125rem; }

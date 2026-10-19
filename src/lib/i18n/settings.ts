@@ -110,6 +110,12 @@ const id = {
   chatWidth: "Lebar kolom chat",
   chatWidthDesc: "Lebar area chat & kotak tulis di layar besar. Tersimpan di perangkat ini.",
   wide: "Lebar",
+  font: "Font tampilan",
+  fontDesc: "Pilih gaya tulisan Markethink, dari yang rapi sampai yang lucu. Tersimpan di perangkat ini.",
+  fontGroups: { standard: "Rapi & modern", fun: "Lucu & santai", classic: "Klasik & unik" } as Record<string, string>,
+  fontDefault: "Bawaan",
+  fontSample: "Halo! Yuk bikin konten hari ini.",
+  fontSaved: (n: string) => `Font diganti ke ${n}`,
 
   // ── Profil ──
   name: "Nama",
@@ -347,6 +353,12 @@ const en: typeof id = {
   chatWidth: "Chat column width",
   chatWidthDesc: "Width of the chat area & input box on large screens. Saved on this device.",
   wide: "Wide",
+  font: "Display font",
+  fontDesc: "Pick how Markethink's text looks, from clean to playful. Saved on this device.",
+  fontGroups: { standard: "Clean & modern", fun: "Fun & casual", classic: "Classic & unique" },
+  fontDefault: "Default",
+  fontSample: "Hi! Let's make some content today.",
+  fontSaved: (n: string) => `Font changed to ${n}`,
 
   name: "Name",
   role: "Role",

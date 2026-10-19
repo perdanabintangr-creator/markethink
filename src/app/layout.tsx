@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers";
 import { CHAT_PREFS_SCRIPT } from "@/lib/chat-prefs";
 import { resolveAppUrl } from "@/lib/env";
+import { FONT_SCRIPT } from "@/lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="id" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: CHAT_PREFS_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: FONT_SCRIPT }} />
       </head>
       <body className="font-sans">
         <Providers>{children}</Providers>

@@ -10,6 +10,7 @@ import { useApp } from "@/components/app/app-context";
 import { settingsText } from "@/lib/i18n/settings";
 import { SettingRow } from "./settings-nav";
 import { Segmented } from "./segmented";
+import { FontPicker } from "./font-picker";
 
 export function GeneralPrefs({ language }: { language: "id" | "en" }) {
   const router = useRouter();
@@ -61,6 +62,7 @@ export function GeneralPrefs({ language }: { language: "id" | "en" }) {
           ]}
         />
       </SettingRow>
+      <FontPicker />
       <SettingRow title={t.textSize} desc={t.textSizeDesc}>
         <Segmented
           value={text}
