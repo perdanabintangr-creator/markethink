@@ -311,6 +311,7 @@ const id = {
     drivers: "🚀 Pendorong pasar",
     barriers: "🧱 Penghambat",
     gaps: "Yang masih perlu divalidasi",
+    raise: "Cara menaikkan keyakinan: isi wilayah sampai kota/kabupaten dan masukkan angka nyata bisnismu (penjualan, jumlah pelanggan, harga, pesaing) di kolom data yang sudah kamu punya, lalu jalankan ulang.",
   },
 
   entry: {
@@ -1149,6 +1150,7 @@ const en: ResultsText = {
     drivers: "🚀 Market drivers",
     barriers: "🧱 Barriers",
     gaps: "Still needs validation",
+    raise: "To raise confidence: set the area down to a city/regency and add your real business numbers (sales, customers, prices, competitors) in the data you already have field, then run it again.",
   },
 
   entry: {

@@ -95,6 +95,7 @@ export function SizingResult({ data }: { data: SizingOutput }) {
           <Pill tone="muted">{t.phase(tr.ev(data.lifecycle))}</Pill>
           <Pill tone={toneOf(data.confidence)}>{t.confidence(tr.ev(data.confidence))}</Pill>
         </div>
+        {data.confidence_reason && <p className="mt-2 text-xs text-muted-foreground">{data.confidence_reason}</p>}
       </Summary>
 
       <SectionCard title={t.sizeTitle} hint={data.market_definition}>
@@ -189,9 +190,10 @@ export function SizingResult({ data }: { data: SizingOutput }) {
 
       <Recommendations items={data.recommendations} />
 
-      {!!data.data_gaps.length && (
+      {(!!data.data_gaps.length || data.confidence !== "tinggi") && (
         <SectionCard title={t.gaps}>
           <ul className="space-y-1.5 text-sm text-muted-foreground">{data.data_gaps.map((d, i) => <li key={i}>• {d}</li>)}</ul>
+          {data.confidence !== "tinggi" && <p className="mt-3 text-sm text-primary">{t.raise}</p>}
         </SectionCard>
       )}
       <Sources sources={data.sources} />

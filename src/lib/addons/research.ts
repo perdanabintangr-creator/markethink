@@ -74,12 +74,16 @@ const sizing: Runner<typeof sizingInput> = {
       input.price && `Harga rata-rata: ${input.price}`,
       bizLine(input.model),
       input.goal && `Tujuan riset: ${input.goal}`,
+      input.known && `Data yang sudah diketahui user (pakai sebagai fakta, lebih kuat dari asumsi): ${input.known}`,
     ]);
     const research = await webResearch(ctx, {
       system: `${CONSULTANT}
 Tugasmu: kumpulkan data untuk MENGHITUNG UKURAN PASAR. Cari: nilai pasar kategori ini (Rp/USD) & pertumbuhannya (CAGR),
 jumlah calon pembeli (populasi, rumah tangga, UMKM, pengguna internet/e-commerce sesuai target), frekuensi & nilai belanja,
 porsi penjualan per kanal (marketplace, social commerce, modern/tradisional trade), tren konsumen & regulasi terbaru di wilayah ini.
+Bila wilayahnya kota/kabupaten, WAJIB cari data lokal dengan nama wilayahnya: jumlah penduduk per kelompok umur & rumah tangga
+(BPS kota/kabupaten "dalam angka" terbaru), jumlah pesaing sejenis & kisaran harganya (Google Maps, Instagram, situs/marketplace),
+jumlah ulasan pesaing sebagai petunjuk volume pembeli, dan minat pencarian. Satu angka lokal bersumber lebih berharga dari angka nasional.
 ${RESEARCH_RULES}`,
       prompt: untrusted("riset", brief),
       maxUses: 10,
@@ -93,7 +97,11 @@ Susun laporan UKURAN & TREN PASAR dari catatan riset. Aturan:
 - Hitung dengan 2 cara bila bisa (top-down dari laporan industri & bottom-up: jumlah pembeli × frekuensi × harga); tuliskan langkah bottom-up.
 - projection: 5 tahun mulai tahun ini, nilai SAM; base memakai cagr_pct, conservative & optimistic ±30-50% dari pertumbuhan base.
 - channels total ±100%. trends 4-6, PESTEL 1-2 poin per faktor (konteks Indonesia), recommendations 3-5.
-- confidence jujur: "rendah" bila banyak angka asumsi. data_gaps = apa yang perlu divalidasi (mis. survei 200 responden).
+- Data yang diketahui user adalah fakta: pakai langsung di hitungan bottom-up (tulis sumber "data user").
+- confidence dinilai jujur dari angka kunci hitungan (jumlah pembeli, frekuensi, harga, nilai pasar):
+  "tinggi" = hampir semua angka kunci bersumber (URL riset atau data user) dan dua cara hitung saling mendekati;
+  "sedang" = sebagian angka kunci bersumber, sisanya asumsi wajar; "rendah" = sebagian besar angka kunci asumsi.
+  confidence_reason = alasannya dalam 1-2 kalimat. data_gaps = angka mana yang masih asumsi & cara memvalidasinya (mis. survei 200 responden).
 ${research.webNote}`,
       prompt: `${brief}\n\nCatatan riset:\n${untrusted("catatan-riset", research.text.slice(0, 30_000))}`,
       maxOutputTokens: 9000,

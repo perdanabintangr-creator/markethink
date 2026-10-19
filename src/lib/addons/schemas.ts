@@ -284,6 +284,7 @@ export const sizingInput = z.object({
   price: opt(80),
   model: z.enum(BIZ_MODELS).default("b2c"),
   goal: opt(300),
+  known: opt(800),
 });
 
 const sizeLevel = z.object({
@@ -321,6 +322,7 @@ export const sizingOutput = z.object({
   barriers: z.array(t(160)),
   recommendations: recs,
   confidence: z.enum(["tinggi", "sedang", "rendah"]),
+  confidence_reason: t(300).describe("1-2 kalimat: kenapa tingkat keyakinan ini (berapa angka bersumber vs asumsi)"),
   data_gaps: z.array(t(200)).describe("Data yang masih asumsi & cara memvalidasinya"),
 });
 

@@ -83,7 +83,7 @@ function collect(tool: string, form: HTMLFormElement, attachmentIds: string[]) {
     case "competitor":
       return { brand: str("brand"), product: str("product"), market: str("market"), competitors: str("competitors"), focus: str("focus") };
     case "sizing":
-      return { product: str("product"), business: str("business"), area: str("area"), target: str("target"), price: str("price"), model: str("model"), goal: str("goal") };
+      return { product: str("product"), business: str("business"), area: str("area"), target: str("target"), price: str("price"), model: str("model"), known: str("known"), goal: str("goal") };
     case "persona":
       return { product: str("product"), brand: str("brand"), area: str("area"), price: str("price"), model: str("model"), known: str("known"), goal: str("goal") };
     case "entry":
@@ -556,11 +556,9 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
                 </Field>
               )}
             </div>
-            {tool === "persona" && (
-              <Field label={L.known} hint={L.knownHint}>
-                <Textarea name="known" maxLength={800} rows={3} placeholder={L.knownPh} />
-              </Field>
-            )}
+            <Field label={tool === "sizing" ? L.knownSizing : L.known} hint={tool === "sizing" ? L.knownSizingHint : L.knownHint}>
+              <Textarea name="known" maxLength={800} rows={3} placeholder={tool === "sizing" ? L.knownSizingPh : L.knownPh} />
+            </Field>
             <Field label={L.goal}>
               <Input name="goal" maxLength={300} placeholder={tool === "sizing" ? L.goalPhSizing : L.goalPhPersona} />
             </Field>

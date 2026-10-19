@@ -28,6 +28,7 @@ interface ResultLite {
   status: string;
 }
 
+const notStartedOf = (plan: AgentStep[]) => plan.every((p) => p.status === "pending" || p.status === "skipped");
 const stepLabels = (tool: string, c: ChatText, lang: Lang) => [...c.stepBaseLabels, ...(proFormSteps(tool, lang) ?? c.stepDefaultLabels)];
 
 /** Halaman misi Agent: rencana → jalankan langkah satu per satu (tiap langkah = satu Tools Pro) → ringkasan paket. */
@@ -122,9 +123,23 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
   // Kembali ke halaman saat langkah masih diproses server → pantau sampai selesai.
   useEffect(() => {
     if (runningIdx === -1 || working) return;
-    const t = setInterval(() => void refresh(), 10_000);
+    const t = setInterval(() => void refresh(), 5_000);
     return () => clearInterval(t);
   }, [runningIdx, working, refresh]);
+
+  // Misi yang sudah dimulai lanjut sendiri saat halaman dibuka lagi (langkah berikutnya / ringkasan),
+  // tanpa harus klik "Lanjutkan". Tiap keadaan hanya dicoba sekali agar tidak berulang bila gagal.
+  const autoRef = useRef<string | null>(null);
+  const started = !notStartedOf(run.plan);
+  useEffect(() => {
+    if (!started || working || summarizing !== null || loopRef.current || runningIdx !== -1 || run.summary) return;
+    const nextIdx = run.plan.findIndex((p) => p.status === "pending");
+    const key = nextIdx !== -1 ? `step-${nextIdx}` : okCount > 0 ? "summary" : null;
+    if (!key || autoRef.current === key) return;
+    autoRef.current = key;
+    if (nextIdx !== -1) void runAll();
+    else void finish();
+  }, [started, working, summarizing, runningIdx, run.plan, run.summary, okCount, runAll, finish]);
 
   useEffect(() => () => void (stopRef.current = true), []);
 
@@ -150,7 +165,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
 
   const resultFor = (step: AgentStep) => results.find((r) => r.id === step.run_id);
   const busy = Boolean(working) || summarizing !== null;
-  const notStarted = run.plan.every((p) => p.status === "pending" || p.status === "skipped");
+  const notStarted = notStartedOf(run.plan);
 
   return (
     <div className="space-y-6">
