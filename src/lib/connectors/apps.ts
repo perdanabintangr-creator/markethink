@@ -90,6 +90,32 @@ export function mentionsApp(text: string, app: ConnectorApp) {
   return re.test(text);
 }
 
+/** Pecah teks jadi potongan biasa & mention aplikasi (untuk ditampilkan sebagai lencana berlogo). */
+export function splitMentions(text: string, apps: readonly ConnectorApp[] = CONNECTOR_APPS) {
+  const out: ({ text: string } | { app: ConnectorApp })[] = [];
+  if (!apps.length) return [{ text }];
+  const alt = apps.map((a) => a.mention.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const re = new RegExp(`(^|\\s)(${alt})(?![A-Za-z0-9_-])`, "gi");
+  let last = 0;
+  for (const m of text.matchAll(re)) {
+    const start = m.index! + m[1].length;
+    if (start > last) out.push({ text: text.slice(last, start) });
+    out.push({ app: apps.find((a) => a.mention.toLowerCase() === m[2].toLowerCase())! });
+    last = start + m[2].length;
+  }
+  if (last < text.length) out.push({ text: text.slice(last) });
+  return out;
+}
+
+/** Hapus semua mention aplikasi dari teks (tombol × di lencana kotak chat). */
+export function removeMention(text: string, app: ConnectorApp) {
+  return splitMentions(text, [app])
+    .map((p) => ("text" in p ? p.text : ""))
+    .join("")
+    .replace(/^[ \t]+/, "")
+    .replace(/[ \t]{2,}/g, " ");
+}
+
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
 /** Ambil id lampiran dari "/api/attachments/<uuid>" atau dari uuid polos. */

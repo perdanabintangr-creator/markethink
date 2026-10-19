@@ -9,10 +9,12 @@ const id = {
   mentionHint: "Pilih dengan Enter, tutup dengan Esc",
   connected: "Terhubung",
   notConnected: "Belum terhubung",
+  usingApp: (n: string) => `Memakai ${n}`,
+  removeApp: (n: string) => `Lepas ${n}`,
 
   // ── Tombol & kartu hasil ──
   editInCanva: "Edit di Canva",
-  sendingToCanva: "Mengirim ke Canva...",
+  sendingToCanva: "Menghubungkan ke Canva & mengirim desain...",
   openInCanva: "Buka di Canva",
   connectCanva: "Hubungkan Canva",
   sentToCanva: "Terkirim ke Canva",
@@ -55,9 +57,11 @@ const en: typeof id = {
   mentionHint: "Enter to pick, Esc to close",
   connected: "Connected",
   notConnected: "Not connected",
+  usingApp: (n: string) => `Using ${n}`,
+  removeApp: (n: string) => `Remove ${n}`,
 
   editInCanva: "Edit in Canva",
-  sendingToCanva: "Sending to Canva...",
+  sendingToCanva: "Connecting to Canva & sending the design...",
   openInCanva: "Open in Canva",
   connectCanva: "Connect Canva",
   sentToCanva: "Sent to Canva",

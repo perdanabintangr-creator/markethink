@@ -21,6 +21,8 @@ import {
   findMention,
   insertMention,
   mentionsApp,
+  removeMention,
+  splitMentions,
 } from "@/lib/connectors/apps";
 import { CANVA_AUTHORIZE_URL, CANVA_SCOPES, canvaEnabled, canvaFileKind, canvaRedirectUri } from "@/lib/connectors/canva";
 import { connectorsText } from "@/lib/i18n/connectors";
@@ -233,5 +235,19 @@ describe("teks konektor", () => {
     for (const s of [...collect(id), ...collect(en), ...CONNECTOR_APPS.flatMap((a) => [a.description.id, a.description.en])]) {
       expect(s, s).not.toMatch(/[–—]/);
     }
+  });
+});
+
+describe("lencana mention aplikasi", () => {
+  const canva = CONNECTOR_APPS[0];
+  it("memecah @Canva jadi lencana, tidak menyentuh email", () => {
+    const parts = splitMentions("@canva kirim ini ya, cc halo@canva.com");
+    expect(parts[0]).toEqual({ app: canva });
+    expect(parts.filter((p) => "app" in p)).toHaveLength(1);
+    expect(parts.map((p) => ("text" in p ? p.text : "#")).join("")).toBe("# kirim ini ya, cc halo@canva.com");
+  });
+  it("tombol × menghapus mention", () => {
+    expect(removeMention("@Canva saya mau edit", canva)).toBe("saya mau edit");
+    expect(removeMention("tolong @Canva kirim", canva)).toBe("tolong kirim");
   });
 });

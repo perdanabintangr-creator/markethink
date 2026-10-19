@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { UPLOAD_ERRORS, uploadFile } from "@/lib/upload-client";
 import { buildQuotedMessage } from "@/lib/quote";
 import { chatText } from "@/lib/i18n/chat";
-import { CONNECTOR_APPS, filterApps, findMention, insertMention, type ConnectorApp } from "@/lib/connectors/apps";
+import { CONNECTOR_APPS, filterApps, findMention, insertMention, mentionsApp, removeMention, type ConnectorApp } from "@/lib/connectors/apps";
 import { connectorsText } from "@/lib/i18n/connectors";
 import { AppIcon } from "@/components/connectors/app-icon";
 import { useConnectorReturnNotice, useConnectors } from "@/components/connectors/use-connectors";
@@ -74,6 +74,7 @@ export function Composer({
   const availableApps = CONNECTOR_APPS.filter((a) => connectors === null || connectors.some((s) => s.id === a.id && s.enabled));
   const mentionApps = mention && mention.start !== mentionDismissed ? filterApps(mention.query, availableApps) : [];
   const mentionOpen = mentionApps.length > 0;
+  const usedApps = availableApps.filter((a) => mentionsApp(text, a));
 
   function updateMention(value: string, caret: number | null, selectionEnd?: number | null) {
     const m = caret !== null && caret === (selectionEnd ?? caret) ? findMention(value, caret) : null;
@@ -243,6 +244,40 @@ export function Composer({
             );
           })}
           <p className="px-2.5 pb-1 pt-1 text-[10px] text-muted-foreground">{cx.mentionHint}</p>
+        </div>
+      )}
+      {usedApps.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-3 pt-3">
+          {usedApps.map((app) => {
+            const status = connectors?.find((x) => x.id === app.id);
+            return (
+              <span
+                key={app.id}
+                className="inline-flex items-center gap-1.5 rounded-full border bg-background py-0.5 pl-0.5 pr-1 text-xs shadow-sm"
+              >
+                <AppIcon id={app.icon} className="size-5 text-[10px]" />
+                <span className="font-medium">{cx.usingApp(app.name)}</span>
+                {status && (
+                  <span
+                    className={cn("size-1.5 rounded-full", status.connected ? "bg-emerald-500" : "bg-muted-foreground/50")}
+                    title={status.connected ? cx.connected : cx.notConnected}
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setText((v) => removeMention(v, app));
+                    taRef.current?.focus();
+                  }}
+                  aria-label={cx.removeApp(app.name)}
+                  title={cx.removeApp(app.name)}
+                  className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            );
+          })}
         </div>
       )}
       <textarea

@@ -40,7 +40,7 @@ import { ScenePreviewButton } from "./scene-preview";
 import { SelectionAsk } from "./selection-ask";
 import { EditInCanvaButton, goConnectCanva } from "@/components/connectors/canva-button";
 import { AppIcon } from "@/components/connectors/app-icon";
-import { attachmentIdFromUrl } from "@/lib/connectors/apps";
+import { attachmentIdFromUrl, splitMentions } from "@/lib/connectors/apps";
 import { connectorsText } from "@/lib/i18n/connectors";
 
 const TIER_LABEL = Object.fromEntries(getTiers({}).map((t) => [t.id, t.label]));
@@ -395,7 +395,22 @@ function UserBubble({ text }: { text: string }) {
           {quote}
         </p>
       )}
-      {body && <p className="whitespace-pre-wrap">{body}</p>}
+      {body && (
+        <p className="whitespace-pre-wrap">
+          {splitMentions(body).map((p, i) =>
+            "app" in p ? (
+              <span
+                key={i}
+                className="mx-0.5 inline-flex items-center gap-1 rounded-full bg-background py-0.5 pl-0.5 pr-2 align-middle text-xs font-medium shadow-sm ring-1 ring-border"
+              >
+                <AppIcon id={p.app.icon} className="size-4 text-[9px]" /> {p.app.name}
+              </span>
+            ) : (
+              p.text
+            ),
+          )}
+        </p>
+      )}
     </div>
   );
 }
@@ -574,7 +589,23 @@ function SendToCanvaResult({ part, streaming }: { part: ToolPart; streaming: boo
   const { lang } = useApp();
   const c = connectorsText(lang);
   if (part.state === "output-error") return <ToolError message={c.canvaFailed} />;
-  if (part.state !== "output-available" || !part.output) return <ToolPending label={c.sendingToCanva} streaming={streaming} />;
+  if (part.state !== "output-available" || !part.output) {
+    if (!streaming) return null;
+    return (
+      <div className="flex max-w-xl items-center gap-3 rounded-xl border bg-card px-4 py-3">
+        <span className="relative">
+          <AppIcon id="canva" className="size-9 text-sm" />
+          <span className="absolute -inset-1 animate-ping rounded-full bg-[#7D2AE8]/20" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Canva</p>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="size-3 animate-spin" /> {c.sendingToCanva}
+          </p>
+        </div>
+      </div>
+    );
+  }
   const o = part.output;
   const needsConnect = Boolean(o.needsConnect);
   if (!o.ok && !needsConnect) {
