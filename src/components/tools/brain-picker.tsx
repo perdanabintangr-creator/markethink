@@ -8,7 +8,7 @@ import { toolTierInfo, toolTierLockedHint } from "@/lib/addons/i18n";
 import { toolsText } from "@/lib/i18n/tools";
 import { cn } from "@/lib/utils";
 
-/** Pilihan otak Tools Pro & Agent (Senior / Associate / Director). Pilihan diingat di browser. */
+/** Pilihan otak Tools Pro & Agent (Senior / Head / Director). Pilihan diingat di browser. */
 export function useToolTier() {
   const { allowedTiers, user } = useApp();
   const allowed = (t: ToolTier) => t === "senior" || user.role === "admin" || allowedTiers.includes(t);

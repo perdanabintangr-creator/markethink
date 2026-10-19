@@ -152,7 +152,7 @@ export const toolTierInfo = (tier: ToolTier, lang: Lang | null | undefined) => (
 /** Tooltip for a tier locked by the user's plan (brain picker). */
 export function toolTierLockedHint(tier: ToolTier, lang: Lang | null | undefined) {
   if (tier === "director") return isEn(lang) ? "Director is available on the Promax plan" : "Director tersedia di paket Promax";
-  return isEn(lang) ? "Associate is available from the Pro plan" : "Associate tersedia mulai paket Pro";
+  return isEn(lang) ? "Head is available from the Pro plan" : "Head tersedia mulai paket Pro";
 }
 
 /** `creditText` (format.ts) in `lang`. "id" output is identical to `creditText`. */

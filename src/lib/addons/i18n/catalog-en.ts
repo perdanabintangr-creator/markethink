@@ -244,6 +244,6 @@ export const AGENT_EXAMPLES_EN = [
 
 export const TOOL_TIER_INFO_EN: Record<ToolTier, { label: string; hint: string }> = {
   senior: { label: "Senior", hint: "Balanced, fast & sharp for most work." },
-  associate: { label: "Associate", hint: "Deep reasoning: deeper analysis (Pro/Promax plans). Takes a bit longer." },
+  associate: { label: "Head", hint: "Deep reasoning: deeper analysis (Pro/Promax plans). Takes a bit longer." },
   director: { label: "Director", hint: "The smartest brain (Promax plan). Uses 2 quota units per result and is the slowest to process." },
 };

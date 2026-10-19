@@ -376,3 +376,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 
 ## 2026-10-19 · Urutan metode bayar Midtrans
 - Snap memakai `enabled_payments`: QRIS umum (`other_qris`, lewat GoPay QRIS, 0,7%) paling atas, lalu Virtual Account. GoPay e-money (4% untuk produk digital) disembunyikan; pengguna GoPay tetap bisa scan QRIS. ACC founder.
+
+## 2026-10-19 · Otak "Associate" → "Head"
+- Nama tampilan otak ke-3 diganti "Markethink Head" (sekelas Head of Marketing), urutan: Junior → Senior → Head → Director. Id internal tetap `associate` supaya data lama & pengaturan tidak berubah. ACC founder.

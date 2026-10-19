@@ -77,7 +77,7 @@ const id = {
       quota: "Kuota lebih besar",
       includes: "Semua di Starter, plus:",
       features: [
-        { icon: "sharp", text: "Otak Associate (lebih tajam)" },
+        { icon: "sharp", text: "Otak Head (lebih tajam)" },
         { icon: "agent", text: "Markethink Agent: satu tujuan, beberapa tools jalan otomatis" },
         { icon: "visual", text: "Visual premium: PPT penuh foto AI" },
         { icon: "edit", text: "Edit gambar pintar, layout dirapikan otomatis" },
@@ -155,7 +155,7 @@ const en: typeof id = {
       quota: "Bigger quota",
       includes: "Everything in Starter, plus:",
       features: [
-        { icon: "sharp", text: "Associate brain (sharper)" },
+        { icon: "sharp", text: "Head brain (sharper)" },
         { icon: "agent", text: "Markethink Agent: one goal, several tools run automatically" },
         { icon: "visual", text: "Premium visuals: PPT full of AI photos" },
         { icon: "edit", text: "Smart image editing that tidies the layout for you" },

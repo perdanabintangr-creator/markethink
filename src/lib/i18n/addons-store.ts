@@ -24,7 +24,7 @@ const id = {
   howTitle: "Cara kerja add-on",
   how: [
     "Add-on dipakai lebih dulu sebelum kuota paket, jadi kuota paketmu lebih awet.",
-    "Hasil dari add-on memakai otak Senior. Pilih otak Associate atau Director bila ingin memakai kuota paket.",
+    "Hasil dari add-on memakai otak Senior. Pilih otak Head atau Director bila ingin memakai kuota paket.",
     "Kuota hasil terisi lagi tiap bulan sejak tanggal pembelian, selama add-on aktif.",
   ],
   storeLink: "Toko Add-on",
@@ -54,7 +54,7 @@ const en: typeof id = {
   howTitle: "How add-ons work",
   how: [
     "Add-ons are used before your plan quota, so your plan quota lasts longer.",
-    "Add-on results use the Senior brain. Choose Associate or Director to use your plan quota instead.",
+    "Add-on results use the Senior brain. Choose Head or Director to use your plan quota instead.",
     "Results refill every month from the purchase date while the add-on is active.",
   ],
   storeLink: "Add-on Store",

@@ -51,7 +51,7 @@ describe("Markethink Agent", () => {
 
 describe("pilihan otak Tools Pro", async () => {
   const { resolveToolTier } = await import("@/lib/addons/tool-tier");
-  it("default Senior; Associate/Director hanya bila paket membukanya", () => {
+  it("default Senior; Head/Director hanya bila paket membukanya", () => {
     expect(resolveToolTier("director", ["junior", "senior", "associate", "director"])).toBe("director");
     expect(resolveToolTier("director", ["junior", "senior", "associate"])).toBe("senior");
     expect(resolveToolTier("associate", ["junior", "senior", "associate"])).toBe("associate");

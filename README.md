@@ -5,7 +5,7 @@ riset → strategi → konten → kalender → KPI. Bahasa default Indonesia (bi
 
 ## Fitur
 - **Chat**: streaming, markdown + tabel, history (cari/rename/hapus), stop, regenerate, edit pesan, copy, feedback 👍👎 + alasan.
-- **3 tier otak marketing**: Junior (cepat) → Senior (default) → Associate (deep reasoning). Dipetakan ke model LLM di `src/lib/ai/models.config.ts`, dengan fallback otomatis antar provider (Gemini, Groq, OpenRouter).
+- **3 tier otak marketing**: Junior (cepat) → Senior (default) → Head (deep reasoning) → Director. Dipetakan ke model LLM di `src/lib/ai/models.config.ts`, dengan fallback otomatis antar provider (Gemini, Groq, OpenRouter).
 - **Onboarding persona** (role, industri, pengalaman, tujuan) → personalisasi system prompt (`prompts/system.md`).
 - **Brand Workspace**: Brand Kit + upload knowledge (PDF/DOCX/TXT/CSV) → RAG pgvector.
 - **16 Marketing Agents** dari database (admin bisa tambah/edit tanpa deploy).

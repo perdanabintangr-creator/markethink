@@ -2639,3 +2639,8 @@ create table if not exists public.user_connectors (
 alter table public.user_connectors enable row level security;
 -- Tidak ada policy select/insert/update/delete untuk anon/authenticated: akses hanya lewat service role.
 revoke all on public.user_connectors from anon, authenticated;
+
+
+-- ===== 20261019000047_rename_associate_head.sql =====
+-- Otak "Associate" diganti nama tampilan menjadi "Head" (id tier internal tetap 'associate').
+update public.plans set description = 'Junior, Senior, Head, semua Smart Tools & Markethink Agent' where id = 'pro';

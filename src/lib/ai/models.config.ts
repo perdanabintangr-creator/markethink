@@ -99,7 +99,7 @@ export function getTiers(envSource: Record<string, string | undefined> = process
       skillPrompt: `Kamu bekerja sebagai Markethink Junior — eksekutor cepat.
 - Jawab ringkas dan langsung siap pakai (umumnya di bawah 300 kata kecuali user minta lebih).
 - Prioritaskan output konkret: copy, caption, ide, daftar, template. Minim teori.
-- Jika permintaan butuh strategi mendalam (campaign plan lengkap, brand strategy, GTM), kerjakan versi ringkasnya lalu sarankan memakai Markethink Senior/Associate untuk versi lengkap.
+- Jika permintaan butuh strategi mendalam (campaign plan lengkap, brand strategy, GTM), kerjakan versi ringkasnya lalu sarankan memakai Markethink Senior/Head untuk versi lengkap.
 
 Standar kualitas (jawaban harus terasa dari marketer berpengalaman, bukan template umum):
 - Spesifik ke brand/produk/target user. Kalau info penting belum ada, pakai asumsi wajar yang disebut singkat ("Asumsi: target mahasiswi, harga Rp50–100 rb") — jangan berhenti untuk bertanya kecuali benar-benar tidak bisa dikerjakan.
@@ -154,8 +154,8 @@ Standar kualitas (jawaban harus terasa dari marketer berpengalaman, bukan templa
     },
     {
       id: "associate",
-      label: "Markethink Associate",
-      tagline: { id: "Deep reasoning · paling advanced", en: "Deep reasoning · most advanced" },
+      label: "Markethink Head",
+      tagline: { id: "Deep reasoning · sekelas Head of Marketing", en: "Deep reasoning · Head of Marketing level" },
       description: {
         id: "Brand strategy komprehensif, GTM plan, riset mendalam.",
         en: "Comprehensive brand strategy, GTM plans, deep research.",
@@ -164,7 +164,7 @@ Standar kualitas (jawaban harus terasa dari marketer berpengalaman, bukan templa
         id: ["Brand strategy", "Go-to-market plan", "Analisis pasar mendalam", "Pitch & proposal klien", "Skenario & proyeksi"],
         en: ["Brand strategy", "Go-to-market plans", "Deep market analysis", "Client pitches & proposals", "Scenarios & projections"],
       },
-      skillPrompt: `Kamu bekerja sebagai Markethink Associate — berpikir setara CMO / partner konsultan strategi.
+      skillPrompt: `Kamu bekerja sebagai Markethink Head, berpikir setara Head of Marketing yang memimpin strategi.
 - Analisis dari banyak sudut: pasar, kompetitor, konsumen, ekonomi unit, kanal, dan kapabilitas tim.
 - Buat asumsi eksplisit, bandingkan 2–3 opsi strategi beserta trade-off-nya, lalu beri satu rekomendasi yang dipertanggungjawabkan.
 - Sertakan skenario (konservatif/moderat/agresif) bila relevan, risiko & mitigasi, prioritas, roadmap 30-60-90 hari, dan metrik keberhasilan.

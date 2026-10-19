@@ -1,5 +1,5 @@
 /**
- * Otak untuk Tools Pro & Markethink Agent: Senior (default), Associate, Director — sesuai tier yang dibuka paket user.
+ * Otak untuk Tools Pro & Markethink Agent: Senior (default), Head, Director — sesuai tier yang dibuka paket user.
  * Director memakai 2 kuota per hasil (biaya AI ±5× Senior).
  */
 export const TOOL_TIERS = ["senior", "associate", "director"] as const;
@@ -10,7 +10,7 @@ export const TOOL_TIER_KEY = "mt_tool_tier";
 
 export const TOOL_TIER_INFO: Record<ToolTier, { label: string; hint: string }> = {
   senior: { label: "Senior", hint: "Seimbang, cepat & tajam untuk kebanyakan pekerjaan." },
-  associate: { label: "Associate", hint: "Deep reasoning: analisis lebih dalam (paket Pro/Promax). Sedikit lebih lama." },
+  associate: { label: "Head", hint: "Deep reasoning: analisis lebih dalam (paket Pro/Promax). Sedikit lebih lama." },
   director: { label: "Director", hint: "Otak paling pintar (paket Promax). Memakai 2 kuota per hasil dan paling lama diproses." },
 };
 

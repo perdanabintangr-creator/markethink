@@ -89,7 +89,7 @@ export function AgentForm({ agent }: { agent: Omit<Agent, "instructions" | "is_a
                   [
                     ["junior", "Markethink Junior (cepat)"],
                     ["senior", "Markethink Senior (seimbang)"],
-                    ["associate", "Markethink Associate (paling mendalam)"],
+                    ["associate", "Markethink Head (lebih mendalam)"],
                   ] as const
                 ).map(([id, label]) => (
                   <option key={id} value={id} disabled={!allowedTiers.includes(id)}>

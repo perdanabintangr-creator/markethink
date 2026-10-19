@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getTier, getTiers, messageCreditCost, estimateCostUsd } from "@/lib/ai/models.config";
 
 describe("models.config", () => {
-  it("urutan tier Junior → Senior → Associate", () => {
+  it("urutan tier Junior → Senior → Head", () => {
     expect(getTiers({}).map((t) => t.id)).toEqual(["junior", "senior", "associate", "director"]);
   });
 

@@ -12,7 +12,7 @@ export const PLAN_NAME: Record<string, string> = { beta: "Free", starter: "Start
 export const COST_CATEGORY: Record<string, string> = {
   "chat:junior": "Chat · Junior (Haiku/Gemini)",
   "chat:senior": "Chat · Senior (Sonnet)",
-  "chat:associate": "Chat · Associate (Opus)",
+  "chat:associate": "Chat · Head (Opus)",
   "chat:director": "Chat · Director (Fable)",
   web_search: "Pencarian web",
   image: "Gambar di chat",

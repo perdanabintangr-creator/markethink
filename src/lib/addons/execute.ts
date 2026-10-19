@@ -77,7 +77,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
         : `Smart Tools tersedia mulai paket Starter${offered ? ", atau beli add-on ini saja" : ""}.`,
     };
   }
-  // Otak di atas Senior (Associate/Director) dipilih → pakai kuota paket bila paket membuka Smart Tools (add-on selalu otak Senior).
+  // Otak di atas Senior (Head/Director) dipilih → pakai kuota paket bila paket membuka Smart Tools (add-on selalu otak Senior).
   const viaAddon = access.via === "addon" && !(access.planAllowed && tier && tier !== DEFAULT_TOOL_TIER);
   if (viaAddon && !(revision ? access.addon?.canRevise : (access.addon?.remaining ?? 0) > 0)) {
     return {
