@@ -37,7 +37,9 @@ async function call<T>(url: string, init: RequestInit = {}): Promise<T> {
     data = null;
   }
   if (!res.ok && !(data && typeof data === "object" && "status_code" in data)) {
-    throw new Error(`midtrans ${res.status}: ${text.slice(0, 300)}`);
+    // 401 hampir selalu berarti Server Key tidak cocok dengan mode (kunci sandbox di mode production atau sebaliknya).
+    const hint = res.status === 401 ? ` [mode ${modeOf(serverKey())}: cek MIDTRANS_SERVER_KEY & MIDTRANS_IS_PRODUCTION]` : "";
+    throw new Error(`midtrans ${res.status}${hint}: ${text.slice(0, 300)}`);
   }
   return data as T;
 }
