@@ -52,12 +52,20 @@ export interface SnapParams {
   finishUrl: string;
 }
 
+/**
+ * Metode bayar yang ditampilkan Snap, sesuai urutan. QRIS umum (other_qris, diproses lewat GoPay QRIS, biaya 0,7%) paling atas;
+ * GoPay e-money (4% untuk produk digital) sengaja tidak dimasukkan karena pengguna GoPay tetap bisa scan QRIS. Metode yang belum
+ * aktif di akun Midtrans otomatis tidak tampil.
+ */
+export const ENABLED_PAYMENTS = ["other_qris", "bca_va", "bni_va", "bri_va", "echannel", "permata_va", "cimb_va", "bsi_va"];
+
 /** Buat transaksi Snap → token + URL halaman bayar Midtrans. */
 export async function createSnapTransaction(p: SnapParams) {
   const body = {
     transaction_details: { order_id: p.orderId, gross_amount: p.amount },
     item_details: [{ id: p.item.id.slice(0, 50), price: p.amount, quantity: 1, name: p.item.name.slice(0, 50) }],
     customer_details: { first_name: (p.customer.name || p.customer.email || "Pelanggan").slice(0, 50), email: p.customer.email ?? undefined },
+    enabled_payments: ENABLED_PAYMENTS,
     callbacks: { finish: p.finishUrl },
     expiry: { unit: "hours", duration: 24 },
   };

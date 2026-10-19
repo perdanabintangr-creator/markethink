@@ -1,8 +1,13 @@
 import { createHash } from "crypto";
 import { describe, expect, it } from "vitest";
-import { modeOf, newOrderId, paymentStatusOf, validSignature } from "@/lib/payments/midtrans";
+import { ENABLED_PAYMENTS, modeOf, newOrderId, paymentStatusOf, validSignature } from "@/lib/payments/midtrans";
 
 describe("pembayaran Midtrans", () => {
+  it("QRIS tampil paling atas & GoPay e-money disembunyikan", () => {
+    expect(ENABLED_PAYMENTS[0]).toBe("other_qris");
+    expect(ENABLED_PAYMENTS).not.toContain("gopay");
+  });
+
   it("tanda tangan notifikasi: SHA512(order_id + status_code + gross_amount + server key)", () => {
     const n = { order_id: "MTK-P-abc-1", status_code: "200", gross_amount: "60000.00" };
     const signature_key = createHash("sha512").update(`${n.order_id}${n.status_code}${n.gross_amount}SB-key`).digest("hex");
