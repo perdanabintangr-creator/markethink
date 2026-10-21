@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { speechChunks } from "@/lib/voice/speech";
+import { mergeTranscripts, speechChunks } from "@/lib/voice/speech";
 
 /** Tipe minimal Web Speech API (belum ada di lib DOM bawaan TypeScript untuk versi webkit). */
 interface RecognitionResultEvent {
@@ -90,18 +90,18 @@ export function useVoice(lang: string) {
       rec.continuous = Boolean(opts.continuous);
       rec.interimResults = true;
       rec.maxAlternatives = 1;
+      // Snapshot utuh sesi ini (bukan disambung-sambung), lihat mergeTranscripts.
       let finalText = "";
       let error: ListenError | undefined;
       rec.onresult = (e) => {
-        let live = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) {
+        const finals: string[] = [];
+        const lives: string[] = [];
+        for (let i = 0; i < e.results.length; i++) {
           const r = e.results[i];
-          if (r.isFinal) {
-            finalText += `${r[0].transcript} `;
-            if (opts.continuous) opts.onFinal(r[0].transcript.trim());
-          } else live += r[0].transcript;
+          (r.isFinal ? finals : lives).push(r[0].transcript);
         }
-        const shown = (opts.continuous ? live : `${finalText}${live}`).trim();
+        finalText = mergeTranscripts(finals);
+        const shown = mergeTranscripts([...finals, ...lives]);
         setInterim(shown);
         opts.onInterim?.(shown);
       };
@@ -114,7 +114,7 @@ export function useVoice(lang: string) {
         setListening(false);
         setInterim("");
         const text = finalText.trim();
-        if (!opts.continuous && text) opts.onFinal(text);
+        if (text) opts.onFinal(text);
         opts.onEnd?.(text ? undefined : (error ?? (opts.continuous ? undefined : "no-speech")));
       };
       recRef.current = rec;

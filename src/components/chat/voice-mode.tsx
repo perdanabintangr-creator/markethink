@@ -108,14 +108,16 @@ export function VoiceMode({
       };
       const ok = listen({
         continuous: true,
-        onFinal: (chunk) => {
-          heard = `${heard} ${chunk}`;
+        // Keduanya berisi kalimat utuh sesi ini (bukan potongan), jadi diganti, tidak disambung.
+        onFinal: (full) => {
+          heard = full;
           live = "";
           armSilence();
         },
-        onInterim: (text) => {
-          live = text;
-          if (text) setSaid(`${heard} ${text}`.trim());
+        onInterim: (full) => {
+          heard = "";
+          live = full;
+          if (full) setSaid(full);
           armSilence();
         },
         onEnd: (err) => {

@@ -68,3 +68,29 @@ export function fillerFor(request: string, lang: Lang | null | undefined, seed =
     : ["Oke, saya pikirkan dulu ya.", "Siap, sebentar ya.", "Oke, saya kerjakan dulu ya."];
   return pool[Math.abs(seed) % pool.length];
 }
+
+/**
+ * Gabungkan potongan hasil pengenal suara jadi satu kalimat utuh.
+ * Chrome Android/tablet mengirim tiap potongan beserta kata-kata sebelumnya ("oke", "oke karena", "oke karena bisnis"...),
+ * jadi potongan yang merupakan kelanjutan potongan sebelumnya menggantikannya, bukan disambung.
+ */
+export function mergeTranscripts(parts: string[]) {
+  const norm = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "").replace(/\s+/g, " ").trim();
+  const out: string[] = [];
+  for (const raw of parts) {
+    const text = raw.replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const prev = out[out.length - 1];
+    if (prev !== undefined) {
+      const a = norm(prev);
+      const b = norm(text);
+      if (b.startsWith(a)) {
+        out[out.length - 1] = text;
+        continue;
+      }
+      if (a.startsWith(b)) continue;
+    }
+    out.push(text);
+  }
+  return out.join(" ");
+}

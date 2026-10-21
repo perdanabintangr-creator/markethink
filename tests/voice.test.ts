@@ -45,3 +45,17 @@ describe("audio untuk suara → teks", () => {
     expect(rms(new Float32Array([0.5, -0.5]))).toBeCloseTo(0.5);
   });
 });
+
+import { mergeTranscripts } from "@/lib/voice/speech";
+
+describe("gabung hasil pengenal suara", () => {
+  it("tidak mengulang kalimat di Chrome Android (tiap potongan berisi kata sebelumnya)", () => {
+    expect(mergeTranscripts(["oke", "Oke karena", "Oke karena bisnis", "Oke karena bisnis kita di foto box"])).toBe(
+      "Oke karena bisnis kita di foto box",
+    );
+  });
+  it("tetap menyambung potongan yang memang berbeda (desktop)", () => {
+    expect(mergeTranscripts(["bikin strategi konten", "untuk bulan Halloween"])).toBe("bikin strategi konten untuk bulan Halloween");
+    expect(mergeTranscripts(["Halo semua", "halo"])).toBe("Halo semua");
+  });
+});

@@ -81,9 +81,13 @@ export function Composer({
   }, []);
   function toggleDictation() {
     if (dictation.listening) return dictation.stopListening();
+    // Teks yang sudah diketik + kalimat utuh hasil dikte (diganti tiap pembaruan, tidak disambung berulang).
+    const base = text && !/\s$/.test(text) ? `${text} ` : text;
+    const put = (said: string) => setText(`${base}${said}`);
     const ok = dictation.listen({
       continuous: true,
-      onFinal: (said) => setText((v) => (v && !/\s$/.test(v) ? `${v} ${said}` : `${v}${said}`)),
+      onInterim: put,
+      onFinal: put,
       onEnd: (err) => {
         if (err === "denied") toast.error(V.micDenied);
       },
