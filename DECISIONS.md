@@ -384,3 +384,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Tombol mikrofon (dikte) + tombol "Ngobrol" di kotak chat, dan "Ngobrol langsung" di halaman chat baru. AI menyapa, mendengar, mengirim ucapan sebagai pesan chat biasa, bilang sedang mengerjakan, lalu membacakan ringkasan jawabannya dan mendengar lagi.
 - Memakai Web Speech API bawaan browser (Rp0). Suara AI premium (mis. ElevenLabs / OpenAI TTS) adalah opsi berbayar: perlu ACC founder.
 - Browser tidak mengizinkan suara otomatis tanpa klik, jadi sapaan dimulai saat user menekan tombol.
+
+## 2026-10-21 · Mode Ngobrol: pendeteksi suara + Groq Whisper (menunggu ACC)
+- Header `Permissions-Policy` sebelumnya memblokir mikrofon (`microphone=()`); diubah ke `microphone=(self)`.
+- Jalur cepat & tahan bising: Silero VAD di browser (gratis, aset di `public/vad` disalin saat build) mendeteksi ucapan manusia, mengabaikan musik, lalu potongan suara dikirim ke `/api/voice/transcribe` → Groq `whisper-large-v3-turbo` (±US$0,04/jam audio, minimal ditagih 10 detik per ucapan).
+- Mati secara default. Aktif hanya bila founder ACC dan menyetel `VOICE_STT=groq` + `GROQ_API_KEY` di Vercel. Tanpa itu, tetap pakai pengenal suara browser.

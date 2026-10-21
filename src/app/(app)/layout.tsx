@@ -4,6 +4,7 @@ import { getAllowedTiers } from "@/lib/plan";
 import { getDict } from "@/lib/i18n/dict";
 import { AppShell } from "@/components/app/app-shell";
 import { paymentsEnabled } from "@/lib/payments/midtrans";
+import { sttEnabled } from "@/lib/voice/stt";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, profile } = await requireUser();
@@ -39,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         freeModels: profile.role !== "admin" && Boolean(flags?.find((f) => f.key === "free_models")?.enabled),
         researchAllowed: profile.role === "admin" || Boolean(flags?.find((f) => f.key === "research")?.enabled),
         payEnabled: paymentsEnabled(),
+        voiceStt: sttEnabled(),
       }}
     >
       {children}

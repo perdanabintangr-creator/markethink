@@ -8,11 +8,14 @@ import type { Lang } from "@/lib/i18n/dict";
 import { voiceText } from "@/lib/i18n/voice";
 import { fillerFor, speakableText, speechLang } from "@/lib/voice/speech";
 import { useVoice } from "./use-voice";
+import { useVad } from "./use-vad";
 
-type Phase = "speaking" | "listening" | "thinking" | "idle";
+type Phase = "speaking" | "listening" | "transcribing" | "thinking" | "idle";
 
 /** Jeda diam (ms) setelah user bicara sebelum ucapannya dikirim. */
 const SILENCE_MS = 1200;
+/** Tanpa ucapan selama ini (ms) → berhenti mendengarkan supaya mic tidak menyala terus. */
+const NO_SPEECH_MS = 15000;
 
 /**
  * Mode ngobrol suara: AI menyapa, mendengarkan user, mengirim ucapan sebagai pesan chat biasa,
@@ -25,6 +28,7 @@ export function VoiceMode({
   busy,
   reply,
   failures,
+  stt,
   onSend,
   onClose,
 }: {
@@ -36,6 +40,8 @@ export function VoiceMode({
   reply: { id: string; text: string } | null;
   /** Bertambah setiap kali menjawab gagal. */
   failures: number;
+  /** Pakai pendeteksi suara + Groq Whisper (cepat & tahan bising). */
+  stt?: boolean;
   onSend: (text: string) => void;
   onClose: () => void;
 }) {
@@ -50,6 +56,10 @@ export function VoiceMode({
   const seenReply = useRef(reply?.id ?? null);
   const seenFailures = useRef(failures);
   const sayRef = useRef<(text: string) => void>(() => {});
+  const listenRef = useRef<() => void>(() => {});
+  const [sttOn, setSttOn] = useState(Boolean(stt));
+  const [userTalking, setUserTalking] = useState(false);
+  const noSpeechTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const { listen, stopListening, speak, stopSpeaking } = voice;
 
@@ -74,7 +84,7 @@ export function VoiceMode({
    * Dengar dengan deteksi jeda sendiri: begitu user berhenti bicara ±1,2 detik, ucapan langsung dikirim
    * (tanpa menunggu pengenal suara browser yang di beberapa HP/tablet lambat memutuskan "selesai").
    */
-  const startListening = useCallback(
+  const startBrowserListening = useCallback(
     (retry = true) => {
       setHint(null);
       setSaid("");
@@ -113,7 +123,7 @@ export function VoiceMode({
           if (done || waitingReply.current) return;
           if (`${heard}${live}`.trim()) return finish();
           // Beberapa HP menutup mic sendiri dalam hitungan detik tanpa suara: coba sekali lagi otomatis.
-          if (retry && !err && Date.now() - startedAt < 4000) return startListening(false);
+          if (retry && !err && Date.now() - startedAt < 4000) return startBrowserListening(false);
           setPhase("idle");
           if (err === "denied") setHint(V.micDenied);
           else setHint(V.noSpeech);
@@ -124,6 +134,71 @@ export function VoiceMode({
     },
     [listen, stopListening, submitSpeech, V],
   );
+
+  // ── Jalur cepat: pendeteksi suara manusia di browser → Groq Whisper ──
+  const vad = useVad({
+    onSpeaking: (talking) => {
+      setUserTalking(talking);
+      if (talking) clearTimeout(noSpeechTimer.current);
+    },
+    onSpeech: (wav) => {
+      clearTimeout(noSpeechTimer.current);
+      void vad.pause();
+      setPhase("transcribing");
+      const form = new FormData();
+      form.append("audio", wav, "speech.wav");
+      form.append("lang", lang);
+      void fetch("/api/voice/transcribe", { method: "POST", body: form })
+        .then(async (res) => {
+          if (res.status === 503) {
+            setSttOn(false);
+            return startBrowserListening();
+          }
+          const text = res.ok ? ((await res.json()) as { text?: string }).text?.trim() : "";
+          if (text) submitSpeech(text);
+          else listenRef.current();
+        })
+        .catch(() => listenRef.current());
+    },
+  });
+
+  const startVadListening = useCallback(async () => {
+    setHint(null);
+    setSaid("");
+    setPhase("listening");
+    const err = await vad.start();
+    if (err === "denied") {
+      setPhase("idle");
+      setHint(V.micDenied);
+      return;
+    }
+    if (err) {
+      setSttOn(false);
+      startBrowserListening();
+      return;
+    }
+    clearTimeout(noSpeechTimer.current);
+    noSpeechTimer.current = setTimeout(() => {
+      void vad.pause();
+      setPhase("idle");
+      setHint(V.noSpeech);
+    }, NO_SPEECH_MS);
+  }, [vad, V, startBrowserListening]);
+
+  const startListening = useCallback(() => {
+    if (sttOn) void startVadListening();
+    else startBrowserListening();
+  }, [sttOn, startVadListening, startBrowserListening]);
+  useEffect(() => {
+    listenRef.current = startListening;
+  }, [startListening]);
+
+  const stopAllListening = useCallback(() => {
+    clearTimeout(noSpeechTimer.current);
+    setUserTalking(false);
+    stopListening();
+    void vad.pause();
+  }, [stopListening, vad]);
 
   const sayThenListen = useCallback(
     (text: string) => {
@@ -170,19 +245,24 @@ export function VoiceMode({
       stopSpeaking();
       startListening();
     } else if (phase === "listening") {
-      stopListening();
+      stopAllListening();
       setPhase("idle");
     } else if (phase === "idle") startListening();
   };
 
   const close = () => {
-    stopListening();
+    stopAllListening();
     stopSpeaking();
     onClose();
   };
 
   const status =
-    phase === "listening" ? V.listening : phase === "thinking" || busy ? V.thinking : phase === "speaking" ? V.speaking : V.paused;
+    phase === "listening"
+      ? V.listening
+      : phase === "transcribing"
+        ? V.processing
+        : phase === "thinking" || busy
+          ? V.thinking : phase === "speaking" ? V.speaking : V.paused;
   const live = voice.interim || said;
 
   return (
@@ -195,12 +275,12 @@ export function VoiceMode({
           className="relative grid size-20 place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {phase === "listening" && <span className="absolute inset-0 animate-ping rounded-full bg-primary/25" />}
-          {phase === "thinking" && <span className="absolute -inset-1 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />}
+          {(phase === "thinking" || phase === "transcribing") && <span className="absolute -inset-1 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />}
           <span
             className={cn(
               "relative size-16 rounded-full bg-[radial-gradient(circle_at_30%_30%,#7dd3fc,#2563eb_55%,#1e3a8a)] shadow-lg transition-transform",
               phase === "speaking" && "animate-pulse",
-              phase === "listening" && "scale-110",
+              phase === "listening" && (userTalking ? "scale-125" : "scale-105"),
               phase === "idle" && "opacity-70",
             )}
           />

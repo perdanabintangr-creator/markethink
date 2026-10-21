@@ -11,3 +11,4 @@ coverage/
 *.tsbuildinfo
 .sentryclirc
 supabase/.temp/
+public/vad/

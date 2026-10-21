@@ -24,6 +24,8 @@ export interface AppContextValue {
   researchAllowed: boolean;
   /** Pembayaran otomatis (Midtrans) aktif: tombol beli langsung membuka halaman bayar. */
   payEnabled?: boolean;
+  /** Mode Ngobrol memakai pendeteksi suara + Groq Whisper (cepat, tahan bising). Tanpa ini: pengenal suara browser. */
+  voiceStt?: boolean;
   /** Peran user dari onboarding (umkm_owner, marketing_pro, freelancer, …) — untuk template. */
   personaRole?: string | null;
 }

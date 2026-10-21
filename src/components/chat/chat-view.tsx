@@ -70,7 +70,7 @@ export function ChatView({
   /** Chat baru dibuka dari sebuah project → tampil halaman depan project (seperti ChatGPT/Claude Projects). */
   project?: ProjectHomeData | null;
 }) {
-  const { t, lang, user, workspaces, allowedTiers, personaRole } = useApp();
+  const { t, lang, user, workspaces, allowedTiers, personaRole, voiceStt } = useApp();
   const c = chatText(lang);
   const [tier, setTier] = useState<TierChoice>(() => pickTierChoice(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
@@ -366,6 +366,7 @@ export function ChatView({
       busy={busy || remoteWaiting}
       reply={voiceReply}
       failures={voiceFailures}
+      stt={voiceStt}
       onSend={(text) => {
         setPrefill(null);
         send(text);

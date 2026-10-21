@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fillerFor, speakableText, speechChunks, speechLang } from "@/lib/voice/speech";
+import { encodeWav, rms } from "@/lib/voice/wav";
 
 describe("mode ngobrol suara", () => {
   it("membersihkan markdown supaya enak diucapkan", () => {
@@ -30,5 +31,17 @@ describe("mode ngobrol suara", () => {
     expect(fillerFor("make a deck", "en")).toMatch(/presentation/);
     expect(speechLang("en")).toBe("en-US");
     expect(speechLang("id")).toBe("id-ID");
+  });
+});
+
+describe("audio untuk suara → teks", () => {
+  it("WAV 16-bit mono berheader benar", () => {
+    const buf = encodeWav(new Float32Array([0, 0.5, -0.5, 1]), 16000);
+    const v = new DataView(buf);
+    expect(buf.byteLength).toBe(44 + 8);
+    expect(String.fromCharCode(...new Uint8Array(buf.slice(0, 4)))).toBe("RIFF");
+    expect(v.getUint32(24, true)).toBe(16000);
+    expect(v.getInt16(44 + 6, true)).toBe(32767);
+    expect(rms(new Float32Array([0.5, -0.5]))).toBeCloseTo(0.5);
   });
 });
