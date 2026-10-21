@@ -2,7 +2,10 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowUp, CornerDownRight, FileText, Globe, Image as ImageIcon, Loader2, Lock, Paperclip, Square, X } from "lucide-react";
+import { ArrowUp, AudioLines, CornerDownRight, FileText, Globe, Image as ImageIcon, Loader2, Lock, Mic, Paperclip, Square, X } from "lucide-react";
+import { voiceText } from "@/lib/i18n/voice";
+import { speechLang } from "@/lib/voice/speech";
+import { dictationSupported, useVoice, voiceSupported } from "./use-voice";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app/app-context";
@@ -38,6 +41,7 @@ export function Composer({
   prefill,
   autoFocus,
   placeholder,
+  onVoice,
 }: {
   onSend: (text: string, attachments: PendingAttachment[]) => void;
   onStop: () => void;
@@ -54,6 +58,8 @@ export function Composer({
   autoFocus?: boolean;
   /** Teks petunjuk kotak chat (default dari kamus bahasa). */
   placeholder?: string;
+  /** Buka mode ngobrol suara. */
+  onVoice?: () => void;
 }) {
   const { t, lang, researchAllowed } = useApp();
   const c = chatText(lang);
@@ -63,6 +69,28 @@ export function Composer({
   const [uploading, setUploading] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Suara: ketik pakai suara (dikte) & tombol buka mode ngobrol. Dicek setelah mount (API hanya ada di browser).
+  const V = voiceText(lang);
+  const dictation = useVoice(speechLang(lang));
+  const [canDictate, setCanDictate] = useState(false);
+  const [canTalk, setCanTalk] = useState(false);
+  useEffect(() => {
+    setCanDictate(dictationSupported());
+    setCanTalk(voiceSupported());
+  }, []);
+  function toggleDictation() {
+    if (dictation.listening) return dictation.stopListening();
+    const ok = dictation.listen({
+      continuous: true,
+      onFinal: (said) => setText((v) => (v && !/\s$/.test(v) ? `${v} ${said}` : `${v}${said}`)),
+      onEnd: (err) => {
+        if (err === "denied") toast.error(V.micDenied);
+      },
+    });
+    if (!ok) toast.error(V.unsupported);
+    taRef.current?.focus();
+  }
 
   // Mention aplikasi: ketik "@" di awal kata → daftar aplikasi (mis. Canva).
   const cx = connectorsText(lang);
@@ -150,6 +178,7 @@ export function Composer({
     if (busy || uploading) return;
     const value = text.trim();
     if (!value && !attachments.length && !quote) return;
+    dictation.stopListening();
     const message = value || (attachments.length ? c.analyzeAttached : t.explainPrompt);
     onSend(quote ? buildQuotedMessage(quote, message) : message, attachments);
     onClearQuote?.();
@@ -353,10 +382,36 @@ export function Composer({
           {!researchAllowed && <Lock className="size-3" />}
         </button>
         <div className="flex-1" />
+        {canDictate && (
+          <Button
+            variant={dictation.listening ? "secondary" : "ghost"}
+            size="icon"
+            onClick={toggleDictation}
+            aria-pressed={dictation.listening}
+            aria-label={dictation.listening ? V.stopDictate : V.dictate}
+            title={dictation.listening ? V.stopDictate : V.dictate}
+            className={cn("rounded-full", dictation.listening && "text-primary")}
+          >
+            <Mic className={cn(dictation.listening && "animate-pulse")} />
+          </Button>
+        )}
         <UsageRing />
         {busy ? (
           <Button size="icon" variant="secondary" onClick={onStop} aria-label={t.stop} className="rounded-full">
             <Square className="fill-current" />
+          </Button>
+        ) : onVoice && canTalk && !text.trim() && !attachments.length && !quote ? (
+          <Button
+            size="icon"
+            onClick={() => {
+              dictation.stopListening();
+              onVoice();
+            }}
+            aria-label={V.talkTitle}
+            title={V.talkTitle}
+            className="rounded-full"
+          >
+            <AudioLines />
           </Button>
         ) : (
           <Button

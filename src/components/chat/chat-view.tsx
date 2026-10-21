@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
-import { ArrowDown, Bot, Briefcase, Check, ChevronDown, FileText, FolderOpen, Link2, Loader2, PanelRight, Share2, X } from "lucide-react";
+import { ArrowDown, AudioLines, Bot, Briefcase, Check, ChevronDown, FileText, FolderOpen, Link2, Loader2, PanelRight, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -33,6 +33,9 @@ import { ModelSelector, type TierOption } from "./model-selector";
 import { ProjectHome, type ProjectHomeData } from "./project-home";
 import { QuickStarts, type QuickStart } from "./quick-starts";
 import { QuotaDialog } from "./quota-dialog";
+import { VoiceMode } from "./voice-mode";
+import { voiceSupported } from "./use-voice";
+import { voiceText } from "@/lib/i18n/voice";
 
 
 
@@ -160,6 +163,14 @@ export function ChatView({
     [chatId, c],
   );
 
+  // Mode ngobrol suara: jawaban terakhir yang selesai & jumlah gagal, untuk dibacakan.
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceReply, setVoiceReply] = useState<{ id: string; text: string } | null>(null);
+  const [voiceFailures, setVoiceFailures] = useState(0);
+  const [canTalk, setCanTalk] = useState(false);
+  useEffect(() => setCanTalk(voiceSupported()), []);
+  const V = voiceText(lang);
+
   const { messages, sendMessage, status, stop, regenerate, setMessages, error, clearError } = useChat<MtMessage>({
     id: chatId,
     messages: initialMessages,
@@ -174,6 +185,7 @@ export function ChatView({
       emitChatsChanged();
       setTimeout(emitChatsChanged, 4000);
       const text = messageToText(message);
+      setVoiceReply({ id: message.id, text });
       const update = toolRun ? text.match(UPDATE_RESULT_BLOCK) : null;
       if (update) void updateToolRun(update[1].trim());
       if (activeAgent?.output_canvas && !autoCanvasDone.current && text.length > 400) {
@@ -183,6 +195,7 @@ export function ChatView({
     },
     onError: async (err) => {
       setStatusLabel(null);
+      setVoiceFailures((n) => n + 1);
       let code = "";
       let serverMessage = "";
       try {
@@ -345,6 +358,21 @@ export function ChatView({
     if (q.research) setResearch(true);
     setPrefill({ text: q.prompt[lang], key: Date.now() });
   };
+  const voicePanel = (
+    <VoiceMode
+      lang={lang}
+      firstName={firstName}
+      hasMessages={messages.length > 0}
+      busy={busy || remoteWaiting}
+      reply={voiceReply}
+      failures={voiceFailures}
+      onSend={(text) => {
+        setPrefill(null);
+        send(text);
+      }}
+      onClose={() => setVoiceOpen(false)}
+    />
+  );
   const composer = (extra: { autoFocus?: boolean; placeholder?: string } = {}) => (
     <Composer
       onSend={(text, files) => {
@@ -361,6 +389,7 @@ export function ChatView({
       prefill={prefill}
       autoFocus={extra.autoFocus}
       placeholder={extra.placeholder}
+      onVoice={() => setVoiceOpen(true)}
     />
   );
   const disclaimer = <p className="mt-1.5 text-center text-[11px] text-muted-foreground">{t.disclaimer}</p>;
@@ -446,7 +475,7 @@ export function ChatView({
           {messages.length === 0 && project && project.id === workspaceId && !activeAgent ? (
             <ProjectHome
               project={project}
-              composer={composer({ autoFocus: true, placeholder: c.newChatIn(project.name) })}
+              composer={voiceOpen ? null : composer({ autoFocus: true, placeholder: c.newChatIn(project.name) })}
               extras={
                 <div className="mt-3">
                   <QuickStarts
@@ -470,9 +499,17 @@ export function ChatView({
                   {activeAgent ? activeAgent.name : firstName ? `${t.hello}, ${firstName}` : t.emptyTitle}
                 </h1>
                 <p className="mt-2 text-sm text-muted-foreground sm:text-base">{activeAgent ? t.agentReady : t.emptyTitle}</p>
+                {canTalk && !voiceOpen && !activeAgent && (
+                  <div className="mt-4 flex flex-col items-center gap-1.5">
+                    <Button className="rounded-full" onClick={() => setVoiceOpen(true)}>
+                      <AudioLines /> {V.homeCta}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">{V.homeHint}</p>
+                  </div>
+                )}
               </div>
-              {composer({ autoFocus: true })}
-              {!activeAgent && (
+              {!voiceOpen && composer({ autoFocus: true })}
+              {!activeAgent && !voiceOpen && (
                 <div className="mt-4">
                   <QuickStarts
                     lang={lang}
@@ -537,7 +574,7 @@ export function ChatView({
           )}
         </div>
 
-        {messages.length > 0 && (
+        {(messages.length > 0 || voiceOpen) && (
         <div className="chat-col relative mx-auto w-full max-w-3xl px-3 pb-3 sm:px-4">
           {!atBottom && (
             <button
@@ -548,7 +585,7 @@ export function ChatView({
               <ArrowDown className="size-4" />
             </button>
           )}
-          {composer()}
+          {voiceOpen ? voicePanel : composer()}
           {disclaimer}
         </div>
         )}

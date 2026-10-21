@@ -379,3 +379,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 
 ## 2026-10-19 · Otak "Associate" → "Head"
 - Nama tampilan otak ke-3 diganti "Markethink Head" (sekelas Head of Marketing), urutan: Junior → Senior → Head → Director. Id internal tetap `associate` supaya data lama & pengaturan tidak berubah. ACC founder.
+
+## 2026-10-21 · Mode ngobrol suara (versi gratis)
+- Tombol mikrofon (dikte) + tombol "Ngobrol" di kotak chat, dan "Ngobrol langsung" di halaman chat baru. AI menyapa, mendengar, mengirim ucapan sebagai pesan chat biasa, bilang sedang mengerjakan, lalu membacakan ringkasan jawabannya dan mendengar lagi.
+- Memakai Web Speech API bawaan browser (Rp0). Suara AI premium (mis. ElevenLabs / OpenAI TTS) adalah opsi berbayar: perlu ACC founder.
+- Browser tidak mengizinkan suara otomatis tanpa klik, jadi sapaan dimulai saat user menekan tombol.
