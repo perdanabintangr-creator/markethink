@@ -11,6 +11,9 @@ import { useVoice } from "./use-voice";
 
 type Phase = "speaking" | "listening" | "thinking" | "idle";
 
+/** Jeda diam (ms) setelah user bicara sebelum ucapannya dikirim. */
+const SILENCE_MS = 1200;
+
 /**
  * Mode ngobrol suara: AI menyapa, mendengarkan user, mengirim ucapan sebagai pesan chat biasa,
  * bilang sedang mengerjakan, lalu membacakan jawabannya dan kembali mendengarkan. Ketik tetap bisa (tombol "Ketik saja").
@@ -50,37 +53,82 @@ export function VoiceMode({
 
   const { listen, stopListening, speak, stopSpeaking } = voice;
 
-  const startListening = useCallback(() => {
-    setHint(null);
-    const ok = listen({
-      onFinal: (text) => {
-        setSaid(text);
-        setPhase("thinking");
-        waitingReply.current = true;
-        onSend(text);
-        fillerTalking.current = true;
-        speak(fillerFor(text, lang), () => {
-          fillerTalking.current = false;
-          const next = pendingSpeech.current;
-          pendingSpeech.current = null;
-          if (next) sayRef.current(next);
-        });
-      },
-      onEnd: (err) => {
-        if (waitingReply.current) return;
-        setPhase("idle");
-        if (err === "denied") setHint(V.micDenied);
-        else if (err === "no-speech") setHint(V.noSpeech);
-      },
-    });
-    setPhase(ok ? "listening" : "idle");
-    if (!ok) setHint(V.unsupported);
-  }, [listen, speak, onSend, lang, V]);
+  const submitSpeech = useCallback(
+    (text: string) => {
+      setSaid(text);
+      setPhase("thinking");
+      waitingReply.current = true;
+      onSend(text);
+      fillerTalking.current = true;
+      speak(fillerFor(text, lang), () => {
+        fillerTalking.current = false;
+        const next = pendingSpeech.current;
+        pendingSpeech.current = null;
+        if (next) sayRef.current(next);
+      });
+    },
+    [onSend, speak, lang],
+  );
+
+  /**
+   * Dengar dengan deteksi jeda sendiri: begitu user berhenti bicara ±1,2 detik, ucapan langsung dikirim
+   * (tanpa menunggu pengenal suara browser yang di beberapa HP/tablet lambat memutuskan "selesai").
+   */
+  const startListening = useCallback(
+    (retry = true) => {
+      setHint(null);
+      setSaid("");
+      let heard = "";
+      let live = "";
+      let done = false;
+      let silence: ReturnType<typeof setTimeout> | undefined;
+      const startedAt = Date.now();
+      const finish = () => {
+        if (done) return;
+        const text = `${heard} ${live}`.replace(/\s+/g, " ").trim();
+        if (!text) return;
+        done = true;
+        clearTimeout(silence);
+        stopListening();
+        submitSpeech(text);
+      };
+      const armSilence = () => {
+        clearTimeout(silence);
+        if (`${heard}${live}`.trim()) silence = setTimeout(finish, SILENCE_MS);
+      };
+      const ok = listen({
+        continuous: true,
+        onFinal: (chunk) => {
+          heard = `${heard} ${chunk}`;
+          live = "";
+          armSilence();
+        },
+        onInterim: (text) => {
+          live = text;
+          if (text) setSaid(`${heard} ${text}`.trim());
+          armSilence();
+        },
+        onEnd: (err) => {
+          clearTimeout(silence);
+          if (done || waitingReply.current) return;
+          if (`${heard}${live}`.trim()) return finish();
+          // Beberapa HP menutup mic sendiri dalam hitungan detik tanpa suara: coba sekali lagi otomatis.
+          if (retry && !err && Date.now() - startedAt < 4000) return startListening(false);
+          setPhase("idle");
+          if (err === "denied") setHint(V.micDenied);
+          else setHint(V.noSpeech);
+        },
+      });
+      setPhase(ok ? "listening" : "idle");
+      if (!ok) setHint(V.unsupported);
+    },
+    [listen, stopListening, submitSpeech, V],
+  );
 
   const sayThenListen = useCallback(
     (text: string) => {
       setPhase("speaking");
-      speak(text, startListening);
+      speak(text, () => startListening());
     },
     [speak, startListening],
   );

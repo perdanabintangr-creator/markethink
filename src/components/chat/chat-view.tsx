@@ -522,7 +522,7 @@ export function ChatView({
                   />
                 </div>
               )}
-              <div className="mt-3">{disclaimer}</div>
+              {!voiceOpen && <div className="mt-3">{disclaimer}</div>}
             </div>
           ) : (
             <div className="chat-thread chat-col mx-auto max-w-3xl space-y-6 px-4 py-6">

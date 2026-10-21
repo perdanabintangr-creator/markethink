@@ -160,12 +160,25 @@ export function useVoice(lang: string) {
           onDone?.();
           return;
         }
-        const u = new SpeechSynthesisUtterance(chunks[i++]);
+        const chunk = chunks[i++];
+        const u = new SpeechSynthesisUtterance(chunk);
         u.lang = lang;
         if (voice) u.voice = voice;
         u.rate = 1.05;
-        u.onend = next;
-        u.onerror = next;
+        // Pengaman: sebagian HP/tablet kadang tidak memanggil onend, jadi lanjut sendiri setelah perkiraan durasi.
+        let advanced = false;
+        let guard: ReturnType<typeof setTimeout>;
+        const advance = () => {
+          if (advanced) return;
+          advanced = true;
+          clearTimeout(guard);
+          next();
+        };
+        // Lanjut hanya bila suara benar-benar sudah diam, supaya mic tidak menangkap suara AI sendiri.
+        const check = () => (synth.speaking ? (guard = setTimeout(check, 400)) : advance());
+        guard = setTimeout(check, 1200 + chunk.length * 70);
+        u.onend = advance;
+        u.onerror = advance;
         synth.speak(u);
       };
       next();
