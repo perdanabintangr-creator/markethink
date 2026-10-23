@@ -6,11 +6,13 @@ import { CheckCircle2, Loader2, X, XCircle } from "lucide-react";
 import { useApp } from "@/components/app/app-context";
 import { paymentsText } from "@/lib/i18n/payments";
 
-/** Banner setelah kembali dari halaman bayar Midtrans (?paid=<order>): cek status berkala sampai berhasil/gagal. */
+/** Banner setelah kembali dari halaman bayar (Midtrans/Duitku): cek status berkala sampai berhasil/gagal. */
 export function PaymentReturn() {
   const P = paymentsText(useApp().lang);
   const router = useRouter();
-  const order = useSearchParams().get("paid");
+  const params = useSearchParams();
+  // Midtrans kembali dengan ?paid=<order>; Duitku bisa menambahkan ?merchantOrderId=<order>.
+  const order = params.get("paid")?.split("?")[0] || params.get("merchantOrderId");
   const [state, setState] = useState<{ status: string; item: string } | null>(null);
   const [hidden, setHidden] = useState(false);
 

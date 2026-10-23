@@ -389,3 +389,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Header `Permissions-Policy` sebelumnya memblokir mikrofon (`microphone=()`); diubah ke `microphone=(self)`.
 - Jalur cepat & tahan bising: Silero VAD di browser (gratis, aset di `public/vad` disalin saat build) mendeteksi ucapan manusia, mengabaikan musik, lalu potongan suara dikirim ke `/api/voice/transcribe` → Groq `whisper-large-v3-turbo` (±US$0,04/jam audio, minimal ditagih 10 detik per ucapan).
 - Mati secara default. Aktif hanya bila founder ACC dan menyetel `VOICE_STT=groq` + `GROQ_API_KEY` di Vercel. Tanpa itu, tetap pakai pengenal suara browser.
+
+## 2026-10-23 · Payment gateway Duitku (ACC founder)
+- Midtrans masih lama di tahap review, jadi Duitku POP ditambahkan (`src/lib/payments/duitku.ts`), mengikuti format library resmi duitkupg/duitku-php.
+- Env: `DUITKU_MERCHANT_CODE`, `DUITKU_API_KEY`, `DUITKU_IS_PRODUCTION="true"` untuk live (default sandbox). `PAYMENT_PROVIDER` bisa memilih manual; tanpa itu Duitku diutamakan bila terpasang, lalu Midtrans.
+- Callback `/api/webhooks/duitku` (tanda tangan MD5), status selalu dicek ulang ke API Duitku; aktivasi paket/add-on memakai alur yang sama dengan Midtrans. Pembayaran lama tetap dicek ke gateway asalnya (kolom `payments.provider`).

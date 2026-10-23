@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiSession, jsonError } from "@/lib/api";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createSnapTransaction, newOrderId, paymentsEnabled } from "@/lib/payments/midtrans";
+import { createSnapTransaction, newOrderId } from "@/lib/payments/midtrans";
+import { createDuitkuInvoice } from "@/lib/payments/duitku";
+import { activeProvider } from "@/lib/payments/gateway";
 import { priceItem } from "@/lib/payments/orders";
 
 const schema = z.object({
@@ -10,11 +12,12 @@ const schema = z.object({
   id: z.string().regex(/^[a-z_]{2,40}$/),
 });
 
-/** Mulai pembayaran: harga dihitung di server, transaksi Midtrans dibuat, user diarahkan ke halaman bayar. */
+/** Mulai pembayaran: harga dihitung di server, tagihan dibuat di gateway aktif (Duitku/Midtrans), user diarahkan ke halaman bayar. */
 export async function POST(req: Request) {
   const s = await apiSession();
   if (s.error) return s.error;
-  if (!paymentsEnabled()) return jsonError(503, "payments_disabled");
+  const provider = activeProvider();
+  if (!provider) return jsonError(503, "payments_disabled");
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "invalid_body");
   const { kind, id } = parsed.data;
@@ -32,20 +35,27 @@ export async function POST(req: Request) {
     item_id: id,
     item_name: item.name,
     amount_idr: item.amount,
+    provider,
   });
   if (error) return jsonError(500, "save_failed");
   try {
-    const snap = await createSnapTransaction({
-      orderId,
-      amount: item.amount,
-      item: { id, name: item.name },
-      customer: { name: s.profile.full_name, email: s.profile.email ?? s.user.email },
-      finishUrl: `${origin}${back}?paid=${encodeURIComponent(orderId)}`,
-    });
-    await admin.from("payments").update({ redirect_url: snap.redirectUrl, updated_at: new Date().toISOString() }).eq("order_id", orderId);
-    return NextResponse.json({ orderId, redirectUrl: snap.redirectUrl, token: snap.token });
+    const customer = { name: s.profile.full_name, email: s.profile.email ?? s.user.email };
+    const returnUrl = `${origin}${back}?paid=${encodeURIComponent(orderId)}`;
+    const pay =
+      provider === "duitku"
+        ? await createDuitkuInvoice({
+            orderId,
+            amount: item.amount,
+            item: { name: item.name },
+            customer,
+            callbackUrl: `${origin}/api/webhooks/duitku`,
+            returnUrl,
+          })
+        : await createSnapTransaction({ orderId, amount: item.amount, item: { id, name: item.name }, customer, finishUrl: returnUrl });
+    await admin.from("payments").update({ redirect_url: pay.redirectUrl, updated_at: new Date().toISOString() }).eq("order_id", orderId);
+    return NextResponse.json({ orderId, redirectUrl: pay.redirectUrl });
   } catch (err) {
-    console.error("[pay] snap gagal", err);
+    console.error(`[pay] ${provider} gagal`, err);
     await admin.from("payments").update({ status: "failed", fulfill_error: String(err).slice(0, 500) }).eq("order_id", orderId);
     return jsonError(502, "gateway_error");
   }
