@@ -3,12 +3,18 @@
 import { useMemo, useState } from "react";
 import type { CalendarOutput } from "@/lib/addons/pro/specs/calendar";
 import { cn } from "@/lib/utils";
+import { CalendarDays, FileDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { calendarToCsv, calendarToIcs } from "@/lib/addons/exports";
+import { downloadText, exportsText } from "@/lib/i18n/exports";
 import { CopyCard, KeyValues, Pill, Points, SectionCard, StatGrid, Summary, useResultsI18n } from "./kit";
 
 const COLORS = ["#2563eb", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6"];
 
-export function CalendarResult({ data }: { data: CalendarOutput }) {
-  const { t: tr, f } = useResultsI18n();
+export function CalendarResult({ data, brand }: { data: CalendarOutput; brand?: string }) {
+  const { t: tr, f, lang } = useResultsI18n();
+  const X = exportsText(lang);
+  const fileBase = `kalender-konten-${(brand || "brand").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${data.posts[0]?.date.slice(0, 7) ?? ""}`;
   const t = tr.calendar;
   const color = (pillar: string) => COLORS[Math.max(0, data.pillars.findIndex((p) => p.name === pillar)) % COLORS.length];
   const month = data.posts[0]?.date.slice(0, 7) ?? "";
@@ -30,6 +36,21 @@ export function CalendarResult({ data }: { data: CalendarOutput }) {
   return (
     <div className="space-y-4">
       <Summary text={data.summary} />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          className="rounded-full"
+          title={X.toCalendarHint}
+          onClick={() => downloadText(`${fileBase}.ics`, calendarToIcs(data.posts, brand || "Brand"), "text/calendar;charset=utf-8")}
+        >
+          <CalendarDays /> {X.toCalendar}
+        </Button>
+        <Button size="sm" variant="outline" className="rounded-full" onClick={() => downloadText(`${fileBase}.csv`, calendarToCsv(data.posts), "text/csv;charset=utf-8")}>
+          <FileDown /> {X.csv}
+        </Button>
+        <span className="text-xs text-muted-foreground">{X.toCalendarHint}</span>
+      </div>
 
       <StatGrid
         items={[

@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { FORMAT_LABEL, PLATFORM_LABEL, variantText, type AdVariant, type AdcopyOutput } from "@/lib/addons/pro/specs/adcopy";
 import { cn } from "@/lib/utils";
+import { FileDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { adcopyToCsv } from "@/lib/addons/exports";
+import { downloadText, exportsText } from "@/lib/i18n/exports";
 import { CopyButton, DataTable, KeyValues, Pill, SectionCard, StatGrid, Summary, useResultsI18n } from "./kit";
 
 const COLORS = ["#2563eb", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6", "#8b5cf6"];
@@ -10,8 +14,9 @@ const RULE = { kill: { tone: "bad" }, scale: { tone: "good" }, iterate: { tone: 
 const chars = (s: string) => [...s].length;
 
 export function AdcopyResult({ data, brand }: { data: AdcopyOutput; brand?: string }) {
-  const { t: tr } = useResultsI18n();
+  const { t: tr, lang } = useResultsI18n();
   const t = tr.adcopy;
+  const X = exportsText(lang);
   const platform = data.platform ?? (data.variants.every((v) => v.format === "search") ? "google" : "meta");
   const name = brand?.trim() || t.yourBrand;
   const [angle, setAngle] = useState<string | null>(null);
@@ -22,6 +27,19 @@ export function AdcopyResult({ data, brand }: { data: AdcopyOutput; brand?: stri
   return (
     <div className="space-y-4">
       <Summary text={data.strategy.summary} />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          className="rounded-full"
+          onClick={() =>
+            downloadText(`copy-iklan-${(brand || "brand").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`, adcopyToCsv(data.variants, platform), "text/csv;charset=utf-8")
+          }
+        >
+          <FileDown /> {X.adsCsv}
+        </Button>
+        <span className="text-xs text-muted-foreground">{X.adsCsvHint}</span>
+      </div>
 
       <StatGrid
         items={[

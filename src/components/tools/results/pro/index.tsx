@@ -13,7 +13,7 @@ type View = (props: { data: unknown; input: Record<string, unknown> }) => React.
 
 /** Halaman hasil Tools Pro per role. */
 export const PRO_VIEWS: Record<string, View> = {
-  calendar: ({ data }) => <CalendarResult data={data as CalendarOutput} />,
+  calendar: ({ data, input }) => <CalendarResult data={data as CalendarOutput} brand={typeof input.brand === "string" ? input.brand : undefined} />,
   report: ({ data }) => <ReportResult data={data as ReportOutput} />,
   ...strategiViews,
   ...kontenViews,

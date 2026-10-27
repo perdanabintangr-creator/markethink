@@ -3,6 +3,7 @@
 import type { SizingOutput } from "@/lib/addons/schemas";
 import { Pill, SectionCard, useResultsI18n } from "../common";
 import { BarList, Recommendations, Sources, Summary, toneOf } from "./research-common";
+import { SizingSimulator } from "./sizing-sim";
 
 /** Lingkaran bertingkat TAM ⊃ SAM ⊃ SOM (luas sebanding nilai, dengan batas minimum agar terbaca). */
 function MarketCircles({ data }: { data: SizingOutput }) {
@@ -78,7 +79,7 @@ function Projection({ data }: { data: SizingOutput }) {
 
 const PESTEL_KEYS = ["politik", "ekonomi", "sosial", "teknologi", "lingkungan", "hukum"];
 
-export function SizingResult({ data }: { data: SizingOutput }) {
+export function SizingResult({ data, input }: { data: SizingOutput; input?: Record<string, unknown> }) {
   const { t: tr, f } = useResultsI18n();
   const t = tr.sizing;
   const shortRp = f.shortRp;
@@ -117,6 +118,8 @@ export function SizingResult({ data }: { data: SizingOutput }) {
           </div>
         </div>
       </SectionCard>
+
+      <SizingSimulator data={data} price={input?.price} />
 
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <SectionCard title={t.projTitle} hint={t.scenariosHint}>

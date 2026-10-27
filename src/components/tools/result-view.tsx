@@ -43,7 +43,7 @@ export function ResultView({ tool, output, input, runId }: { tool: string; outpu
     case "kol":
       return <KolResult data={output as KolOutput} />;
     case "sizing":
-      return <SizingResult data={output as SizingOutput} />;
+      return <SizingResult data={output as SizingOutput} input={input} />;
     case "persona":
       return <PersonaResult data={output as PersonaOutput} runId={runId} />;
     case "entry":
