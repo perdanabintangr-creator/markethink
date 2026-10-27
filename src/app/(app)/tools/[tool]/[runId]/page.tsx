@@ -86,7 +86,7 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
               <FilesBar files={(run.files ?? []) as ToolFileLite[]} />
               <ReviseButton runId={run.id} tool={tool} revisionsLeft={Math.max(0, MAX_REVISIONS - (revisions ?? 0))} />
             </div>
-            <ResultView tool={tool} output={run.output} input={(run.input ?? {}) as Record<string, unknown>} />
+            <ResultView tool={tool} output={run.output} input={(run.input ?? {}) as Record<string, unknown>} runId={run.id} />
             <ResearchNotes output={run.output} />
             <p className="pt-2 text-center text-xs text-muted-foreground">{T.madeWith}</p>
           </>

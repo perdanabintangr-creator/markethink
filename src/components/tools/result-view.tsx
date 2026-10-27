@@ -25,7 +25,7 @@ import { SurveyResult } from "./results/survey";
 import { PRO_VIEWS } from "./results/pro";
 import { useResultsI18n } from "./common";
 
-export function ResultView({ tool, output, input }: { tool: string; output: unknown; input: Record<string, unknown> }) {
+export function ResultView({ tool, output, input, runId }: { tool: string; output: unknown; input: Record<string, unknown>; runId?: string }) {
   const { t } = useResultsI18n();
   const Pro = PRO_VIEWS[tool];
   if (Pro) return <Pro data={output} input={input} />;
@@ -45,7 +45,7 @@ export function ResultView({ tool, output, input }: { tool: string; output: unkn
     case "sizing":
       return <SizingResult data={output as SizingOutput} />;
     case "persona":
-      return <PersonaResult data={output as PersonaOutput} />;
+      return <PersonaResult data={output as PersonaOutput} runId={runId} />;
     case "entry":
       return <EntryResult data={output as EntryOutput} />;
     case "survey":

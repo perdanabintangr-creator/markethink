@@ -3,6 +3,7 @@
 import type { PersonaOutput } from "@/lib/addons/schemas";
 import { Pill, SectionCard, useResultsI18n } from "../common";
 import { BarList, Recommendations, Sources, Summary } from "./research-common";
+import { PersonaLab, type LabTest } from "./persona-lab";
 
 const COLORS = ["#2563eb", "#ec4899", "#0ea5e9", "#f59e0b", "#14b8a6"];
 
@@ -54,7 +55,7 @@ function List({ title, items, tone }: { title: string; items: string[]; tone: st
   );
 }
 
-export function PersonaResult({ data }: { data: PersonaOutput }) {
+export function PersonaResult({ data, runId }: { data: PersonaOutput & { lab_tests?: LabTest[] }; runId?: string }) {
   const t = useResultsI18n().t.persona;
   return (
     <div className="space-y-4">
@@ -117,6 +118,8 @@ export function PersonaResult({ data }: { data: PersonaOutput }) {
           </section>
         ))}
       </div>
+
+      {runId && data.personas.length > 0 && <PersonaLab runId={runId} data={data} />}
 
       <SectionCard title={t.journey}>
         <div className="overflow-x-auto">

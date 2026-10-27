@@ -95,7 +95,7 @@ export function ToolRunPanel({
         {data && (
           <div className="space-y-4">
             <FilesBar files={data.run.files ?? []} />
-            <ResultView tool={data.run.tool} output={data.run.output} input={data.run.input ?? {}} />
+            <ResultView tool={data.run.tool} output={data.run.output} input={data.run.input ?? {}} runId={data.run.id} />
             <ResearchNotes output={data.run.output} />
           </div>
         )}
