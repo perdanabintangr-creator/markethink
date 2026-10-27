@@ -345,6 +345,11 @@ export const FORMS_EN: Record<string, FormTextEn> = {
     fields: {
       platform: { label: "Platform", options: { instagram: "Instagram", tiktok: "TikTok" } },
       handle: { label: "Account username *", placeholder: "e.g. @kopisenja.id" },
+      link: {
+        label: "Profile / website / store link (optional)",
+        placeholder: "e.g. https://www.instagram.com/kopisenja.id or https://kopisenja.id",
+        hint: "Markethink opens this link and uses its content as evidence. Pages that need a login (e.g. some IG/TikTok profiles) may not be readable.",
+      },
       niche: {
         label: "Brand & what you sell *",
         placeholder:

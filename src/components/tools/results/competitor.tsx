@@ -1,5 +1,8 @@
 "use client";
 
+import { Megaphone, TrendingUp } from "lucide-react";
+import { googleTrendsUrl, metaAdLibraryUrl } from "@/lib/addons/exports";
+import { exportsText } from "@/lib/i18n/exports";
 import type { CompetitorOutput } from "@/lib/addons/schemas";
 import { Bullets, Pill, SectionCard, useResultsI18n } from "../common";
 
@@ -43,7 +46,8 @@ function PositioningMap({ data, brand }: { data: CompetitorOutput; brand: string
 }
 
 export function CompetitorResult({ data, brand }: { data: CompetitorOutput; brand: string }) {
-  const { t: tr } = useResultsI18n();
+  const { t: tr, lang } = useResultsI18n();
+  const X = exportsText(lang);
   const t = tr.competitor;
   const c0 = tr.common;
   return (
@@ -105,6 +109,30 @@ export function CompetitorResult({ data, brand }: { data: CompetitorOutput; bran
               ))}
             </tbody>
           </table>
+        </div>
+      </SectionCard>
+
+      <SectionCard title={X.realData} hint={X.realDataHint}>
+        <div className="flex flex-wrap gap-2">
+          {data.competitors.map((c) => (
+            <a
+              key={c.name}
+              href={metaAdLibraryUrl(c.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm hover:bg-accent"
+            >
+              <Megaphone className="size-3.5 text-primary" /> {c.name}: {X.activeAds}
+            </a>
+          ))}
+          <a
+            href={googleTrendsUrl([brand, ...data.competitors.map((c) => c.name)])}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-3 py-1.5 text-sm hover:bg-accent"
+          >
+            <TrendingUp className="size-3.5 text-primary" /> {X.trends}
+          </a>
         </div>
       </SectionCard>
 

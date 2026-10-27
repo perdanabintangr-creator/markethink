@@ -18,6 +18,10 @@ const id = {
   txDay: "Transaksi per hari",
   in3y: "Omzet di tahun ke-3",
   sam: "SAM (pasar yang bisa dilayani)",
+  realData: "📡 Cek data asli kompetitor",
+  realDataHint: "Langsung dari sumber resminya, gratis.",
+  activeAds: "Iklan aktif (Meta)",
+  trends: "Bandingkan tren pencarian (Google Trends)",
 };
 
 const en: typeof id = {
@@ -37,6 +41,10 @@ const en: typeof id = {
   txDay: "Transactions per day",
   in3y: "Revenue in year 3",
   sam: "SAM (serviceable market)",
+  realData: "📡 Check competitors' real data",
+  realDataHint: "Straight from the official sources, free.",
+  activeAds: "Active ads (Meta)",
+  trends: "Compare search trends (Google Trends)",
 };
 
 export const exportsText = (lang: Lang | null | undefined) => (lang === "en" ? en : id);

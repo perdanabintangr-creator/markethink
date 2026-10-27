@@ -7,6 +7,7 @@ import { EXPERT, webResearch } from "../helpers";
 import { aiObject, revisionBlock, makeDeck, makeWorkbook, withNotes, storeMaybe, storeToolFile, type SheetSpec, type ToolCtx, type ToolFile } from "../runtime";
 import type { Runner, ToolResult } from "../tools";
 import { briefFromFields, filesField, schemaFromFields, type ToolForm } from "./fields";
+import { extractUrls, linksEvidence, readUserLinks } from "../links";
 
 export { EXPERT } from "../helpers";
 
@@ -122,6 +123,11 @@ export function makeRunner<O extends z.ZodTypeAny>(def: ProDef<O>): Runner<z.Zod
         webNote = r.webNote;
       }
 
+      // Link yang ditempel user (website, toko, landing page) dibuka & dipakai sebagai bukti nyata.
+      const links = ctx.revision ? [] : await readUserLinks(extractUrls(raw));
+      const linkText = linksEvidence(links);
+      for (const l of links) if (l.ok && !sources.some((x) => x.url === l.url)) sources.push({ title: l.title || l.url, url: l.url });
+
       const rules = typeof def.rules === "function" ? def.rules(raw as never) : def.rules;
       const system = `${EXPERT}
 
@@ -135,6 +141,7 @@ ${webNote ? `\n${webNote}` : ""}`;
         `Hari ini: ${todayWIB()} (WIB).`,
         untrusted("brief", brief),
         loaded.text && `Data dari file user:\n${untrusted("file", loaded.text)}`,
+        linkText && `Isi halaman dari link yang diberikan user (bukti nyata; pakai sebagai fakta, sebut bila relevan):\n${untrusted("link", linkText.slice(0, 18_000))}`,
         notes && `Catatan riset web (pakai angka & fakta ini, sebut sumbernya bila relevan):\n${untrusted("riset", notes.slice(0, 30_000))}`,
         ctx.revision && revisionBlock(ctx.revision),
       ]

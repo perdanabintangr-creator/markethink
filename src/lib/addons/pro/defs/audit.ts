@@ -18,8 +18,8 @@ export const auditDef: ProDef<typeof auditOutput> = {
   output: auditOutput,
   maxOutputTokens: 14000,
   validate: (input) =>
-    !String(input.bio ?? "").trim() && !String(input.data ?? "").trim() && !(input.attachment_ids as string[] | undefined)?.length
-      ? "Isi bio sekarang, data konten terakhir, atau upload screenshot profil/insight dulu, ya — supaya audit berdasarkan bukti, bukan tebakan."
+    !String(input.bio ?? "").trim() && !String(input.data ?? "").trim() && !String(input.link ?? "").trim() && !(input.attachment_ids as string[] | undefined)?.length
+      ? "Isi link profil, bio sekarang, data konten terakhir, atau upload screenshot profil/insight dulu, ya, supaya audit berdasarkan bukti, bukan tebakan."
       : null,
   role: `Kamu Social Media Lead di agency yang rutin mengaudit akun Instagram & TikTok brand sebelum pitching dan onboarding klien.
 Auditmu tajam dan jujur: setiap nilai punya bukti dari akun itu sendiri, setiap temuan diikuti perbaikan yang bisa dikerjakan minggu ini,
@@ -29,7 +29,8 @@ dan klien langsung paham apa yang harus diubah duluan.`,
     const limit = BIO_LIMIT[platform];
     return `KONTEKS
 - Platform: ${platform === "tiktok" ? "TikTok" : "Instagram"} · akun ${input.handle} · tujuan akun: ${GOAL[String(input.goal)] ?? GOAL.sales}.
-- Sumber bukti HANYA: bio, followers, frekuensi, data konten, dan screenshot dari user. Kamu tidak bisa membuka akunnya.
+- Sumber bukti HANYA: bio, followers, frekuensi, data konten, screenshot dari user, dan isi halaman dari link yang berhasil dibaca sistem
+  (judul, deskripsi, jumlah followers/posting bila tertulis di sana). Selain itu kamu tidak bisa membuka akunnya.
   DILARANG mengarang angka performa (views, ER, followers, jam aktif) atau isi konten yang tidak terlihat. Bila sebuah aspek tidak bisa
   dinilai dari data, tetap beri skor konservatif (4-6), tulis evidence diawali "Asumsi: …", dan masukkan data yang dibutuhkan ke assumptions.
 

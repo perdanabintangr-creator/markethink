@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adcopyToCsv, calendarToCsv, calendarToIcs, parseRupiah, parseTime } from "@/lib/addons/exports";
+import { adcopyToCsv, calendarToCsv, calendarToIcs, googleTrendsUrl, metaAdLibraryUrl, parseRupiah, parseTime } from "@/lib/addons/exports";
 
 const post = { date: "2026-11-05", time: "19.30", platform: "Instagram", format: "Reels", pillar: "Edukasi", title: "Tips, trik; dan \"rahasia\"", caption: "Baris 1\nBaris 2", hashtags: ["kopi", "#senja"] };
 
@@ -34,5 +34,16 @@ describe("ekspor hasil Smart Tools", () => {
     expect(parseRupiah("1,5 jt")).toBe(1500000);
     expect(parseRupiah("45k")).toBe(45000);
     expect(parseRupiah("gratis")).toBeNull();
+  });
+});
+
+describe("tautan data asli kompetitor", () => {
+  it("Meta Ad Library & Google Trends (Indonesia)", () => {
+    expect(metaAdLibraryUrl("Kopi Kenangan")).toContain("country=ID");
+    expect(metaAdLibraryUrl("Kopi Kenangan")).toContain("q=Kopi%20Kenangan");
+    const t = googleTrendsUrl(["A", "B & C", "", "D", "E", "F", "G"]);
+    expect(t).toContain("geo=ID");
+    expect(t.split("q=")[1].split(",")).toHaveLength(5);
+    expect(t).toContain("B%20%26%20C");
   });
 });

@@ -17,6 +17,14 @@ export const auditForm: ToolForm = {
     },
     { type: "text", name: "handle", label: "Username akun *", required: true, max: 60, placeholder: "mis. @kopisenja.id", half: true },
     {
+      type: "text",
+      name: "link",
+      label: "Link profil / website / toko (opsional)",
+      max: 300,
+      placeholder: "mis. https://www.instagram.com/kopisenja.id atau https://kopisenja.id",
+      hint: "Markethink membuka link ini dan memakai isinya sebagai bukti. Halaman yang butuh login (mis. sebagian profil IG/TikTok) mungkin tidak terbaca.",
+    },
+    {
       type: "textarea",
       name: "niche",
       label: "Brand & apa yang dijual *",

@@ -163,3 +163,16 @@ export function parseRupiah(text: unknown): number | null {
   const v = Math.round(num * mult);
   return v > 0 ? v : null;
 }
+
+/** Halaman Meta Ad Library: iklan yang sedang tayang di Indonesia untuk kata kunci/nama brand. */
+export const metaAdLibraryUrl = (name: string) =>
+  `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=ID&media_type=all&search_type=keyword_unordered&q=${encodeURIComponent(name.trim())}`;
+
+/** Google Trends: bandingkan minat pencarian beberapa nama (maks 5) di Indonesia, 12 bulan terakhir. */
+export const googleTrendsUrl = (names: string[]) =>
+  `https://trends.google.com/trends/explore?date=today%2012-m&geo=ID&q=${names
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .slice(0, 5)
+    .map(encodeURIComponent)
+    .join(",")}`;
