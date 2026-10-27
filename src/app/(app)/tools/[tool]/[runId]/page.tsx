@@ -12,6 +12,8 @@ import { ToolIcon } from "@/components/tools/tool-icon";
 import { DiscussInChat, ReviseButton } from "@/components/tools/run-discussion";
 import { ResearchNotes } from "@/components/tools/research-notes";
 import { MAX_REVISIONS } from "@/lib/addons/format";
+import { WatchButton, WatchChanges } from "@/components/tools/watch-button";
+import { isWatchable } from "@/lib/addons/watchers";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata() {
@@ -85,7 +87,9 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
             <div className="flex flex-wrap items-center gap-2">
               <FilesBar files={(run.files ?? []) as ToolFileLite[]} />
               <ReviseButton runId={run.id} tool={tool} revisionsLeft={Math.max(0, MAX_REVISIONS - (revisions ?? 0))} />
+              {isWatchable(tool) && <WatchButton runId={run.id} />}
             </div>
+            <WatchChanges output={run.output} />
             <ResultView tool={tool} output={run.output} input={(run.input ?? {}) as Record<string, unknown>} runId={run.id} />
             <ResearchNotes output={run.output} />
             <p className="pt-2 text-center text-xs text-muted-foreground">{T.madeWith}</p>

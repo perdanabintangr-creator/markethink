@@ -394,3 +394,10 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Midtrans masih lama di tahap review, jadi Duitku POP ditambahkan (`src/lib/payments/duitku.ts`), mengikuti format library resmi duitkupg/duitku-php.
 - Env: `DUITKU_MERCHANT_CODE`, `DUITKU_API_KEY`, `DUITKU_IS_PRODUCTION="true"` untuk live (default sandbox). `PAYMENT_PROVIDER` bisa memilih manual; tanpa itu Duitku diutamakan bila terpasang, lalu Midtrans.
 - Callback `/api/webhooks/duitku` (tanda tangan MD5), status selalu dicek ulang ke API Duitku; aktivasi paket/add-on memakai alur yang sama dengan Midtrans. Pembayaran lama tetap dicek ke gateway asalnya (kolom `payments.provider`).
+
+## 2026-10-27 · Smart Tools naik kelas (5 ide, ACC founder "jalankan semua")
+1. **Uji ke Calon Pembeli** (hasil Persona): wawancara persona & uji 2-3 versi materi → skor per persona, pemenang, versi diperbaiki. `/api/tools/runs/[id]/persona-lab`, kredit sesuai biaya nyata (otak Senior).
+2. **Hasil interaktif**: simulator target penjualan di Ukuran Pasar (dihitung di browser, gratis), ekspor kalender → .ics (Google Calendar) & CSV, copy iklan → CSV.
+3. **Data nyata**: link yang ditempel di form Tools Pro dibuka & dipakai sebagai bukti (pembaca tautan chat `src/lib/ai/links.ts`, aman dari alamat internal); kolom link di Audit Akun; tombol ke Meta Ad Library & Google Trends di hasil Kompetitor. Catatan: API Meta Ad Library hanya memberi iklan komersial untuk negara Uni Eropa, jadi untuk Indonesia dipakai tautan langsung.
+4. **Pantau mingguan** (Pro+, maks 3): tabel `tool_watchers` (migrasi 0048), cron harian `/api/cron/watchers` (vercel.json, butuh env `CRON_SECRET`) → tiap pemantauan dijalankan di request sendiri, AI (Junior) merangkum perubahan, email ke user. Memotong kuota seperti menjalankan tool biasa.
+5. **Isi form otomatis**: "Ceritakan singkat" → AI (Junior) mengisi field form dari cerita + Brand Kit + isian sebelumnya; hanya nilai valid yang dipakai.
