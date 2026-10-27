@@ -18,6 +18,7 @@ import { localizeForm } from "@/lib/addons/i18n";
 import { useApp } from "@/components/app/app-context";
 import { toolsText, type ToolsText } from "@/lib/i18n/tools";
 import { WorkingShowcase } from "./working-showcase";
+import { PrefillBox } from "./prefill-box";
 import { BrainPicker, useToolTier } from "./brain-picker";
 import Link from "next/link";
 import { TOOL_CREDIT_ESTIMATE, quotaShare, type ToolAccessLite } from "@/lib/addons/format";
@@ -241,6 +242,7 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const pro = PRO_FORMS[tool];
   // Teks tampilan saja; pengiriman form tetap memakai PRO_FORMS asli (nama field & value opsi tidak berubah).
   const proView = pro ? localizeForm(tool, pro, lang) : undefined;
@@ -296,7 +298,8 @@ export function ToolRunner({ tool, access }: { tool: string; access: ToolAccessL
 
   return (
     <div className="relative">
-      <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border bg-card p-4 sm:p-6">
+      <form ref={formRef} onSubmit={onSubmit} className="space-y-4 rounded-2xl border bg-card p-4 sm:p-6">
+        {access.allowed && <PrefillBox tool={tool} formRef={formRef} />}
         {pro && (
           <div className="grid gap-4 sm:grid-cols-2">
             {(proView ?? pro).fields.map((f) => (
