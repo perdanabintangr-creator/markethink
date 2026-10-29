@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -34,6 +34,7 @@ import {
   FolderInput,
   FolderOpen,
   FolderOutput,
+  LayoutDashboard,
   LayoutGrid,
   Lock,
   Languages,
@@ -125,17 +126,23 @@ function swallowNextClick() {
 const itemHref = (c: HistoryItem) => (c.toolRun ? `/tools/${c.toolRun.tool}/${c.id}` : `/chat/${c.id}`);
 import { cn } from "@/lib/utils";
 import { shellText } from "@/lib/i18n/shell";
+import { workspaceUiText } from "@/lib/i18n/workspace-ui";
+import { UNLIMITED_CREDITS } from "@/lib/addons/format";
 import { useApp } from "./app-context";
+import { openCommandPalette } from "./command-palette";
+import { useUsage } from "./usage-ring";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t, user, lang, workspaces, planName, planId } = useApp();
   const s = shellText(lang);
+  const w = workspaceUiText(lang);
+  // Sidebar dirender dua kali (desktop & laci HP) → id gradien logo harus unik.
+  const logoId = `mt-logo-${useId().replace(/[^a-z0-9]/gi, "")}`;
   const pathname = usePathname();
   const router = useRouter();
   const { setTheme } = useTheme();
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [runs, setRuns] = useState<HistoryItem[]>([]);
-  const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   // Urutan project lokal (langsung berubah saat di-drag, lalu disimpan ke server).
@@ -171,7 +178,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     return () => clearInterval(timer);
   }, [anyGenerating, load]);
 
-  const q = query.trim().toLowerCase();
+  // Pencarian riwayat kini lewat palet perintah (Ctrl+K); daftar di sidebar selalu lengkap.
+  const q = "";
   const matching = useMemo(() => (q ? chats.filter((c) => c.title.toLowerCase().includes(q)) : chats), [chats, q]);
   const activeChat = chats.find((c) => pathname === `/chat/${c.id}`);
 
@@ -201,7 +209,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     } catch {
       /* abaikan */
     }
-    if (next !== routeMode) router.push(next === "tools" ? "/tools" : "/chat");
   }
   const inMode = useCallback((c: HistoryItem) => isToolsItem(c) === (mode === "tools"), [mode]);
 
@@ -493,48 +500,41 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col gap-3 bg-muted/40 p-3">
       <div className="flex items-center justify-between px-1">
-        <Logo href="/chat" />
+        <Logo href="/dashboard" gradientId={logoId} />
       </div>
-      <ModeSwitch mode={mode} onChange={switchMode} />
-      {mode === "chat" ? (
-        <>
-          <Button asChild className="w-full justify-start" onClick={onNavigate}>
-            <Link href="/chat">
-              <MessageSquarePlus /> {t.newChat}
-            </Link>
-          </Button>
-          <nav className="space-y-0.5">
-            <Link
-              href="/tools/agent"
-              onClick={onNavigate}
-              className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent"
-            >
-              <BrainCircuit className="size-4 text-primary" /> Markethink Agent
-              <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{t.newBadge}</span>
-            </Link>
-          </nav>
-        </>
-      ) : (
-        <div className="space-y-1.5">
-          <Button asChild className="w-full justify-start" onClick={onNavigate}>
-            <Link href="/tools/agent">
-              <BrainCircuit /> Markethink Agent
-              <span className="ml-auto rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[10px] font-semibold">{t.newBadge}</span>
-            </Link>
-          </Button>
-          <Link
-            href="/tools"
-            onClick={onNavigate}
-            className={cn("flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent", pathname === "/tools" && "bg-accent font-medium")}
-          >
-            <LayoutGrid className="size-4" /> {s.allTools}
-          </Link>
-        </div>
-      )}
-
-      <div className="relative">
-        <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={mode === "tools" ? s.searchToolResults : t.searchChats} className="h-9 pl-8" />
+      <button
+        type="button"
+        onClick={openCommandPalette}
+        className="flex h-9 items-center gap-2 rounded-lg border bg-background px-2.5 text-sm text-muted-foreground shadow-xs transition-colors hover:bg-accent"
+      >
+        <Search className="size-4" />
+        {w.searchOrRun}
+        <kbd className="ml-auto rounded border border-b-2 px-1 text-[10px]">Ctrl K</kbd>
+      </button>
+      <nav className="space-y-3">
+        <NavGroup label={w.main}>
+          <NavLink href="/dashboard" icon={LayoutDashboard} active={pathname === "/dashboard"} onNavigate={onNavigate}>
+            {w.dashboard}
+          </NavLink>
+          <NavLink href="/chat" icon={MessageSquarePlus} active={pathname === "/chat"} onNavigate={onNavigate}>
+            {w.newChat}
+          </NavLink>
+          <NavLink href="/tools/agent" icon={BrainCircuit} active={pathname.startsWith("/tools/agent")} onNavigate={onNavigate} badge={t.newBadge}>
+            {w.agent}
+          </NavLink>
+        </NavGroup>
+        <NavGroup label={w.work}>
+          <NavLink href="/tools" icon={LayoutGrid} active={pathname === "/tools"} onNavigate={onNavigate}>
+            {w.smartTools}
+          </NavLink>
+          <NavLink href="/workspaces" icon={FolderOpen} active={pathname.startsWith("/workspaces")} onNavigate={onNavigate}>
+            {w.projects}
+          </NavLink>
+        </NavGroup>
+      </nav>
+      <div className="space-y-1.5">
+        <p className="px-2 text-xs font-medium text-muted-foreground">{w.history}</p>
+        <ModeSwitch mode={mode} onChange={switchMode} />
       </div>
 
       <DndContext
@@ -682,6 +682,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         )}
       </DragOverlay>
       </DndContext>
+
+      <CreditMeter onNavigate={onNavigate} />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -939,11 +941,11 @@ function ToolsMenu({ pathname, onNavigate }: { pathname: string; onNavigate?: ()
 function ModeSwitch({ mode, onChange }: { mode: SidebarMode; onChange: (m: SidebarMode) => void }) {
   const { t } = useApp();
   const items: { id: SidebarMode; label: string; icon: React.ReactNode }[] = [
-    { id: "chat", label: "Chat", icon: <MessagesSquare className="size-4" /> },
-    { id: "tools", label: t.toolsPro, icon: <Wrench className="size-4" /> },
+    { id: "chat", label: "Chat", icon: <MessagesSquare className="size-3.5" /> },
+    { id: "tools", label: t.toolsPro, icon: <Wrench className="size-3.5" /> },
   ];
   return (
-    <div role="tablist" aria-label="Mode" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+    <div role="tablist" aria-label="Mode" className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-0.5">
       {items.map((it) => (
         <button
           key={it.id}
@@ -952,7 +954,7 @@ function ModeSwitch({ mode, onChange }: { mode: SidebarMode; onChange: (m: Sideb
           aria-selected={mode === it.id}
           onClick={() => onChange(it.id)}
           className={cn(
-            "flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+            "flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
             mode === it.id && "bg-background text-foreground shadow-sm",
           )}
         >
@@ -1169,6 +1171,76 @@ function ChatItem({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+    </div>
+  );
+}
+
+function NavGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-0.5">
+      <p className="px-2 pb-0.5 text-xs font-medium text-muted-foreground">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+function NavLink({
+  href,
+  icon: Icon,
+  active,
+  onNavigate,
+  badge,
+  children,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  active: boolean;
+  onNavigate?: () => void;
+  badge?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-accent",
+        active ? "bg-accent font-medium text-accent-foreground" : "text-foreground/85",
+      )}
+    >
+      <Icon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
+      <span className="truncate">{children}</span>
+      {badge && <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{badge}</span>}
+    </Link>
+  );
+}
+
+/** Meter kredit bulan ini di kaki sidebar (selalu terlihat, seperti aplikasi SaaS). */
+function CreditMeter({ onNavigate }: { onNavigate?: () => void }) {
+  const { lang, credits } = useApp();
+  const w = workspaceUiText(lang);
+  const { used, unlimited, remaining } = useUsage();
+  const fmt = (n: number) => n.toLocaleString(lang === "en" ? "en-US" : "id-ID");
+  const tone = used >= 100 ? "bg-destructive" : used >= 80 ? "bg-amber-500" : "bg-primary";
+  return (
+    <div className="space-y-2 rounded-xl border bg-background p-3 shadow-xs">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium">{w.credits}</span>
+        <span className="tabular-nums text-muted-foreground">
+          {unlimited || credits.monthLimit >= UNLIMITED_CREDITS ? w.unlimited : `${fmt(Math.max(0, remaining))} / ${fmt(credits.monthLimit)}`}
+        </span>
+      </div>
+      {!unlimited && (
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+          <div className={cn("h-full rounded-full transition-all", tone)} style={{ width: `${100 - used}%` }} />
+        </div>
+      )}
+      {!unlimited && (
+        <Link href="/pricing" onClick={onNavigate} className="block text-xs font-medium text-primary hover:underline">
+          {w.upgrade}
+        </Link>
+      )}
     </div>
   );
 }

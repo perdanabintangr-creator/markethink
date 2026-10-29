@@ -401,3 +401,11 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 3. **Data nyata**: link yang ditempel di form Tools Pro dibuka & dipakai sebagai bukti (pembaca tautan chat `src/lib/ai/links.ts`, aman dari alamat internal); kolom link di Audit Akun; tombol ke Meta Ad Library & Google Trends di hasil Kompetitor. Catatan: API Meta Ad Library hanya memberi iklan komersial untuk negara Uni Eropa, jadi untuk Indonesia dipakai tautan langsung.
 4. **Pantau mingguan** (Pro+, maks 3): tabel `tool_watchers` (migrasi 0048), cron harian `/api/cron/watchers` (vercel.json, butuh env `CRON_SECRET`) → tiap pemantauan dijalankan di request sendiri, AI (Junior) merangkum perubahan, email ke user. Memotong kuota seperti menjalankan tool biasa.
 5. **Isi form otomatis**: "Ceritakan singkat" → AI (Junior) mengisi field form dari cerita + Brand Kit + isian sebelumnya; hanya nilai valid yang dipakai.
+
+## 2026-10-29 · Tampilan gaya SaaS, tahap 1 (ACC founder)
+- Warna & font tetap; yang berubah tata letak. Founder menolak 2 konsep lain (meja kerja kuning, ruang konsultasi zamrud/emas) dan memilih versi 3 (gaya SaaS).
+- Kerangka: sidebar bergrup (Utama: Dashboard, Chat baru, Agent · Kerja: Smart Tools, Project & Brand Kit), riwayat chat/Smart Tools tetap di bawahnya (tab, drag & drop, sematan, project), meter kredit di kaki sidebar, bar atas (breadcrumb, cari, "Buat baru"), palet perintah Ctrl/⌘+K (halaman, semua tool, project, chat & hasil terakhir, "Tanya AI").
+- Kotak cari di sidebar diganti palet perintah. Tab riwayat tidak lagi berpindah halaman saat diklik.
+- `/dashboard` jadi halaman utama setelah login (selesai onboarding tetap ke chat). Isinya data asli: kredit terpakai, chat & hasil Smart Tools 7 hari, pantauan + perubahan terbaru, grafik kredit 7 hari dari `credit_ledger` (Chat / Smart Tools & Agent / Gambar & PPT, per hari WIB), aktivitas terbaru, kelengkapan Brand Kit per project.
+- Kotak tanya Dashboard & "Tanya AI" di palet membuka `/chat?prompt=…` (opsional `&research=1`) yang langsung terkirim satu kali.
+- Tahap berikut: Asisten AI 3 panel (panel konteks project), halaman Hasil (tabel), Kalender konten. Insight IG/TikTok menunggu domain & nama brand baru.

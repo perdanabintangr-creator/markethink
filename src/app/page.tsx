@@ -47,7 +47,7 @@ export default async function LandingPage() {
           <Logo />
           <nav className="flex items-center gap-2">
             {user ? (
-              <Button asChild size="sm"><Link href="/chat">Buka App</Link></Button>
+              <Button asChild size="sm"><Link href="/dashboard">Buka App</Link></Button>
             ) : (
               <>
                 <Button asChild variant="ghost" size="sm"><Link href="/login">Masuk</Link></Button>
@@ -73,7 +73,7 @@ export default async function LandingPage() {
             seperti Perplexity, tapi semuanya dikhususkan untuk marketing di Indonesia.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Button asChild size="lg"><Link href={user ? "/chat" : "/register"}>Mulai gratis sekarang</Link></Button>
+            <Button asChild size="lg"><Link href={user ? "/dashboard" : "/register"}>Mulai gratis sekarang</Link></Button>
             <Button asChild size="lg" variant="outline"><Link href="#fitur">Lihat fitur</Link></Button>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default async function LandingPage() {
         <Globe className="mx-auto size-8 text-primary" />
         <h2 className="mt-4 text-2xl font-bold sm:text-3xl">Siap bikin marketing yang lebih tajam?</h2>
         <p className="mt-2 text-muted-foreground">Daftar beta gratis, tanpa kartu kredit.</p>
-        <Button asChild size="lg" className="mt-6"><Link href={user ? "/chat" : "/register"}>Coba Markethink</Link></Button>
+        <Button asChild size="lg" className="mt-6"><Link href={user ? "/dashboard" : "/register"}>Coba Markethink</Link></Button>
       </section>
 
       <footer className="border-t">

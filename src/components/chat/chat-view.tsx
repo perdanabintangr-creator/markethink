@@ -52,6 +52,8 @@ export function ChatView({
   toolRun = null,
   initialGenerating = false,
   project = null,
+  initialPrompt = null,
+  initialResearch = false,
 }: {
   chatId: string;
   initialMessages: MtMessage[];
@@ -69,8 +71,12 @@ export function ChatView({
   initialGenerating?: boolean;
   /** Chat baru dibuka dari sebuah project → tampil halaman depan project (seperti ChatGPT/Claude Projects). */
   project?: ProjectHomeData | null;
+  /** Pertanyaan dari Dashboard / palet perintah (?prompt=…) — langsung dikirim saat chat baru dibuka. */
+  initialPrompt?: string | null;
+  /** Nyalakan Riset Web untuk pertanyaan awal (bila paket mengizinkan). */
+  initialResearch?: boolean;
 }) {
-  const { t, lang, user, workspaces, allowedTiers, personaRole, voiceStt } = useApp();
+  const { t, lang, user, workspaces, allowedTiers, personaRole, voiceStt, researchAllowed } = useApp();
   const c = chatText(lang);
   const [tier, setTier] = useState<TierChoice>(() => pickTierChoice(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
@@ -310,6 +316,19 @@ export function ChatView({
       opts.current = { ...opts.current, tier: run.tier, agentId: run.agentId, workspaceId: run.workspaceId ?? opts.current.workspaceId };
       send(run.text);
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pertanyaan dari Dashboard / Ctrl+K: kirim sekali begitu chat baru terbuka.
+  const promptSent = useRef(false);
+  useEffect(() => {
+    if (!isNew || !initialPrompt?.trim() || promptSent.current) return;
+    promptSent.current = true;
+    if (initialResearch && researchAllowed) {
+      setResearch(true);
+      opts.current = { ...opts.current, research: true };
+    }
+    send(initialPrompt.trim());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

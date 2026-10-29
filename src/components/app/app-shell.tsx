@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Menu } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Logo } from "@/components/logo";
-import { shellText } from "@/lib/i18n/shell";
 import { AppContextProvider, type AppContextValue } from "./app-context";
+import { CommandPalette } from "./command-palette";
 import { Sidebar } from "./sidebar";
+import { Topbar } from "./topbar";
 import { UpdateNotifier } from "./update-notifier";
 
 export function AppShell({ value, children }: { value: AppContextValue; children: React.ReactNode }) {
@@ -14,8 +13,9 @@ export function AppShell({ value, children }: { value: AppContextValue; children
   return (
     <AppContextProvider value={value}>
       <UpdateNotifier />
+      <CommandPalette />
       <div className="flex h-dvh overflow-hidden print:block print:h-auto print:overflow-visible">
-        <aside className="hidden w-72 shrink-0 border-r md:block print:hidden">
+        <aside className="hidden w-64 shrink-0 border-r md:block print:hidden">
           <Sidebar />
         </aside>
         <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
@@ -28,12 +28,7 @@ export function AppShell({ value, children }: { value: AppContextValue; children
           </DialogPrimitive.Portal>
         </DialogPrimitive.Root>
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex h-12 items-center gap-2 border-b px-3 md:hidden print:hidden">
-            <button onClick={() => setOpen(true)} className="rounded-md p-1.5 hover:bg-accent" aria-label={shellText(value.lang).openMenu}>
-              <Menu className="size-5" />
-            </button>
-            <Logo href="/chat" className="text-sm" />
-          </div>
+          <Topbar onMenu={() => setOpen(true)} />
           <main className="min-h-0 flex-1 print:h-auto">{children}</main>
         </div>
       </div>

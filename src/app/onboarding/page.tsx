@@ -7,7 +7,7 @@ export const metadata = { title: "Kenalan dulu" };
 
 export default async function OnboardingPage() {
   const { profile } = await requireUser({ allowNotOnboarded: true });
-  if (profile.onboarded) redirect("/chat");
+  if (profile.onboarded) redirect("/dashboard");
   return (
     <div className="min-h-dvh bg-gradient-to-b from-accent/40 to-background px-4 py-10">
       <div className="mx-auto max-w-2xl">

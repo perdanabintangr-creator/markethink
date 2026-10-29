@@ -53,7 +53,7 @@ export default function ResetPasswordPage() {
       );
     }
     toast.success("Password berhasil diganti 🎉");
-    router.replace("/chat");
+    router.replace("/dashboard");
     router.refresh();
   }
 

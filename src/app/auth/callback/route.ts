@@ -5,7 +5,7 @@ import { syncAdminRole } from "@/lib/auth";
 import { emails, sendEmail } from "@/lib/email";
 
 function safeNext(raw: string | null) {
-  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/chat";
+  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
 }
 
 async function afterLogin(userId: string, email: string | undefined) {

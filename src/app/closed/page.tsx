@@ -10,7 +10,7 @@ export default async function ClosedBetaPage() {
   // Akses sudah dibuka (mode publik / diberi akses) → langsung masuk aplikasi.
   const { user, profile } = await getSession();
   if (!user) redirect("/login");
-  if (profile && (await hasAppAccess(profile))) redirect(profile.onboarded ? "/chat" : "/onboarding");
+  if (profile && (await hasAppAccess(profile))) redirect(profile.onboarded ? "/dashboard" : "/onboarding");
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
       <Logo />

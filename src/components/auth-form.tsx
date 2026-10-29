@@ -30,7 +30,7 @@ function getClient() {
 }
 
 function safeNext(raw: string | null) {
-  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/chat";
+  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
 }
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {

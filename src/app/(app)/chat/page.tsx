@@ -26,8 +26,12 @@ async function loadProject(workspaceId: string): Promise<ProjectHomeData | null>
   };
 }
 
-export default async function NewChatPage({ searchParams }: { searchParams: Promise<{ workspace?: string }> }) {
-  const { workspace } = await searchParams;
+export default async function NewChatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ workspace?: string; prompt?: string; research?: string }>;
+}) {
+  const { workspace, prompt, research } = await searchParams;
   const id = crypto.randomUUID();
   const workspaceId = workspace && /^[0-9a-f-]{36}$/i.test(workspace) ? workspace : null;
   const project = workspaceId ? await loadProject(workspaceId) : null;
@@ -44,6 +48,8 @@ export default async function NewChatPage({ searchParams }: { searchParams: Prom
       initialCanvasIds={[]}
       initialShareToken={null}
       project={project}
+      initialPrompt={typeof prompt === "string" ? prompt.slice(0, 4000) : null}
+      initialResearch={research === "1"}
     />
   );
 }
