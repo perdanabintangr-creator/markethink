@@ -1,9 +1,7 @@
 import { DashboardView, type DashboardData } from "@/components/dashboard/dashboard-view";
-import { UNLIMITED_CREDITS } from "@/lib/addons/format";
 import { toolNameL } from "@/lib/addons/i18n";
 import { requireUser } from "@/lib/auth";
-import { getCreditStatus } from "@/lib/credits";
-import { brandKitCompleteness, usageByDay } from "@/lib/dashboard";
+import { activityByDay, brandKitCompleteness } from "@/lib/dashboard";
 import { isGenerating } from "@/lib/types";
 
 export const metadata = { title: "Dashboard" };
@@ -12,14 +10,16 @@ export const dynamic = "force-dynamic";
 const DAY = 86_400_000;
 
 export default async function DashboardPage() {
-  const { supabase, user, profile } = await requireUser();
+  const { supabase, profile } = await requireUser();
   const now = Date.now();
   const since7 = new Date(now - 7 * DAY).toISOString();
   const lang = profile.language === "en" ? "en" : "id";
 
-  const [credits, ledger, runsCount, runs, chatsCount, chats, watchers, workspaces, flag] = await Promise.all([
-    getCreditStatus(user.id),
-    supabase.from("credit_ledger").select("delta, reason, created_at").gte("created_at", new Date(now - 8 * DAY).toISOString()).limit(3000),
+  const since8 = new Date(now - 8 * DAY).toISOString();
+  const [replies, toolTimes, agentTimes, runsCount, runs, chatsCount, chats, watchers, workspaces, flag] = await Promise.all([
+    supabase.from("usage_logs").select("created_at").eq("status", "ok").gte("created_at", since8).limit(3000),
+    supabase.from("tool_runs").select("created_at").eq("status", "ok").is("agent_run_id", null).gte("created_at", since8).limit(3000),
+    supabase.from("agent_runs").select("created_at").gte("created_at", since8).limit(500),
     supabase.from("tool_runs").select("id", { count: "exact", head: true }).eq("hidden", false).gte("created_at", since7),
     supabase.from("tool_runs").select("id, tool, title, status, created_at").eq("hidden", false).order("created_at", { ascending: false }).limit(6),
     supabase.from("chats").select("id", { count: "exact", head: true }).gte("updated_at", since7),
@@ -30,7 +30,7 @@ export default async function DashboardPage() {
       .eq("active", true)
       .order("last_run_at", { ascending: false, nullsFirst: false })
       .limit(5),
-    supabase.from("workspaces").select("id, name, brand_kit").order("sort_order", { ascending: true, nullsFirst: true }).order("updated_at", { ascending: false }).limit(5),
+    supabase.from("workspaces").select("id, name, brand_kit").order("sort_order", { ascending: true, nullsFirst: true }).order("updated_at", { ascending: false }),
     profile.role === "admin"
       ? Promise.resolve({ data: { enabled: true } })
       : supabase.from("feature_flags").select("enabled").eq("plan_id", profile.plan_id).eq("key", "research").maybeSingle(),
@@ -83,7 +83,8 @@ export default async function DashboardPage() {
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
     .slice(0, 7);
 
-  const unlimited = credits.monthLimit >= UNLIMITED_CREDITS;
+  const kits = (workspaces.data ?? []).map((w) => ({ id: w.id as string, name: w.name as string, kit: brandKitCompleteness(w.brand_kit) }));
+  const times = (rows: { created_at: unknown }[] | null) => (rows ?? []).map((r) => r.created_at as string);
   const wibNow = new Date(now + 7 * 3_600_000);
   const data: DashboardData = {
     firstName: (profile.full_name ?? "").trim().split(/\s+/)[0] ?? "",
@@ -96,15 +97,16 @@ export default async function DashboardPage() {
       timeZone: "Asia/Jakarta",
     }),
     researchAllowed: Boolean(flag.data?.enabled),
-    credits: { used: Math.max(0, credits.used), limit: credits.monthLimit, unlimited },
+    projectsCount: kits.length,
+    kitsComplete: kits.filter((k) => k.kit === 100).length,
     chats7: chatsCount.count ?? 0,
     runs7: runsCount.count ?? 0,
     watchersActive: watcherRows.length,
     watchChanges,
-    usage: usageByDay((ledger.data ?? []) as { delta: number; reason: string | null; created_at: string }[], 7, now),
+    activity: activityByDay(times(replies.data), [...times(toolTimes.data), ...times(agentTimes.data)], 7, now),
     recent,
     watchers: watcherRows,
-    projects: (workspaces.data ?? []).map((w) => ({ id: w.id as string, name: w.name as string, kit: brandKitCompleteness(w.brand_kit) })),
+    projects: kits.slice(0, 5),
     now,
   };
 

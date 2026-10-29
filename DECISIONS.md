@@ -409,3 +409,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - `/dashboard` jadi halaman utama setelah login (selesai onboarding tetap ke chat). Isinya data asli: kredit terpakai, chat & hasil Smart Tools 7 hari, pantauan + perubahan terbaru, grafik kredit 7 hari dari `credit_ledger` (Chat / Smart Tools & Agent / Gambar & PPT, per hari WIB), aktivitas terbaru, kelengkapan Brand Kit per project.
 - Kotak tanya Dashboard & "Tanya AI" di palet membuka `/chat?prompt=…` (opsional `&research=1`) yang langsung terkirim satu kali.
 - Tahap berikut: Asisten AI 3 panel (panel konteks project), halaman Hasil (tabel), Kalender konten. Insight IG/TikTok menunggu domain & nama brand baru.
+
+## 2026-10-29 · Tampilan gaya SaaS, tahap 2
+- Atas permintaan founder, tampilan "kredit" dari UI baru dihapus: meter kredit di sidebar, kartu "Kredit terpakai" (dan perkiraan rupiah), serta grafik kredit di Dashboard. Gantinya kartu "Project" (jumlah project + Brand Kit lengkap) dan grafik "Aktivitas 7 hari" (jawaban AI dari `usage_logs` status ok + hasil Smart Tools & Agent). Lingkaran pemakaian (persen) di kotak chat tetap ada sebagai penanda batas paket.
+- Asisten AI: panel "Konteks" di kanan layar chat (layar ≥1280px, bisa ditutup, pilihan diingat di browser): Brand Kit project, file project, memory yang dipakai AI di ruang chat itu, otak & status Riset Web. Data dari `GET /api/chat-context` (RLS user, memory dibatasi per project seperti di chat).
+- Daftar chat tetap di sidebar (tidak dibuat kolom ketiga) supaya riwayat tidak tampil dua kali.

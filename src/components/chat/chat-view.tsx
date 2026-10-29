@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
-import { ArrowDown, AudioLines, Bot, Briefcase, Check, ChevronDown, FileText, FolderOpen, Link2, Loader2, PanelRight, Share2, X } from "lucide-react";
+import { ArrowDown, AudioLines, Bot, Briefcase, Check, ChevronDown, FileText, FolderOpen, Link2, Loader2, PanelRight, PanelRightOpen, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,10 +26,12 @@ import { track } from "@/lib/analytics";
 import { ATTACHMENT_URL_PREFIX, PENDING_KEY, isGenerating, type MtMessage, type PendingAgentRun } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { chatText } from "@/lib/i18n/chat";
+import { workspaceUiText } from "@/lib/i18n/workspace-ui";
 import { ChatMessage, messageToText } from "./message";
 import { buildQuotedMessage } from "@/lib/quote";
 import { Composer, type PendingAttachment } from "./composer";
 import { ModelSelector, type TierOption } from "./model-selector";
+import { ContextPanel } from "./context-panel";
 import { ProjectHome, type ProjectHomeData } from "./project-home";
 import { QuickStarts, type QuickStart } from "./quick-starts";
 import { QuotaDialog } from "./quota-dialog";
@@ -38,6 +40,8 @@ import { voiceSupported } from "./use-voice";
 import { voiceText } from "@/lib/i18n/voice";
 
 
+
+const CTX_KEY = "mt_ctx_panel";
 
 export function ChatView({
   chatId,
@@ -319,6 +323,32 @@ export function ChatView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Panel konteks kanan (layar lebar): terbuka secara bawaan, pilihan user diingat di browser.
+  const w = workspaceUiText(lang);
+  const [ctxOpen, setCtxOpen] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(CTX_KEY) === "0") setCtxOpen(false);
+    } catch {
+      /* penyimpanan browser tidak tersedia */
+    }
+  }, []);
+  function toggleCtx(next: boolean) {
+    setCtxOpen(next);
+    try {
+      localStorage.setItem(CTX_KEY, next ? "1" : "0");
+    } catch {
+      /* abaikan */
+    }
+  }
+  // Muat ulang isi panel (memory terbaru) setiap AI selesai menjawab.
+  const [ctxKey, setCtxKey] = useState(0);
+  useEffect(() => {
+    if (!busy) setCtxKey(messages.length);
+  }, [busy, messages.length]);
+  const brainLabel = tier === "auto" ? w.ctxAuto : (tiers.find((x) => x.id === tier)?.label.replace("Markethink ", "") ?? tier);
+  const sidePanelOpen = Boolean(canvasId || (toolRun && runOpen));
+
   // Pertanyaan dari Dashboard / Ctrl+K: kirim sekali begitu chat baru terbuka.
   const promptSent = useRef(false);
   useEffect(() => {
@@ -458,6 +488,18 @@ export function ChatView({
           {toolRun && !runOpen && (
             <Button variant="ghost" size="sm" onClick={() => setRunOpen(true)}>
               <PanelRight /> <span className="hidden sm:inline">{c.result}</span>
+            </Button>
+          )}
+          {!sidePanelOpen && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn("hidden xl:inline-flex", ctxOpen && "bg-accent")}
+              onClick={() => toggleCtx(!ctxOpen)}
+              aria-pressed={ctxOpen}
+              title={ctxOpen ? w.hideContext : w.showContext}
+            >
+              <PanelRightOpen /> {w.context}
             </Button>
           )}
           {canvasIds.length > 0 && !canvasId && (
@@ -610,6 +652,19 @@ export function ChatView({
         </div>
         )}
       </div>
+
+      {ctxOpen && !sidePanelOpen && (
+        <aside className="hidden h-full w-72 shrink-0 border-l bg-muted/20 xl:block">
+          <ContextPanel
+            lang={lang}
+            workspaceId={workspaceId}
+            brainLabel={brainLabel}
+            research={research}
+            refreshKey={ctxKey}
+            onClose={() => toggleCtx(false)}
+          />
+        </aside>
+      )}
 
       {canvasId ? (
         <div className="h-full w-full border-l lg:w-1/2 lg:max-w-3xl">

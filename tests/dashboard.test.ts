@@ -1,35 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { brandKitCompleteness, niceMax, usageByDay, usageCategory, wibDay } from "@/lib/dashboard";
+import { activityByDay, brandKitCompleteness, niceMax, wibDay } from "@/lib/dashboard";
 import { crumbsFor } from "@/lib/breadcrumbs";
 import { timeAgo, workspaceUiText } from "@/lib/i18n/workspace-ui";
 
-describe("dashboard: pemakaian kredit", () => {
-  it("kelompok dari reason ledger", () => {
-    expect(usageCategory("chat_settle")).toBe("chat");
-    expect(usageCategory("llm_error")).toBe("chat");
-    expect(usageCategory("tool:calendar")).toBe("tools");
-    expect(usageCategory("agent")).toBe("tools");
-    expect(usageCategory("deck_images")).toBe("media");
-    expect(usageCategory("carousel_failed")).toBe("media");
-    expect(usageCategory("admin_grant")).toBeNull();
-  });
-
-  it("per hari menurut WIB, refund mengurangi, tidak pernah minus", () => {
+describe("dashboard: aktivitas", () => {
+  it("dihitung per hari menurut WIB, di luar rentang diabaikan", () => {
     const now = Date.parse("2026-10-29T05:00:00Z"); // 12.00 WIB
-    const rows = [
-      { delta: -10, reason: "chat", created_at: "2026-10-29T01:00:00Z" },
-      { delta: 3, reason: "chat_settle", created_at: "2026-10-29T02:00:00Z" },
-      { delta: -20, reason: "tool", created_at: "2026-10-28T18:30:00Z" }, // 29 Okt 01.30 WIB
-      { delta: -5, reason: "image", created_at: "2026-10-27T03:00:00Z" },
-      { delta: 50, reason: "admin_grant", created_at: "2026-10-29T03:00:00Z" },
-      { delta: 9, reason: "tool_settle", created_at: "2026-10-26T03:00:00Z" },
-      { delta: -99, reason: "chat", created_at: "2026-10-01T03:00:00Z" },
-    ];
-    const days = usageByDay(rows, 7, now);
+    const days = activityByDay(
+      ["2026-10-29T01:00:00Z", "2026-10-28T18:30:00Z", "2026-10-27T03:00:00Z", "2026-10-01T03:00:00Z"],
+      ["2026-10-29T02:00:00Z", "2026-10-26T03:00:00Z"],
+      7,
+      now,
+    );
     expect(days).toHaveLength(7);
-    expect(days[6]).toEqual({ day: "2026-10-29", chat: 7, tools: 20, media: 0 });
-    expect(days[4].media).toBe(5);
-    expect(days[3].tools).toBe(0);
+    expect(days[6]).toEqual({ day: "2026-10-29", chat: 2, tools: 1 });
+    expect(days[4]).toEqual({ day: "2026-10-27", chat: 1, tools: 0 });
+    expect(days[3].tools).toBe(1);
+    expect(days.reduce((n, d) => n + d.chat, 0)).toBe(3);
     expect(wibDay(Date.parse("2026-10-28T17:00:00Z"))).toBe("2026-10-29");
   });
 

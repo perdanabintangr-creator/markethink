@@ -34,7 +34,7 @@ export function useUsage() {
   }, []);
   const unlimited = credits.monthLimit >= UNLIMITED_CREDITS;
   const used = unlimited || credits.monthLimit <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(((credits.monthLimit - remaining) / credits.monthLimit) * 100)));
-  return { used, unlimited, remaining };
+  return { used, unlimited };
 }
 
 const tone = (used: number) => (used >= 100 ? "text-destructive" : used >= 80 ? "text-amber-500" : "text-primary");

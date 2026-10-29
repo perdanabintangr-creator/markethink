@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowUpRight,
   BrainCircuit,
-  Coins,
   Eye,
   FolderOpen,
   LayoutGrid,
@@ -15,7 +14,7 @@ import {
 } from "lucide-react";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { toolNameL } from "@/lib/addons/i18n";
-import { niceMax, type UsageDay } from "@/lib/dashboard";
+import { niceMax, type ActivityDay } from "@/lib/dashboard";
 import { timeAgo, workspaceUiText, type WorkspaceUiText } from "@/lib/i18n/workspace-ui";
 import type { Lang } from "@/lib/i18n/dict";
 import { cn } from "@/lib/utils";
@@ -27,12 +26,13 @@ export interface DashboardData {
   hour: number;
   dateLabel: string;
   researchAllowed: boolean;
-  credits: { used: number; limit: number; unlimited: boolean };
+  projectsCount: number;
+  kitsComplete: number;
   chats7: number;
   runs7: number;
   watchersActive: number;
   watchChanges: number;
-  usage: UsageDay[];
+  activity: ActivityDay[];
   recent: {
     id: string;
     kind: "chat" | "run";
@@ -50,7 +50,6 @@ export interface DashboardData {
 export function DashboardView({ lang, data }: { lang: Lang; data: DashboardData }) {
   const t = workspaceUiText(lang);
   const fmt = (n: number) => n.toLocaleString(lang === "en" ? "en-US" : "id-ID");
-  const rupiah = `Rp${fmt(data.credits.used * 100)}`;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -65,7 +64,7 @@ export function DashboardView({ lang, data }: { lang: Lang; data: DashboardData 
         <DashboardAsk lang={lang} researchAllowed={data.researchAllowed} />
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat icon={Coins} label={t.statCredits} value={fmt(data.credits.used)} sub={t.statCreditsSub(rupiah)} />
+          <Stat icon={FolderOpen} label={t.statProjects} value={fmt(data.projectsCount)} sub={t.statProjectsSub(data.kitsComplete)} />
           <Stat icon={MessageSquareText} label={t.statChats} value={fmt(data.chats7)} sub={t.last7} />
           <Stat icon={Wrench} label={t.statRuns} value={fmt(data.runs7)} sub={t.last7} />
           <Stat
@@ -89,17 +88,16 @@ export function DashboardView({ lang, data }: { lang: Lang; data: DashboardData 
             </Panel>
 
             <Panel
-              title={t.usageChart}
+              title={t.activityChart}
               action={
                 <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                   <Legend className="bg-primary" label={t.legendTools} />
                   <Legend className="bg-primary-2/60" label={t.legendChat} />
-                  <Legend className="bg-amber-400/80" label={t.legendMedia} />
                 </div>
               }
             >
               <div className="p-4">
-                <UsageChart days={data.usage} lang={lang} emptyText={t.noUsage} />
+                <ActivityChart days={data.activity} lang={lang} label={t.activityChart} emptyText={t.noActivity} />
               </div>
             </Panel>
 
@@ -302,8 +300,8 @@ function StatusBadge({ status, t }: { status: DashboardData["recent"][number]["s
 }
 
 /** Grafik batang bertumpuk 7 hari; satu skala untuk sumbu dan batang. */
-function UsageChart({ days, lang, emptyText }: { days: UsageDay[]; lang: Lang; emptyText: string }) {
-  const totals = days.map((d) => d.chat + d.tools + d.media);
+function ActivityChart({ days, lang, label, emptyText }: { days: ActivityDay[]; lang: Lang; label: string; emptyText: string }) {
+  const totals = days.map((d) => d.chat + d.tools);
   const peak = Math.max(...totals, 0);
   const max = niceMax(peak);
   const W = 640;
@@ -319,7 +317,7 @@ function UsageChart({ days, lang, emptyText }: { days: UsageDay[]; lang: Lang; e
 
   return (
     <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="Kredit per hari">
+      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={label}>
         {[0, max / 2, max].map((g) => (
           <g key={g}>
             <line x1={L} x2={W} y1={y(g)} y2={y(g)} className="stroke-border" strokeDasharray={g ? "3 3" : undefined} vectorEffect="non-scaling-stroke" />
@@ -333,7 +331,6 @@ function UsageChart({ days, lang, emptyText }: { days: UsageDay[]; lang: Lang; e
           const segs: [number, string][] = [
             [d.tools, "fill-primary"],
             [d.chat, "fill-primary-2/60"],
-            [d.media, "fill-amber-400/80"],
           ];
           let base = 0;
           return (

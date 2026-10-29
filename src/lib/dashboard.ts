@@ -2,42 +2,30 @@
  * Perhitungan untuk halaman Dashboard (tanpa akses DB — mudah dites).
  */
 
-export type UsageCategory = "chat" | "tools" | "media";
-
-/** Kelompok pemakaian dari `credit_ledger.reason` (mis. "chat_settle", "tool:calendar", "deck_images"). */
-export function usageCategory(reason: string | null | undefined): UsageCategory | null {
-  const r = (reason ?? "").toLowerCase();
-  if (!r || r.startsWith("admin") || r.startsWith("manual") || r.startsWith("topup") || r.startsWith("purchase")) return null;
-  if (r.startsWith("chat") || r.startsWith("llm_error") || r.startsWith("credits_low")) return "chat";
-  if (r.startsWith("image") || r.startsWith("presentation") || r.startsWith("deck") || r.startsWith("carousel")) return "media";
-  return "tools";
-}
-
 const WIB_MS = 7 * 3_600_000;
 /** "YYYY-MM-DD" menurut WIB. */
 export const wibDay = (ms: number) => new Date(ms + WIB_MS).toISOString().slice(0, 10);
 
-export interface UsageDay {
+export interface ActivityDay {
   day: string;
+  /** Jawaban AI di chat. */
   chat: number;
+  /** Hasil Smart Tools & Agent. */
   tools: number;
-  media: number;
 }
 
-/** Pemakaian kredit bersih per hari (WIB) untuk `days` hari terakhir; refund mengurangi pemakaian hari itu. */
-export function usageByDay(rows: { delta: number; reason: string | null; created_at: string }[], days = 7, now = Date.now()): UsageDay[] {
-  const out: UsageDay[] = [];
-  for (let i = days - 1; i >= 0; i--) out.push({ day: wibDay(now - i * 86_400_000), chat: 0, tools: 0, media: 0 });
+/** Jumlah aktivitas per hari (WIB) untuk `days` hari terakhir. */
+export function activityByDay(chatTimes: string[], toolTimes: string[], days = 7, now = Date.now()): ActivityDay[] {
+  const out: ActivityDay[] = [];
+  for (let i = days - 1; i >= 0; i--) out.push({ day: wibDay(now - i * 86_400_000), chat: 0, tools: 0 });
   const byDay = new Map(out.map((d) => [d.day, d]));
-  for (const r of rows) {
-    const cat = usageCategory(r.reason);
-    const d = byDay.get(wibDay(Date.parse(r.created_at)));
-    if (cat && d) d[cat] -= r.delta;
+  for (const at of chatTimes) {
+    const d = byDay.get(wibDay(Date.parse(at)));
+    if (d) d.chat += 1;
   }
-  for (const d of out) {
-    d.chat = Math.max(0, d.chat);
-    d.tools = Math.max(0, d.tools);
-    d.media = Math.max(0, d.media);
+  for (const at of toolTimes) {
+    const d = byDay.get(wibDay(Date.parse(at)));
+    if (d) d.tools += 1;
   }
   return out;
 }

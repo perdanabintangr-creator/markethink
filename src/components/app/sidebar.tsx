@@ -127,10 +127,8 @@ const itemHref = (c: HistoryItem) => (c.toolRun ? `/tools/${c.toolRun.tool}/${c.
 import { cn } from "@/lib/utils";
 import { shellText } from "@/lib/i18n/shell";
 import { workspaceUiText } from "@/lib/i18n/workspace-ui";
-import { UNLIMITED_CREDITS } from "@/lib/addons/format";
 import { useApp } from "./app-context";
 import { openCommandPalette } from "./command-palette";
-import { useUsage } from "./usage-ring";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t, user, lang, workspaces, planName, planId } = useApp();
@@ -683,8 +681,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </DragOverlay>
       </DndContext>
 
-      <CreditMeter onNavigate={onNavigate} />
-
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-2 rounded-lg p-2 text-left hover:bg-accent">
@@ -1213,34 +1209,5 @@ function NavLink({
       <span className="truncate">{children}</span>
       {badge && <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{badge}</span>}
     </Link>
-  );
-}
-
-/** Meter kredit bulan ini di kaki sidebar (selalu terlihat, seperti aplikasi SaaS). */
-function CreditMeter({ onNavigate }: { onNavigate?: () => void }) {
-  const { lang, credits } = useApp();
-  const w = workspaceUiText(lang);
-  const { used, unlimited, remaining } = useUsage();
-  const fmt = (n: number) => n.toLocaleString(lang === "en" ? "en-US" : "id-ID");
-  const tone = used >= 100 ? "bg-destructive" : used >= 80 ? "bg-amber-500" : "bg-primary";
-  return (
-    <div className="space-y-2 rounded-xl border bg-background p-3 shadow-xs">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium">{w.credits}</span>
-        <span className="tabular-nums text-muted-foreground">
-          {unlimited || credits.monthLimit >= UNLIMITED_CREDITS ? w.unlimited : `${fmt(Math.max(0, remaining))} / ${fmt(credits.monthLimit)}`}
-        </span>
-      </div>
-      {!unlimited && (
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-          <div className={cn("h-full rounded-full transition-all", tone)} style={{ width: `${100 - used}%` }} />
-        </div>
-      )}
-      {!unlimited && (
-        <Link href="/pricing" onClick={onNavigate} className="block text-xs font-medium text-primary hover:underline">
-          {w.upgrade}
-        </Link>
-      )}
-    </div>
   );
 }
