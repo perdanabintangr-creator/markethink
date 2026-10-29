@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   BrainCircuit,
+  CalendarDays,
   CreditCard,
+  Files,
   FolderOpen,
   LayoutDashboard,
   LayoutGrid,
@@ -103,6 +105,8 @@ export function CommandPalette() {
       { id: "new-project", group: t.cmdCreate, label: t.newProject, href: "/workspaces", icon: FolderOpen, keywords: "project brand kit klien" },
       { id: "dashboard", group: t.cmdGo, label: t.dashboard, href: "/dashboard", icon: LayoutDashboard, keywords: "beranda home" },
       { id: "tools", group: t.cmdGo, label: t.smartTools, href: "/tools", icon: LayoutGrid, keywords: "tools pro" },
+      { id: "results", group: t.cmdGo, label: t.results, href: "/hasil", icon: Files, keywords: "hasil output riwayat" },
+      { id: "calendar", group: t.cmdGo, label: t.calendar, href: "/kalender", icon: CalendarDays, keywords: "jadwal posting kalender" },
       { id: "projects", group: t.cmdGo, label: t.projects, href: "/workspaces", icon: FolderOpen },
       { id: "settings", group: t.cmdGo, label: t.settings, href: "/settings", icon: Settings, keywords: "font tema bahasa akun" },
       { id: "pricing", group: t.cmdGo, label: t.pricing, href: "/pricing", icon: CreditCard, keywords: "paket upgrade bayar kredit" },

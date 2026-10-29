@@ -27,12 +27,14 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import {
   BrainCircuit,
+  CalendarDays,
   ChevronRight,
   Crown,
   Folder,
   FolderInput,
   FolderOpen,
   FolderOutput,
+  Files,
   House,
   LayoutGrid,
   Languages,
@@ -487,6 +489,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </NavLink>
         <NavLink href="/tools/agent" icon={BrainCircuit} active={pathname.startsWith("/tools/agent")} onNavigate={onNavigate}>
           {w.agent}
+        </NavLink>
+        <NavLink href="/hasil" icon={Files} active={pathname === "/hasil"} onNavigate={onNavigate}>
+          {w.results}
+        </NavLink>
+        <NavLink href="/kalender" icon={CalendarDays} active={pathname === "/kalender"} onNavigate={onNavigate}>
+          {w.calendar}
         </NavLink>
       </nav>
 

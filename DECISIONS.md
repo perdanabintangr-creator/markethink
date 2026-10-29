@@ -421,3 +421,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Bar atas hanya di HP (menu, logo, cari, chat baru). Di laptop dihapus (breadcrumb & "Buat baru" ikut hilang).
 - Beranda: sapaan, kotak tanya, 4 kartu (caption → mengisi kotak chat lewat `?draft=`, rencana konten, iklan, kompetitor), kartu "Mulai di sini" (4 langkah, hilang sendiri bila selesai), kabar pantauan (hanya bila ada minggu ini), "Lanjutkan" 4 item terakhir. Angka statistik & grafik dihapus.
 - Panel Konteks di chat kini tertutup secara bawaan (dibuka lewat tombol "Konteks").
+
+## 2026-10-29 · Tampilan tahap 3: Hasil saya & Kalender konten
+- Menu baru di sidebar (tetap ringkas, 5 menu): **Hasil saya** (`/hasil`) dan **Kalender konten** (`/kalender`).
+- Hasil saya: semua hasil Smart Tools (hanya hasil asal, bukan revisi; yang disembunyikan tidak tampil) + Markethink Agent, dengan kotak cari, filter kelompok (hanya kelompok yang punya hasil), dan pengelompokan Hari ini / 7 hari terakhir / Lebih lama (WIB).
+- Kalender konten: menggabungkan posting dari semua hasil "Kalender Konten Bulanan" (versi terbaru tiap rantai revisi; hanya kolom `output->posts` yang diambil). Laptop: grid bulan; HP: daftar per hari. Klik posting → detail (hook, caption + hashtag, CTA, arahan visual), tombol Salin caption & Buka hasil lengkap. Ekspor bulan berjalan ke .ics (Google Calendar).
+- Status "sudah diposting" belum ada (butuh tabel baru), menunggu masukan tester.
