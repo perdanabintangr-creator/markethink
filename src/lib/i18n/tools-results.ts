@@ -121,7 +121,7 @@ const id = {
     budgetDay: "Budget iklan / hari",
     ordersNeeded: "Jumlah order dibutuhkan",
     adCostOrder: "Biaya iklan / order",
-    locked: "Kalkulator tersedia mulai paket Starter (tidak memakai kuota).",
+    locked: "Kalkulator tersedia di paket Pro & Promax (tidak memakai kuota).",
     seePlans: "Lihat paket",
   },
 
@@ -960,7 +960,7 @@ const en: ResultsText = {
     budgetDay: "Ad budget / day",
     ordersNeeded: "Orders needed",
     adCostOrder: "Ad cost / order",
-    locked: "Calculators are available from the Starter plan (no quota used).",
+    locked: "Calculators are available on the Pro & Promax plans (no quota used).",
     seePlans: "See plans",
   },
 

@@ -4,8 +4,8 @@ import { ArrowLeft, CheckCircle2, CircleAlert, Clock } from "lucide-react";
 import { getSession, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { addonInfo, toolInfo } from "@/lib/addons/catalog";
-import { getAddonOffers, getToolAccess } from "@/lib/addons/access";
-import { localizeAddonInfo, localizeToolInfo, localizedCreditText, localizedTools, noQuotaLabel, proToolsLabel } from "@/lib/addons/i18n";
+import { getToolAccess } from "@/lib/addons/access";
+import { localizeAddonInfo, localizeToolInfo, localizedCreditText, noQuotaLabel, proToolsLabel } from "@/lib/addons/i18n";
 import { dateL, toolsText } from "@/lib/i18n/tools";
 import { PLAN_OFFER_COLUMNS, toPlanOffer } from "@/lib/plan-offers";
 import { ToolRunner } from "@/components/tools/tool-runner";
@@ -34,15 +34,13 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
   const addon = localizeAddonInfo(addonInfo(baseInfo.addon)!, lang);
   const admin = createAdminClient();
   const access = await getToolAccess(admin, profile, baseInfo.addon);
-  // Terkunci (paket Free) → tampilkan pilihan upgrade paket, bukan form. Kalkulator tetap terlihat dengan overlay.
+  // Terkunci (Free & Starter) → tampilkan pilihan upgrade ke Pro/Promax, bukan form. Kalkulator tetap terlihat dengan overlay.
   const locked = !access.allowed;
   const { data: planRows } =
     locked && !info.noQuota
-      ? await supabase.from("plans").select(PLAN_OFFER_COLUMNS).in("id", ["starter", "pro", "promax"]).order("sort_order")
+      ? await supabase.from("plans").select(PLAN_OFFER_COLUMNS).in("id", ["pro", "promax"]).order("sort_order")
       : { data: [] };
   const plans = (planRows ?? []).map((r) => toPlanOffer(r));
-  // Paket belum membuka Tools Pro → tawarkan juga add-on kelompok ini saja (harga coret bila promo).
-  const addonOffer = !access.allowed && !info.noQuota ? ((await getAddonOffers(admin, profile.plan_id))[baseInfo.addon] ?? null) : null;
   const { data: runs } = info.noQuota
     ? { data: [] }
     : await supabase
@@ -88,7 +86,6 @@ export default async function ToolPage({ params }: { params: Promise<{ tool: str
             toolName={info.name}
             noteName={baseInfo.name}
             plans={plans}
-            addon={addonOffer && { ...addonOffer, name: addon.name, tools: localizedTools(lang).filter((t) => t.addon === baseInfo.addon && !t.noQuota).map((t) => t.name) }}
           />
         ) : (
           <ToolRunner tool={tool} access={access} />

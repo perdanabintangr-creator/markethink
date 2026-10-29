@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, ShoppingBag, Zap } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
 import { getSession, requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAddonOffers, getAddonQuotas, getToolAccess } from "@/lib/addons/access";
-import { AddonOfferCard } from "@/components/tools/addon-offer-card";
-import type { AddonOffer } from "@/lib/addons/format";
+import { getAddonQuotas, getToolAccess } from "@/lib/addons/access";
 import type { AddonQuota } from "@/lib/addons/addon-quota";
 import { localizedAddons, localizedCreditText, localizedTools, proToolsLabel } from "@/lib/addons/i18n";
 import { dateL, toolsText } from "@/lib/i18n/tools";
 import { ToolIcon } from "@/components/tools/tool-icon";
-import { addonsStoreText } from "@/lib/i18n/addons-store";
 
 export async function generateMetadata() {
   const { profile } = await getSession();
@@ -21,12 +18,8 @@ export default async function ToolsHub() {
   const { profile } = await requireUser();
   const admin = createAdminClient();
   const access = await getToolAccess(admin, profile);
-  // Add-on bisa dibeli semua paket (status aktif tampil per kelompok); paket tanpa Smart Tools melihat harga tiap kelompok.
-  const [offers, quotas]: [Record<string, AddonOffer>, Record<string, AddonQuota>] = await Promise.all([
-    access.allowed ? Promise.resolve({}) : getAddonOffers(admin, profile.plan_id),
-    getAddonQuotas(admin, profile.id),
-  ]);
-  const S = addonsStoreText(profile.language);
+  // Add-on per kelompok tidak dijual lagi; pembelian lama yang masih aktif tetap ditampilkan & bisa dipakai.
+  const quotas: Record<string, AddonQuota> = await getAddonQuotas(admin, profile.id);
   const lang = profile.language;
   const T = toolsText(lang);
   const ADDONS = localizedAddons(lang);
@@ -65,19 +58,6 @@ export default async function ToolsHub() {
             </span>
             <ArrowRight className="size-4 shrink-0 text-primary" />
           </Link>
-          <Link
-            href="/tools/addons"
-            className="mt-3 flex items-center gap-3 rounded-2xl border p-4 transition-colors hover:border-primary/60 hover:bg-accent/40"
-          >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <ShoppingBag className="size-5" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-semibold">{S.storeLink}</span>
-              <span className="block text-sm text-muted-foreground">{S.storeLinkDesc}</span>
-            </span>
-            <ArrowRight className="size-4 shrink-0 text-primary" />
-          </Link>
           <nav className="mt-4 flex flex-wrap gap-2">
             {ADDONS.map((a) => (
               <a key={a.id} href={`#${a.id}`} className="rounded-full border px-3 py-1 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground">
@@ -103,10 +83,6 @@ export default async function ToolsHub() {
                   <p className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400">
                     ✓ {T.addonActive(quotas[addon.id].remaining, quotas[addon.id].quota, dateL(quotas[addon.id].paidUntil, lang))}
                   </p>
-                ) : offers[addon.id] ? (
-                  <div className="mt-3 rounded-lg border border-dashed p-3">
-                    <AddonOfferCard offer={{ ...offers[addon.id], name: addon.name }} compact />
-                  </div>
                 ) : null}
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

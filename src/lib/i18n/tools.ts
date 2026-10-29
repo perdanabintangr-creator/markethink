@@ -269,9 +269,9 @@ const id = {
   addonUsesOne: "Memakai 1 hasil dari kuota add-on.",
   orUpgradePlan: "Atau upgrade paket: semua Smart Tools + chat AI lebih lengkap.",
   addonNormalPrice: (price: string) => `normal ${price}`,
-  lockedTitle: (name: string) => `${name} tersedia mulai paket Starter`,
+  lockedTitle: (name: string) => `${name} tersedia di paket Pro & Promax`,
   lockedDesc:
-    "Smart Tools menghasilkan dokumen setara konsultan & agency (halaman visual + PPT/Excel). Semua paket berbayar sudah termasuk Smart Tools, dan pemakaiannya memakai kuota bulanan paket.",
+    "Smart Tools menghasilkan dokumen setara konsultan & agency (halaman visual + PPT/Excel). Semua Smart Tools terbuka dalam satu paket: Pro atau Promax, dan pemakaiannya memakai kuota bulanan paket.",
 
   // ---------------------------------------------------------------- halaman /tools
   hubDesc: "Dikelompokkan per peran di tim marketing. Hasilnya setara deliverable konsultan & agency: halaman visual + file PPT/Excel siap presentasi.",
@@ -581,9 +581,9 @@ const en: typeof id = {
   addonUsesOne: "Uses 1 result from your add-on quota.",
   orUpgradePlan: "Or upgrade your plan: all Smart Tools + a fuller AI chat.",
   addonNormalPrice: (price: string) => `normally ${price}`,
-  lockedTitle: (name: string) => `${name} is available from the Starter plan`,
+  lockedTitle: (name: string) => `${name} is available on the Pro & Promax plans`,
   lockedDesc:
-    "Smart Tools produce consultant- & agency-grade documents (visual page + PPT/Excel). Every paid plan includes Smart Tools, and usage draws from the plan's monthly quota.",
+    "Smart Tools produce consultant- & agency-grade documents (visual page + PPT/Excel). All Smart Tools unlock together with one plan: Pro or Promax, and usage draws from the plan's monthly quota.",
 
   hubDesc: "Grouped by role in a marketing team. Results match consultant & agency deliverables: a visual page + presentation-ready PPT/Excel files.",
   hubQuotaNote: "All tools use your plan's monthly quota. If a result fails, your quota is fully refunded.",

@@ -427,3 +427,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Hasil saya: semua hasil Smart Tools (hanya hasil asal, bukan revisi; yang disembunyikan tidak tampil) + Markethink Agent, dengan kotak cari, filter kelompok (hanya kelompok yang punya hasil), dan pengelompokan Hari ini / 7 hari terakhir / Lebih lama (WIB).
 - Kalender konten: menggabungkan posting dari semua hasil "Kalender Konten Bulanan" (versi terbaru tiap rantai revisi; hanya kolom `output->posts` yang diambil). Laptop: grid bulan; HP: daftar per hari. Klik posting → detail (hook, caption + hashtag, CTA, arahan visual), tombol Salin caption & Buka hasil lengkap. Ekspor bulan berjalan ke .ics (Google Calendar).
 - Status "sudah diposting" belum ada (butuh tabel baru), menunggu masukan tester.
+
+## 2026-10-29 · Smart Tools hanya di Pro & Promax (ACC founder)
+- Semua Smart Tools dibuka dengan satu paket: **Pro (Rp200rb)** atau **Promax (Rp300rb)**. Starter (Rp60rb) tidak lagi membuka Smart Tools (tetap: Junior & Senior, Riset Web, gambar AI, PPT). Free & Starter melihat tools tapi terkunci, dengan tawaran upgrade Pro/Promax.
+- 8 add-on per kelompok & 2 bundel dinonaktifkan (`is_active=false`, migrasi 0049); halaman `/tools/addons` dialihkan ke `/pricing`. Data pembelian lama tetap ada; add-on yang masih aktif (saat diubah: 0) tetap bisa dipakai sampai habis masa berlakunya.
+- Teks paket, pesan terkunci, kalkulator, dan penjelasan otak diperbarui ("tersedia di paket Pro & Promax").

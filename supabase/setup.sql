@@ -2668,3 +2668,14 @@ create index tool_watchers_due on public.tool_watchers (next_run_at) where activ
 create index tool_watchers_user on public.tool_watchers (user_id);
 alter table public.tool_watchers enable row level security;
 create policy "own watchers" on public.tool_watchers for select using (user_id = auth.uid());
+
+
+-- ===== 20261029000049_tools_pro_promax_only.sql =====
+-- Smart Tools hanya untuk paket Pro & Promax (keputusan founder 29 Okt 2026).
+-- Starter tidak lagi membuka Smart Tools; add-on per kelompok & bundel tidak dijual lagi (data pembelian lama tetap tersimpan).
+update public.feature_flags set enabled = false where plan_id = 'starter' and key = 'tools_pro';
+update public.addons set is_active = false;
+update public.addon_bundles set is_active = false;
+update public.plans set description = 'Junior & Senior, Riset Web, gambar AI & PPT' where id = 'starter';
+update public.plans set description = 'Junior, Senior & Head, semua Smart Tools & Markethink Agent' where id = 'pro';
+update public.plans set description = 'Semua otak termasuk Director, semua Smart Tools & Markethink Agent' where id = 'promax';

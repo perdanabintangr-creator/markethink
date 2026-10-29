@@ -50,7 +50,7 @@ const id = {
   quotaTitle: "Kuota bulan ini sudah habis",
   dailyLimitDesc: (notice: string) => `${notice} Paket berbayar tidak punya batas harian, cukup kuota bulanan.`,
   tierLockedDesc:
-    "Starter membuka Senior (strategi & campaign) + semua Smart Tools. Pro menambah Head (sekelas Head of Marketing) & Markethink Agent. Promax membuka Director, otak paling cerdas.",
+    "Starter membuka Senior (strategi & campaign) & Riset Web. Pro menambah Head (sekelas Head of Marketing), semua Smart Tools & Markethink Agent. Promax membuka Director, otak paling cerdas.",
   quotaDesc:
     "Kuota direset otomatis tiap tanggal 1 pukul 00.00 WIB. Butuh lebih banyak sekarang? Upgrade paket untuk kuota bulanan yang lebih besar.",
   seePlansPricing: "Lihat paket & harga",
@@ -211,7 +211,7 @@ const en: typeof id = {
   quotaTitle: "This month's quota is used up",
   dailyLimitDesc: (notice) => `${notice} Paid plans have no daily limit, just a monthly quota.`,
   tierLockedDesc:
-    "Starter unlocks Senior (strategy & campaigns) + all Smart Tools. Pro adds Head (Head of Marketing level) & Markethink Agent. Promax unlocks Director, the smartest brain.",
+    "Starter unlocks Senior (strategy & campaigns) & Web Research. Pro adds Head (Head of Marketing level), all Smart Tools & Markethink Agent. Promax unlocks Director, the smartest brain.",
   quotaDesc:
     "Your quota resets automatically on the 1st of every month at 00:00 WIB. Need more now? Upgrade your plan for a bigger monthly quota.",
   seePlansPricing: "See plans & pricing",

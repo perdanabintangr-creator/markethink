@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
   const orderId = newOrderId(kind);
   const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || new URL(req.url).origin;
-  const back = kind === "plan" ? "/pricing" : "/tools/addons";
+  const back = kind === "plan" ? "/pricing" : "/tools";
   const { error } = await admin.from("payments").insert({
     order_id: orderId,
     user_id: s.user.id,

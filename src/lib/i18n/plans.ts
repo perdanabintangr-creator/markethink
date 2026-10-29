@@ -64,7 +64,6 @@ const id = {
       includes: "Semua di Free, plus:",
       features: [
         { icon: "brain", text: "Otak Junior & Senior, tanpa batas harian" },
-        { icon: "tools", text: "Semua Smart Tools: strategi, riset, konten, iklan & laporan" },
         { icon: "deck", text: "PPT, carousel & poster IG/TikTok" },
         { icon: "photo", text: "Gambar AI & Foto Produk Studio" },
         { icon: "privacy", text: "Otak Claude dengan privasi penuh" },
@@ -77,6 +76,7 @@ const id = {
       quota: "Kuota lebih besar",
       includes: "Semua di Starter, plus:",
       features: [
+        { icon: "tools", text: "Semua Smart Tools: strategi, riset, konten, iklan & laporan" },
         { icon: "sharp", text: "Otak Head (lebih tajam)" },
         { icon: "agent", text: "Markethink Agent: satu tujuan, beberapa tools jalan otomatis" },
         { icon: "visual", text: "Visual premium: PPT penuh foto AI" },
@@ -142,7 +142,6 @@ const en: typeof id = {
       includes: "Everything in Free, plus:",
       features: [
         { icon: "brain", text: "Junior & Senior brains, no daily limits" },
-        { icon: "tools", text: "All Smart Tools: strategy, research, content, ads & reports" },
         { icon: "deck", text: "PPT, carousels & IG/TikTok posters" },
         { icon: "photo", text: "AI images & Product Photo Studio" },
         { icon: "privacy", text: "Claude brain with full privacy" },
@@ -155,6 +154,7 @@ const en: typeof id = {
       quota: "Bigger quota",
       includes: "Everything in Starter, plus:",
       features: [
+        { icon: "tools", text: "All Smart Tools: strategy, research, content, ads & reports" },
         { icon: "sharp", text: "Head brain (sharper)" },
         { icon: "agent", text: "Markethink Agent: one goal, several tools run automatically" },
         { icon: "visual", text: "Premium visuals: PPT full of AI photos" },

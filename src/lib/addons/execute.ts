@@ -66,15 +66,14 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   // Paket yang belum membuka Tools Pro: add-on yang dibeli terpisah (kuota hasil + batas modal, tanpa kredit, otak Senior).
   const access = await getToolAccess(admin, profile, info.addon);
   if (!access.allowed) {
-    const offered = Boolean(access.addon);
     return {
       ok: false,
       status: 402,
       code: "plan_required",
       addon: info.addon,
       message: en
-        ? `Smart Tools are available from the Starter plan${offered ? ", or buy just this add-on" : ""}.`
-        : `Smart Tools tersedia mulai paket Starter${offered ? ", atau beli add-on ini saja" : ""}.`,
+        ? "Smart Tools are available on the Pro & Promax plans."
+        : "Smart Tools tersedia di paket Pro & Promax.",
     };
   }
   // Otak di atas Senior (Head/Director) dipilih → pakai kuota paket bila paket membuka Smart Tools (add-on selalu otak Senior).
