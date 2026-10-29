@@ -414,3 +414,10 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Atas permintaan founder, tampilan "kredit" dari UI baru dihapus: meter kredit di sidebar, kartu "Kredit terpakai" (dan perkiraan rupiah), serta grafik kredit di Dashboard. Gantinya kartu "Project" (jumlah project + Brand Kit lengkap) dan grafik "Aktivitas 7 hari" (jawaban AI dari `usage_logs` status ok + hasil Smart Tools & Agent). Lingkaran pemakaian (persen) di kotak chat tetap ada sebagai penanda batas paket.
 - Asisten AI: panel "Konteks" di kanan layar chat (layar ≥1280px, bisa ditutup, pilihan diingat di browser): Brand Kit project, file project, memory yang dipakai AI di ruang chat itu, otak & status Riset Web. Data dari `GET /api/chat-context` (RLS user, memory dibatasi per project seperti di chat).
 - Daftar chat tetap di sidebar (tidak dibuat kolom ketiga) supaya riwayat tidak tampil dua kali.
+
+## 2026-10-29 · Tampilan disederhanakan untuk pengguna baru
+- Founder menilai tahap 1–2 terlalu ramai. Prinsip baru: satu aksi utama per layar, info tambahan hanya muncul bila relevan.
+- Sidebar: logo + ikon cari, tombol utama "Chat baru", 3 menu (Beranda, Smart Tools, Agent), Project, lalu satu daftar Riwayat (chat & hasil Smart Tools digabung, tab Chat/Smart Tools dihapus).
+- Bar atas hanya di HP (menu, logo, cari, chat baru). Di laptop dihapus (breadcrumb & "Buat baru" ikut hilang).
+- Beranda: sapaan, kotak tanya, 4 kartu (caption → mengisi kotak chat lewat `?draft=`, rencana konten, iklan, kompetitor), kartu "Mulai di sini" (4 langkah, hilang sendiri bila selesai), kabar pantauan (hanya bila ada minggu ini), "Lanjutkan" 4 item terakhir. Angka statistik & grafik dihapus.
+- Panel Konteks di chat kini tertutup secara bawaan (dibuka lewat tombol "Konteks").

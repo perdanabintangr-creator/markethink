@@ -8,7 +8,7 @@ const id = {
   toolsPro: "Smart Tools",
   newBadge: "Baru",
   workspaces: "Projects",
-  projects: "Projects",
+  projects: "Project",
   newProject: "Project baru",
   newProjectPrompt: "Nama project (mis. nama brand / klien):",
   newChatInProject: "Chat baru di project ini",

@@ -29,9 +29,9 @@ async function loadProject(workspaceId: string): Promise<ProjectHomeData | null>
 export default async function NewChatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; prompt?: string; research?: string }>;
+  searchParams: Promise<{ workspace?: string; prompt?: string; research?: string; draft?: string }>;
 }) {
-  const { workspace, prompt, research } = await searchParams;
+  const { workspace, prompt, research, draft } = await searchParams;
   const id = crypto.randomUUID();
   const workspaceId = workspace && /^[0-9a-f-]{36}$/i.test(workspace) ? workspace : null;
   const project = workspaceId ? await loadProject(workspaceId) : null;
@@ -50,6 +50,7 @@ export default async function NewChatPage({
       project={project}
       initialPrompt={typeof prompt === "string" ? prompt.slice(0, 4000) : null}
       initialResearch={research === "1"}
+      initialDraft={typeof draft === "string" ? draft.slice(0, 2000) : null}
     />
   );
 }

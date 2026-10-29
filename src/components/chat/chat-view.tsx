@@ -58,6 +58,7 @@ export function ChatView({
   project = null,
   initialPrompt = null,
   initialResearch = false,
+  initialDraft = null,
 }: {
   chatId: string;
   initialMessages: MtMessage[];
@@ -79,6 +80,8 @@ export function ChatView({
   initialPrompt?: string | null;
   /** Nyalakan Riset Web untuk pertanyaan awal (bila paket mengizinkan). */
   initialResearch?: boolean;
+  /** Kerangka perintah dari Beranda (?draft=…): hanya mengisi kotak chat, user yang melengkapi & mengirim. */
+  initialDraft?: string | null;
 }) {
   const { t, lang, user, workspaces, allowedTiers, personaRole, voiceStt, researchAllowed } = useApp();
   const c = chatText(lang);
@@ -323,12 +326,12 @@ export function ChatView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Panel konteks kanan (layar lebar): terbuka secara bawaan, pilihan user diingat di browser.
+  // Panel konteks kanan (layar lebar): tertutup secara bawaan agar layar tetap lega; pilihan user diingat di browser.
   const w = workspaceUiText(lang);
-  const [ctxOpen, setCtxOpen] = useState(true);
+  const [ctxOpen, setCtxOpen] = useState(false);
   useEffect(() => {
     try {
-      if (localStorage.getItem(CTX_KEY) === "0") setCtxOpen(false);
+      if (localStorage.getItem(CTX_KEY) === "1") setCtxOpen(true);
     } catch {
       /* penyimpanan browser tidak tersedia */
     }
@@ -401,7 +404,7 @@ export function ChatView({
   const workspaceName = workspaces.find((w) => w.id === workspaceId)?.name;
   const lastAssistantIndex = messages.map((m) => m.role).lastIndexOf("assistant");
 
-  const [prefill, setPrefill] = useState<{ text: string; key: number } | null>(null);
+  const [prefill, setPrefill] = useState<{ text: string; key: number } | null>(() => (isNew && initialDraft ? { text: initialDraft, key: 1 } : null));
   const firstName = (user.name ?? "").trim().split(/\s+/)[0] ?? "";
   const pickQuickStart = (q: QuickStart) => {
     if (q.research) setResearch(true);
