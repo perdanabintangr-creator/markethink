@@ -432,3 +432,10 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Semua Smart Tools dibuka dengan satu paket: **Pro (Rp200rb)** atau **Promax (Rp300rb)**. Starter (Rp60rb) tidak lagi membuka Smart Tools (tetap: Junior & Senior, Riset Web, gambar AI, PPT). Free & Starter melihat tools tapi terkunci, dengan tawaran upgrade Pro/Promax.
 - 8 add-on per kelompok & 2 bundel dinonaktifkan (`is_active=false`, migrasi 0049); halaman `/tools/addons` dialihkan ke `/pricing`. Data pembelian lama tetap ada; add-on yang masih aktif (saat diubah: 0) tetap bisa dipakai sampai habis masa berlakunya.
 - Teks paket, pesan terkunci, kalkulator, dan penjelasan otak diperbarui ("tersedia di paket Pro & Promax").
+
+## 2026-10-30 · Payment gateway Mayar (ACC founder "pake mayar aja")
+- Midtrans 3× meminta "Business Supporting Document" (butuh NIB). Founder memilih Mayar agar cepat beroperasi.
+- `src/lib/payments/mayar.ts`: single payment request (`/hl/v1/payment/create`, otomatis coba `/hl/v2/payments/create` bila v1 tidak dikenal), nomor order ikut di deskripsi, cek status `/hl/v1/payment/{id}` (cadangan v2). Pembacaan respons dibuat longgar karena dokumentasi resmi tidak bisa diakses dari container (dipelajari dari CLI resmi `mayarid/mayar-cli` & pustaka komunitas).
+- Webhook `/api/webhooks/mayar`: cocokkan lewat nomor order/`payments.gateway_ref` (kolom baru, migrasi 0050), status selalu dicek ulang ke API; bila API belum lunas, `payment.received` hanya dipercaya jika header `x-callback-token` cocok dengan `MAYAR_WEBHOOK_TOKEN` dan nominal ≥ tagihan.
+- Env: `MAYAR_API_KEY` (wajib), `MAYAR_IS_PRODUCTION="true"` untuk live (default sandbox api.mayar.club), `MAYAR_WEBHOOK_TOKEN` (disarankan). Bila terpasang, Mayar otomatis jadi gateway utama (bisa dipaksa lewat `PAYMENT_PROVIDER`).
+- Potongan biaya per transaksi Mayar belum diketahui; founder diminta mengirim info biaya sebelum live.

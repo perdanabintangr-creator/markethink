@@ -5,6 +5,7 @@ import { getAddonOffers, getBundleOffers } from "@/lib/addons/access";
 import { splitBundleAmount } from "@/lib/addons/addon-quota";
 import { getTransactionStatus, paymentStatusOf, type MidtransStatus } from "./midtrans";
 import { duitkuStatusOf, getDuitkuStatus } from "./duitku";
+import { getMayarStatus } from "./mayar";
 
 export type PaymentKind = "plan" | "addon" | "bundle";
 const PAID_PLANS = ["starter", "pro", "promax"];
@@ -59,7 +60,12 @@ export function fromMidtrans(s: MidtransStatus): GatewayStatus {
   };
 }
 
-async function fetchStatus(provider: string | null, orderId: string): Promise<GatewayStatus> {
+async function fetchStatus(provider: string | null, orderId: string, ref: string | null): Promise<GatewayStatus> {
+  if (provider === "mayar") {
+    if (!ref) return { status: "pending", amount: null, paymentType: null, paidAt: null, notFound: true, raw: null };
+    const s = await getMayarStatus(ref);
+    return { ...s, paidAt: null };
+  }
   if (provider === "duitku") {
     const s = await getDuitkuStatus(orderId);
     return {
@@ -76,7 +82,8 @@ async function fetchStatus(provider: string | null, orderId: string): Promise<Ga
 
 /** Aktifkan paket/add-on/bundel memakai fungsi pencatatan yang sama dengan back office (laporan penjualan ikut tercatat). */
 async function fulfill(admin: SupabaseClient, p: PaymentRow) {
-  const method = `${p.provider === "duitku" ? "Duitku" : "Midtrans"} ${p.payment_type ?? ""}`.trim();
+  const gateway = p.provider === "duitku" ? "Duitku" : p.provider === "mayar" ? "Mayar" : "Midtrans";
+  const method = `${gateway} ${p.payment_type ?? ""}`.trim();
   const note = `Bayar otomatis ${p.order_id}`;
   if (p.kind === "plan") {
     const { error } = await admin.rpc("bo_record_sale", {
@@ -133,12 +140,12 @@ async function fulfill(admin: SupabaseClient, p: PaymentRow) {
 export async function syncPayment(admin: SupabaseClient, orderId: string, known?: GatewayStatus) {
   const { data: pay } = await admin
     .from("payments")
-    .select("order_id, user_id, kind, item_id, months, amount_idr, status, payment_type, provider, fulfilled_at")
+    .select("order_id, user_id, kind, item_id, months, amount_idr, status, payment_type, provider, gateway_ref, fulfilled_at")
     .eq("order_id", orderId)
     .maybeSingle();
   if (!pay) return null;
   if (pay.fulfilled_at) return "paid" as const;
-  const s = known ?? (await fetchStatus(pay.provider, orderId));
+  const s = known ?? (await fetchStatus(pay.provider, orderId, (pay.gateway_ref as string | null) ?? null));
   if (s.notFound) return pay.status as string;
   const status = s.status;
   // Nominal harus sama dengan tagihan (menolak manipulasi nominal).

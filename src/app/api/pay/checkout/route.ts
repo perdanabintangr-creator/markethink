@@ -4,6 +4,7 @@ import { apiSession, jsonError } from "@/lib/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createSnapTransaction, newOrderId } from "@/lib/payments/midtrans";
 import { createDuitkuInvoice } from "@/lib/payments/duitku";
+import { createMayarPayment } from "@/lib/payments/mayar";
 import { activeProvider } from "@/lib/payments/gateway";
 import { priceItem } from "@/lib/payments/orders";
 
@@ -12,7 +13,7 @@ const schema = z.object({
   id: z.string().regex(/^[a-z_]{2,40}$/),
 });
 
-/** Mulai pembayaran: harga dihitung di server, tagihan dibuat di gateway aktif (Duitku/Midtrans), user diarahkan ke halaman bayar. */
+/** Mulai pembayaran: harga dihitung di server, tagihan dibuat di gateway aktif (Mayar/Duitku/Midtrans), user diarahkan ke halaman bayar. */
 export async function POST(req: Request) {
   const s = await apiSession();
   if (s.error) return s.error;
@@ -42,7 +43,9 @@ export async function POST(req: Request) {
     const customer = { name: s.profile.full_name, email: s.profile.email ?? s.user.email };
     const returnUrl = `${origin}${back}?paid=${encodeURIComponent(orderId)}`;
     const pay =
-      provider === "duitku"
+      provider === "mayar"
+        ? await createMayarPayment({ orderId, amount: item.amount, item: { name: item.name }, customer, redirectUrl: returnUrl })
+        : provider === "duitku"
         ? await createDuitkuInvoice({
             orderId,
             amount: item.amount,
@@ -52,7 +55,10 @@ export async function POST(req: Request) {
             returnUrl,
           })
         : await createSnapTransaction({ orderId, amount: item.amount, item: { id, name: item.name }, customer, finishUrl: returnUrl });
-    await admin.from("payments").update({ redirect_url: pay.redirectUrl, updated_at: new Date().toISOString() }).eq("order_id", orderId);
+    await admin
+      .from("payments")
+      .update({ redirect_url: pay.redirectUrl, gateway_ref: "reference" in pay ? pay.reference : null, updated_at: new Date().toISOString() })
+      .eq("order_id", orderId);
     return NextResponse.json({ orderId, redirectUrl: pay.redirectUrl });
   } catch (err) {
     console.error(`[pay] ${provider} gagal`, err);

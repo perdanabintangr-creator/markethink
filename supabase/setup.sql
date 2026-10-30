@@ -2679,3 +2679,9 @@ update public.addon_bundles set is_active = false;
 update public.plans set description = 'Junior & Senior, Riset Web, gambar AI & PPT' where id = 'starter';
 update public.plans set description = 'Junior, Senior & Head, semua Smart Tools & Markethink Agent' where id = 'pro';
 update public.plans set description = 'Semua otak termasuk Director, semua Smart Tools & Markethink Agent' where id = 'promax';
+
+
+-- ===== 20261030000050_payments_gateway_ref.sql =====
+-- Id tagihan di gateway (mis. id "payment request" Mayar) untuk cek status & mencocokkan webhook.
+alter table public.payments add column if not exists gateway_ref text;
+create index if not exists payments_gateway_ref_idx on public.payments (gateway_ref) where gateway_ref is not null;
