@@ -48,6 +48,11 @@ const Ctx = createContext<AppContextValue | null>(null);
 
 export const AppContextProvider = Ctx.Provider;
 
+/** Sama seperti useApp, tapi aman dipakai di halaman publik (tanpa AppShell) → null. */
+export function useAppOptional() {
+  return useContext(Ctx);
+}
+
 export function useApp() {
   const v = useContext(Ctx);
   if (!v) throw new Error("useApp di luar AppContextProvider");

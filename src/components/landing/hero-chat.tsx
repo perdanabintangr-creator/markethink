@@ -54,7 +54,7 @@ export function HeroChat() {
 
   const d = DEMOS[i];
   return (
-    <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.06] p-4 text-left shadow-2xl shadow-cyan-500/10 backdrop-blur-xl sm:p-5">
+    <div className="relative w-full p-4 text-left sm:p-5">
       <div className="mb-4 flex items-center gap-2 text-xs text-white/50">
         <span className="size-2.5 rounded-full bg-red-400/70" />
         <span className="size-2.5 rounded-full bg-amber-300/70" />

@@ -28,7 +28,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RECOMMENDED_PLAN, type PlanOffer } from "@/lib/plan-offers";
-import { useApp } from "@/components/app/app-context";
+import Link from "next/link";
+import { useAppOptional } from "@/components/app/app-context";
 import { toolsText } from "@/lib/i18n/tools";
 import { plansText, type PlanDetail, type PlanIcon } from "@/lib/i18n/plans";
 import { paymentsText } from "@/lib/i18n/payments";
@@ -60,8 +61,23 @@ const ICONS: Record<PlanIcon, LucideIcon> = {
  * Angka kredit & batas tidak ditampilkan (besar kuota ditulis dengan kata). Permintaan masuk ke back office → Calon pelanggan untuk dikirimi cara bayar.
  * `showTeam` menampilkan tab Personal / Tim & Agency (halaman Paket & harga).
  */
-export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanOffer[]; currentPlan?: string; note: string; showTeam?: boolean }) {
-  const { lang, payEnabled } = useApp();
+export function PlanCards({
+  plans,
+  currentPlan,
+  note,
+  showTeam,
+  signupHref,
+}: {
+  plans: PlanOffer[];
+  currentPlan?: string;
+  note: string;
+  showTeam?: boolean;
+  /** Halaman publik (belum login): tombol paket mengarah ke daftar/masuk, bukan pembayaran. */
+  signupHref?: string;
+}) {
+  const app = useAppOptional();
+  const lang = app?.lang ?? "id";
+  const payEnabled = Boolean(app?.payEnabled);
   const PAY = paymentsText(lang);
   const T = toolsText(lang);
   const P = plansText(lang);
@@ -123,9 +139,15 @@ export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanO
                 <CheckCircle2 className="size-4" /> {P.team.sent}
               </p>
             ) : (
-              <Button className="w-full rounded-full" disabled={busy !== null} onClick={() => requestPlan("team")}>
-                {busy === "team" && <Loader2 className="animate-spin" />} {P.team.cta}
-              </Button>
+              signupHref ? (
+                <Button asChild className="w-full rounded-full">
+                  <Link href={signupHref}>{P.team.cta}</Link>
+                </Button>
+              ) : (
+                <Button className="w-full rounded-full" disabled={busy !== null} onClick={() => requestPlan("team")}>
+                  {busy === "team" && <Loader2 className="animate-spin" />} {P.team.cta}
+                </Button>
+              )
             )}
           </div>
           <FeatureList features={P.team.features} />
@@ -169,11 +191,23 @@ export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanO
                   {current ? (
                     <p className="rounded-full border py-2 text-center text-sm text-muted-foreground">{T.currentPlan}</p>
                   ) : !p.price ? (
-                    <p className="rounded-full border py-2 text-center text-sm text-muted-foreground">{P.getFree}</p>
+                    signupHref ? (
+                      <Button asChild variant="outline" className="w-full rounded-full">
+                        <Link href="/register">{P.getFree}</Link>
+                      </Button>
+                    ) : (
+                      <p className="rounded-full border py-2 text-center text-sm text-muted-foreground">{P.getFree}</p>
+                    )
                   ) : sentPlan === p.id ? (
                     <p className="flex min-h-9 items-center justify-center gap-1.5 text-center text-sm text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="size-4 shrink-0" /> {T.sentContact}
                     </p>
+                  ) : signupHref ? (
+                    <Button asChild variant={best ? "default" : "outline"} className="w-full rounded-full">
+                      <Link href={signupHref}>
+                        <Sparkles /> {T.choosePlan(p.name)}
+                      </Link>
+                    </Button>
                   ) : (
                     <Button
                       variant={best ? "default" : "outline"}

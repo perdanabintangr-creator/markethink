@@ -453,3 +453,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-10-31 · Logo Q & landing page baru (filosofi MARQTHINK)
 - Logo dari founder (ikon Q + wordmark): aset di `public/brand/` (ikon 64/192/512, logo horizontal untuk latar gelap/terang/putih), favicon `src/app/icon.png` & `apple-icon.png`. Komponen `Logo` = ikon Q + wordmark "MARQ" (warna teks, ikut tema) + "THINK" (gradasi biru), font Montserrat (Google Fonts) lewat `--font-brand`.
 - Landing page dirombak (gelap-biru seperti logo, beranimasi): hero "Think like a brand." + demo tanya-jawab yang mengetik sendiri, persona berjalan, Filosofi MARQ (marque = brand) + THINK, tiga makna Q (Question, Quality, Quotient + meter "MQ"), Cara kerja (Tanya → Riset → Strategi → Eksekusi), Fitur, CTA dengan tagline bergantian. Animasi dimatikan untuk user yang memilih "kurangi animasi".
+
+## 2026-10-31 · Halaman harga publik & landing futuristik
+- `/harga`: halaman harga tanpa login (data paket dari DB lewat admin client, kartu `PlanCards` mode publik `signupHref` → daftar lalu kembali ke `/pricing`). User yang sudah login diarahkan ke `/pricing` (bisa langsung bayar). Header & footer publik jadi komponen bersama (`SiteHeader`, `SiteFooter`).
+- Menu "Filosofi" diganti "Kenapa Marqthink" (anchor `#kenapa`).
+- Landing: latar jaringan "otak" bergerak (canvas, ikut kursor, berhenti saat tidak terlihat), judul "a brand." berkilau, kartu demo dengan sinar berputar, dua baris kata-kata marketing berjalan berlawanan arah, bagian kutipan tokoh marketing (Bezos, Godin, Sinek, Drucker, Fishburne) dengan efek teks "decode" + terjemahan, kartu fitur dengan sorot cahaya mengikuti kursor. Semua animasi mati bila user memilih "kurangi animasi".

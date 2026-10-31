@@ -18,15 +18,24 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import { Logo, LogoMark, Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
+import { BorderBeam } from "@/components/landing/border-beam";
+import { GlowCard } from "@/components/landing/glow-card";
 import { HeroChat } from "@/components/landing/hero-chat";
+import { NeuralField } from "@/components/landing/neural-field";
+import { QuoteCarousel } from "@/components/landing/quote-carousel";
 import { QuotientGauge } from "@/components/landing/quotient-gauge";
 import { Reveal } from "@/components/landing/reveal";
 import { RotatingTagline } from "@/components/landing/rotating-tagline";
+import { SiteFooter } from "@/components/landing/site-footer";
+import { SiteHeader } from "@/components/landing/site-header";
 import { getSession } from "@/lib/auth";
 import { BRAND, BRAND_ICON } from "@/lib/brand";
 import { isSupabaseConfigured } from "@/lib/env";
+
+/** Kata-kata marketing yang berjalan (dua baris, arah berlawanan). */
+const wordsA = ["Brand awareness", "Positioning", "Storytelling", "Insight", "Engagement", "Loyalty"];
+const wordsB = ["Konversi", "Copywriting", "Funnel", "ROAS", "Viral", "Repeat order"];
 
 const personas = [
   { icon: Megaphone, label: "Marketing profesional & agency" },
@@ -84,43 +93,14 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-dvh overflow-x-hidden">
-      {/* ---------------------------------------------------------------- Header */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#050b1f]/95 text-white backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <LogoMark className="size-8" />
-            <Wordmark className="text-lg text-white" />
-          </Link>
-          <nav className="hidden items-center gap-6 text-sm text-white/70 md:flex">
-            <a href="#filosofi" className="hover:text-white">Filosofi</a>
-            <a href="#cara-kerja" className="hover:text-white">Cara kerja</a>
-            <a href="#fitur" className="hover:text-white">Fitur</a>
-            <Link href="/pricing" className="hover:text-white">Paket</Link>
-          </nav>
-          <div className="flex items-center gap-2">
-            {user ? (
-              <Button asChild size="sm" className="rounded-full bg-white text-[#050b1f] hover:bg-white/90">
-                <Link href="/dashboard">Buka App</Link>
-              </Button>
-            ) : (
-              <>
-                <Button asChild variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white">
-                  <Link href="/login">Masuk</Link>
-                </Button>
-                <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-[#0a6cff] to-[#12d0f5] text-white shadow-lg shadow-cyan-500/20 hover:opacity-90">
-                  <Link href="/register">Coba Gratis</Link>
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      <SiteHeader loggedIn={Boolean(user)} />
 
       {/* ---------------------------------------------------------------- Hero */}
       <section className="relative isolate overflow-hidden bg-[#050b1f] text-white">
         <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 size-[56rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,108,255,0.35),transparent_60%)]" />
         <div className="pointer-events-none absolute -bottom-40 -right-20 -z-10 size-[34rem] rounded-full bg-[radial-gradient(circle,rgba(18,208,245,0.22),transparent_60%)]" />
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
+        <NeuralField className="-z-10 opacity-70" />
 
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-14 sm:pt-20 lg:grid-cols-[1.1fr_1fr]">
           <div className="text-center lg:text-left">
@@ -130,7 +110,9 @@ export default async function LandingPage() {
             <h1 className="mt-6 font-brand text-5xl font-black leading-[1.02] tracking-tight sm:text-7xl">
               Think like
               <br />
-              <span className="bg-gradient-to-r from-[#3b8bff] via-[#12b8f5] to-[#5ef0ff] bg-clip-text text-transparent">a brand.</span>
+              <span className="mq-motion animate-[mq-shimmer_6s_linear_infinite] bg-[linear-gradient(90deg,#3b8bff,#12b8f5,#5ef0ff,#ffffff,#5ef0ff,#12b8f5,#3b8bff)] bg-[length:200%_auto] bg-clip-text text-transparent">
+                a brand.
+              </span>
             </h1>
             <p className="mt-5 text-lg font-medium text-white/90 sm:text-xl">Otak marketing untuk brand kamu.</p>
             <p className="mx-auto mt-3 max-w-xl text-white/60 lg:mx-0">
@@ -144,7 +126,7 @@ export default async function LandingPage() {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="rounded-full border-white/20 bg-transparent px-7 text-base text-white hover:bg-white/10 hover:text-white">
-                <a href="#filosofi">Kenal {BRAND}</a>
+                <a href="#kenapa">Kenapa {BRAND}?</a>
               </Button>
             </div>
           </div>
@@ -156,7 +138,9 @@ export default async function LandingPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={BRAND_ICON} alt="" className="mq-motion absolute inset-6 animate-[mq-float_5s_ease-in-out_infinite] drop-shadow-[0_0_30px_rgba(18,208,245,0.45)]" />
             </div>
-            <HeroChat />
+            <BorderBeam className="w-full max-w-md shadow-2xl shadow-cyan-500/15">
+              <HeroChat />
+            </BorderBeam>
           </div>
         </div>
 
@@ -172,11 +156,31 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ---------------------------------------------------------------- Filosofi: MARQ */}
-      <section id="filosofi" className="scroll-mt-16 bg-background">
+      {/* ---------------------------------------------------------------- Kata-kata marketing berjalan */}
+      <section aria-hidden className="relative overflow-hidden border-b bg-background py-10 [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
+        <div className="mq-motion flex w-max animate-[mq-marquee_40s_linear_infinite] gap-10 whitespace-nowrap">
+          {[...wordsA, ...wordsA].map((w, i) => (
+            <span key={i} className="font-brand text-5xl font-black uppercase tracking-tight text-transparent [-webkit-text-stroke:1.5px_var(--color-border)] transition-colors hover:text-primary sm:text-7xl">
+              {w}
+              <span className="ml-10 text-primary [-webkit-text-stroke:0]">✦</span>
+            </span>
+          ))}
+        </div>
+        <div className="mq-motion mt-4 flex w-max animate-[mq-marquee-rev_46s_linear_infinite] gap-10 whitespace-nowrap">
+          {[...wordsB, ...wordsB].map((w, i) => (
+            <span key={i} className="bg-gradient-to-r from-[#0a6cff] to-[#12d0f5] bg-clip-text font-brand text-5xl font-black uppercase tracking-tight text-transparent sm:text-7xl">
+              {w}
+              <span className="ml-10 text-foreground/15">●</span>
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- Kenapa Marqthink: MARQ */}
+      <section id="kenapa" className="scroll-mt-16 bg-background">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
           <Reveal className="text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Filosofi</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Kenapa {BRAND}?</p>
             <h2 className="mt-3 font-brand text-3xl font-black tracking-tight sm:text-5xl">Setiap brand butuh otak yang berpikir untuknya.</h2>
           </Reveal>
 
@@ -203,7 +207,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ---------------------------------------------------------------- Filosofi: Q */}
+      {/* ---------------------------------------------------------------- Kenapa Marqthink: Q */}
       <section className="relative overflow-hidden border-y bg-muted/40">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
           <div className="grid items-center gap-12 lg:grid-cols-[0.8fr_1.2fr]">
@@ -270,6 +274,16 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ---------------------------------------------------------------- Kutipan marketing */}
+      <section className="relative isolate overflow-hidden bg-[#050b1f] py-24 text-white sm:py-32">
+        <NeuralField className="-z-10 opacity-50" density={0.00006} />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 size-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,108,255,0.28),transparent_60%)]" />
+        <div className="mx-auto max-w-6xl px-4">
+          <p className="mb-10 text-center text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Kata mereka tentang marketing</p>
+          <QuoteCarousel />
+        </div>
+      </section>
+
       {/* ---------------------------------------------------------------- Fitur */}
       <section id="fitur" className="scroll-mt-16 border-t bg-muted/40">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
@@ -280,14 +294,13 @@ export default async function LandingPage() {
           <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((f, i) => (
               <Reveal key={f.title} delay={(i % 4) * 90}>
-                <div className="group relative h-full overflow-hidden rounded-3xl border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-                  <div className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full bg-[radial-gradient(circle,rgba(18,208,245,0.18),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <GlowCard className="h-full p-6">
                   <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                     <f.icon className="size-5" />
                   </span>
                   <h3 className="mt-5 font-semibold">{f.title}</h3>
                   <p className="mt-1.5 text-sm text-muted-foreground">{f.desc}</p>
-                </div>
+                </GlowCard>
               </Reveal>
             ))}
           </div>
@@ -297,6 +310,7 @@ export default async function LandingPage() {
       {/* ---------------------------------------------------------------- CTA */}
       <section className="relative isolate overflow-hidden bg-[#050b1f] text-white">
         <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 size-[44rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,108,255,0.35),transparent_60%)]" />
+        <NeuralField className="-z-10 opacity-60" />
         <div className="mx-auto max-w-4xl px-4 py-24 text-center">
           <Reveal>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -314,20 +328,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ---------------------------------------------------------------- Footer */}
-      <footer className="border-t bg-background">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row">
-          <div className="flex flex-col items-center gap-1 sm:items-start">
-            <Logo />
-            <span className="text-xs">© {new Date().getFullYear()} {BRAND} · Think like a brand.</span>
-          </div>
-          <div className="flex gap-5">
-            <Link href="/pricing" className="hover:text-foreground">Paket & harga</Link>
-            <Link href="/terms" className="hover:text-foreground">Syarat Layanan</Link>
-            <Link href="/privacy" className="hover:text-foreground">Kebijakan Privasi</Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
