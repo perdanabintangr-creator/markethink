@@ -28,6 +28,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: CHAT_PREFS_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: FONT_SCRIPT }} />
+        {/* Font brand (logo & judul landing): Montserrat tebal, mirip huruf logo MARQTHINK. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" />
       </head>
       <body className="font-sans">
         <Providers>{children}</Providers>

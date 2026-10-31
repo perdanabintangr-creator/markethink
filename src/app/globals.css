@@ -75,6 +75,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --font-brand: "Montserrat", ui-sans-serif, system-ui, sans-serif;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
@@ -213,3 +214,39 @@ html[data-chat-text="lg"] .chat-thread .prose { font-size: 1rem; }
 html[data-chat-text="sm"] .chat-thread .user-bubble { font-size: 0.8125rem; }
 html[data-chat-text="lg"] .chat-thread .user-bubble { font-size: 1rem; }
 html[data-chat-width="lg"] .chat-col { max-width: 62rem; }
+
+/* Landing Marqthink */
+@keyframes mq-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes mq-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes mq-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes mq-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mq-motion {
+    animation: none !important;
+  }
+}

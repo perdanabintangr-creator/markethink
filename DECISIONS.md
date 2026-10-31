@@ -449,3 +449,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - DNS di Hostinger: A @ → 216.198.79.1 & 64.29.17.1, CNAME www → Vercel; `www` dialihkan ke apex. Supabase Site URL & Redirect URLs diperbarui founder.
 - Env production: `NEXT_PUBLIC_APP_URL=https://marqthink.com`, `CANONICAL_HOST=marqthink.com` → halaman dari markethink-pi.vercel.app dialihkan 308 ke marqthink.com; `/api/*` (webhook pembayaran, callback Canva, cron) tidak dialihkan.
 - Sisa: redirect URL Canva baru, webhook Mayar ke domain baru, verifikasi domain di Resend + `EMAIL_FROM`, `CRON_SECRET` belum ada di Vercel.
+
+## 2026-10-31 · Logo Q & landing page baru (filosofi MARQTHINK)
+- Logo dari founder (ikon Q + wordmark): aset di `public/brand/` (ikon 64/192/512, logo horizontal untuk latar gelap/terang/putih), favicon `src/app/icon.png` & `apple-icon.png`. Komponen `Logo` = ikon Q + wordmark "MARQ" (warna teks, ikut tema) + "THINK" (gradasi biru), font Montserrat (Google Fonts) lewat `--font-brand`.
+- Landing page dirombak (gelap-biru seperti logo, beranimasi): hero "Think like a brand." + demo tanya-jawab yang mengetik sendiri, persona berjalan, Filosofi MARQ (marque = brand) + THINK, tiga makna Q (Question, Quality, Quotient + meter "MQ"), Cara kerja (Tanya → Riset → Strategi → Eksekusi), Fitur, CTA dengan tagline bergantian. Animasi dimatikan untuk user yang memilih "kurangi animasi".

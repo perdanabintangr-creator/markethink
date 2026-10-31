@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -129,8 +129,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t, user, lang, workspaces, planName, planId } = useApp();
   const s = shellText(lang);
   const w = workspaceUiText(lang);
-  // Sidebar dirender dua kali (desktop & laci HP) → id gradien logo harus unik.
-  const logoId = `mt-logo-${useId().replace(/[^a-z0-9]/gi, "")}`;
   const pathname = usePathname();
   const router = useRouter();
   const { setTheme } = useTheme();
@@ -464,7 +462,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col gap-3 bg-muted/40 p-3">
       <div className="flex items-center justify-between gap-2 px-1">
-        <Logo href="/dashboard" gradientId={logoId} />
+        <Logo href="/dashboard" />
         <button
           type="button"
           onClick={openCommandPalette}
