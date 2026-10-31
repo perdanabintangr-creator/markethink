@@ -13,6 +13,7 @@ Yang sengaja **tidak** diubah (nama teknis, bukan tampilan): nama package, `supa
 | Tempat | Yang diubah |
 |---|---|
 | Vercel → project aplikasi → Settings → Domains | Tambah domain baru (mis. `marqthink.vercel.app` bila tersedia, atau domain sendiri). Domain lama tetap aktif. |
+| Vercel → Environment Variables (alamat utama) | `CANONICAL_HOST` = `marqthink.com` → halaman dari alamat lama otomatis dialihkan (API/webhook tidak). |
 | Vercel → Environment Variables | `NEXT_PUBLIC_APP_URL` = alamat baru; `EMAIL_FROM` = `Marqthink <noreply@domain>` setelah domain diverifikasi di Resend. Back office: `MARKETHINK_APP_URL` = alamat baru. Redeploy. |
 | Supabase → Authentication → URL Configuration | Site URL = alamat baru; tambah `https://<alamat-baru>/**` di Redirect URLs (alamat lama biarkan dulu). |
 | Google Cloud → OAuth consent screen | Nama aplikasi "Marqthink" (+ logo bila ada). |

@@ -1,7 +1,10 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { canonicalRedirect } from "@/lib/canonical";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
+  const target = canonicalRedirect(request.nextUrl, request.method);
+  if (target) return NextResponse.redirect(target, 308);
   return updateSession(request);
 }
 
