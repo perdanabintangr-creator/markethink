@@ -258,6 +258,23 @@ html[data-chat-width="lg"] .chat-col { max-width: 62rem; }
     transform: translateY(-10px);
   }
 }
+@keyframes mq-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes mq-wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .mq-motion {
     animation: none !important;

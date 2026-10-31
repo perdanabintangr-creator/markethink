@@ -458,3 +458,11 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - `/harga`: halaman harga tanpa login (data paket dari DB lewat admin client, kartu `PlanCards` mode publik `signupHref` → daftar lalu kembali ke `/pricing`). User yang sudah login diarahkan ke `/pricing` (bisa langsung bayar). Header & footer publik jadi komponen bersama (`SiteHeader`, `SiteFooter`).
 - Menu "Filosofi" diganti "Kenapa Marqthink" (anchor `#kenapa`).
 - Landing: latar jaringan "otak" bergerak (canvas, ikut kursor, berhenti saat tidak terlihat), judul "a brand." berkilau, kartu demo dengan sinar berputar, dua baris kata-kata marketing berjalan berlawanan arah, bagian kutipan tokoh marketing (Bezos, Godin, Sinek, Drucker, Fishburne) dengan efek teks "decode" + terjemahan, kartu fitur dengan sorot cahaya mengikuti kursor. Semua animasi mati bila user memilih "kurangi animasi".
+
+## 2026-10-31 — Landing: studi kasus, cara kerja visual, fitur interaktif
+- Kata-kata marketing berjalan dipindah ke dalam hero (menyatu, bukan section terpisah); chip persona dihapus (diganti tab studi kasus).
+- Section "Kenapa Marqthink" (arti MARQ/THINK) & "Kenapa huruf Q" dihapus atas permintaan founder. Diganti:
+  - **Studi kasus** (`#studi-kasus`, 4 tab: UMKM, online shop, agency, creator). Ditandai "contoh skenario" — bukan testimoni pelanggan nyata.
+  - **Bedanya**: tabel AI chat umum vs Marqthink (tanpa menyebut merek lain).
+- Cara kerja: 4 langkah dengan visual hasil per langkah (berganti otomatis 6,5 dtk, bisa diklik).
+- Fitur: klik kartu → dialog contoh permintaan + contoh hasil + tombol "Coba gratis" (`/register?next=<fitur>`) atau "Buka fitur ini" bila sudah login.

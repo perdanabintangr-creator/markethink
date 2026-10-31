@@ -12,7 +12,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
           <Wordmark className="text-lg text-white" />
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-white/70 md:flex">
-          <Link href="/#kenapa" className="transition-colors hover:text-white">Kenapa Marqthink</Link>
+          <Link href="/#studi-kasus" className="transition-colors hover:text-white">Studi kasus</Link>
           <Link href="/#cara-kerja" className="transition-colors hover:text-white">Cara kerja</Link>
           <Link href="/#fitur" className="transition-colors hover:text-white">Fitur</Link>
           <Link href="/harga" className="transition-colors hover:text-white">Harga</Link>
