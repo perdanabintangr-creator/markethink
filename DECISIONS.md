@@ -444,3 +444,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Nama brand kini satu sumber: `src/lib/brand.ts` (`BRAND` "Marqthink", `BRAND_WORDMARK` "MARQTHINK" untuk logo, `BRAND_SLUG` "marqthink" untuk nama file/UID). Logo, judul halaman, email pengirim default, ID kalender (.ics), nama file unduhan memakai konstanta ini.
 - Semua teks tampilan (UI id/en, email, nama otak "Marqthink Junior/Senior/Head/Director", prompt AI, PPT/Excel, halaman legal, back office) diganti lewat `scripts/rename-brand.mjs` (bisa dipakai lagi untuk rebranding berikutnya). Deskripsi paket di DB lewat migrasi 0051.
 - Nama teknis internal tidak diubah (lihat BRANDING.md). Domain production masih markethink-pi.vercel.app sampai founder menambah domain baru; daftar langkah manual di BRANDING.md.
+
+## 2026-10-31 · Domain marqthink.com (founder beli di Hostinger, 1 tahun Rp181.166)
+- DNS di Hostinger: A @ → 216.198.79.1 & 64.29.17.1, CNAME www → Vercel; `www` dialihkan ke apex. Supabase Site URL & Redirect URLs diperbarui founder.
+- Env production: `NEXT_PUBLIC_APP_URL=https://marqthink.com`, `CANONICAL_HOST=marqthink.com` → halaman dari markethink-pi.vercel.app dialihkan 308 ke marqthink.com; `/api/*` (webhook pembayaran, callback Canva, cron) tidak dialihkan.
+- Sisa: redirect URL Canva baru, webhook Mayar ke domain baru, verifikasi domain di Resend + `EMAIL_FROM`, `CRON_SECRET` belum ada di Vercel.

@@ -11,10 +11,10 @@ Founder: Bro Dana (non-teknis). Bahasa komunikasi: Indonesia, ringkas, tanpa jar
 - Jangan pernah meminta/menampilkan secret key di chat. Jangan commit secret.
 
 ## Infrastruktur
-- Production: https://markethink-pi.vercel.app (Vercel tim `markethink`, Hobby).
+- Production: https://marqthink.com (domain Hostinger, DNS A → Vercel). Alamat lama https://markethink-pi.vercel.app otomatis dialihkan (env `CANONICAL_HOST`), kecuali /api. Vercel tim `markethink`, project `markethink`, Hobby.
 - Supabase project `cqrstytnbfspbwgyvpzi` (Singapore, free) — dikelola via connector Supabase; migrasi di `supabase/migrations` + `npm run db:bundle`.
 - Diagnosa error chat: tabel `usage_logs` (kolom `status`, `error`) dan `credit_ledger`.
-- Connector Vercel saat ini ditolak (403) untuk scope tim `markethink`; status deploy dicek lewat founder.
+- Connector Vercel: akses tim `markethink` sudah di-approve founder (31 Okt); bila 403 lagi, minta link `authorize_team_access`.
 
 Nama brand: `src/lib/brand.ts`; rebranding & langkah manual: `BRANDING.md`.
 
