@@ -52,7 +52,7 @@ export function RequestAddonButton({
 
   async function pay() {
     setBusy(true);
-    if (!(await startCheckout(bundle ? "bundle" : "addon", (bundle ?? addon)!, PAY.failed))) setBusy(false);
+    if (!(await startCheckout(bundle ? "bundle" : "addon", (bundle ?? addon)!, PAY.failed, PAY.opening))) setBusy(false);
   }
 
   async function submit() {

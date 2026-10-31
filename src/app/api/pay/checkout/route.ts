@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { apiSession, jsonError } from "@/lib/api";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -27,42 +27,78 @@ export async function POST(req: Request) {
   if (!item) return jsonError(400, "unknown_item");
 
   const orderId = newOrderId(kind);
-  const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || new URL(req.url).origin;
+  const origin =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    new URL(req.url).origin;
   const back = kind === "plan" ? "/pricing" : "/tools";
-  const { error } = await admin.from("payments").insert({
-    order_id: orderId,
-    user_id: s.user.id,
-    kind,
-    item_id: id,
-    item_name: item.name,
-    amount_idr: item.amount,
-    provider,
-  });
-  if (error) return jsonError(500, "save_failed");
+  const customer = {
+    name: s.profile.full_name,
+    email: s.profile.email ?? s.user.email,
+  };
+  const returnUrl = `${origin}${back}?paid=${encodeURIComponent(orderId)}`;
+  // Tagihan di gateway dibuat bersamaan dengan pencatatan di database (bukan berurutan) supaya halaman bayar lebih cepat terbuka.
+  // Aman: callback gateway baru datang setelah user membayar, jauh setelah catatan tersimpan.
+  // `.then` sekali di sini → query hanya dijalankan satu kali walau ditunggu dua kali (sukses & gagal).
+  const saved = admin
+    .from("payments")
+    .insert({
+      order_id: orderId,
+      user_id: s.user.id,
+      kind,
+      item_id: id,
+      item_name: item.name,
+      amount_idr: item.amount,
+      provider,
+    })
+    .then((r) => r);
   try {
-    const customer = { name: s.profile.full_name, email: s.profile.email ?? s.user.email };
-    const returnUrl = `${origin}${back}?paid=${encodeURIComponent(orderId)}`;
-    const pay =
+    const [pay, { error }] = await Promise.all([
       provider === "mayar"
-        ? await createMayarPayment({ orderId, amount: item.amount, item: { name: item.name }, customer, redirectUrl: returnUrl })
-        : provider === "duitku"
-        ? await createDuitkuInvoice({
+        ? createMayarPayment({
             orderId,
             amount: item.amount,
             item: { name: item.name },
             customer,
-            callbackUrl: `${origin}/api/webhooks/duitku`,
-            returnUrl,
+            redirectUrl: returnUrl,
           })
-        : await createSnapTransaction({ orderId, amount: item.amount, item: { id, name: item.name }, customer, finishUrl: returnUrl });
-    await admin
-      .from("payments")
-      .update({ redirect_url: pay.redirectUrl, gateway_ref: "reference" in pay ? pay.reference : null, updated_at: new Date().toISOString() })
-      .eq("order_id", orderId);
+        : provider === "duitku"
+          ? createDuitkuInvoice({
+              orderId,
+              amount: item.amount,
+              item: { name: item.name },
+              customer,
+              callbackUrl: `${origin}/api/webhooks/duitku`,
+              returnUrl,
+            })
+          : createSnapTransaction({
+              orderId,
+              amount: item.amount,
+              item: { id, name: item.name },
+              customer,
+              finishUrl: returnUrl,
+            }),
+      saved,
+    ]);
+    if (error) return jsonError(500, "save_failed");
+    // Link bayar & referensi gateway disimpan setelah respons dikirim (tidak membuat user menunggu).
+    after(async () => {
+      await admin
+        .from("payments")
+        .update({
+          redirect_url: pay.redirectUrl,
+          gateway_ref: "reference" in pay ? pay.reference : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("order_id", orderId);
+    });
     return NextResponse.json({ orderId, redirectUrl: pay.redirectUrl });
   } catch (err) {
     console.error(`[pay] ${provider} gagal`, err);
-    await admin.from("payments").update({ status: "failed", fulfill_error: String(err).slice(0, 500) }).eq("order_id", orderId);
+    await saved;
+    await admin
+      .from("payments")
+      .update({ status: "failed", fulfill_error: String(err).slice(0, 500) })
+      .eq("order_id", orderId);
     return jsonError(502, "gateway_error");
   }
 }

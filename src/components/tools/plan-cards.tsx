@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bot,
   Brain,
@@ -32,7 +32,7 @@ import { useApp } from "@/components/app/app-context";
 import { toolsText } from "@/lib/i18n/tools";
 import { plansText, type PlanDetail, type PlanIcon } from "@/lib/i18n/plans";
 import { paymentsText } from "@/lib/i18n/payments";
-import { startCheckout } from "./checkout";
+import { startCheckout, warmPaymentPages } from "./checkout";
 
 const ICONS: Record<PlanIcon, LucideIcon> = {
   chat: MessageSquare,
@@ -68,12 +68,15 @@ export function PlanCards({ plans, currentPlan, note, showTeam }: { plans: PlanO
   const [tab, setTab] = useState<"personal" | "team">("personal");
   const [sentPlan, setSentPlan] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  useEffect(() => {
+    if (payEnabled) warmPaymentPages();
+  }, [payEnabled]);
 
   async function requestPlan(plan: string) {
     setBusy(plan);
     // Pembayaran online aktif → langsung ke halaman bayar Midtrans (paket tim tetap daftar minat).
     if (payEnabled && plan !== "team") {
-      if (!(await startCheckout("plan", plan, PAY.failed))) setBusy(null);
+      if (!(await startCheckout("plan", plan, PAY.failed, PAY.opening))) setBusy(null);
       return;
     }
     const res = await fetch("/api/tools/request", { method: "POST", body: JSON.stringify({ plan, note }) });
