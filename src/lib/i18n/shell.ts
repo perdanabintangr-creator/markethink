@@ -67,7 +67,7 @@ const id = {
   seePlans: "Lihat paket",
   dateLocale: "id-ID",
   // Notifikasi versi baru
-  updatedTitle: "✨ Markethink baru saja diperbarui",
+  updatedTitle: "✨ Marqthink baru saja diperbarui",
   updatedDesc: "Muat ulang untuk memakai fitur & tampilan terbaru.",
   reload: "Muat ulang",
 };
@@ -138,7 +138,7 @@ const en: typeof id = {
   seePlans: "See plans",
   dateLocale: "en-US",
   // Notifikasi versi baru
-  updatedTitle: "✨ Markethink was just updated",
+  updatedTitle: "✨ Marqthink was just updated",
   updatedDesc: "Reload to get the latest features & design.",
   reload: "Reload",
 };

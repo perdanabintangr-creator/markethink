@@ -22,7 +22,7 @@ export const auditForm: ToolForm = {
       label: "Link profil / website / toko (opsional)",
       max: 300,
       placeholder: "mis. https://www.instagram.com/kopisenja.id atau https://kopisenja.id",
-      hint: "Markethink membuka link ini dan memakai isinya sebagai bukti. Halaman yang butuh login (mis. sebagian profil IG/TikTok) mungkin tidak terbaca.",
+      hint: "Marqthink membuka link ini dan memakai isinya sebagai bukti. Halaman yang butuh login (mis. sebagian profil IG/TikTok) mungkin tidak terbaca.",
     },
     {
       type: "textarea",

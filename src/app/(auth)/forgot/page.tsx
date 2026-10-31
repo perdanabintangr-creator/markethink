@@ -31,7 +31,7 @@ export default function ForgotPage() {
         <MailCheck className="mx-auto size-10 text-primary" />
         <h1 className="text-xl font-semibold">Cek email kamu 📬</h1>
         <p className="text-sm text-muted-foreground">
-          Kalau <b className="text-foreground">{sentTo}</b> terdaftar di Markethink, link untuk membuat password baru sudah kami kirim. Link bisa dibuka di HP
+          Kalau <b className="text-foreground">{sentTo}</b> terdaftar di Marqthink, link untuk membuat password baru sudah kami kirim. Link bisa dibuka di HP
           maupun laptop dan berlaku 1 jam.
         </p>
         <p className="text-xs text-muted-foreground">Tidak ada di kotak masuk? Cek folder Spam/Promosi, tunggu 1-2 menit.</p>

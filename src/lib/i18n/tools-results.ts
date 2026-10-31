@@ -285,7 +285,7 @@ const id = {
     method: (s: string) => `Metode: ${s}`,
     fieldTips: "Tips menyebar survei",
     excelNote:
-      "Excel berisi kolom “Pilihan jawaban” yang bisa langsung disalin ke Google Form. Setelah data terkumpul, upload hasilnya ke chat Markethink untuk dianalisis.",
+      "Excel berisi kolom “Pilihan jawaban” yang bisa langsung disalin ke Google Form. Setelah data terkumpul, upload hasilnya ke chat Marqthink untuk dianalisis.",
   },
 
   sizing: {
@@ -1124,7 +1124,7 @@ const en: ResultsText = {
     method: (s) => `Method: ${s}`,
     fieldTips: "Survey distribution tips",
     excelNote:
-      "The Excel file has an “Answer options” column you can paste straight into Google Forms. Once the data is in, upload the results to Markethink chat for analysis.",
+      "The Excel file has an “Answer options” column you can paste straight into Google Forms. Once the data is in, upload the results to Marqthink chat for analysis.",
   },
 
   sizing: {

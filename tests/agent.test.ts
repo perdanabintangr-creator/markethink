@@ -8,7 +8,7 @@ const { AGENT_TOOLS, AGENT_EXCLUDED, AGENT_MAX_STEPS } = await import("@/lib/age
 const { RUNNERS } = await import("@/lib/addons/tools");
 const { schemaForPrompt, coerceToSchema } = await import("@/lib/addons/json-output");
 
-describe("Markethink Agent", () => {
+describe("Marqthink Agent", () => {
   it("tools Agent: semua punya runner AI & form-nya bisa dijelaskan ke AI (JSON Schema)", () => {
     expect(AGENT_TOOLS.length).toBeGreaterThan(15);
     for (const t of AGENT_TOOLS) {

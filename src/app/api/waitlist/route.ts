@@ -21,6 +21,6 @@ export async function POST(req: Request) {
     note: parsed.data.note ?? null,
   });
   if (error) return jsonError(400, "save_failed");
-  await sendEmail(parsed.data.email, "Kamu masuk waitlist Markethink Pro", emails.waitlist());
+  await sendEmail(parsed.data.email, "Kamu masuk waitlist Marqthink Pro", emails.waitlist());
   return NextResponse.json({ ok: true });
 }

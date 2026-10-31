@@ -100,7 +100,7 @@ export function validSignature(n: MidtransStatus, key = serverKey()) {
   return expected === n.signature_key;
 }
 
-/** Status Midtrans → status pembayaran Markethink. */
+/** Status Midtrans → status pembayaran Marqthink. */
 export function paymentStatusOf(s: Pick<MidtransStatus, "transaction_status" | "fraud_status">): "paid" | "pending" | "failed" | "expired" | "canceled" {
   switch (s.transaction_status) {
     case "settlement":

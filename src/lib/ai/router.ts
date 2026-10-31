@@ -30,7 +30,7 @@ function instantiate(c: ModelCandidate): LanguageModelV2 {
     case "openrouter":
       return createOpenRouter({
         apiKey: providerKeys.openrouter,
-        headers: { "HTTP-Referer": resolveAppUrl(), "X-Title": "Markethink" },
+        headers: { "HTTP-Referer": resolveAppUrl(), "X-Title": "Marqthink" },
       }).chat(c.modelId) as unknown as LanguageModelV2;
   }
 }

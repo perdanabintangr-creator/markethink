@@ -97,7 +97,7 @@ export async function recordSale(_prev: ActionState, formData: FormData): Promis
   let userId = d.user_id;
   if (!userId && d.email) {
     const { data } = await admin.from("profiles").select("id").ilike("email", d.email).maybeSingle();
-    if (!data) return { error: `Akun ${d.email} belum terdaftar di Markethink. Minta pelanggan daftar dulu.` };
+    if (!data) return { error: `Akun ${d.email} belum terdaftar di Marqthink. Minta pelanggan daftar dulu.` };
     userId = data.id;
   }
   if (!userId) return { error: "Isi email pelanggan dulu." };
@@ -363,7 +363,7 @@ export async function createResetLink(userId: string): Promise<{ link?: string; 
   const admin = createAdminClient();
   const { data: u, error: getErr } = await admin.auth.admin.getUserById(userId);
   if (getErr || !u.user?.email) return { error: "Akun tidak ditemukan." };
-  const appUrl = (process.env.MARKETHINK_APP_URL || "https://markethink-pi.vercel.app").replace(/\/$/, "");
+  const appUrl = (process.env.MARQTHINK_APP_URL || "https://markethink-pi.vercel.app").replace(/\/$/, "");
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email: u.user.email,

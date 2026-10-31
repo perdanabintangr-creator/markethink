@@ -104,7 +104,7 @@ export async function createMayarPayment(p: MayarPaymentParams) {
   return { redirectUrl: created.link, reference: created.id };
 }
 
-/** Status Mayar → status Markethink. */
+/** Status Mayar → status Marqthink. */
 export function mayarStatusOf(raw: unknown): "paid" | "pending" | "failed" | "expired" | "canceled" {
   const s = typeof raw === "string" ? raw.toLowerCase() : raw === true ? "paid" : "";
   if (["paid", "success", "settled", "settlement", "completed", "complete"].includes(s)) return "paid";

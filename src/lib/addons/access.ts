@@ -9,7 +9,7 @@ import type { AddonAccessLite, AddonOffer, BundleOffer, ToolAccessLite } from ".
 type Profile = { id: string; role: string; plan_id: string };
 
 /**
- * Hak pakai Smart Tools & Markethink Agent: ditentukan paket (feature flag `tools_pro` / `agent`) dan saldo kredit bulanan.
+ * Hak pakai Smart Tools & Marqthink Agent: ditentukan paket (feature flag `tools_pro` / `agent`) dan saldo kredit bulanan.
  * Add-on yang dibeli terpisah (untuk `addonId`) dipakai lebih dulu di semua paket; untuk Free, add-on satu-satunya pembuka tool.
  * Admin selalu boleh.
  */

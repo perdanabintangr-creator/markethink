@@ -439,3 +439,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Webhook `/api/webhooks/mayar`: cocokkan lewat nomor order/`payments.gateway_ref` (kolom baru, migrasi 0050), status selalu dicek ulang ke API; bila API belum lunas, `payment.received` hanya dipercaya jika header `x-callback-token` cocok dengan `MAYAR_WEBHOOK_TOKEN` dan nominal ≥ tagihan.
 - Env: `MAYAR_API_KEY` (wajib), `MAYAR_IS_PRODUCTION="true"` untuk live (default sandbox api.mayar.club), `MAYAR_WEBHOOK_TOKEN` (disarankan). Bila terpasang, Mayar otomatis jadi gateway utama (bisa dipaksa lewat `PAYMENT_PROVIDER`).
 - Potongan biaya per transaksi Mayar belum diketahui; founder diminta mengirim info biaya sebelum live.
+
+## 2026-10-31 · Rebranding Markethink → Marqthink (keputusan founder)
+- Nama brand kini satu sumber: `src/lib/brand.ts` (`BRAND` "Marqthink", `BRAND_WORDMARK` "MARQTHINK" untuk logo, `BRAND_SLUG` "marqthink" untuk nama file/UID). Logo, judul halaman, email pengirim default, ID kalender (.ics), nama file unduhan memakai konstanta ini.
+- Semua teks tampilan (UI id/en, email, nama otak "Marqthink Junior/Senior/Head/Director", prompt AI, PPT/Excel, halaman legal, back office) diganti lewat `scripts/rename-brand.mjs` (bisa dipakai lagi untuk rebranding berikutnya). Deskripsi paket di DB lewat migrasi 0051.
+- Nama teknis internal tidak diubah (lihat BRANDING.md). Domain production masih markethink-pi.vercel.app sampai founder menambah domain baru; daftar langkah manual di BRANDING.md.

@@ -76,7 +76,7 @@ export async function toolRunsIndexPrompt(db: SupabaseClient, userId: string) {
     return `- id=${r.id} · "${(r.title ?? name).replace(/"/g, "'")}" · ${name} · ${dateWIB(r.created_at)}${r.versions > 1 ? ` · versi ${r.versions}` : ""}`;
   });
   return `HASIL SMART TOOLS MILIK USER
-User juga memakai Markethink Smart Tools (mode terpisah di sidebar). Hasil terbarunya (terbaru di atas):
+User juga memakai Marqthink Smart Tools (mode terpisah di sidebar). Hasil terbarunya (terbaru di atas):
 ${lines.join("\n")}
 Bila user menyinggung hasil yang dibuat di Smart Tools (mis. "yang sudah saya buat di Smart Tools", "persona tadi", "kalender kontenku", menyebut brand/judulnya),
 panggil tool \`read_tool_result\` dengan id yang paling cocok SEBELUM menjawab, lalu jawab berdasarkan isinya (sebut judulnya). Jangan mengarang isi hasil.

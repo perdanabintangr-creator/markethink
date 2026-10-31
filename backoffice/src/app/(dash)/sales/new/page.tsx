@@ -14,7 +14,7 @@ export default async function NewSalePage() {
     <div className="max-w-3xl">
       <PageTitle
         title="Catat penjualan"
-        description="Setelah pelanggan transfer/bayar, catat di sini — paketnya langsung aktif dan masuk laporan. Pelanggan harus sudah punya akun Markethink."
+        description="Setelah pelanggan transfer/bayar, catat di sini — paketnya langsung aktif dan masuk laporan. Pelanggan harus sudah punya akun Marqthink."
       />
       <Card>
         <CardContent className="p-5">

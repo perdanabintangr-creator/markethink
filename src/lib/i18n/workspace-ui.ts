@@ -5,7 +5,7 @@ const id = {
   // Menu
   dashboard: "Beranda",
   newChat: "Chat baru",
-  agent: "Markethink Agent",
+  agent: "Marqthink Agent",
   smartTools: "Smart Tools",
   results: "Hasil saya",
   calendar: "Kalender konten",
@@ -93,7 +93,7 @@ const id = {
 const en: typeof id = {
   dashboard: "Home",
   newChat: "New chat",
-  agent: "Markethink Agent",
+  agent: "Marqthink Agent",
   smartTools: "Smart Tools",
   results: "My results",
   calendar: "Content calendar",

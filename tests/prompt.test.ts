@@ -28,7 +28,7 @@ describe("system prompt", () => {
 
   it("memuat prompts/system.md beserta instruksi keamanan", async () => {
     const out = await buildSystemPrompt({ role: "Mahasiswa" });
-    expect(out).toContain("Markethink");
+    expect(out).toContain("Marqthink");
     expect(out).toContain("untrusted_data");
     expect(out).not.toMatch(/\{(role|industry|experience|brand_kit|memory)\}/);
   });

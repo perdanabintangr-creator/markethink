@@ -1,7 +1,7 @@
 import { TOOLS, type ToolId } from "@/lib/addons/catalog";
 
 /**
- * Tools yang bisa dipakai Markethink Agent. Dikecualikan: kalkulator (bukan AI) dan tools yang wajib
+ * Tools yang bisa dipakai Marqthink Agent. Dikecualikan: kalkulator (bukan AI) dan tools yang wajib
  * membaca data performa milik user (laporan iklan/bulanan/KOL) — itu tetap dijalankan manual dengan upload file.
  */
 export const AGENT_EXCLUDED: ToolId[] = ["calc", "ads", "report", "kolreport"];

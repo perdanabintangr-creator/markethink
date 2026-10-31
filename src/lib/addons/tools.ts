@@ -399,7 +399,7 @@ Aturan:
           title: "Langkah perbaikan",
           steps: padSteps(out.next_steps.map((s, i) => ({ title: clip(`${i + 1}. Dampak ${s.impact}`, 40), text: clip(s.step, 120) }))),
         },
-        { layout: "closing", title: "Catatan data", bullets: [clip(out.data_notes, 140), "Dianalisis dengan Markethink · Dokter Iklan"] },
+        { layout: "closing", title: "Catatan data", bullets: [clip(out.data_notes, 140), "Dianalisis dengan Marqthink · Dokter Iklan"] },
       ],
     });
     const colors: Record<string, string> = { bagus: "DCFCE7", perhatian: "FEF3C7", boros: "FEE2E2" };

@@ -7,7 +7,7 @@ import { loadAgentRun } from "@/lib/agent/server";
 import { AgentMission } from "@/components/agent/agent-mission";
 import type { ToolFileLite } from "@/lib/addons/format";
 
-export const metadata = { title: "Markethink Agent" };
+export const metadata = { title: "Marqthink Agent" };
 export const dynamic = "force-dynamic";
 
 export default async function AgentRunPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +26,7 @@ export default async function AgentRunPage({ params }: { params: Promise<{ id: s
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl space-y-4 px-4 py-6 sm:py-8">
         <Link href="/tools/agent" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Markethink Agent
+          <ArrowLeft className="size-4" /> Marqthink Agent
         </Link>
         <AgentMission
           initial={run}

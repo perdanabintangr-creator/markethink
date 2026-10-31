@@ -1,6 +1,6 @@
 /**
  * Konfigurasi publik Supabase (aman berada di browser — data dilindungi RLS).
- * Env var tetap diutamakan; nilai bawaan = project production Markethink,
+ * Env var tetap diutamakan; nilai bawaan = project production Marqthink,
  * supaya deploy tetap jalan walau env publik belum diisi di Vercel.
  */
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://cqrstytnbfspbwgyvpzi.supabase.co";

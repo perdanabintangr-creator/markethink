@@ -25,7 +25,7 @@ async function afterLoginTasks(userId: string, email: string | undefined) {
     .eq("id", userId)
     .single();
   const isNew = profile && !profile.onboarded && Date.now() - new Date(profile.created_at).getTime() < 10 * 60 * 1000;
-  if (isNew && email) await sendEmail(email, "Selamat datang di Markethink 👋", emails.welcome(profile.full_name ?? ""));
+  if (isNew && email) await sendEmail(email, "Selamat datang di Marqthink 👋", emails.welcome(profile.full_name ?? ""));
   await admin.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", userId);
 }
 

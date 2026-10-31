@@ -17,7 +17,7 @@ describe("pembayaran Midtrans", () => {
     expect(validSignature(n, "SB-key")).toBe(false);
   });
 
-  it("status Midtrans → status Markethink", () => {
+  it("status Midtrans → status Marqthink", () => {
     expect(paymentStatusOf({ transaction_status: "settlement" })).toBe("paid");
     expect(paymentStatusOf({ transaction_status: "capture", fraud_status: "accept" })).toBe("paid");
     expect(paymentStatusOf({ transaction_status: "capture", fraud_status: "challenge" })).toBe("pending");

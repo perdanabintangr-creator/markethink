@@ -199,7 +199,7 @@ async function viaOpenRouterImages(key: string, model: string, prompt: string, a
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
       "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://markethink-pi.vercel.app",
-      "X-Title": "Markethink",
+      "X-Title": "Marqthink",
     },
     body: JSON.stringify({ model, prompt, aspect_ratio: imageApiAspect(aspectRatio), n: 1 }),
   });
@@ -236,7 +236,7 @@ async function viaOpenRouter(key: string, prompt: string, aspectRatio: string, r
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
         "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://markethink-pi.vercel.app",
-        "X-Title": "Markethink",
+        "X-Title": "Marqthink",
       },
       body: JSON.stringify({
         model,

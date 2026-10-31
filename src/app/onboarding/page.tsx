@@ -16,7 +16,7 @@ export default async function OnboardingPage() {
           Halo{profile.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}! Kenalan dulu yuk 👋
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Biar jawaban Markethink pas dengan kebutuhanmu. Cuma 30 detik, bisa diubah nanti di Pengaturan.
+          Biar jawaban Marqthink pas dengan kebutuhanmu. Cuma 30 detik, bisa diubah nanti di Pengaturan.
         </p>
         <OnboardingForm needsConsent={!profile.consent_at} />
       </div>

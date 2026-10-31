@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 export interface ResultItem {
   id: string;
   title: string;
-  /** Nama tool (atau "Markethink Agent"). */
+  /** Nama tool (atau "Marqthink Agent"). */
   kind: string;
   /** Kelompok untuk filter (mis. "Konten & Sosmed", "Agent"). */
   group: string;

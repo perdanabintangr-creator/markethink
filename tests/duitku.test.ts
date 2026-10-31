@@ -20,7 +20,7 @@ describe("pembayaran Duitku", () => {
     expect(validDuitkuCallback(n, "kunci", "DS123")).toBe(false);
   });
 
-  it("status Duitku → status Markethink", () => {
+  it("status Duitku → status Marqthink", () => {
     expect(duitkuStatusOf("00")).toBe("paid");
     expect(duitkuStatusOf("01")).toBe("pending");
     expect(duitkuStatusOf("02")).toBe("failed");

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   if (env.resendKey && env.supabaseServiceKey) {
     const { data, error } = await createAdminClient().auth.admin.generateLink({ type: "recovery", email, options: { redirectTo } });
     if (!error && data.properties?.action_link) {
-      const sent = await sendEmail(email, "Reset password Markethink", emails.resetPassword(data.properties.action_link));
+      const sent = await sendEmail(email, "Reset password Marqthink", emails.resetPassword(data.properties.action_link));
       if (!sent.skipped) return NextResponse.json({ ok: true });
     } else if (error && !/not.?found/i.test(error.message)) {
       console.error("[forgot] generateLink gagal", error.message);

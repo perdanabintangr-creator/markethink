@@ -9,6 +9,7 @@ import { buildPresentation, presentationSchema } from "@/lib/pptx";
 import { sanitizeFileName } from "@/lib/files";
 import { untrusted } from "@/lib/ai/prompt";
 import { DEFAULT_TOOL_TIER, type ToolTier } from "./tool-tier";
+import { BRAND_SLUG } from "@/lib/brand";
 
 export interface ToolCtx {
   admin: SupabaseClient;
@@ -199,7 +200,7 @@ export function addCost(
 /** Simpan file hasil tool ke Storage + tabel attachments (diunduh lewat /api/attachments/:id). */
 export async function storeToolFile(ctx: ToolCtx, name: string, kind: "pptx" | "xlsx", bytes: Uint8Array, label: string): Promise<ToolFile> {
   const id = crypto.randomUUID();
-  const clean = sanitizeFileName(name).replace(/\s+/g, "-") || `markethink.${kind}`;
+  const clean = sanitizeFileName(name).replace(/\s+/g, "-") || `${BRAND_SLUG}.${kind}`;
   const mime = kind === "pptx" ? PPTX_MIME : XLSX_MIME;
   const path = `${ctx.userId}/generated/tools/${id}-${clean}`;
   const { error: upErr } = await ctx.admin.storage.from("uploads").upload(path, bytes, { contentType: mime });
@@ -302,12 +303,12 @@ export function sanitizeDeck(deck: { slides: AnySlide[] } & Record<string, unkno
     }
     if (s) fixed.push(s);
   }
-  while (fixed.length < 3) fixed.push({ layout: "closing", title: "Terima kasih", bullets: ["Dibuat dengan Markethink Smart Tools"] });
+  while (fixed.length < 3) fixed.push({ layout: "closing", title: "Terima kasih", bullets: ["Dibuat dengan Marqthink Smart Tools"] });
   return { ...deck, slides: fixed.slice(0, 20) };
 }
 
 /**
- * Bangun file PPT dari slide yang disusun program (bukan AI) — memakai mesin desain PPT Markethink.
+ * Bangun file PPT dari slide yang disusun program (bukan AI) — memakai mesin desain PPT Marqthink.
  * Tidak pernah melempar error: bila gagal, kembalikan null (hasil & Excel tetap jadi).
  */
 export async function makeDeck(deck: { slides: AnySlide[] } & Record<string, unknown>): Promise<Uint8Array | null> {
@@ -364,7 +365,7 @@ export function notesSheet(notes: string, sources: { title: string; url: string 
   }
   return {
     name: "Temuan riset",
-    title: "Temuan riset lengkap (riset web Markethink)",
+    title: "Temuan riset lengkap (riset web Marqthink)",
     columns: [
       { header: "Topik", key: "topic", width: 26, wrap: true },
       { header: "Temuan", key: "finding", width: 90, wrap: true },
@@ -384,7 +385,7 @@ export function withNotes(ctx: ToolCtx, sheets: SheetSpec[], sources?: { title: 
 export async function makeWorkbook(sheets: SheetSpec[]) {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Markethink";
+  wb.creator = "Marqthink";
   for (const spec of sheets) {
     const ws = wb.addWorksheet(spec.name.slice(0, 31).replace(/[\\/*?:[\]]/g, " "));
     let headerRow = 1;
@@ -422,4 +423,4 @@ export const fileSlug = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 40) || "markethink";
+    .slice(0, 40) || BRAND_SLUG;

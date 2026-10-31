@@ -3,8 +3,8 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Back Office Markethink", template: "%s · Back Office Markethink" },
-  description: "Dashboard internal founder & tim bisnis Markethink.",
+  title: { default: "Back Office Marqthink", template: "%s · Back Office Marqthink" },
+  description: "Dashboard internal founder & tim bisnis Marqthink.",
   robots: { index: false, follow: false },
 };
 

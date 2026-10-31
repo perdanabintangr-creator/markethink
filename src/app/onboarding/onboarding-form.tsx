@@ -122,7 +122,7 @@ export function OnboardingForm({ needsConsent }: { needsConsent: boolean }) {
       )}
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
       <Button size="lg" className="w-full sm:w-auto" disabled={pending || !role || !industry || !experience || !goal}>
-        {pending && <Loader2 className="animate-spin" />} Mulai pakai Markethink
+        {pending && <Loader2 className="animate-spin" />} Mulai pakai Marqthink
       </Button>
     </form>
   );

@@ -135,12 +135,12 @@ export default async function LandingPage() {
         <Globe className="mx-auto size-8 text-primary" />
         <h2 className="mt-4 text-2xl font-bold sm:text-3xl">Siap bikin marketing yang lebih tajam?</h2>
         <p className="mt-2 text-muted-foreground">Daftar beta gratis, tanpa kartu kredit.</p>
-        <Button asChild size="lg" className="mt-6"><Link href={user ? "/dashboard" : "/register"}>Coba Markethink</Link></Button>
+        <Button asChild size="lg" className="mt-6"><Link href={user ? "/dashboard" : "/register"}>Coba Marqthink</Link></Button>
       </section>
 
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row">
-          <span>© {new Date().getFullYear()} Markethink</span>
+          <span>© {new Date().getFullYear()} Marqthink</span>
           <div className="flex gap-4">
             <Link href="/terms" className="hover:underline">Syarat Layanan</Link>
             <Link href="/privacy" className="hover:underline">Kebijakan Privasi</Link>

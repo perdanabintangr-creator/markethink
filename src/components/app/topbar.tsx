@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Menu, Search, SquarePen } from "lucide-react";
 import { LogoMark } from "@/components/logo";
+import { BRAND_WORDMARK } from "@/lib/brand";
 import { shellText } from "@/lib/i18n/shell";
 import { workspaceUiText } from "@/lib/i18n/workspace-ui";
 import { useApp } from "./app-context";
@@ -20,7 +21,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
       </button>
       <Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold" aria-label={t.dashboard}>
         <LogoMark className="size-6" gradientId="mt-logo-top" />
-        Markethink
+        <span className="tracking-wide">{BRAND_WORDMARK}</span>
       </Link>
       <div className="flex-1" />
       <button onClick={openCommandPalette} className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label={t.searchOrRun}>

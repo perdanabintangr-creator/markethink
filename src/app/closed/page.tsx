@@ -15,7 +15,7 @@ export default async function ClosedBetaPage() {
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
       <Logo />
       <div className="max-w-md space-y-2">
-        <h1 className="text-xl font-semibold">Markethink masih dalam uji coba tertutup 🔒</h1>
+        <h1 className="text-xl font-semibold">Marqthink masih dalam uji coba tertutup 🔒</h1>
         <p className="text-sm text-muted-foreground">
           Akun kamu sudah terdaftar. Kami akan mengabari lewat email begitu akses beta dibuka untukmu.
         </p>

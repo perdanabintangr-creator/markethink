@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND_WORDMARK } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 /** `gradientId` wajib unik bila logo tampil lebih dari sekali di satu halaman (mis. sidebar & bar atas). */
@@ -21,7 +22,7 @@ export function Logo({ href = "/", className, gradientId }: { href?: string; cla
   return (
     <Link href={href} className={cn("flex items-center gap-2 font-semibold tracking-tight", className)}>
       <LogoMark gradientId={gradientId} />
-      <span>Markethink</span>
+      <span className="tracking-wide">{BRAND_WORDMARK}</span>
     </Link>
   );
 }

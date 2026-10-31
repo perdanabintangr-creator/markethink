@@ -45,7 +45,7 @@ const id = {
     "Satu kuota bulanan untuk semua fitur (chat, riset, gambar, PPT, Smart Tools & Agent), dihitung dari pemakaian nyata dan direset tiap tanggal 1.",
   plans: {
     beta: {
-      headline: "Kenalan dengan Markethink",
+      headline: "Kenalan dengan Marqthink",
       desc: "Coba asisten marketing AI untuk kebutuhan ringan sehari-hari.",
       quota: "Kuota percobaan",
       features: [
@@ -78,7 +78,7 @@ const id = {
       features: [
         { icon: "tools", text: "Semua Smart Tools: strategi, riset, konten, iklan & laporan" },
         { icon: "sharp", text: "Otak Head (lebih tajam)" },
-        { icon: "agent", text: "Markethink Agent: satu tujuan, beberapa tools jalan otomatis" },
+        { icon: "agent", text: "Marqthink Agent: satu tujuan, beberapa tools jalan otomatis" },
         { icon: "visual", text: "Visual premium: PPT penuh foto AI" },
         { icon: "edit", text: "Edit gambar pintar, layout dirapikan otomatis" },
         { icon: "project", text: "Project & penyimpanan lebih lega" },
@@ -123,7 +123,7 @@ const en: typeof id = {
     "One monthly quota for everything (chat, research, images, PPT, Smart Tools & Agent), based on actual usage and reset on the 1st of each month.",
   plans: {
     beta: {
-      headline: "Meet Markethink",
+      headline: "Meet Marqthink",
       desc: "Try an AI marketing assistant for light everyday needs.",
       quota: "Trial quota",
       features: [
@@ -156,7 +156,7 @@ const en: typeof id = {
       features: [
         { icon: "tools", text: "All Smart Tools: strategy, research, content, ads & reports" },
         { icon: "sharp", text: "Head brain (sharper)" },
-        { icon: "agent", text: "Markethink Agent: one goal, several tools run automatically" },
+        { icon: "agent", text: "Marqthink Agent: one goal, several tools run automatically" },
         { icon: "visual", text: "Premium visuals: PPT full of AI photos" },
         { icon: "edit", text: "Smart image editing that tidies the layout for you" },
         { icon: "project", text: "Roomier projects & storage" },

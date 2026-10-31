@@ -25,7 +25,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .map((r) => `- [${r!.title ?? toolInfo(r!.tool as string)?.name}](/tools/${r!.tool}/${r!.id}) · ${toolInfo(r!.tool as string)?.name} (id=${r!.id})`)
     .join("\n");
   const text = [
-    `🤖 **Paket Markethink Agent: ${run.title ?? "Misi"}**`,
+    `🤖 **Paket Marqthink Agent: ${run.title ?? "Misi"}**`,
     `**Tujuan:**\n> ${run.goal.replace(/\n/g, "\n> ")}`,
     "---",
     run.summary,
@@ -36,7 +36,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const { data: chat, error } = await admin
     .from("chats")
-    .insert({ user_id: s.user.id, title: `Paket: ${run.title ?? "Markethink Agent"}`.slice(0, 80), source_agent_id: run.id })
+    .insert({ user_id: s.user.id, title: `Paket: ${run.title ?? "Marqthink Agent"}`.slice(0, 80), source_agent_id: run.id })
     .select("id")
     .single();
   if (error || !chat) return jsonError(500, "chat_failed");

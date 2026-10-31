@@ -31,7 +31,7 @@ export interface OAuthCookiePayload {
   s: string;
   /** code_verifier PKCE. */
   v: string;
-  /** user Markethink yang memulai alur. */
+  /** user Marqthink yang memulai alur. */
   u: string;
   /** Halaman tujuan setelah selesai (path relatif, sudah divalidasi). */
   r: string;
@@ -128,7 +128,7 @@ export function basicAuthHeader(clientId: string, clientSecret: string) {
 }
 
 /** Judul/nama untuk header metadata Canva: dipotong maks 50 karakter (unencoded), lalu base64 UTF-8. */
-export function canvaTitleBase64(title: string, fallback = "Markethink") {
+export function canvaTitleBase64(title: string, fallback = "Marqthink") {
   const clean = title.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim() || fallback;
   const cut = Array.from(clean).slice(0, 50).join("").trim();
   return Buffer.from(cut || fallback, "utf8").toString("base64");

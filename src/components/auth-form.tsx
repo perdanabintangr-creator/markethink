@@ -128,7 +128,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   return (
     <div className="space-y-5">
       <div className="space-y-1 text-center">
-        <h1 className="text-xl font-semibold">{mode === "login" ? "Masuk ke Markethink" : "Daftar Beta Gratis"}</h1>
+        <h1 className="text-xl font-semibold">{mode === "login" ? "Masuk ke Marqthink" : "Daftar Beta Gratis"}</h1>
         <p className="text-sm text-muted-foreground">
           {mode === "login" ? "Lanjutkan ke otak marketing kamu." : "Coba gratis dengan kuota harian."}
         </p>
@@ -186,7 +186,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </div>
         <Button type="submit" className="w-full" disabled={loading || redirecting}>
           {(loading || redirecting) && <Loader2 className="animate-spin" />}
-          {redirecting ? "Membuka Markethink…" : mode === "login" ? "Masuk" : "Daftar"}
+          {redirecting ? "Membuka Marqthink…" : mode === "login" ? "Masuk" : "Daftar"}
         </Button>
       </form>
 

@@ -8,12 +8,12 @@ export default function TermsPage() {
       <p>Terakhir diperbarui: 8 Oktober 2026</p>
       <h2>1. Layanan beta</h2>
       <p>
-        Markethink saat ini berstatus <strong>beta gratis</strong> dengan kuota kredit harian. Fitur, kuota, dan
+        Marqthink saat ini berstatus <strong>beta gratis</strong> dengan kuota kredit harian. Fitur, kuota, dan
         ketersediaan dapat berubah sewaktu-waktu tanpa pemberitahuan.
       </p>
       <h2>2. Akun</h2>
       <p>
-        Markethink hanya untuk pengguna berusia <strong>18 tahun ke atas</strong>. Dengan mendaftar, kamu menyatakan sudah
+        Marqthink hanya untuk pengguna berusia <strong>18 tahun ke atas</strong>. Dengan mendaftar, kamu menyatakan sudah
         berusia minimal 18 tahun.
       </p>
       <p>Kamu bertanggung jawab menjaga kerahasiaan akun. Satu orang satu akun; pembuatan banyak akun untuk menghindari kuota dilarang.</p>

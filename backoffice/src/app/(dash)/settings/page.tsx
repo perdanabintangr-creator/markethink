@@ -11,7 +11,7 @@ import { setAppSetting, updatePlanCredits, updatePlanStorage } from "../../actio
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pengaturan aplikasi" };
 
-/** Owner: saklar fitur & kuota aplikasi AI Markethink (dulu menu Admin di aplikasi). */
+/** Owner: saklar fitur & kuota aplikasi AI Marqthink (dulu menu Admin di aplikasi). */
 export default async function AppSettingsPage() {
   const { isOwner } = await requireBackoffice();
   if (!isOwner) redirect("/");
@@ -54,7 +54,7 @@ export default async function AppSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageTitle title="Pengaturan aplikasi" description="Saklar fitur & kuota aplikasi AI Markethink. Perubahan langsung berlaku untuk user." />
+      <PageTitle title="Pengaturan aplikasi" description="Saklar fitur & kuota aplikasi AI Marqthink. Perubahan langsung berlaku untuk user." />
       <div className="grid gap-4 lg:grid-cols-3">
         {toggles.map((t) => (
           <Card key={t.title}>

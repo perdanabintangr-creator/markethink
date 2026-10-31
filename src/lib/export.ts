@@ -1,5 +1,7 @@
 /** Utilitas export canvas: CSV dari tabel markdown, DOCX dari markdown sederhana. */
 
+import { BRAND_SLUG } from "@/lib/brand";
+
 export function parseMarkdownTables(md: string): string[][][] {
   const lines = md.split("\n");
   const tables: string[][][] = [];
@@ -63,7 +65,7 @@ export function slugify(s: string) {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
-      .slice(0, 60) || "markethink"
+      .slice(0, 60) || BRAND_SLUG
   );
 }
 
@@ -122,7 +124,7 @@ export async function markdownToDocx(md: string, title: string): Promise<Blob> {
     i++;
   }
 
-  const doc = new Document({ title, creator: "Markethink", sections: [{ children }] });
+  const doc = new Document({ title, creator: "Marqthink", sections: [{ children }] });
   return Packer.toBlob(doc);
 }
 

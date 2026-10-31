@@ -18,7 +18,7 @@ describe("pembayaran Mayar", () => {
     expect(parseCreated({ message: "error" })).toBeNull();
   });
 
-  it("status Mayar → status Markethink", () => {
+  it("status Mayar → status Marqthink", () => {
     expect(mayarStatusOf("paid")).toBe("paid");
     expect(mayarStatusOf("SUCCESS")).toBe("paid");
     expect(mayarStatusOf(true)).toBe("paid");
@@ -48,7 +48,7 @@ describe("pembayaran Mayar", () => {
   it("petunjuk webhook: nomor order dari deskripsi & id Mayar", () => {
     const h = webhookHints({
       event: { received: "payment.received" },
-      data: { id: "tx-9", productId: "pr-9", status: true, amount: 200000, productName: "Markethink Pro (1 bulan) · MTK-P-mhd2k1-ab12" },
+      data: { id: "tx-9", productId: "pr-9", status: true, amount: 200000, productName: "Marqthink Pro (1 bulan) · MTK-P-mhd2k1-ab12" },
     });
     expect(h).toEqual({ event: "payment.received", ids: ["tx-9", "pr-9"], orderId: "MTK-P-mhd2k1-ab12", amount: 200000, paidFlag: true });
     expect(webhookHints({ event: "payment.reminder", data: { id: "x1", status: "unpaid" } })).toMatchObject({ event: "payment.reminder", paidFlag: false, orderId: null, ids: [] });

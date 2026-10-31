@@ -26,6 +26,7 @@ import { readToolResult } from "@/lib/addons/chat-context";
 import { canvaEnabled, importAttachmentToCanva } from "@/lib/connectors/canva";
 import { attachmentIdFromUrl, connectUrlFor } from "@/lib/connectors/apps";
 import { connectorsText } from "@/lib/i18n/connectors";
+import { BRAND_SLUG } from "@/lib/brand";
 
 export const IMAGE_CREDIT_COST = 6; // ±Rp555 modal per gambar (1 kredit ≈ Rp100)
 export const PPTX_CREDIT_COST = 2;
@@ -185,7 +186,7 @@ export function createChatTools(ctx: ToolCtx) {
   return {
     read_tool_result: tool({
       description:
-        "Baca hasil Markethink Smart Tools milik user (versi terbaru), mis. persona, kalender konten, marketing plan, riset pasar. " +
+        "Baca hasil Marqthink Smart Tools milik user (versi terbaru), mis. persona, kalender konten, marketing plan, riset pasar. " +
         "Pakai id dari daftar HASIL SMART TOOLS MILIK USER di instruksi sistem, setiap kali user menyinggung hasil yang dibuat di Smart Tools. " +
         `Maksimal ${MAX_TOOL_READS} hasil per pesan — pilih yang paling relevan. Default versi ringkas; lengkap=true bila butuh detail (mis. temuan riset).`,
       inputSchema: z.object({
@@ -240,7 +241,7 @@ export function createChatTools(ctx: ToolCtx) {
             (brandColors && !refs.length ? `\nWhere it fits naturally, use the brand colors ${brandColors} as accent colors.` : "");
           const img = await generateImage(finalPrompt, aspect_ratio, refs, { budget: ctx.budgetImages, premiumEdit: premiumEdit && refs.length > 0 });
           const ext = img.mime.includes("jpeg") ? "jpg" : img.mime.split("/")[1] || "png";
-          const saved = await storeFile(ctx, "images", `markethink-${Date.now()}.${ext}`, img.mime, img.bytes, `Gambar AI: ${prompt}`);
+          const saved = await storeFile(ctx, "images", `${BRAND_SLUG}-${Date.now()}.${ext}`, img.mime, img.bytes, `Gambar AI: ${prompt}`);
           const cost = img.costUsd ?? IMAGE_COST_USD;
           // Edit premium: sesuaikan potongan ke biaya nyata (min. tarif gambar biasa); jatuh ke model biasa → tarif biasa.
           const credits = premiumEdit ? Math.max(IMAGE_CREDIT_COST, creditsForUsd(cost)) : IMAGE_CREDIT_COST;
@@ -439,7 +440,7 @@ export function createChatTools(ctx: ToolCtx) {
       ? {
           send_to_canva: tool({
             description:
-              "Kirim file hasil Markethink (PPT, carousel/poster, gambar AI, foto produk) atau gambar dari user ke akun Canva milik user " +
+              "Kirim file hasil Marqthink (PPT, carousel/poster, gambar AI, foto produk) atau gambar dari user ke akun Canva milik user " +
               "sebagai desain yang bisa diedit, lalu dapat link 'Buka di Canva'. Pakai saat user menyebut @Canva atau minta hasil diedit/dibuka/dikirim ke Canva. " +
               "attachment_id: PPT = id file PPT; carousel/poster = id PDF-nya (atau id ZIP-nya); gambar = id gambar. Tidak memotong kuota user.",
             inputSchema: z.object({
@@ -794,7 +795,7 @@ export function capabilitiesPrompt(imageBlockedReason: string | null, opts: { we
     "- **Membuat PPT/slide:** bila user minta presentasi/PPT/deck/slide, panggil tool `create_presentation` dengan isi lengkap dan berkualitas (8–14 slide kecuali diminta lain) dan ikuti aturan desain di deskripsi tool: layout bervariasi (agenda, section, cards+ikon, stats, chart, timeline, comparison, table, quote, closing), teks ringkas, gambar cover, dan speaker notes. Bila ada dokumen terlampir, rangkum & susun slide dari dokumen itu seperti NotebookLM. Setelah file jadi, balas SINGKAT (maks 4 baris): 1 kalimat asumsi utama + 2–3 poin yang perlu user sesuaikan. JANGAN membuat tabel atau mengulang daftar/isi slide (sudah tampil di kartu PPT).",
     "- **Carousel & poster:** bila user minta carousel IG/TikTok/LinkedIn, poster, flyer, atau konten feed berisi teks, panggil `create_carousel` (bukan generate_image) — hasilnya file JPEG per slide + PDF + caption siap posting.",
     canvaEnabled()
-      ? "- **Canva (@Canva):** bila user menyebut @Canva atau minta hasil diedit/dibuka di Canva, panggil `send_to_canva` dengan id file hasil Markethink (PPT: id file PPT; carousel/poster: id PDF; gambar: id gambar) atau gambar dari user. Bila belum ada hasil yang cocok, buat dulu (create_presentation / create_carousel / generate_image) lalu kirim. Bila hasilnya needsConnect, minta user menekan tombol Hubungkan Canva di kartu, lalu minta lagi. Setelah berhasil cukup 1 kalimat; jangan menulis ulang URL."
+      ? "- **Canva (@Canva):** bila user menyebut @Canva atau minta hasil diedit/dibuka di Canva, panggil `send_to_canva` dengan id file hasil Marqthink (PPT: id file PPT; carousel/poster: id PDF; gambar: id gambar) atau gambar dari user. Bila belum ada hasil yang cocok, buat dulu (create_presentation / create_carousel / generate_image) lalu kirim. Bila hasilnya needsConnect, minta user menekan tombol Hubungkan Canva di kartu, lalu minta lagi. Setelah berhasil cukup 1 kalimat; jangan menulis ulang URL."
       : "",
     imageBlockedReason
       ? ""

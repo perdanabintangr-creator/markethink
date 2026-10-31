@@ -1,4 +1,4 @@
--- File gabungan semua migrasi Markethink. Jalankan SEKALI di Supabase → SQL Editor (project baru).
+-- File gabungan semua migrasi Marqthink. Jalankan SEKALI di Supabase → SQL Editor (project baru).
 -- Dibuat otomatis oleh: npm run db:bundle — jangan edit manual.
 
 -- ===== 20261008000001_init.sql =====
@@ -2685,3 +2685,8 @@ update public.plans set description = 'Semua otak termasuk Director, semua Smart
 -- Id tagihan di gateway (mis. id "payment request" Mayar) untuk cek status & mencocokkan webhook.
 alter table public.payments add column if not exists gateway_ref text;
 create index if not exists payments_gateway_ref_idx on public.payments (gateway_ref) where gateway_ref is not null;
+
+
+-- ===== 20261031000051_rebrand_marqthink.sql =====
+-- Rebranding Markethink → Marqthink (keputusan founder 31 Okt 2026): teks deskripsi paket.
+update public.plans set description = replace(description, 'Markethink', 'Marqthink') where description like '%Markethink%';

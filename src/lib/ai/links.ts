@@ -19,7 +19,7 @@ export const LINK_CHARS_NOW = 12_000;
 export const LINK_CHARS_HISTORY = 4_000;
 const MAX_BYTES = 8 * 1024 * 1024;
 const TIMEOUT_MS = 9_000;
-const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 MarkethinkReader/1.0";
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 MarqthinkReader/1.0";
 
 export type LinkKind = LinkPart["kind"];
 

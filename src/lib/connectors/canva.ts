@@ -368,7 +368,7 @@ async function importImage(userId: string, bytes: Uint8Array, mime: string, titl
       type: "type_and_asset",
       design_type: { type: "custom", width: size.width, height: size.height },
       asset_id: job.asset.id,
-      title: Array.from(title).slice(0, 100).join("") || "Markethink",
+      title: Array.from(title).slice(0, 100).join("") || "Marqthink",
     }),
   });
   const design = ((await designRes.json()) as { design: { id: string; urls: DesignLinks } }).design;
@@ -463,5 +463,5 @@ export async function importAttachmentToCanva(userId: string, attachmentId: stri
   if (error || !blob) return { ok: false, code: "not_found" };
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const name = (title?.trim() || file.name.replace(/\.[a-z0-9]+$/i, "")).replace(/\s+/g, " ").slice(0, 100);
-  return importToCanva(userId, { bytes, mime: file.mime, title: name || "Markethink" });
+  return importToCanva(userId, { bytes, mime: file.mime, title: name || "Marqthink" });
 }

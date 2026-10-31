@@ -1,5 +1,6 @@
 /** Server-side env helpers. Fitur yang key-nya belum diisi otomatis dinonaktifkan. */
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/public-config";
+import { BRAND } from "@/lib/brand";
 
 /** URL publik app: env eksplisit → domain production Vercel (otomatis) → localhost. */
 export function resolveAppUrl() {
@@ -20,7 +21,7 @@ export const env = {
   tavilyKey: process.env.TAVILY_API_KEY ?? "",
   geminiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "",
   resendKey: process.env.RESEND_API_KEY ?? "",
-  emailFrom: process.env.EMAIL_FROM ?? "Markethink <onboarding@resend.dev>",
+  emailFrom: process.env.EMAIL_FROM ?? `${BRAND} <onboarding@resend.dev>`,
 };
 
 export const isSupabaseConfigured = () => Boolean(env.supabaseUrl && env.supabaseAnonKey);

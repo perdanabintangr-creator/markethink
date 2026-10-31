@@ -134,7 +134,7 @@ export default async function BackofficeOverview() {
           <CardContent className="flex items-center gap-4 p-5">
             <LogoMark className="size-12" />
             <div className="min-w-0 flex-1">
-              <p className="font-semibold">Markethink AI</p>
+              <p className="font-semibold">Marqthink AI</p>
               <p className="text-sm text-muted-foreground">{today}</p>
             </div>
             <a href="/chat" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm font-medium hover:underline">

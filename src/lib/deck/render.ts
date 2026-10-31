@@ -78,7 +78,7 @@ export async function renderScenePptx(scene: Scene, images: DeckImages, title: s
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
   pptx.title = title;
-  pptx.company = "Markethink";
+  pptx.company = "Marqthink";
   for (const sl of scene.slides) {
     const slide = pptx.addSlide();
     slide.background = { color: sl.bg };
@@ -191,7 +191,7 @@ export async function renderScenePdf(scene: Scene, images: DeckImages, title: st
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   doc.setTitle(title);
-  doc.setProducer("Markethink");
+  doc.setProducer("Marqthink");
   const fonts = {} as Record<FontRole, PDFFont>;
   const embedded = new Map<string, PDFFont>();
   for (const role of ["head", "body", "strong"] as FontRole[]) {

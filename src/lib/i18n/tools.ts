@@ -227,7 +227,7 @@ const id = {
   chooseBrain: "Pilih otak",
 
   // working showcase
-  working: "Otak Markethink sedang bekerja…",
+  working: "Otak Marqthink sedang bekerja…",
   whileWaiting: "Sambil menunggu: ",
 
   // plan cards
@@ -249,7 +249,7 @@ const id = {
   buyAddon: "Beli add-on",
   requestSent: "Permintaan terkirim 🎉",
   requestSentDesc: (name: string) =>
-    `Tim Markethink akan menghubungi kamu lewat email untuk cara pembayaran. Setelah bayar, add-on ${name} langsung aktif 30 hari.`,
+    `Tim Marqthink akan menghubungi kamu lewat email untuk cara pembayaran. Setelah bayar, add-on ${name} langsung aktif 30 hari.`,
   ok: "Oke",
   buyAddonTitle: (name: string) => `Beli add-on ${name}`,
   addonSummary: (price: string, quota: number) => `${price} / bulan · ${quota}× pakai per bulan · hasil visual + file PPT/Excel.`,
@@ -278,7 +278,7 @@ const id = {
   hubQuotaNote: "Semua tools memakai kuota bulanan paket kamu. Kalau hasil gagal dibuat, kuota kembali penuh.",
   addQuota: "Tambah kuota / upgrade",
   unlockTools: "Buka Smart Tools",
-  agentCardTitle: "Markethink Agent · Baru",
+  agentCardTitle: "Marqthink Agent · Baru",
   agentCardDesc: "Beri satu tujuan, Agent menjalankan beberapa tools berurutan sampai paket kerjanya lengkap.",
   forRole: "Untuk: ",
   open: "Buka",
@@ -294,7 +294,7 @@ const id = {
   revisionOf: "Versi perbaikan dari",
   previousResult: "hasil sebelumnya",
   corrected: ". Yang dikoreksi:",
-  madeWith: "Dibuat dengan Markethink Smart Tools · cek ulang angka & klaim sebelum dipublikasikan.",
+  madeWith: "Dibuat dengan Marqthink Smart Tools · cek ulang angka & klaim sebelum dipublikasikan.",
   runFailed: "Hasil gagal dibuat. Kuota kamu dikembalikan penuh.",
   tryAgain: "Coba lagi",
   stillProcessing: "Masih diproses… muat ulang halaman ini sebentar lagi.",
@@ -309,7 +309,7 @@ const id = {
     { t: "4. Terima satu paket", d: "Semua hasil + PPT/Excel + ringkasan eksekutif & rencana eksekusi, siap dibahas di chat." },
   ],
   agentNoQuota: "Sisa kuota bulan ini tidak cukup untuk menjalankan Agent.",
-  agentPlanLocked: "Markethink Agent tersedia di paket Pro & Promax.",
+  agentPlanLocked: "Marqthink Agent tersedia di paket Pro & Promax.",
   previousMissions: "Misi sebelumnya",
   stepsDone: (done: number, total: number) => `${done}/${total} langkah`,
 };
@@ -542,7 +542,7 @@ const en: typeof id = {
   brain: "Brain:",
   chooseBrain: "Choose brain",
 
-  working: "The Markethink brain is working…",
+  working: "The Marqthink brain is working…",
   whileWaiting: "While you wait: ",
 
   sendFailed: "Couldn't send. Try again.",
@@ -562,7 +562,7 @@ const en: typeof id = {
   buyAddon: "Buy add-on",
   requestSent: "Request sent 🎉",
   requestSentDesc: (name: string) =>
-    `The Markethink team will email you with payment instructions. Once paid, the ${name} add-on is active for 30 days right away.`,
+    `The Marqthink team will email you with payment instructions. Once paid, the ${name} add-on is active for 30 days right away.`,
   ok: "OK",
   buyAddonTitle: (name: string) => `Buy the ${name} add-on`,
   addonSummary: (price: string, quota: number) => `${price} / month · ${quota}× uses per month · visual result + PPT/Excel files.`,
@@ -589,7 +589,7 @@ const en: typeof id = {
   hubQuotaNote: "All tools use your plan's monthly quota. If a result fails, your quota is fully refunded.",
   addQuota: "Add quota / upgrade",
   unlockTools: "Unlock Smart Tools",
-  agentCardTitle: "Markethink Agent · New",
+  agentCardTitle: "Marqthink Agent · New",
   agentCardDesc: "Give it one goal and the Agent runs several tools in sequence until the work package is complete.",
   forRole: "For: ",
   open: "Open",
@@ -603,7 +603,7 @@ const en: typeof id = {
   revisionOf: "Revised version of the",
   previousResult: "previous result",
   corrected: ". What was corrected:",
-  madeWith: "Made with Markethink Smart Tools · double-check numbers & claims before publishing.",
+  madeWith: "Made with Marqthink Smart Tools · double-check numbers & claims before publishing.",
   runFailed: "The result couldn't be created. Your quota has been fully refunded.",
   tryAgain: "Try again",
   stillProcessing: "Still processing… reload this page in a moment.",
@@ -617,7 +617,7 @@ const en: typeof id = {
     { t: "4. Get one package", d: "All results + PPT/Excel + an executive summary & execution plan, ready to discuss in chat." },
   ],
   agentNoQuota: "This month's remaining quota isn't enough to run the Agent.",
-  agentPlanLocked: "Markethink Agent is available on the Pro & Promax plans.",
+  agentPlanLocked: "Marqthink Agent is available on the Pro & Promax plans.",
   previousMissions: "Previous missions",
   stepsDone: (done: number, total: number) => `${done}/${total} steps`,
 };

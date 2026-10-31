@@ -17,7 +17,7 @@ export async function priceItem(admin: SupabaseClient, planId: string, kind: Pay
     const { data } = await admin.from("plans").select(PLAN_OFFER_COLUMNS).eq("id", id).maybeSingle();
     if (!data) return null;
     const offer = toPlanOffer(data);
-    return offer.price > 0 ? { name: `Markethink ${offer.name} (1 bulan)`, amount: offer.price } : null;
+    return offer.price > 0 ? { name: `Marqthink ${offer.name} (1 bulan)`, amount: offer.price } : null;
   }
   if (kind === "addon") {
     const offer = (await getAddonOffers(admin, planId))[id];

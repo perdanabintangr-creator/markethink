@@ -80,7 +80,7 @@ export async function fetchPageText(url: string, opts: { timeoutMs?: number; max
   if (SKIP_FETCH.test(url) || !/^https?:\/\//.test(url)) return null;
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; MarkethinkResearch/1.0)", Accept: "text/html,application/xhtml+xml" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; MarqthinkResearch/1.0)", Accept: "text/html,application/xhtml+xml" },
       redirect: "follow",
       signal: AbortSignal.timeout(opts.timeoutMs ?? 7000),
     });

@@ -88,7 +88,7 @@ export function getDuitkuStatus(orderId: string) {
   });
 }
 
-/** Status Duitku → status Markethink. 00 = lunas, 01 = menunggu, 02 = gagal/dibatalkan. */
+/** Status Duitku → status Marqthink. 00 = lunas, 01 = menunggu, 02 = gagal/dibatalkan. */
 export function duitkuStatusOf(code: string | undefined): "paid" | "pending" | "failed" {
   if (code === "00") return "paid";
   if (code === "02") return "failed";

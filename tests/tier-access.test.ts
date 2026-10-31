@@ -17,6 +17,6 @@ describe("akses otak per paket", () => {
     const tiers = getTiers({});
     expect(new Set(tiers.map((t) => t.skillPrompt)).size).toBe(4);
     const out = await buildSystemPrompt({}, { tierInstructions: tiers[2].skillPrompt });
-    expect(out).toContain("Markethink Head");
+    expect(out).toContain("Marqthink Head");
   });
 });

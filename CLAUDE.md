@@ -1,4 +1,4 @@
-# Markethink — panduan kerja CTO (Claude)
+# Marqthink (dulu Markethink) — panduan kerja CTO (Claude)
 
 Founder: Bro Dana (non-teknis). Bahasa komunikasi: Indonesia, ringkas, tanpa jargon.
 
@@ -15,5 +15,7 @@ Founder: Bro Dana (non-teknis). Bahasa komunikasi: Indonesia, ringkas, tanpa jar
 - Supabase project `cqrstytnbfspbwgyvpzi` (Singapore, free) — dikelola via connector Supabase; migrasi di `supabase/migrations` + `npm run db:bundle`.
 - Diagnosa error chat: tabel `usage_logs` (kolom `status`, `error`) dan `credit_ledger`.
 - Connector Vercel saat ini ditolak (403) untuk scope tim `markethink`; status deploy dicek lewat founder.
+
+Nama brand: `src/lib/brand.ts`; rebranding & langkah manual: `BRANDING.md`.
 
 Lihat juga `PROGRESS.md` dan `DECISIONS.md`.

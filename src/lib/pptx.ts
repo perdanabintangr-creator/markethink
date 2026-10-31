@@ -327,7 +327,7 @@ function cover(c: Ctx, input: PresentationInput) {
     if (input.subtitle) {
       slide.addText(input.subtitle, { x: M, y: 4.9, w: tw, h: 1.0, fontFace: BODY, fontSize: fit(input.subtitle, 19, tw, 1.0, 12), color: "E5E7EB", valign: "top", margin: 0 });
     }
-    slide.addText("Dibuat dengan Markethink", { x: M, y: H - 0.8, w: 5, h: 0.3, fontFace: BODY, fontSize: 10, color: "D1D5DB", margin: 0 });
+    slide.addText("Dibuat dengan Marqthink", { x: M, y: H - 0.8, w: 5, h: 0.3, fontFace: BODY, fontSize: 10, color: "D1D5DB", margin: 0 });
     return;
   }
   const hasImg = coverImage(c, slide, "cover", W * 0.5, 0, W * 0.5, H);
@@ -343,7 +343,7 @@ function cover(c: Ctx, input: PresentationInput) {
   if (input.subtitle) {
     slide.addText(input.subtitle, { x: M, y: 4.6, w: tw, h: 1.1, fontFace: BODY, fontSize: fit(input.subtitle, 18, tw, 1.1, 12), color: c.t.muted, valign: "top", margin: 0 });
   }
-  slide.addText("Dibuat dengan Markethink", { x: M, y: H - 0.8, w: 5, h: 0.3, fontFace: BODY, fontSize: 10, color: c.t.muted, margin: 0 });
+  slide.addText("Dibuat dengan Marqthink", { x: M, y: H - 0.8, w: 5, h: 0.3, fontFace: BODY, fontSize: 10, color: c.t.muted, margin: 0 });
 }
 
 function agenda(c: Ctx, slide: Slide, s: SlideInput, top: number) {
@@ -735,8 +735,8 @@ export async function buildPresentation(input: PresentationInput, images: DeckIm
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
   pptx.title = input.title;
-  pptx.company = "Markethink";
-  pptx.author = "Markethink AI";
+  pptx.company = "Marqthink";
+  pptx.author = "Marqthink AI";
   const c: Ctx = { pptx, t: resolveTheme(input), deckTitle: input.title, total: input.slides.length + 1, images, bottom: 0 };
 
   cover(c, input);

@@ -11,7 +11,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
   return (
     <div className="flex h-full min-h-[60dvh] flex-col items-center justify-center gap-3 p-6 text-center">
       <h1 className="text-xl font-semibold">Ada yang tidak beres</h1>
-      <p className="text-sm text-muted-foreground">Coba muat ulang. Kalau masih error, kabari tim Markethink.</p>
+      <p className="text-sm text-muted-foreground">Coba muat ulang. Kalau masih error, kabari tim Marqthink.</p>
       <Button onClick={reset}>Coba lagi</Button>
     </div>
   );

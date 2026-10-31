@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const { data } = await admin.from("payments").select(cols).eq("provider", "mayar").in("gateway_ref", h.ids).limit(1).maybeSingle();
     pay = data;
   }
-  // Event untuk produk Mayar lain (bukan tagihan Markethink) → cukup dibalas OK.
+  // Event untuk produk Mayar lain (bukan tagihan Marqthink) → cukup dibalas OK.
   if (!pay) return new Response("ignored");
 
   const trustedPaid = token === true && h.event === "payment.received" && h.paidFlag && h.amount !== null && h.amount >= pay.amount_idr;

@@ -45,7 +45,7 @@ export function SaleForm({ userId, prices, defaultPlan = "pro" }: { userId?: str
       ) : (
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="sale-email">Email pelanggan</Label>
-          <Input id="sale-email" name="email" type="email" required placeholder="email akun Markethink pelanggan" />
+          <Input id="sale-email" name="email" type="email" required placeholder="email akun Marqthink pelanggan" />
         </div>
       )}
       <div className="space-y-1.5">

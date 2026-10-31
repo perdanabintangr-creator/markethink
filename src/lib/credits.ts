@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Kredit Markethink: satu dompet per BULAN (reset tgl 1, 00.00 WIB) untuk semua fitur.
+ * Kredit Marqthink: satu dompet per BULAN (reset tgl 1, 00.00 WIB) untuk semua fitur.
  * 1 kredit ≈ Rp100 modal AI. Aksi memotong perkiraan dulu, lalu disesuaikan ke biaya nyata (settleCredits).
  */
 export const IDR_PER_USD = Number(process.env.IDR_PER_USD) || 16_500;

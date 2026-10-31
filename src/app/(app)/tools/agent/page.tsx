@@ -9,7 +9,7 @@ import { AgentStart } from "@/components/agent/agent-start";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import type { AgentStep } from "@/lib/agent/catalog";
 
-export const metadata = { title: "Markethink Agent" };
+export const metadata = { title: "Marqthink Agent" };
 export const dynamic = "force-dynamic";
 
 export default async function AgentHome() {
@@ -35,7 +35,7 @@ export default async function AgentHome() {
           </span>
           <div>
             <h1 className="text-xl font-bold sm:text-2xl">
-              Markethink Agent <span className="ml-1 align-middle rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">{T.newBadge}</span>
+              Marqthink Agent <span className="ml-1 align-middle rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">{T.newBadge}</span>
             </h1>
             <p className="text-sm text-muted-foreground">{T.agentDesc}</p>
           </div>

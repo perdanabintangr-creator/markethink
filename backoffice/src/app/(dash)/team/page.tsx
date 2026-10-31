@@ -23,7 +23,7 @@ export default async function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <PageTitle title="Tim & akun" description="Akun login back office untuk tim. Terpisah dari akun aplikasi Markethink — tidak perlu email." />
+      <PageTitle title="Tim & akun" description="Akun login back office untuk tim. Terpisah dari akun aplikasi Marqthink — tidak perlu email." />
       <div className="grid gap-4 xl:grid-cols-[1fr_1.6fr]">
         <Card className="h-fit">
           <CardHeader className="pb-2">

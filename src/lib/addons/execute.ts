@@ -21,7 +21,7 @@ interface ExecOpts {
   revise?: { runId: string; note: string };
   /** Waktu mulai request (ms) — batas waktu AI dihitung dari sini. */
   startedAt?: number;
-  /** Hasil dibuat oleh Markethink Agent. */
+  /** Hasil dibuat oleh Marqthink Agent. */
   agentRunId?: string;
   /** Otak yang dipakai (sudah divalidasi terhadap paket user). */
   tier?: ToolTier;
@@ -178,7 +178,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
   } catch (err) {
     const msg = (err instanceof Error ? err.message : String(err)).slice(0, 1500);
     console.error(`[tool:${tool}] gagal`, msg);
-    // Gagal → kredit dikembalikan penuh (biaya AI ditanggung Markethink).
+    // Gagal → kredit dikembalikan penuh (biaya AI ditanggung Marqthink).
     await refundCredits(userId, estimate, `tool_failed:${tool}`);
     await admin
       .from("tool_runs")

@@ -34,7 +34,7 @@ export async function planMission(
     schema: planSchema,
     system: `${EXPERT}
 
-PERAN: kamu Head of Marketing yang merencanakan pekerjaan tim. User memberi satu tujuan; kamu memilih Smart Tools Markethink yang perlu
+PERAN: kamu Head of Marketing yang merencanakan pekerjaan tim. User memberi satu tujuan; kamu memilih Smart Tools Marqthink yang perlu
 dijalankan BERURUTAN agar menghasilkan paket kerja yang lengkap & saling nyambung (hasil langkah awal dipakai langkah berikutnya).
 
 ATURAN
@@ -140,7 +140,7 @@ export async function summarizeMission(
     model: routed.model,
     system: `${EXPERT}
 
-Tulis RINGKASAN EKSEKUTIF paket kerja Markethink Agent untuk pemilik bisnis, dalam Markdown (bahasa Indonesia, gaya konsultan senior, ringkas).
+Tulis RINGKASAN EKSEKUTIF paket kerja Marqthink Agent untuk pemilik bisnis, dalam Markdown (bahasa Indonesia, gaya konsultan senior, ringkas).
 Struktur:
 ## Inti strategi
 2–4 kalimat benang merah: untuk siapa, pesan utama, kenapa ini akan berhasil.

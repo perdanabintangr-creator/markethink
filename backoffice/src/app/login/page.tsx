@@ -16,7 +16,7 @@ export default async function BackofficeLoginPage() {
       <div className="w-full max-w-sm space-y-6 rounded-2xl border bg-card p-6 shadow-sm">
         <div className="flex flex-col items-center gap-2 text-center">
           <LogoMark className="size-10" />
-          <h1 className="text-xl font-semibold">Back Office Markethink</h1>
+          <h1 className="text-xl font-semibold">Back Office Marqthink</h1>
           <p className="text-sm text-muted-foreground">Masuk dengan username & password tim.</p>
         </div>
         {!hasOwner && (

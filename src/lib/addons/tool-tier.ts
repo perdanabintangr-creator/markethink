@@ -1,5 +1,5 @@
 /**
- * Otak untuk Tools Pro & Markethink Agent: Senior (default), Head, Director — sesuai tier yang dibuka paket user.
+ * Otak untuk Tools Pro & Marqthink Agent: Senior (default), Head, Director — sesuai tier yang dibuka paket user.
  * Director memakai 2 kuota per hasil (biaya AI ±5× Senior).
  */
 export const TOOL_TIERS = ["senior", "associate", "director"] as const;

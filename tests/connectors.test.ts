@@ -137,7 +137,7 @@ describe("helper Canva", () => {
     expect(canvaTitleBase64("My Awesome Design 😍")).toBe("TXkgQXdlc29tZSBEZXNpZ24g8J+YjQ==");
     const long = Buffer.from(canvaTitleBase64("a".repeat(80)), "base64").toString("utf8");
     expect(long).toHaveLength(50);
-    expect(Buffer.from(canvaTitleBase64("  "), "base64").toString("utf8")).toBe("Markethink");
+    expect(Buffer.from(canvaTitleBase64("  "), "base64").toString("utf8")).toBe("Marqthink");
   });
 
   it("ukuran desain custom dalam batas Canva", () => {

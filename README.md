@@ -1,4 +1,4 @@
-# Markethink — Otak Marketing Berbasis AI
+# Marqthink — Otak Marketing Berbasis AI
 
 Chat AI ala ChatGPT/Claude + riset web ber-sitasi ala Perplexity, dikhususkan untuk marketing:
 riset → strategi → konten → kalender → KPI. Bahasa default Indonesia (bisa English).

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const tier = resolveToolTier(parsed.data.tier, await getAllowedTiers(s.supabase, s.profile));
   const { access, maxSteps } = await agentBudget(admin, s.profile, tier);
   if (!access.agent) {
-    return jsonError(402, "agent_locked", { message: "Markethink Agent tersedia di paket Pro & Promax. Upgrade paket untuk memakainya." });
+    return jsonError(402, "agent_locked", { message: "Marqthink Agent tersedia di paket Pro & Promax. Upgrade paket untuk memakainya." });
   }
   if (maxSteps < 1) {
     return jsonError(402, "credits_low", {

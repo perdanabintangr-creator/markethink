@@ -3,6 +3,8 @@
  * kalender konten → .ics (Google Calendar/Outlook/iPhone) & CSV, copy iklan → CSV.
  */
 
+import { BRAND, BRAND_SLUG } from "@/lib/brand";
+
 export interface CalendarPostLite {
   date: string;
   time?: string;
@@ -46,7 +48,7 @@ export function calendarToIcs(posts: CalendarPostLite[], brand: string, stamp = 
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Markethink//Kalender Konten//ID",
+    `PRODID:-//${BRAND}//Kalender Konten//ID`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${icsText(`Konten ${brand}`)}`,
@@ -80,7 +82,7 @@ export function calendarToIcs(posts: CalendarPostLite[], brand: string, stamp = 
       .join("\n\n");
     lines.push(
       "BEGIN:VEVENT",
-      `UID:mt-${d[1]}${d[2]}${d[3]}-${i}-${brand.replace(/[^a-z0-9]/gi, "").toLowerCase() || "brand"}@markethink`,
+      `UID:mt-${d[1]}${d[2]}${d[3]}-${i}-${brand.replace(/[^a-z0-9]/gi, "").toLowerCase() || "brand"}@${BRAND_SLUG}`,
       `DTSTAMP:${dtstamp}`,
       `DTSTART;TZID=Asia/Jakarta:${start}`,
       `DTEND;TZID=Asia/Jakarta:${end}`,

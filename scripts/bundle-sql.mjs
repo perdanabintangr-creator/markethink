@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, writeFileSync } from "fs";
 
 const dir = "supabase/migrations";
 const parts = [
-  "-- File gabungan semua migrasi Markethink. Jalankan SEKALI di Supabase → SQL Editor (project baru).",
+  "-- File gabungan semua migrasi Marqthink. Jalankan SEKALI di Supabase → SQL Editor (project baru).",
   "-- Dibuat otomatis oleh: npm run db:bundle — jangan edit manual.",
 ];
 for (const f of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {

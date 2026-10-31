@@ -78,12 +78,12 @@ export function ModelSelector({
             className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 text-xs font-medium text-primary hover:bg-primary/15"
             aria-label={c.chooseBrain}
           >
-            {isAuto ? <Wand2 className="size-3.5" /> : <Brain className="size-3.5" />} {isAuto ? autoLabel : current.label.replace("Markethink ", "")}
+            {isAuto ? <Wand2 className="size-3.5" /> : <Brain className="size-3.5" />} {isAuto ? autoLabel : current.label.replace("Marqthink ", "")}
             <ChevronDown className="size-3.5" />
           </button>
         ) : (
           <button className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold hover:bg-accent">
-            {isAuto ? `Markethink ${autoLabel}` : current.label}
+            {isAuto ? `Marqthink ${autoLabel}` : current.label}
             <ChevronDown className="size-4 text-muted-foreground" />
           </button>
         )}
@@ -119,7 +119,7 @@ export function ModelSelector({
               <LevelBars level={i + 1} muted={locked} />
               <span className="min-w-0 flex-1">
                 <span className={cn("flex items-center gap-1.5 text-sm font-medium", locked && "text-muted-foreground")}>
-                  {t.label.replace("Markethink ", "")}
+                  {t.label.replace("Marqthink ", "")}
                   {locked && (
                     <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 text-[10px] font-medium text-muted-foreground">
                       <Lock className="!size-2.5" /> {PLAN_LABEL[t.minPlan]}

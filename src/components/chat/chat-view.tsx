@@ -349,7 +349,7 @@ export function ChatView({
   useEffect(() => {
     if (!busy) setCtxKey(messages.length);
   }, [busy, messages.length]);
-  const brainLabel = tier === "auto" ? w.ctxAuto : (tiers.find((x) => x.id === tier)?.label.replace("Markethink ", "") ?? tier);
+  const brainLabel = tier === "auto" ? w.ctxAuto : (tiers.find((x) => x.id === tier)?.label.replace("Marqthink ", "") ?? tier);
   const sidePanelOpen = Boolean(canvasId || (toolRun && runOpen));
 
   // Pertanyaan dari Dashboard / Ctrl+K: kirim sekali begitu chat baru terbuka.

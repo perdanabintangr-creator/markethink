@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { BackofficeShell } from "./shell";
 
 export const metadata = {
-  title: { default: "Back Office", template: "%s · Back Office Markethink" },
+  title: { default: "Back Office", template: "%s · Back Office Marqthink" },
   robots: { index: false, follow: false },
 };
 

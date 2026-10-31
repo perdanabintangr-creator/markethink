@@ -33,7 +33,7 @@ export async function GET(req: Request) {
     if (!env.resendKey) emailTest = { ok: false, error: "RESEND_API_KEY belum terpasang (atau belum Redeploy)" };
     else if (!s.user.email) emailTest = { ok: false, error: "akun admin tidak punya email" };
     else {
-      const res = await sendEmail(s.user.email, "Tes email Markethink ✅", "<p>Email dari Markethink sudah bisa terkirim lewat Resend.</p>");
+      const res = await sendEmail(s.user.email, "Tes email Marqthink ✅", "<p>Email dari Marqthink sudah bisa terkirim lewat Resend.</p>");
       emailTest = res.skipped ? { ok: false, error: "Resend menolak, cek log Vercel ([email] gagal kirim)" } : { ok: true, ke: s.user.email };
     }
   }

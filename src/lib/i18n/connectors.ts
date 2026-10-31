@@ -24,14 +24,14 @@ const id = {
   canvaFailed: "Gagal mengirim ke Canva.",
 
   // ── Notifikasi setelah kembali dari Canva ──
-  toastConnected: "Canva terhubung. Hasil Markethink sekarang bisa dikirim ke Canva.",
+  toastConnected: "Canva terhubung. Hasil Marqthink sekarang bisa dikirim ke Canva.",
   toastDenied: "Menghubungkan Canva dibatalkan.",
   toastError: "Gagal menghubungkan Canva. Coba lagi sebentar lagi.",
   toastDisabled: "Integrasi Canva belum diaktifkan admin.",
-  toastDisconnected: "Canva sudah diputus dari akun Markethink kamu.",
+  toastDisconnected: "Canva sudah diputus dari akun Marqthink kamu.",
 
   // ── Pengaturan → Aplikasi terhubung ──
-  settingsDesc: "Hubungkan aplikasi favoritmu supaya hasil Markethink bisa langsung dikirim dan diedit di sana. Ketik @ di kotak chat untuk memanggilnya.",
+  settingsDesc: "Hubungkan aplikasi favoritmu supaya hasil Marqthink bisa langsung dikirim dan diedit di sana. Ketik @ di kotak chat untuk memanggilnya.",
   canvaDesc: "Kirim PPT, carousel, poster & gambar AI ke akun Canva kamu sebagai desain yang bisa diedit.",
   connectedAs: (name: string) => `Terhubung sebagai ${name}`,
   notConfigured: "Belum tersedia. Admin perlu mengaktifkan integrasi Canva.",
@@ -70,13 +70,13 @@ const en: typeof id = {
   canvaLinkNote: "The edit link is valid for 30 days. The design stays in your Canva account.",
   canvaFailed: "Couldn't send to Canva.",
 
-  toastConnected: "Canva connected. You can now send Markethink results to Canva.",
+  toastConnected: "Canva connected. You can now send Marqthink results to Canva.",
   toastDenied: "Connecting Canva was cancelled.",
   toastError: "Couldn't connect Canva. Please try again shortly.",
   toastDisabled: "The Canva integration hasn't been enabled by the admin yet.",
-  toastDisconnected: "Canva has been disconnected from your Markethink account.",
+  toastDisconnected: "Canva has been disconnected from your Marqthink account.",
 
-  settingsDesc: "Connect your favorite apps so Markethink results can be sent and edited there directly. Type @ in the chat box to call one.",
+  settingsDesc: "Connect your favorite apps so Marqthink results can be sent and edited there directly. Type @ in the chat box to call one.",
   canvaDesc: "Send decks, carousels, posters & AI images to your Canva account as editable designs.",
   connectedAs: (name: string) => `Connected as ${name}`,
   notConfigured: "Not available yet. The admin needs to enable the Canva integration.",

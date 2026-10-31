@@ -1,5 +1,6 @@
 import { ADDON_NAME as ADDON } from "@/lib/admin-format";
 import { getBackofficeUser } from "@/lib/backoffice";
+import { BRAND_SLUG } from "@/lib/brand";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const jsonError = (status: number, error: string) => Response.json({ error }, { status });
@@ -112,7 +113,7 @@ export async function GET(req: Request) {
   return new Response(`﻿${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="markethink-${type}-${date}.csv"`,
+      "Content-Disposition": `attachment; filename="${BRAND_SLUG}-${type}-${date}.csv"`,
       "Cache-Control": "no-store",
     },
   });

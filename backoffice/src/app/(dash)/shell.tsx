@@ -248,7 +248,7 @@ export function BackofficeShell({
     <Link href="/" className="flex items-center gap-2 font-semibold">
       <LogoMark className="size-8" />
       <span className="leading-tight">
-        Markethink
+        Marqthink
         <span className="block text-[11px] font-medium text-primary">Back Office</span>
       </span>
     </Link>

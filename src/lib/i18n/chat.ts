@@ -21,7 +21,7 @@ const id = {
   createPublicLink: "Buat link publik (read-only)",
   disablePublicLink: "Matikan link publik",
   newChatIn: (name: string) => `Chat baru di ${name}…`,
-  remoteWaiting: "Markethink masih menyusun jawaban… hasilnya muncul otomatis di sini.",
+  remoteWaiting: "Marqthink masih menyusun jawaban… hasilnya muncul otomatis di sini.",
   chatError: "Terjadi kendala saat menghubungi otak marketing.",
   retry: "Coba lagi",
   scrollDown: "Scroll ke bawah",
@@ -50,7 +50,7 @@ const id = {
   quotaTitle: "Kuota bulan ini sudah habis",
   dailyLimitDesc: (notice: string) => `${notice} Paket berbayar tidak punya batas harian, cukup kuota bulanan.`,
   tierLockedDesc:
-    "Starter membuka Senior (strategi & campaign) & Riset Web. Pro menambah Head (sekelas Head of Marketing), semua Smart Tools & Markethink Agent. Promax membuka Director, otak paling cerdas.",
+    "Starter membuka Senior (strategi & campaign) & Riset Web. Pro menambah Head (sekelas Head of Marketing), semua Smart Tools & Marqthink Agent. Promax membuka Director, otak paling cerdas.",
   quotaDesc:
     "Kuota direset otomatis tiap tanggal 1 pukul 00.00 WIB. Butuh lebih banyak sekarang? Upgrade paket untuk kuota bulanan yang lebih besar.",
   seePlansPricing: "Lihat paket & harga",
@@ -185,7 +185,7 @@ const en: typeof id = {
   createPublicLink: "Create public link (read-only)",
   disablePublicLink: "Turn off public link",
   newChatIn: (name) => `New chat in ${name}…`,
-  remoteWaiting: "Markethink is still writing the answer… it will appear here automatically.",
+  remoteWaiting: "Marqthink is still writing the answer… it will appear here automatically.",
   chatError: "Something went wrong reaching the marketing brain.",
   retry: "Try again",
   scrollDown: "Scroll to bottom",
@@ -211,7 +211,7 @@ const en: typeof id = {
   quotaTitle: "This month's quota is used up",
   dailyLimitDesc: (notice) => `${notice} Paid plans have no daily limit, just a monthly quota.`,
   tierLockedDesc:
-    "Starter unlocks Senior (strategy & campaigns) & Web Research. Pro adds Head (Head of Marketing level), all Smart Tools & Markethink Agent. Promax unlocks Director, the smartest brain.",
+    "Starter unlocks Senior (strategy & campaigns) & Web Research. Pro adds Head (Head of Marketing level), all Smart Tools & Marqthink Agent. Promax unlocks Director, the smartest brain.",
   quotaDesc:
     "Your quota resets automatically on the 1st of every month at 00:00 WIB. Need more now? Upgrade your plan for a bigger monthly quota.",
   seePlansPricing: "See plans & pricing",

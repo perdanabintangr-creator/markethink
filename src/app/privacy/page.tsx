@@ -7,7 +7,7 @@ export default function PrivacyPage() {
     <LegalPage title="Kebijakan Privasi">
       <p>Terakhir diperbarui: 8 Oktober 2026 (pembaruan: pemrosesan paket Free)</p>
       <p>
-        Markethink menghormati privasi kamu dan memproses data pribadi sesuai Undang-Undang Nomor 27 Tahun 2022 tentang
+        Marqthink menghormati privasi kamu dan memproses data pribadi sesuai Undang-Undang Nomor 27 Tahun 2022 tentang
         Pelindungan Data Pribadi (UU PDP).
       </p>
       <h2>1. Data yang kami kumpulkan</h2>
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       </ul>
       <h2>3. Penyedia AI & layanan pihak ketiga</h2>
       <p>
-        Markethink menggunakan penyedia AI pihak ketiga, antara lain <strong>Anthropic (Claude)</strong>, <strong>Google
+        Marqthink menggunakan penyedia AI pihak ketiga, antara lain <strong>Anthropic (Claude)</strong>, <strong>Google
         Gemini</strong>, OpenRouter (pembuat gambar), Groq, dan Tavily (pencarian web). Isi pesan dan file yang relevan
         dikirim ke penyedia tersebut untuk menghasilkan jawaban dan dapat diproses di luar Indonesia. Kami juga memakai
         Supabase (database & penyimpanan), Vercel (hosting), Upstash (pembatasan akses), Resend (email), PostHog (analitik),
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
         menghapus akun beserta seluruh data kapan saja melalui <em>Pengaturan → Hapus akun</em>.
       </p>
       <h2>6. Kontak</h2>
-      <p>Pertanyaan terkait privasi dapat dikirim ke tim Markethink melalui email yang tercantum di situs.</p>
+      <p>Pertanyaan terkait privasi dapat dikirim ke tim Marqthink melalui email yang tercantum di situs.</p>
     </LegalPage>
   );
 }

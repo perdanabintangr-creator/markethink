@@ -170,7 +170,7 @@ export function AgentMission({ initial, initialResults }: { initial: AgentRunLit
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border bg-card p-4 sm:p-6">
-        <p className="text-xs font-medium uppercase tracking-wide text-primary">Markethink Agent</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-primary">Marqthink Agent</p>
         <h1 className="mt-1 text-xl font-bold sm:text-2xl">{run.title ?? c.newMission}</h1>
         <blockquote className="mt-3 border-l-2 border-primary/40 pl-3 text-sm text-muted-foreground">{run.goal}</blockquote>
         {notStarted && !busy && (

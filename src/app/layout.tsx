@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers";
 import { CHAT_PREFS_SCRIPT } from "@/lib/chat-prefs";
+import { BRAND } from "@/lib/brand";
 import { resolveAppUrl } from "@/lib/env";
 import { FONT_SCRIPT } from "@/lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Markethink: Otak Marketing Berbasis AI", template: "%s · Markethink" },
+  title: { default: `${BRAND}: Otak Marketing Berbasis AI`, template: `%s · ${BRAND}` },
   description:
     "Partner AI untuk marketing: riset ber-sitasi, strategi, konten, kalender, sampai KPI. Dibuat untuk marketer, UMKM, mahasiswa, dan freelancer Indonesia.",
   metadataBase: new URL(resolveAppUrl()),

@@ -33,7 +33,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const ctx = agentCtx(admin, s.user.id, id, startedAt, run.tier ?? undefined, s.profile.language);
   try {
-    const summary = await summarizeMission(ctx, { goal: run.goal, title: run.title ?? "Misi Markethink Agent", results, failed });
+    const summary = await summarizeMission(ctx, { goal: run.goal, title: run.title ?? "Misi Marqthink Agent", results, failed });
     await admin.from("agent_runs").update({ summary, status: "done", updated_at: new Date().toISOString() }).eq("id", id);
     await logAgentCost(admin, s.user.id, id, ctx, run.cost_usd);
     return NextResponse.json({ summary });

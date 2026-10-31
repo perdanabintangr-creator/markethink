@@ -106,7 +106,7 @@ export async function renderImagePptx(scene: Scene, slides: Buffer[], title: str
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
   pptx.title = title;
-  pptx.company = "Markethink";
+  pptx.company = "Marqthink";
   slides.forEach((jpg, i) => {
     const slide = pptx.addSlide();
     slide.addImage({ data: `image/jpeg;base64,${jpg.toString("base64")}`, x: 0, y: 0, w: scene.w, h: scene.h });
