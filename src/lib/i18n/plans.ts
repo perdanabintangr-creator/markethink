@@ -38,7 +38,7 @@ export interface PlanDetail {
 
 const id = {
   personal: "Personal",
-  business: "Tim & Agency",
+  business: "Team",
   getFree: "Pakai gratis",
   monthly: "/ bulan",
   footer:
@@ -98,10 +98,10 @@ const id = {
     },
   } as Record<string, PlanDetail>,
   team: {
-    name: "Tim & Agency",
+    name: "Team",
     badge: "Segera hadir",
     headline: "Satu workspace untuk seluruh tim",
-    desc: "Untuk agency & tim marketing yang menangani banyak brand/klien sekaligus.",
+    desc: "Untuk tim marketing & bisnis yang mengelola banyak brand sekaligus.",
     features: [
       { icon: "team", text: "Banyak anggota tim dalam satu akun" },
       { icon: "project", text: "Project & Brand Kit per klien, dipakai bersama" },
@@ -116,7 +116,7 @@ const id = {
 
 const en: typeof id = {
   personal: "Personal",
-  business: "Team & Agency",
+  business: "Team",
   getFree: "Use for free",
   monthly: "/ month",
   footer:
@@ -176,10 +176,10 @@ const en: typeof id = {
     },
   },
   team: {
-    name: "Team & Agency",
+    name: "Team",
     badge: "Coming soon",
     headline: "One workspace for your whole team",
-    desc: "For agencies & marketing teams handling many brands/clients at once.",
+    desc: "For marketing & business teams managing many brands at once.",
     features: [
       { icon: "team", text: "Multiple team members in one account" },
       { icon: "project", text: "Shared projects & Brand Kits per client" },

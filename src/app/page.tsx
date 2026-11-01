@@ -37,10 +37,11 @@ export default async function LandingPage() {
   return (
     <div className="min-h-dvh overflow-x-clip">
       <SiteHeader loggedIn={Boolean(user)} />
-      <QuotePopup />
 
       {/* ---------------------------------------------------------------- Hero */}
       <section className="relative isolate overflow-hidden bg-[#050b1f] text-white">
+        {/* Pop-up kata-kata marketing: hanya di bagian atas, ikut tergulung saat scroll */}
+        <QuotePopup />
         <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 size-[56rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,108,255,0.35),transparent_60%)]" />
         <div className="pointer-events-none absolute -bottom-40 -right-20 -z-10 size-[34rem] rounded-full bg-[radial-gradient(circle,rgba(18,208,245,0.22),transparent_60%)]" />
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />

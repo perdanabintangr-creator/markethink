@@ -475,3 +475,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-11-01 — Section "Keunggulan" (Question · Quality · Quotient)
 - Q ditampilkan sebagai 3 manfaat, bukan filosofi: Cukup bertanya / Hasil setara konsultan / Makin dipakai, makin pintar. Tiap kartu ada contoh visual + watermark Q.
 - "Quotient" sengaja tidak memakai skor angka (MQ) karena produk belum punya metrik itu; diganti visual memori brand yang tumbuh.
+
+## 2026-11-01 — Paket "Team" & posisi pop-up
+- "Tim & Agency" → **"Team"** (pasangan tab "Personal / Team"); deskripsi tanpa kata agency.
+- Pop-up kata-kata marketing kini hanya di bagian paling atas hero (absolute, ikut tergulung), tidak lagi menempel saat scroll.

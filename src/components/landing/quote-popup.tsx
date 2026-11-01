@@ -19,7 +19,7 @@ function shuffled(n: number) {
 }
 
 /**
- * Pop-up kata-kata marketing yang menempel di bagian atas (di bawah header) dan berganti terus.
+ * Pop-up kata-kata marketing di bagian paling atas hero (tidak ikut turun saat scroll), berganti terus.
  * 100 kalimat diacak tiap kunjungan; berhenti saat kursor di atasnya; bisa ditutup (selama sesi).
  */
 export function QuotePopup() {
@@ -60,8 +60,8 @@ export function QuotePopup() {
   const q = MARKETING_QUOTES[order[pos]];
 
   return (
-    <div className="pointer-events-none sticky top-16 z-30 h-0">
-      <div className="mx-auto flex max-w-6xl justify-center px-4 pt-3">
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-20">
+      <div className="mx-auto flex max-w-6xl justify-center px-4 pt-5">
         <div
           role="status"
           aria-live="polite"

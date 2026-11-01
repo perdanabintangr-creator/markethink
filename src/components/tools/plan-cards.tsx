@@ -59,7 +59,7 @@ const ICONS: Record<PlanIcon, LucideIcon> = {
 /**
  * Kartu paket ala halaman harga ChatGPT/Claude: nama & slogan, tombol di atas harga, lalu "Semua di X, plus:" + keunggulan berikon.
  * Angka kredit & batas tidak ditampilkan (besar kuota ditulis dengan kata). Permintaan masuk ke back office → Calon pelanggan untuk dikirimi cara bayar.
- * `showTeam` menampilkan tab Personal / Tim & Agency (halaman Paket & harga).
+ * `showTeam` menampilkan tab Personal / Team (halaman Paket & harga).
  */
 export function PlanCards({
   plans,
