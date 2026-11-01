@@ -14,7 +14,7 @@ import { RotatingTagline } from "@/components/landing/rotating-tagline";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 import { getSession } from "@/lib/auth";
-import { BRAND, BRAND_ICON } from "@/lib/brand";
+import { BRAND, BRAND_ICON, BRAND_SOCIALS } from "@/lib/brand";
 import { isSupabaseConfigured, resolveAppUrl } from "@/lib/env";
 
 /** Kata-kata marketing yang berjalan di bagian bawah hero (dua baris, arah berlawanan). */
@@ -45,6 +45,7 @@ function brandJsonLd(base: string) {
         url: `${base}/`,
         logo: `${base}/brand/marqthink-q-512.png`,
         slogan: "Otak marketing untuk brand kamu.",
+        sameAs: [BRAND_SOCIALS.instagram.url],
       },
       { "@type": "WebSite", "@id": `${base}/#website`, name: BRAND, alternateName: "MARQTHINK", url: `${base}/`, inLanguage: "id-ID", publisher: { "@id": `${base}/#org` } },
       {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { BRAND } from "@/lib/brand";
+import { BRAND, BRAND_SOCIALS } from "@/lib/brand";
 
 export function SiteFooter() {
   return (
@@ -16,6 +16,20 @@ export function SiteFooter() {
           <Link href="/harga" className="hover:text-foreground">Harga</Link>
           <Link href="/terms" className="hover:text-foreground">Syarat Layanan</Link>
           <Link href="/privacy" className="hover:text-foreground">Kebijakan Privasi</Link>
+          <a
+            href={BRAND_SOCIALS.instagram.url}
+            target="_blank"
+            rel="noopener noreferrer me"
+            className="inline-flex items-center gap-1.5 hover:text-foreground"
+            aria-label={`Instagram ${BRAND}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden>
+              <rect x="2" y="2" width="20" height="20" rx="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" />
+            </svg>
+            @{BRAND_SOCIALS.instagram.handle}
+          </a>
         </div>
       </div>
     </footer>

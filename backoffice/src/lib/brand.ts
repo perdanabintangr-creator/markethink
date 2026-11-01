@@ -13,3 +13,8 @@ export const BRAND_WORDMARK_PARTS = ["MARQ", "THINK"] as const;
 export const BRAND_ICON = "/brand/marqthink-q-192.png";
 /** Tagline resmi. */
 export const BRAND_TAGLINES = ["Think like a brand.", "Otak marketing untuk brand kamu.", "Tanya dulu, baru jualan."] as const;
+
+/** Akun media sosial resmi (tampil di footer & data brand untuk Google). */
+export const BRAND_SOCIALS = {
+  instagram: { handle: "marqthink.ai", url: "https://www.instagram.com/marqthink.ai/" },
+} as const;
