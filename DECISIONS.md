@@ -516,3 +516,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-11-01 — SEO nama brand
 - Judul default "Marqthink (MARQTHINK): Otak Marketing AI untuk Brand Kamu", deskripsi, keywords, OpenGraph/Twitter + gambar pratinjau 1200×630 (`src/app/opengraph-image.png`), canonical beranda, JSON-LD Organization/WebSite/SoftwareApplication (alternateName MARQTHINK).
 - Langkah founder: Search Console → Inspeksi URL → Minta pengindeksan; buat profil sosial @marqthink yang menaut ke marqthink.com.
+
+## 2026-11-01 — Email bermerek Marqthink
+- `src/lib/email-template.ts`: template kartu (logo, label, judul, langkah bernomor, tombol gradasi, footer marqthink.com & IG). Dipakai semua email aplikasi (selamat datang 3 langkah, reset password, waitlist, tes, pantau mingguan).
+- Template email Supabase (konfirmasi daftar, reset, magic link, ganti email, undangan): `node scripts/build-email-templates.mts` → `supabase/email-templates/*.html`, ditempel founder di Supabase → Authentication → Emails → Templates.
+- Nama pengirim "Marqthink <noreply@marqthink.com>": menunggu domain terverifikasi di Resend (EMAIL_FROM di Vercel) + Custom SMTP Supabase (smtp.resend.com).

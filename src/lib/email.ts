@@ -1,6 +1,7 @@
 import "server-only";
 import { Resend } from "resend";
 import { env } from "@/lib/env";
+import { brandEmail, escapeHtml } from "@/lib/email-template";
 
 export async function sendEmail(to: string, subject: string, html: string) {
   if (!env.resendKey) return { skipped: true };
@@ -14,21 +15,65 @@ export async function sendEmail(to: string, subject: string, html: string) {
   }
 }
 
-const wrap = (body: string) =>
-  `<div style="font-family:system-ui,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111">${body}<p style="color:#888;font-size:12px;margin-top:32px">Marqthink, otak marketing berbasis AI</p></div>`;
+const app = () => env.appUrl;
 
 export const emails = {
   welcome: (name: string) =>
-    wrap(`<h2>Selamat datang di Marqthink, ${name || "kamu"}! 👋</h2>
-<p>Akun beta kamu sudah aktif. Kamu dapat kredit gratis setiap hari untuk ngobrol dengan otak marketing kamu.</p>
-<p>Mulai dari: buat Project untuk brand kamu, lalu coba agent <b>Campaign Plan</b> atau <b>Content Calendar</b>.</p>
-<p><a href="${env.appUrl}/chat">Buka Marqthink →</a></p>`),
+    brandEmail({
+      appUrl: app(),
+      eyebrow: "Akun baru",
+      title: "Selamat datang di Marqthink",
+      intro: `Halo ${escapeHtml(name || "kamu")}, akun kamu sudah aktif. Marqthink adalah otak marketing berbasis AI yang membantu kamu meriset, menyusun strategi, dan membuat konten untuk brand kamu.`,
+      steps: [
+        { title: "Lengkapi Brand Kit", desc: "Isi nama brand, produk, target pembeli, dan gaya bahasa. Semua jawaban AI akan menyesuaikan brand kamu." },
+        { title: "Ajukan pertanyaan pertama", desc: "Ceritakan masalah marketing kamu dengan bahasa sehari-hari, misalnya “penjualan turun, harus mulai dari mana?”." },
+        { title: "Buat rencana konten", desc: "Pakai Kalender konten atau Smart Tools untuk mendapatkan caption, copy iklan, dan jadwal posting siap pakai." },
+      ],
+      button: { label: "Buka Marqthink", url: `${app()}/dashboard` },
+      note: "Butuh bantuan? Balas pertanyaan kamu langsung di chat Marqthink atau hubungi kami lewat Instagram @marqthink.ai.",
+    }),
   resetPassword: (link: string) =>
-    wrap(`<h2>Reset password Marqthink</h2>
-<p>Ada permintaan untuk mengganti password akun kamu. Klik tombol di bawah (berlaku 1 jam, bisa dibuka di HP maupun laptop):</p>
-<p><a href="${link}" style="display:inline-block;background:#1e5bff;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Buat password baru</a></p>
-<p style="color:#666;font-size:13px">Tidak merasa meminta? Abaikan email ini, password kamu tidak berubah.</p>`),
+    brandEmail({
+      appUrl: app(),
+      eyebrow: "Keamanan akun",
+      title: "Reset password kamu",
+      intro: "Ada permintaan untuk mengganti password akun Marqthink kamu. Klik tombol di bawah untuk membuat password baru. Link berlaku 1 jam dan bisa dibuka di HP maupun laptop.",
+      button: { label: "Buat password baru", url: link },
+      note: "Tidak merasa meminta? Abaikan email ini. Password kamu tidak berubah.",
+    }),
   waitlist: () =>
-    wrap(`<h2>Kamu masuk waitlist Marqthink Pro ✨</h2>
-<p>Terima kasih! Kami akan kabari begitu paket Pro tersedia, dengan kuota lebih besar dan fitur tambahan.</p>`),
+    brandEmail({
+      appUrl: app(),
+      eyebrow: "Waitlist",
+      title: "Kamu masuk waitlist Marqthink Pro",
+      intro: "Terima kasih! Kami akan mengabari kamu begitu paket Pro tersedia, dengan kuota lebih besar dan fitur tambahan.",
+      button: { label: "Lihat paket", url: `${app()}/harga` },
+    }),
+  /** Email uji dari panel admin. */
+  test: () =>
+    brandEmail({
+      appUrl: app(),
+      eyebrow: "Tes email",
+      title: "Email Marqthink sudah terkirim",
+      intro: "Kalau kamu membaca ini, pengiriman email dari Marqthink lewat Resend sudah berjalan dengan benar.",
+    }),
+  /** Pantau mingguan: hasil baru siap. */
+  watchUpdate: (title: string, changes: string[], url: string, en: boolean) =>
+    brandEmail({
+      appUrl: app(),
+      eyebrow: en ? "Weekly monitoring" : "Pantau mingguan",
+      title: escapeHtml(title),
+      intro: en ? "Here's what changed this week:" : "Ini yang berubah minggu ini:",
+      extra: `<ul style="margin:0;padding-left:20px">${changes.map((c) => `<li style="margin-bottom:6px">${escapeHtml(c)}</li>`).join("")}</ul>`,
+      button: { label: en ? "Open the full result" : "Buka hasil lengkap", url },
+    }),
+  /** Pantau mingguan: tertunda (kuota/akses). */
+  watchPaused: (name: string, message: string, en: boolean) =>
+    brandEmail({
+      appUrl: app(),
+      eyebrow: en ? "Weekly monitoring" : "Pantau mingguan",
+      title: en ? `Monitoring paused: ${escapeHtml(name)}` : `Pantau mingguan tertunda: ${escapeHtml(name)}`,
+      intro: escapeHtml(message),
+      button: { label: en ? "See plans" : "Lihat paket", url: `${app()}/pricing` },
+    }),
 };

@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { routeTier } from "@/lib/ai/router";
 import { untrusted } from "@/lib/ai/prompt";
 import { env } from "@/lib/env";
-import { sendEmail } from "@/lib/email";
+import { emails, sendEmail } from "@/lib/email";
 import { executeTool } from "./execute";
 import { toolInfo } from "./catalog";
 import { DEFAULT_TOOL_TIER, TOOL_TIERS, type ToolTier } from "./tool-tier";
@@ -64,8 +64,6 @@ interface WatcherRow {
   source_run_id: string | null;
 }
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
 /** Jalankan satu pemantauan yang sudah jatuh tempo (dipanggil cron). */
 export async function runWatcher(admin: SupabaseClient, id: string) {
   const { data: w } = await admin.from("tool_watchers").select("id, user_id, tool, input, title, tier, last_run_id, source_run_id, active").eq("id", id).maybeSingle();
@@ -93,7 +91,7 @@ export async function runWatcher(admin: SupabaseClient, id: string) {
       await sendEmail(
         profile.email,
         lang === "en" ? `Weekly monitoring paused: ${name}` : `Pantau mingguan tertunda: ${name}`,
-        `<p>${esc(res.message ?? "")}</p><p><a href="${env.appUrl}/pricing">${lang === "en" ? "See plans" : "Lihat paket"}</a></p>`,
+        emails.watchPaused(name, res.message ?? "", lang === "en"),
       );
     return { ok: false, reason: res.code };
   }
@@ -116,10 +114,7 @@ export async function runWatcher(admin: SupabaseClient, id: string) {
     await sendEmail(
       profile.email,
       lang === "en" ? `Weekly update: ${row.title}` : `Update mingguan: ${row.title}`,
-      `<h2>${esc(row.title)}</h2>
-<p>${lang === "en" ? "This week's changes:" : "Yang berubah minggu ini:"}</p>
-<ul>${(changes.length ? changes : [lang === "en" ? "The new analysis is ready." : "Analisis terbaru sudah siap."]).map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
-<p><a href="${url}" style="display:inline-block;background:#1e5bff;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">${lang === "en" ? "Open the full result" : "Buka hasil lengkap"}</a></p>`,
+      emails.watchUpdate(row.title, changes.length ? changes : [lang === "en" ? "The new analysis is ready." : "Analisis terbaru sudah siap."], url, lang === "en"),
     );
   }
   return { ok: true, runId: res.runId };
