@@ -363,7 +363,8 @@ export async function createResetLink(userId: string): Promise<{ link?: string; 
   const admin = createAdminClient();
   const { data: u, error: getErr } = await admin.auth.admin.getUserById(userId);
   if (getErr || !u.user?.email) return { error: "Akun tidak ditemukan." };
-  const appUrl = (process.env.MARQTHINK_APP_URL || "https://markethink-pi.vercel.app").replace(/\/$/, "");
+  // Alamat aplikasi AI (domain utama). Env opsional; nama lama MARKETHINK_APP_URL tetap dibaca.
+  const appUrl = (process.env.MARQTHINK_APP_URL || process.env.MARKETHINK_APP_URL || "https://marqthink.com").replace(/\/$/, "");
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email: u.user.email,

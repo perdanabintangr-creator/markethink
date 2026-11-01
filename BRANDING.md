@@ -7,14 +7,14 @@ Nama brand disimpan di **`src/lib/brand.ts`** (`BRAND`, `BRAND_WORDMARK`, `BRAND
 2. Buat migrasi data untuk teks di database (contoh: `supabase/migrations/20261031000051_rebrand_marqthink.sql`), lalu `npm run db:bundle`.
 3. `npm run check` → `npm run build` → commit → push.
 
-Yang sengaja **tidak** diubah (nama teknis, bukan tampilan): nama package, `supabase/config.toml`, env `MARKETHINK_APP_URL` (back office), salt OAuth, setting DB `markethink.actor`, awalan nomor order `MTK-`, kunci `localStorage` `mt_*`, migrasi lama.
+Yang sengaja **tidak** diubah (nama teknis, bukan tampilan): nama package, `supabase/config.toml`, salt OAuth, setting DB `markethink.actor`, awalan nomor order `MTK-`, kunci `localStorage` `mt_*`, migrasi lama.
 
 ## Langkah di luar kode (founder)
 | Tempat | Yang diubah |
 |---|---|
 | Vercel → project aplikasi → Settings → Domains | Tambah domain baru (mis. `marqthink.vercel.app` bila tersedia, atau domain sendiri). Domain lama tetap aktif. |
 | Vercel → Environment Variables (alamat utama) | `CANONICAL_HOST` = `marqthink.com` → halaman dari alamat lama otomatis dialihkan (API/webhook tidak). |
-| Vercel → Environment Variables | `NEXT_PUBLIC_APP_URL` = alamat baru; `EMAIL_FROM` = `Marqthink <noreply@domain>` setelah domain diverifikasi di Resend. Back office: `MARKETHINK_APP_URL` = alamat baru. Redeploy. |
+| Vercel → Environment Variables | `NEXT_PUBLIC_APP_URL` = alamat baru; `EMAIL_FROM` = `Marqthink <noreply@domain>` setelah domain diverifikasi di Resend. Back office: `MARQTHINK_APP_URL` = alamat baru (opsional, bawaan kode sudah https://marqthink.com). Redeploy. |
 | Supabase → Authentication → URL Configuration | Site URL = alamat baru; tambah `https://<alamat-baru>/**` di Redirect URLs (alamat lama biarkan dulu). |
 | Google Cloud → OAuth consent screen | Nama aplikasi "Marqthink" (+ logo bila ada). |
 | Canva Developer Portal | Nama integrasi "Marqthink"; tambah redirect URL `https://<alamat-baru>/api/connectors/canva/callback`. |
