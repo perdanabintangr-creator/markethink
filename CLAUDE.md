@@ -12,6 +12,7 @@ Founder: Bro Dana (non-teknis). Bahasa komunikasi: Indonesia, ringkas, tanpa jar
 
 ## Infrastruktur
 - Production: https://marqthink.com (domain Hostinger, DNS A → Vercel). Alamat lama https://markethink-pi.vercel.app otomatis dialihkan (env `CANONICAL_HOST`), kecuali /api. Vercel tim `markethink`, project `markethink`, Hobby.
+- Back office: https://office.marqthink.com (project Vercel `markethink-backoffice`, alamat lama markethink-backoffice.vercel.app tetap jalan). Database sama dengan aplikasi → data otomatis sinkron.
 - Supabase project `cqrstytnbfspbwgyvpzi` (Singapore, free) — dikelola via connector Supabase; migrasi di `supabase/migrations` + `npm run db:bundle`.
 - Diagnosa error chat: tabel `usage_logs` (kolom `status`, `error`) dan `credit_ledger`.
 - Connector Vercel: akses tim `markethink` sudah di-approve founder (31 Okt); bila 403 lagi, minta link `authorize_team_access`.
