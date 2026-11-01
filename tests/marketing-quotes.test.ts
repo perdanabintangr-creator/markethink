@@ -7,6 +7,6 @@ describe("kata-kata marketing pop-up", () => {
     expect(new Set(MARKETING_QUOTES.map((q) => q.text)).size).toBe(100);
   });
   it("tiap kalimat cukup pendek untuk pop-up HP", () => {
-    for (const q of MARKETING_QUOTES) expect(q.text.length, q.text).toBeLessThanOrEqual(120);
+    for (const q of MARKETING_QUOTES) expect(q.text.length, q.text).toBeLessThanOrEqual(100);
   });
 });
