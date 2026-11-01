@@ -7,6 +7,7 @@ import { FeatureExplorer } from "@/components/landing/feature-explorer";
 import { HeroChat } from "@/components/landing/hero-chat";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { NeuralField } from "@/components/landing/neural-field";
+import { QAdvantages } from "@/components/landing/q-advantages";
 import { QuotePopup } from "@/components/landing/quote-popup";
 import { Reveal } from "@/components/landing/reveal";
 import { RotatingTagline } from "@/components/landing/rotating-tagline";
@@ -108,8 +109,21 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ---------------------------------------------------------------- Keunggulan (Question · Quality · Quotient) */}
+      <section id="keunggulan" className="scroll-mt-16 bg-background">
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
+          <Reveal className="text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Keunggulan</p>
+            <h2 className="mt-3 font-brand text-3xl font-black tracking-tight sm:text-5xl">Tanya. Dapat hasil berkelas. Makin cerdas.</h2>
+          </Reveal>
+          <div className="mt-10">
+            <QAdvantages />
+          </div>
+        </div>
+      </section>
+
       {/* ---------------------------------------------------------------- Studi kasus */}
-      <section id="studi-kasus" className="scroll-mt-16 bg-background">
+      <section id="studi-kasus" className="scroll-mt-16 border-y bg-muted/40">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
           <Reveal className="text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Studi kasus</p>
@@ -123,7 +137,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ---------------------------------------------------------------- Cara kerja */}
-      <section id="cara-kerja" className="scroll-mt-16 border-y bg-muted/40">
+      <section id="cara-kerja" className="scroll-mt-16 bg-background">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
           <Reveal className="text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Cara kerja</p>
@@ -136,7 +150,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ---------------------------------------------------------------- Bedanya dengan AI chat biasa */}
-      <section className="bg-background">
+      <section className="border-y bg-muted/40">
         <div className="mx-auto max-w-5xl px-4 py-20 sm:py-28">
           <Reveal className="text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Bedanya</p>
@@ -172,7 +186,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ---------------------------------------------------------------- Fitur */}
-      <section id="fitur" className="scroll-mt-16 border-t bg-muted/40">
+      <section id="fitur" className="scroll-mt-16 bg-background">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
           <Reveal className="text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Fitur</p>

@@ -471,3 +471,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Section kutipan (efek decode) dihapus. Diganti pop-up yang menempel di bawah header landing (`QuotePopup`), berganti tiap 7 detik.
 - 100 kalimat di `src/lib/marketing-quotes.ts`: 26 kutipan tokoh (diterjemahkan, nama tokoh ditulis) + 74 tips tim Marqthink (label "Tips Marqthink", tidak diatribusikan ke tokoh). Urutan diacak tiap kunjungan, berhenti saat disorot kursor, bisa ditutup (selama sesi).
 - Root landing `overflow-x-hidden` → `overflow-x-clip` agar header & pop-up benar-benar menempel saat scroll.
+
+## 2026-11-01 — Section "Keunggulan" (Question · Quality · Quotient)
+- Q ditampilkan sebagai 3 manfaat, bukan filosofi: Cukup bertanya / Hasil setara konsultan / Makin dipakai, makin pintar. Tiap kartu ada contoh visual + watermark Q.
+- "Quotient" sengaja tidak memakai skor angka (MQ) karena produk belum punya metrik itu; diganti visual memori brand yang tumbuh.
