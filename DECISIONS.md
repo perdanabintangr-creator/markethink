@@ -487,3 +487,4 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-11-01 — Pop-up: kata mutiara marketing + lebih kecil di HP
 - Isi diganti 100 kata-kata marketing gaya kata mutiara (15 tokoh + 85 kata-kata Marqthink) yang mendorong berlangganan secara halus, bukan kalimat jualan langsung. Maks 100 karakter.
 - Di HP pop-up diperkecil (lebar 14,5rem, teks 11px); laptop tetap 19rem.
+- 2026-11-01: tombol × pop-up dihapus atas permintaan founder (pop-up tidak bisa ditutup).
