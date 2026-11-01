@@ -488,3 +488,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Isi diganti 100 kata-kata marketing gaya kata mutiara (15 tokoh + 85 kata-kata Marqthink) yang mendorong berlangganan secara halus, bukan kalimat jualan langsung. Maks 100 karakter.
 - Di HP pop-up diperkecil (lebar 14,5rem, teks 11px); laptop tetap 19rem.
 - 2026-11-01: tombol × pop-up dihapus atas permintaan founder (pop-up tidak bisa ditutup).
+
+## 2026-11-01 — Hero baru
+- Judul: "Otak marketing / brand kamu." + sub "Dari riset, strategi, sampai konten siap posting. Semua dimulai dari satu pertanyaan." (pilihan founder). Tagline "Think like a brand." tetap di footer & rotasi CTA.
+- Badge harga: "☕ Lebih murah dari ngopi seminggu · Rp60rb/bulan" (cyan menyala, satu baris di HP).

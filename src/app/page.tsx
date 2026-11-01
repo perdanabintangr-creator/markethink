@@ -48,21 +48,20 @@ export default async function LandingPage() {
 
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-14 pt-14 sm:pt-20 lg:grid-cols-[1.1fr_1fr]">
           <div className="text-center lg:text-left">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/80">
-              <span className="size-1.5 animate-pulse rounded-full bg-cyan-300" /> Mulai gratis · upgrade mulai Rp60 ribu/bulan
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-cyan-300/50 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_30px_rgba(18,208,245,0.25)] sm:gap-2 sm:px-4 sm:py-2 sm:text-base">
+              <span aria-hidden>☕</span> Lebih murah dari ngopi seminggu
+              <span className="text-cyan-300/60">·</span>
+              <span className="font-brand font-black text-cyan-300">Rp60rb/bulan</span>
             </span>
-            <h1 className="mt-6 font-brand text-5xl font-black leading-[1.02] tracking-tight sm:text-7xl">
-              Think like
+            <h1 className="mt-6 font-brand text-5xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-[3.5rem] xl:text-6xl">
+              <span className="lg:whitespace-nowrap">Otak marketing</span>
               <br />
               <span className="mq-motion animate-[mq-shimmer_6s_linear_infinite] bg-[linear-gradient(90deg,#3b8bff,#12b8f5,#5ef0ff,#ffffff,#5ef0ff,#12b8f5,#3b8bff)] bg-[length:200%_auto] bg-clip-text text-transparent">
-                a brand.
+                brand kamu.
               </span>
             </h1>
-            <p className="mt-5 text-lg font-medium text-white/90 sm:text-xl">Otak marketing untuk brand kamu.</p>
-            <p className="mx-auto mt-3 max-w-xl text-white/60 lg:mx-0">
-              Setiap brand butuh otak yang berpikir untuknya. {BRAND} meriset, menyusun strategi, dan mengeksekusi konten
-              marketing kamu, khusus untuk pasar Indonesia.
-            </p>
+            <p className="mt-5 text-lg font-medium text-white/90 sm:text-xl">Dari riset, strategi, sampai konten siap posting.</p>
+            <p className="mx-auto mt-2 max-w-xl text-white/60 lg:mx-0">Semua dimulai dari satu pertanyaan.</p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
               <Button asChild size="lg" className="rounded-full bg-gradient-to-r from-[#0a6cff] to-[#12d0f5] px-7 text-base text-white shadow-xl shadow-cyan-500/25 hover:opacity-90">
                 <Link href={cta}>
