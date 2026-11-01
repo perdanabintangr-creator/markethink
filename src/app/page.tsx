@@ -15,7 +15,7 @@ import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 import { getSession } from "@/lib/auth";
 import { BRAND, BRAND_ICON } from "@/lib/brand";
-import { isSupabaseConfigured } from "@/lib/env";
+import { isSupabaseConfigured, resolveAppUrl } from "@/lib/env";
 
 /** Kata-kata marketing yang berjalan di bagian bawah hero (dua baris, arah berlawanan). */
 const wordsA = ["Brand awareness", "Positioning", "Storytelling", "Insight", "Engagement", "Loyalty"];
@@ -30,12 +30,44 @@ const compare = [
   { icon: Bot, topic: "Cara kerja", other: "Satu pertanyaan, satu jawaban.", ours: "Agent menjalankan beberapa tools sampai jadi paket kerja." },
 ];
 
+export const metadata = { alternates: { canonical: "/" } };
+
+/** Data terstruktur untuk Google: identitas brand, situs, dan aplikasi (membantu pencarian nama "Marqthink"). */
+function brandJsonLd(base: string) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${base}/#org`,
+        name: BRAND,
+        alternateName: ["MARQTHINK", "Marq Think", "Marqthink AI"],
+        url: `${base}/`,
+        logo: `${base}/brand/marqthink-q-512.png`,
+        slogan: "Otak marketing untuk brand kamu.",
+      },
+      { "@type": "WebSite", "@id": `${base}/#website`, name: BRAND, alternateName: "MARQTHINK", url: `${base}/`, inLanguage: "id-ID", publisher: { "@id": `${base}/#org` } },
+      {
+        "@type": "SoftwareApplication",
+        name: BRAND,
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        url: `${base}/`,
+        description: "Otak marketing berbasis AI: riset ber-sumber, strategi, copy iklan, kalender konten, dan desain untuk brand Indonesia.",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "IDR", description: "Mulai gratis, upgrade mulai Rp60.000/bulan" },
+        publisher: { "@id": `${base}/#org` },
+      },
+    ],
+  };
+}
+
 export default async function LandingPage() {
   const { user } = isSupabaseConfigured() ? await getSession() : { user: null };
   const cta = user ? "/dashboard" : "/register";
 
   return (
     <div className="min-h-dvh overflow-x-clip">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(brandJsonLd(resolveAppUrl())) }} />
       <SiteHeader loggedIn={Boolean(user)} />
       <QuotePopup ctaHref={user ? "/pricing" : "/register"} ctaLabel={user ? "Lihat paket" : "Coba gratis"} />
 

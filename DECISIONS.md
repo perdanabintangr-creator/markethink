@@ -512,3 +512,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-11-01 — Verifikasi brand Google & SEO dasar
 - marqthink.com terverifikasi di Google Search Console (TXT di DNS Hostinger — jangan dihapus). Branding Google terverifikasi tanpa logo (logo Q ditolak otomatis); founder perlu klik "Publish branding" ≤ 7 hari.
 - `sitemap.xml` (halaman publik) & `robots.txt` (isi aplikasi/API tidak diindeks) ditambahkan untuk Search Console.
+
+## 2026-11-01 — SEO nama brand
+- Judul default "Marqthink (MARQTHINK): Otak Marketing AI untuk Brand Kamu", deskripsi, keywords, OpenGraph/Twitter + gambar pratinjau 1200×630 (`src/app/opengraph-image.png`), canonical beranda, JSON-LD Organization/WebSite/SoftwareApplication (alternateName MARQTHINK).
+- Langkah founder: Search Console → Inspeksi URL → Minta pengindeksan; buat profil sosial @marqthink yang menaut ke marqthink.com.

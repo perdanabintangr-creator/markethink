@@ -6,11 +6,23 @@ import { resolveAppUrl } from "@/lib/env";
 import { FONT_SCRIPT } from "@/lib/fonts";
 import "./globals.css";
 
+const SITE_DESC =
+  "Marqthink adalah otak marketing berbasis AI untuk brand Indonesia: riset pasar ber-sumber, strategi, copy iklan, kalender konten, sampai desain siap posting. Mulai gratis.";
+
 export const metadata: Metadata = {
-  title: { default: `${BRAND}: Otak Marketing Berbasis AI`, template: `%s · ${BRAND}` },
-  description:
-    "Partner AI untuk marketing: riset ber-sitasi, strategi, konten, kalender, sampai KPI. Dibuat untuk marketer, UMKM, mahasiswa, dan freelancer Indonesia.",
+  title: { default: `${BRAND} (MARQTHINK): Otak Marketing AI untuk Brand Kamu`, template: `%s · ${BRAND}` },
+  description: SITE_DESC,
+  applicationName: BRAND,
+  keywords: ["Marqthink", "MARQTHINK", "AI marketing", "AI marketing Indonesia", "otak marketing", "konsultan marketing AI", "kalender konten", "copy iklan", "riset kompetitor", "UMKM"],
   metadataBase: new URL(resolveAppUrl()),
+  openGraph: {
+    type: "website",
+    siteName: BRAND,
+    locale: "id_ID",
+    title: `${BRAND}: Otak Marketing AI untuk Brand Kamu`,
+    description: SITE_DESC,
+  },
+  twitter: { card: "summary_large_image", title: `${BRAND}: Otak Marketing AI untuk Brand Kamu`, description: SITE_DESC },
 };
 
 export const viewport: Viewport = {
