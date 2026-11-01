@@ -3,15 +3,21 @@ import { Resend } from "resend";
 import { env } from "@/lib/env";
 import { brandEmail, escapeHtml } from "@/lib/email-template";
 
-export async function sendEmail(to: string, subject: string, html: string) {
-  if (!env.resendKey) return { skipped: true };
+export async function sendEmail(to: string, subject: string, html: string): Promise<{ skipped: boolean; id?: string; error?: string }> {
+  if (!env.resendKey) return { skipped: true, error: "RESEND_API_KEY kosong" };
   try {
     const resend = new Resend(env.resendKey);
-    await resend.emails.send({ from: env.emailFrom, to, subject, html });
-    return { skipped: false };
+    // Resend tidak melempar error (mis. alamat ditolak/batas kirim) — hasilnya harus dicek, kalau tidak kegagalan tak terlihat.
+    const { data, error } = await resend.emails.send({ from: env.emailFrom, to, subject, html });
+    if (error) {
+      console.error("[email] Resend menolak", { to, subject, error: error.message ?? error });
+      return { skipped: true, error: error.message ?? String(error) };
+    }
+    console.info("[email] terkirim", { to, subject, id: data?.id });
+    return { skipped: false, id: data?.id };
   } catch (err) {
     console.error("[email] gagal kirim", err);
-    return { skipped: true };
+    return { skipped: true, error: err instanceof Error ? err.message : String(err) };
   }
 }
 

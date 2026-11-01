@@ -28,13 +28,13 @@ export async function GET(req: Request) {
     }
   }
 
-  let emailTest: { ok: boolean; ke?: string; error?: string } | string = "tambahkan ?email=1 di alamat untuk kirim email uji ke email kamu";
+  let emailTest: { ok: boolean; ke?: string; id?: string; error?: string } | string = "tambahkan ?email=1 di alamat untuk kirim email uji ke email kamu";
   if (new URL(req.url).searchParams.get("email") === "1") {
     if (!env.resendKey) emailTest = { ok: false, error: "RESEND_API_KEY belum terpasang (atau belum Redeploy)" };
     else if (!s.user.email) emailTest = { ok: false, error: "akun admin tidak punya email" };
     else {
       const res = await sendEmail(s.user.email, "Tes email Marqthink ✅", emails.test());
-      emailTest = res.skipped ? { ok: false, error: "Resend menolak, cek log Vercel ([email] gagal kirim)" } : { ok: true, ke: s.user.email };
+      emailTest = res.skipped ? { ok: false, error: res.error ?? "Resend menolak" } : { ok: true, ke: s.user.email, id: res.id };
     }
   }
 
