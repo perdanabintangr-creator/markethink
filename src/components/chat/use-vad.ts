@@ -5,7 +5,7 @@ import type { MicVAD } from "@ricky0123/vad-web";
 import { encodeWav, rms } from "@/lib/voice/wav";
 
 /** Potongan suara di bawah kekerasan ini dianggap suara latar/jauh (bukan orang yang bicara ke AI). */
-const MIN_RMS = 0.012;
+const MIN_RMS = 0.006;
 
 export type VadError = "denied" | "load_failed";
 
@@ -31,12 +31,15 @@ export function useVad(opts: { onSpeech: (wav: Blob) => void; onSpeaking?: (spea
         baseAssetPath: "/vad/",
         onnxWASMBasePath: "/vad/",
         startOnLoad: false,
-        // Lebih ketat dari bawaan supaya musik & obrolan latar tidak dianggap ucapan.
-        positiveSpeechThreshold: 0.8,
-        negativeSpeechThreshold: 0.6,
-        redemptionMs: 700,
-        preSpeechPadMs: 300,
-        minSpeechMs: 500,
+        // Sedikit lebih ketat dari bawaan (0,5/0,35) supaya bising latar tidak dianggap ucapan,
+        // tapi tidak terlalu ketat agar suara pelan/jauh dari HP tetap tertangkap.
+        positiveSpeechThreshold: 0.6,
+        negativeSpeechThreshold: 0.4,
+        // Jeda bicara sampai 1,8 detik masih dianggap kalimat yang sama (ambil napas, mikir) → tidak terpotong.
+        redemptionMs: 1800,
+        // Ambil 0,8 detik sebelum suara terdeteksi agar suku kata pertama tidak hilang.
+        preSpeechPadMs: 800,
+        minSpeechMs: 400,
         getStream: () =>
           navigator.mediaDevices.getUserMedia({
             audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },

@@ -12,8 +12,8 @@ import { useVad } from "./use-vad";
 
 type Phase = "speaking" | "listening" | "transcribing" | "thinking" | "idle";
 
-/** Jeda diam (ms) setelah user bicara sebelum ucapannya dikirim. */
-const SILENCE_MS = 1200;
+/** Jeda diam (ms) setelah user bicara sebelum ucapannya dikirim — cukup lama untuk jeda berpikir/ambil napas. */
+const SILENCE_MS = 2300;
 /** Tanpa ucapan selama ini (ms) → berhenti mendengarkan supaya mic tidak menyala terus. */
 const NO_SPEECH_MS = 15000;
 
@@ -81,21 +81,23 @@ export function VoiceMode({
   );
 
   /**
-   * Dengar dengan deteksi jeda sendiri: begitu user berhenti bicara ±1,2 detik, ucapan langsung dikirim
+   * Dengar dengan deteksi jeda sendiri: begitu user berhenti bicara ±2,3 detik, ucapan langsung dikirim
    * (tanpa menunggu pengenal suara browser yang di beberapa HP/tablet lambat memutuskan "selesai").
    */
   const startBrowserListening = useCallback(
     (retry = true) => {
       setHint(null);
       setSaid("");
+      let carried = ""; // ucapan dari sesi pengenal suara sebelumnya (browser kadang menutup mic sendiri di tengah bicara)
       let heard = "";
       let live = "";
       let done = false;
       let silence: ReturnType<typeof setTimeout> | undefined;
       const startedAt = Date.now();
+      const current = () => `${carried} ${heard} ${live}`.replace(/\s+/g, " ").trim();
       const finish = () => {
         if (done) return;
-        const text = `${heard} ${live}`.replace(/\s+/g, " ").trim();
+        const text = current();
         if (!text) return;
         done = true;
         clearTimeout(silence);
@@ -104,33 +106,43 @@ export function VoiceMode({
       };
       const armSilence = () => {
         clearTimeout(silence);
-        if (`${heard}${live}`.trim()) silence = setTimeout(finish, SILENCE_MS);
+        if (current()) silence = setTimeout(finish, SILENCE_MS);
       };
-      const ok = listen({
-        continuous: true,
-        // Keduanya berisi kalimat utuh sesi ini (bukan potongan), jadi diganti, tidak disambung.
-        onFinal: (full) => {
-          heard = full;
-          live = "";
-          armSilence();
-        },
-        onInterim: (full) => {
-          heard = "";
-          live = full;
-          if (full) setSaid(full);
-          armSilence();
-        },
-        onEnd: (err) => {
-          clearTimeout(silence);
-          if (done || waitingReply.current) return;
-          if (`${heard}${live}`.trim()) return finish();
-          // Beberapa HP menutup mic sendiri dalam hitungan detik tanpa suara: coba sekali lagi otomatis.
-          if (retry && !err && Date.now() - startedAt < 4000) return startBrowserListening(false);
-          setPhase("idle");
-          if (err === "denied") setHint(V.micDenied);
-          else setHint(V.noSpeech);
-        },
-      });
+      const open = (): boolean =>
+        listen({
+          continuous: true,
+          // Keduanya berisi kalimat utuh sesi ini (bukan potongan), jadi diganti, tidak disambung.
+          onFinal: (full) => {
+            heard = full;
+            live = "";
+            armSilence();
+          },
+          onInterim: (full) => {
+            heard = "";
+            live = full;
+            if (full || carried) setSaid(current());
+            armSilence();
+          },
+          onEnd: (err) => {
+            if (done || waitingReply.current) return clearTimeout(silence);
+            if (current()) {
+              // Browser menutup mic padahal jeda diam belum habis → simpan ucapan & lanjut dengar,
+              // jadi kalimat panjang tidak terpotong. Pengiriman tetap menunggu jeda diam (SILENCE_MS).
+              carried = current();
+              heard = "";
+              live = "";
+              if (err === "denied" || !open()) finish();
+              return;
+            }
+            clearTimeout(silence);
+            // Beberapa HP menutup mic sendiri dalam hitungan detik tanpa suara: coba sekali lagi otomatis.
+            if (retry && !err && Date.now() - startedAt < 4000) return startBrowserListening(false);
+            setPhase("idle");
+            if (err === "denied") setHint(V.micDenied);
+            else setHint(V.noSpeech);
+          },
+        });
+      const ok = open();
       setPhase(ok ? "listening" : "idle");
       if (!ok) setHint(V.unsupported);
     },

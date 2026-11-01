@@ -1,5 +1,6 @@
 import "server-only";
 import { untrusted } from "./prompt";
+import { googleDateRange, isRecentSource } from "./recency";
 
 export interface Source {
   id: number;
@@ -17,10 +18,18 @@ export const searchApiEnabled = () => serperEnabled() || Boolean(process.env.TAV
 
 /** Pencarian Google via Serper (±$1 per 1.000 pencarian), hasil untuk Indonesia. */
 export async function serperSearch(query: string, opts: { maxResults?: number; signal?: AbortSignal } = {}): Promise<Source[]> {
+  // Utamakan hasil 2 tahun terakhir (filter tanggal Google). Bila kosong (topik niche), cari ulang tanpa filter
+  // lalu buang yang tanggalnya ketahuan lebih tua dari 2 tahun.
+  const recent = await serperQuery(query, opts, googleDateRange());
+  if (recent.length) return recent;
+  return serperQuery(query, opts);
+}
+
+async function serperQuery(query: string, opts: { maxResults?: number; signal?: AbortSignal }, tbs?: string): Promise<Source[]> {
   const res = await fetch("https://google.serper.dev/search", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-API-KEY": process.env.SERPER_API_KEY!.trim() },
-    body: JSON.stringify({ q: query.slice(0, 400), gl: "id", hl: "id", num: Math.min(10, opts.maxResults ?? 8) }),
+    body: JSON.stringify({ q: query.slice(0, 400), gl: "id", hl: "id", num: Math.min(10, opts.maxResults ?? 8), ...(tbs ? { tbs } : {}) }),
     signal: opts.signal,
   });
   if (!res.ok) throw new Error(`Serper error ${res.status}: ${(await res.text()).slice(0, 200)}`);
@@ -40,7 +49,7 @@ export async function serperSearch(query: string, opts: { maxResults?: number; s
   for (const q of (data.peopleAlsoAsk ?? []).slice(0, 3)) if (q.link && q.snippet) list.push({ title: q.question, url: q.link, content: q.snippet });
   const seen = new Set<string>();
   return list
-    .filter((r) => r.url && !seen.has(r.url) && (seen.add(r.url), true))
+    .filter((r) => r.url && !seen.has(r.url) && (seen.add(r.url), true) && isRecentSource(r.publishedDate))
     .slice(0, opts.maxResults ?? 8)
     .map((r, i) => ({ ...r, id: i + 1, content: r.content.slice(0, 1500) }));
 }
@@ -63,7 +72,7 @@ async function tavilySearch(query: string, opts: { maxResults?: number; signal?:
   const data = (await res.json()) as {
     results?: { title: string; url: string; content: string; published_date?: string }[];
   };
-  return (data.results ?? []).map((r, i) => ({
+  return (data.results ?? []).filter((r) => isRecentSource(r.published_date)).map((r, i) => ({
     id: i + 1,
     title: r.title,
     url: r.url,

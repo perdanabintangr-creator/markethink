@@ -1,4 +1,5 @@
 import { toolRunChatPrompt, toolRunsIndexPrompt } from "@/lib/addons/chat-context";
+import { recencyRule } from "@/lib/ai/recency";
 import { after } from "next/server";
 import {
   consumeStream,
@@ -320,7 +321,9 @@ export async function POST(req: Request) {
       const runPrompt = existing?.source_run_id
         ? await toolRunChatPrompt(admin, existing.source_run_id as string)
         : await toolRunsIndexPrompt(admin, user.id);
-      const system = runPrompt ? `${baseSystem}\n\n${runPrompt}` : baseSystem;
+      // Semua jawaban (terutama yang memakai riset web): hanya sumber ≤ 2 tahun.
+      const freshBase = `${baseSystem}\n\n${recencyRule()}`;
+      const system = runPrompt ? `${freshBase}\n\n${runPrompt}` : freshBase;
       // Konteks yang berubah tiap pesan ditaruh di pesan user terakhir agar system prompt tetap bisa di-cache.
       const turnContext = buildTurnContext({
         knowledge: wsCtx.knowledge,

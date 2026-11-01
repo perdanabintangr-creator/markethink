@@ -1,4 +1,5 @@
 import "server-only";
+import { recencyRule } from "@/lib/ai/recency";
 import { generateText } from "ai";
 import { DEFAULT_TOOL_TIER } from "./tool-tier";
 import { SERPER_COST_USD, fetchPageText, formatSources, serperEnabled, serperSearch } from "@/lib/ai/research";
@@ -91,7 +92,7 @@ export async function webResearch(ctx: ToolCtx, opts: { system: string; prompt: 
   const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER);
   const research = await generateText({
     model: routed.model,
-    system: opts.system + langRule(ctx),
+    system: `${opts.system}\n\n${recencyRule()}${langRule(ctx)}`,
     prompt: opts.prompt,
     tools: { web_search: anthropic.tools.webSearch_20250305({ maxUses: opts.maxUses ?? 8 }) },
     maxOutputTokens: opts.maxOutputTokens ?? 6000,
@@ -127,7 +128,7 @@ async function serperResearch(
   const q = await generateText({
     model: qRouted.model,
     system: `Kamu peneliti pasar. Dari tugas riset & brief, tulis ${max} kata kunci pencarian Google yang spesifik dan beragam
-(bahasa Indonesia; boleh bahasa Inggris untuk data industri/laporan global). Sertakan tahun terkini bila relevan.
+(bahasa Indonesia; boleh bahasa Inggris untuk data industri/laporan global). Sertakan tahun ${new Date().getFullYear()} atau ${new Date().getFullYear() - 1} bila relevan — data lebih dari 2 tahun tidak dipakai.
 Bila brief menyebut nama brand/kompetitor, buat kata kunci khusus untuk masing-masing (mis. "<brand> harga paket", "<brand> promo",
 "<brand> review", "<brand> lokasi") — data spesifik per brand lebih penting daripada kata kunci umum.
 Balas hanya daftar kata kunci, satu per baris, tanpa nomor dan tanpa penjelasan.`,
@@ -168,6 +169,8 @@ Balas hanya daftar kata kunci, satu per baris, tanpa nomor dan tanpa penjelasan.
   const notes = await generateText({
     model: routed.model,
     system: `${opts.system}
+
+${recencyRule()}
 
 Hasil pencarian Google sudah tersedia di bawah (cuplikan + isi halaman, bernomor). Tulis CATATAN RISET MENDALAM dalam Markdown:
 - Kelompokkan per topik atau per brand/kompetitor dengan subjudul (###).
