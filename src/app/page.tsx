@@ -40,13 +40,13 @@ export default async function LandingPage() {
       <QuotePopup ctaHref={user ? "/pricing" : "/register"} ctaLabel={user ? "Lihat paket" : "Coba gratis"} />
 
       {/* ---------------------------------------------------------------- Hero */}
-      <section className="relative isolate overflow-hidden bg-[#050b1f] text-white">
+      <section className="relative isolate flex min-h-[calc(100svh-4rem)] flex-col overflow-hidden bg-[#050b1f] text-white">
         <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 size-[56rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,108,255,0.35),transparent_60%)]" />
         <div className="pointer-events-none absolute -bottom-40 -right-20 -z-10 size-[34rem] rounded-full bg-[radial-gradient(circle,rgba(18,208,245,0.22),transparent_60%)]" />
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
         <NeuralField className="-z-10 opacity-70" />
 
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-14 pt-14 sm:pt-20 lg:grid-cols-[1.1fr_1fr]">
+        <div className="mx-auto grid w-full max-w-6xl flex-1 content-center items-center gap-12 px-4 pb-14 pt-14 sm:pt-20 lg:grid-cols-[1.1fr_1fr]">
           <div className="text-center lg:text-left">
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-cyan-300/50 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_30px_rgba(18,208,245,0.25)] sm:gap-2 sm:px-4 sm:py-2 sm:text-base">
               <span aria-hidden>☕</span> Lebih murah dari ngopi seminggu
