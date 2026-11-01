@@ -466,3 +466,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
   - **Bedanya**: tabel AI chat umum vs Marqthink (tanpa menyebut merek lain).
 - Cara kerja: 4 langkah dengan visual hasil per langkah (berganti otomatis 6,5 dtk, bisa diklik).
 - Fitur: klik kartu → dialog contoh permintaan + contoh hasil + tombol "Coba gratis" (`/register?next=<fitur>`) atau "Buka fitur ini" bila sudah login.
+
+## 2026-11-01 — Pop-up kata-kata marketing
+- Section kutipan (efek decode) dihapus. Diganti pop-up yang menempel di bawah header landing (`QuotePopup`), berganti tiap 7 detik.
+- 100 kalimat di `src/lib/marketing-quotes.ts`: 26 kutipan tokoh (diterjemahkan, nama tokoh ditulis) + 74 tips tim Marqthink (label "Tips Marqthink", tidak diatribusikan ke tokoh). Urutan diacak tiap kunjungan, berhenti saat disorot kursor, bisa ditutup (selama sesi).
+- Root landing `overflow-x-hidden` → `overflow-x-clip` agar header & pop-up benar-benar menempel saat scroll.

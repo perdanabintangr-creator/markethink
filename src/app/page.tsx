@@ -7,7 +7,7 @@ import { FeatureExplorer } from "@/components/landing/feature-explorer";
 import { HeroChat } from "@/components/landing/hero-chat";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { NeuralField } from "@/components/landing/neural-field";
-import { QuoteCarousel } from "@/components/landing/quote-carousel";
+import { QuotePopup } from "@/components/landing/quote-popup";
 import { Reveal } from "@/components/landing/reveal";
 import { RotatingTagline } from "@/components/landing/rotating-tagline";
 import { SiteFooter } from "@/components/landing/site-footer";
@@ -34,8 +34,9 @@ export default async function LandingPage() {
   const cta = user ? "/dashboard" : "/register";
 
   return (
-    <div className="min-h-dvh overflow-x-hidden">
+    <div className="min-h-dvh overflow-x-clip">
       <SiteHeader loggedIn={Boolean(user)} />
+      <QuotePopup />
 
       {/* ---------------------------------------------------------------- Hero */}
       <section className="relative isolate overflow-hidden bg-[#050b1f] text-white">
@@ -44,7 +45,7 @@ export default async function LandingPage() {
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
         <NeuralField className="-z-10 opacity-70" />
 
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-14 pt-14 sm:pt-20 lg:grid-cols-[1.1fr_1fr]">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-14 pt-36 sm:pt-32 lg:grid-cols-[1.1fr_1fr]">
           <div className="text-center lg:text-left">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/80">
               <span className="size-1.5 animate-pulse rounded-full bg-cyan-300" /> Mulai gratis · upgrade mulai Rp60 ribu/bulan
@@ -167,16 +168,6 @@ export default async function LandingPage() {
               </Reveal>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------------------- Kutipan marketing */}
-      <section className="relative isolate overflow-hidden bg-[#050b1f] py-24 text-white sm:py-32">
-        <NeuralField className="-z-10 opacity-50" density={0.00006} />
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 size-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,108,255,0.28),transparent_60%)]" />
-        <div className="mx-auto max-w-6xl px-4">
-          <p className="mb-10 text-center text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Kata mereka tentang marketing</p>
-          <QuoteCarousel />
         </div>
       </section>
 
