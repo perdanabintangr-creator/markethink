@@ -505,3 +505,6 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Kolom `profiles.whatsapp` (format baku 62…, dicek database). Wajib di onboarding; pengguna lama tanpa nomor mendapat pop-up wajib sekali di aplikasi; bisa diubah di Pengaturan → Profil.
 - Back office: nomor tampil di daftar & detail pelanggan (klik → chat WA), bisa dicari, ikut di unduhan Excel pelanggan.
 - OTP WA (berbayar) ditunda; dipertimbangkan bila banyak nomor asal-asalan. Login Google menunggu founder mengisi kredensial Google di Supabase.
+
+## 2026-11-01 — Login Google aktif
+- Founder membuat OAuth client "Marqthink Web" (Google Auth Platform, In production) & mengisinya di Supabase. Env `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` (production) → tombol Google tampil di Masuk/Daftar. Pengguna Google tetap wajib isi nomor WA di onboarding.
