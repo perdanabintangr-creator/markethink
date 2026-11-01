@@ -521,3 +521,4 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - `src/lib/email-template.ts`: template kartu (logo, label, judul, langkah bernomor, tombol gradasi, footer marqthink.com & IG). Dipakai semua email aplikasi (selamat datang 3 langkah, reset password, waitlist, tes, pantau mingguan).
 - Template email Supabase (konfirmasi daftar, reset, magic link, ganti email, undangan): `node scripts/build-email-templates.mts` → `supabase/email-templates/*.html`, ditempel founder di Supabase → Authentication → Emails → Templates.
 - Nama pengirim "Marqthink <noreply@marqthink.com>": menunggu domain terverifikasi di Resend (EMAIL_FROM di Vercel) + Custom SMTP Supabase (smtp.resend.com).
+- 2026-11-01: domain marqthink.com Verified di Resend (DKIM + SPF via CNAME rsend/send, DMARC p=none). `EMAIL_FROM="Marqthink <noreply@marqthink.com>"` di Vercel. Supabase Custom SMTP → smtp.resend.com (sender Marqthink).
