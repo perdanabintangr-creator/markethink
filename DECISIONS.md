@@ -479,3 +479,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-11-01 — Paket "Team" & posisi pop-up
 - "Tim & Agency" → **"Team"** (pasangan tab "Personal / Team"); deskripsi tanpa kata agency.
 - Pop-up kata-kata marketing kini hanya di bagian paling atas hero (absolute, ikut tergulung), tidak lagi menempel saat scroll.
+
+## 2026-11-01 — Pop-up "bener juga" di pojok kanan bawah
+- Pop-up jadi toast kecil `fixed` di kanan bawah (tetap ada saat scroll), muncul 2,5 dtk setelah halaman dibuka, ganti tiap 8 dtk, + link "Coba gratis" (login: "Lihat paket").
+- Isi diganti 100 kalimat persuasif agar pengunjung ingin berlangganan (biaya, waktu, tanpa harus jago, kualitas, kenal brand, momentum, risiko kecil). Aturan: hanya klaim yang benar (harga paket & fitur yang ada), tanpa jumlah pengguna/testimoni karangan.
