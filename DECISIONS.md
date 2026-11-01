@@ -492,3 +492,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-11-01 — Hero baru
 - Judul: "Otak marketing / brand kamu." + sub "Dari riset, strategi, sampai konten siap posting. Semua dimulai dari satu pertanyaan." (pilihan founder). Tagline "Think like a brand." tetap di footer & rotasi CTA.
 - Badge harga: "☕ Lebih murah dari ngopi seminggu · Rp60rb/bulan" (cyan menyala, satu baris di HP).
+
+## 2026-11-01 · Alamat back office office.marqthink.com
+- Project Vercel `markethink-backoffice` + domain `office.marqthink.com` (Production). DNS Hostinger: CNAME `office` → target dari Vercel.
+  Alamat lama markethink-backoffice.vercel.app tetap jalan. Database sama dengan aplikasi (data otomatis sinkron).
