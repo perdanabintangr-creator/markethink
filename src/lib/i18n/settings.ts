@@ -177,6 +177,11 @@ const id = {
   // ── Pesan error server action ──
   errInvalidData: "Data tidak valid.",
   errSaveFailed: "Gagal menyimpan.",
+  errWhatsapp: "Nomor WhatsApp belum benar. Contoh: 0812 3456 7890.",
+  whatsapp: "Nomor WhatsApp",
+  waGateTitle: "Lengkapi nomor WhatsApp kamu",
+  waGateDesc: "Untuk info akun, tagihan, dan bantuan. Cukup sekali, tidak kami sebarkan.",
+  waGateSave: "Simpan & lanjut",
   errMax1500: "Maksimal 1.500 karakter.",
   errPasswordMin: "Password minimal 8 karakter.",
   errPasswordMismatch: "Konfirmasi password tidak sama.",
@@ -415,6 +420,11 @@ const en: typeof id = {
 
   errInvalidData: "Invalid data.",
   errSaveFailed: "Couldn't save.",
+  errWhatsapp: "That WhatsApp number doesn't look right. Example: 0812 3456 7890.",
+  whatsapp: "WhatsApp number",
+  waGateTitle: "Add your WhatsApp number",
+  waGateDesc: "For account info, billing, and support. One time only, never shared.",
+  waGateSave: "Save & continue",
   errMax1500: "Maximum 1,500 characters.",
   errPasswordMin: "Password must be at least 8 characters.",
   errPasswordMismatch: "Passwords don't match.",

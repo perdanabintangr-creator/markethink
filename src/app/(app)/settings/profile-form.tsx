@@ -14,7 +14,7 @@ import { updateProfile } from "./actions";
 export function ProfileForm({
   profile,
 }: {
-  profile: { full_name: string; email: string; persona_role: string; industry: string; experience: string; goal: string };
+  profile: { full_name: string; email: string; whatsapp: string; persona_role: string; industry: string; experience: string; goal: string };
 }) {
   const router = useRouter();
   const { lang } = useApp();
@@ -41,6 +41,10 @@ export function ProfileForm({
       <div className="space-y-1.5">
         <Label>{t.email}</Label>
         <Input value={profile.email} disabled />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="whatsapp">{t.whatsapp}</Label>
+        <Input id="whatsapp" name="whatsapp" type="tel" inputMode="tel" defaultValue={profile.whatsapp} placeholder="0812 3456 7890" maxLength={20} required />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="persona_role">{t.role}</Label>

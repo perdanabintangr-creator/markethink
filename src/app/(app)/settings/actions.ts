@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { EXPERIENCE, ROLES } from "@/lib/personas";
 import { RESPONSE_STYLES } from "@/lib/ai/prompt-styles";
 import { settingsText } from "@/lib/i18n/settings";
+import { normalizeWhatsapp } from "@/lib/whatsapp";
 
 const profileSchema = z.object({
   full_name: z.string().trim().max(80),
@@ -15,6 +16,7 @@ const profileSchema = z.object({
   industry: z.string().trim().min(1).max(80),
   experience: z.enum(EXPERIENCE.map((e) => e.id) as [string, ...string[]]),
   goal: z.string().trim().max(200),
+  whatsapp: z.string().trim().max(30).optional(),
 });
 
 export async function updateProfile(_prev: { ok?: boolean; error?: string } | undefined, formData: FormData) {
@@ -22,9 +24,12 @@ export async function updateProfile(_prev: { ok?: boolean; error?: string } | un
   const t = settingsText(profile.language);
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: t.errInvalidData };
+  const { whatsapp: waRaw, ...rest } = parsed.data;
+  const whatsapp = normalizeWhatsapp(waRaw);
+  if (!whatsapp) return { error: t.errWhatsapp };
   const { error } = await supabase
     .from("profiles")
-    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .update({ ...rest, whatsapp, updated_at: new Date().toISOString() })
     .eq("id", user.id);
   if (error) return { error: t.errSaveFailed };
   revalidatePath("/", "layout");
@@ -135,4 +140,16 @@ export async function deleteAccount(formData: FormData) {
   await admin.auth.admin.deleteUser(user.id);
   await supabase.auth.signOut();
   redirect("/?deleted=1");
+}
+
+/** Pengguna lama yang belum punya nomor WhatsApp: isi sekali dari pop-up di aplikasi. */
+export async function saveWhatsapp(_prev: { ok?: boolean; error?: string } | undefined, formData: FormData) {
+  const { supabase, user, profile } = await requireUser();
+  const t = settingsText(profile.language);
+  const whatsapp = normalizeWhatsapp(String(formData.get("whatsapp") ?? ""));
+  if (!whatsapp) return { error: t.errWhatsapp };
+  const { error } = await supabase.from("profiles").update({ whatsapp, updated_at: new Date().toISOString() }).eq("id", user.id);
+  if (error) return { error: t.errSaveFailed };
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

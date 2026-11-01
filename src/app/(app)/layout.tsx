@@ -5,6 +5,7 @@ import { getDict } from "@/lib/i18n/dict";
 import { AppShell } from "@/components/app/app-shell";
 import { anyPaymentsEnabled } from "@/lib/payments/gateway";
 import { sttEnabled } from "@/lib/voice/stt";
+import { WhatsappGate } from "@/components/app/whatsapp-gate";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, profile } = await requireUser();
@@ -44,6 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }}
     >
       {children}
+      {!profile.whatsapp && <WhatsappGate lang={profile.language === "en" ? "en" : "id"} />}
     </AppShell>
   );
 }

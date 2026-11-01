@@ -28,6 +28,7 @@ export async function GET(req: Request) {
     rows = ((data ?? []) as Record<string, unknown>[]).map((r) => ({
       email: r.email,
       nama: r.full_name,
+      whatsapp: r.whatsapp ? `+${r.whatsapp}` : "",
       paket: PLAN[String(r.plan_id)] ?? r.plan_id,
       di_paket_sejak: r.plan_started_at,
       aktif_sampai: r.active_until,

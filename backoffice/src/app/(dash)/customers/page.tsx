@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatWhatsapp, whatsappLink } from "@/lib/whatsapp";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
@@ -32,6 +33,7 @@ interface Row {
   id: string;
   email: string | null;
   full_name: string | null;
+  whatsapp: string | null;
   role: string;
   internal: boolean;
   plan_id: string;
@@ -87,7 +89,7 @@ export default async function CustomersPage({
         }
       />
       <form className="flex flex-wrap items-end gap-2 rounded-xl border bg-background p-3">
-        <Input name="q" defaultValue={q} placeholder="Cari email atau nama…" className="w-full sm:w-64" />
+        <Input name="q" defaultValue={q} placeholder="Cari email, nama, atau no. WA…" className="w-full sm:w-64" />
         <NativeSelect name="plan" defaultValue={plan} className="w-auto">
           <option value="">Semua paket</option>
           <option value="beta">Free</option>
@@ -135,6 +137,16 @@ export default async function CustomersPage({
                     <Link href={`/customers/${u.id}`} className="font-medium hover:underline">{u.email}</Link>
                     <div className="text-xs text-muted-foreground">
                       {u.full_name ?? "-"}
+                      {u.whatsapp ? (
+                        <>
+                          {" · "}
+                          <a href={whatsappLink(u.whatsapp)} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline dark:text-emerald-400">
+                            WA {formatWhatsapp(u.whatsapp)}
+                          </a>
+                        </>
+                      ) : (
+                        " · WA belum diisi"
+                      )}
                       {u.internal && " · admin aplikasi"}
                       {u.banned && " · diblokir"}
                     </div>

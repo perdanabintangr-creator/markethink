@@ -65,6 +65,7 @@ async function Section({ tab, t, supabase, user, profile }: { tab: string; t: Se
             profile={{
               full_name: profile.full_name ?? "",
               email: profile.email ?? "",
+              whatsapp: profile.whatsapp ? `0${profile.whatsapp.slice(2)}` : "",
               persona_role: profile.persona_role ?? "",
               industry: profile.industry ?? "",
               experience: profile.experience ?? "",

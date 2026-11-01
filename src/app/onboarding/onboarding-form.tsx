@@ -45,9 +45,26 @@ export function OnboardingForm({ needsConsent }: { needsConsent: boolean }) {
   const [experience, setExperience] = useState("");
   const [goal, setGoal] = useState("");
   const [language, setLanguage] = useState("id");
+  const [wa, setWa] = useState("");
 
   return (
     <form action={action} className="mt-8 space-y-8">
+      <section className="space-y-2">
+        <h2 className="font-semibold">Nomor WhatsApp</h2>
+        <p className="text-sm text-muted-foreground">Untuk info akun, tagihan, dan bantuan. Tidak kami sebarkan.</p>
+        <Input
+          name="whatsapp"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="0812 3456 7890"
+          value={wa}
+          onChange={(e) => setWa(e.target.value)}
+          maxLength={20}
+          required
+          className="max-w-xs"
+        />
+      </section>
       <section className="space-y-3">
         <h2 className="font-semibold">1. Kamu siapa?</h2>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -121,7 +138,7 @@ export function OnboardingForm({ needsConsent }: { needsConsent: boolean }) {
         </label>
       )}
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
-      <Button size="lg" className="w-full sm:w-auto" disabled={pending || !role || !industry || !experience || !goal}>
+      <Button size="lg" className="w-full sm:w-auto" disabled={pending || wa.replace(/\D/g, "").length < 9 || !role || !industry || !experience || !goal}>
         {pending && <Loader2 className="animate-spin" />} Mulai pakai Marqthink
       </Button>
     </form>

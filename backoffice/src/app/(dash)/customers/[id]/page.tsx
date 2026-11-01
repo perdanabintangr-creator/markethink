@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatWhatsapp, whatsappLink } from "@/lib/whatsapp";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MEMBER_DISCOUNT_PLANS, addonEffectivePrice, effectivePrice, memberPrice } from "@/lib/promo";
@@ -28,7 +29,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   const [{ data: u }, { data: subs }, { data: changes }, { data: usage }, { data: plans }, { data: addonSubs }, { data: addonRows }, { data: runs }] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, email, full_name, role, plan_id, plan_started_at, banned, beta_access, monthly_credit_override, persona_role, industry, experience, goal, onboarded, created_at, last_active_at")
+      .select("id, email, full_name, whatsapp, role, plan_id, plan_started_at, banned, beta_access, monthly_credit_override, persona_role, industry, experience, goal, onboarded, created_at, last_active_at")
       .eq("id", id)
       .maybeSingle(),
     admin
@@ -111,10 +112,20 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
             Password tidak bisa dilihat siapa pun (termasuk tim) karena disimpan teracak. Bila pelanggan lupa, buat link reset di bawah.
           </p>
         </CardHeader>
-        <CardContent className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+        <CardContent className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <p className="text-xs text-muted-foreground">Email</p>
             <p className="break-all font-medium">{au?.email ?? u.email}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">WhatsApp</p>
+            {u.whatsapp ? (
+              <a href={whatsappLink(u.whatsapp)} target="_blank" rel="noreferrer" className="font-medium text-emerald-600 hover:underline dark:text-emerald-400">
+                {formatWhatsapp(u.whatsapp)}
+              </a>
+            ) : (
+              <p className="font-medium text-muted-foreground">Belum diisi</p>
+            )}
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Cara masuk</p>

@@ -9,6 +9,7 @@ export interface Profile {
   id: string;
   email: string | null;
   full_name: string | null;
+  whatsapp: string | null;
   avatar_url: string | null;
   role: "user" | "admin";
   plan_id: string;

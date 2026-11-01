@@ -500,3 +500,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-11-01 — Sumber riset maks 2 tahun & mic lebih sabar
 - `src/lib/ai/recency.ts`: Serper memakai filter tanggal Google (cdr: 2 tahun terakhir); bila kosong, cari ulang tanpa filter. Hasil yang tanggalnya ketahuan > 2 tahun dibuang (Serper & Tavily). Semua prompt chat & riset Smart Tools diberi aturan "hanya sumber ≤ 2 tahun, sebut 'data lama' bila terpaksa". Pencarian bawaan Claude (cadangan) hanya lewat aturan prompt (tidak punya filter tanggal).
 - Mic mode Ngobrol (pengenal suara browser — Groq Whisper belum dipasang): jeda diam sebelum kirim 1,2 → 2,3 dtk; bila browser menutup mic di tengah bicara, ucapan disimpan & mic dibuka lagi (tidak terpotong). Jalur VAD+Whisper: redemption 0,7 → 1,8 dtk, pre-pad 0,8 dtk, ambang lebih sensitif.
+
+## 2026-11-01 — Nomor WhatsApp wajib (tanpa OTP)
+- Kolom `profiles.whatsapp` (format baku 62…, dicek database). Wajib di onboarding; pengguna lama tanpa nomor mendapat pop-up wajib sekali di aplikasi; bisa diubah di Pengaturan → Profil.
+- Back office: nomor tampil di daftar & detail pelanggan (klik → chat WA), bisa dicari, ikut di unduhan Excel pelanggan.
+- OTP WA (berbayar) ditunda; dipertimbangkan bila banyak nomor asal-asalan. Login Google menunggu founder mengisi kredensial Google di Supabase.
