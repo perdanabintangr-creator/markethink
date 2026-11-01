@@ -508,3 +508,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 
 ## 2026-11-01 — Login Google aktif
 - Founder membuat OAuth client "Marqthink Web" (Google Auth Platform, In production) & mengisinya di Supabase. Env `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` (production) → tombol Google tampil di Masuk/Daftar. Pengguna Google tetap wajib isi nomor WA di onboarding.
+
+## 2026-11-01 — Verifikasi brand Google & SEO dasar
+- marqthink.com terverifikasi di Google Search Console (TXT di DNS Hostinger — jangan dihapus). Branding Google terverifikasi tanpa logo (logo Q ditolak otomatis); founder perlu klik "Publish branding" ≤ 7 hari.
+- `sitemap.xml` (halaman publik) & `robots.txt` (isi aplikasi/API tidak diindeks) ditambahkan untuk Search Console.
