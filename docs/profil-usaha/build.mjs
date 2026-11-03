@@ -11,7 +11,7 @@ const root = join(here, "../..");
 const CONTACT = {
   owner: "Perdana Bintang Rinaldi",
   email: "perdanabintangr@gmail.com",
-  whatsapp: "", // contoh: "+62 812-3456-7890"
+  whatsapp: "+62 822-8464-7968",
   address: "Jorong Simancung, Desa/Kelurahan Padang Sibusuk, Kec. Kupitan, Kab. Sijunjung, Provinsi Sumatera Barat", // sama dengan NIB
   nib: "0311260132635",
 };
