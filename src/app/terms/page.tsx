@@ -5,11 +5,18 @@ export const metadata = { title: "Syarat Layanan" };
 export default function TermsPage() {
   return (
     <LegalPage title="Syarat Layanan">
-      <p>Terakhir diperbarui: 8 Oktober 2026</p>
-      <h2>1. Layanan beta</h2>
+      <p>Terakhir diperbarui: 3 November 2026</p>
+      <h2>1. Layanan & paket</h2>
       <p>
-        Marqthink saat ini berstatus <strong>beta gratis</strong> dengan kuota kredit harian. Fitur, kuota, dan
-        ketersediaan dapat berubah sewaktu-waktu tanpa pemberitahuan.
+        Marqthink adalah layanan AI untuk marketing yang tersedia dalam paket <strong>Gratis</strong> dan paket berbayar
+        bulanan (Starter, Pro, Promax). Harga dan isi tiap paket tercantum di halaman <a href="/harga">Harga</a>. Fitur dan
+        kuota dapat kami perbarui dari waktu ke waktu; perubahan harga tidak berlaku untuk periode yang sudah dibayar.
+      </p>
+      <h2>1a. Pembayaran</h2>
+      <p>
+        Pembayaran dilakukan di muka per periode melalui penyedia pembayaran resmi (QRIS, e-wallet, virtual account). Paket aktif
+        otomatis setelah pembayaran berhasil dan <strong>tidak diperpanjang otomatis</strong>. Ketentuan pengembalian dana
+        mengikuti <a href="/refund">Kebijakan Refund</a>.
       </p>
       <h2>2. Akun</h2>
       <p>
@@ -33,7 +40,7 @@ export default function TermsPage() {
       <h2>6. Penghentian</h2>
       <p>Kami dapat menangguhkan akun yang melanggar syarat ini. Kamu dapat menghapus akun kapan saja.</p>
       <h2>7. Batasan tanggung jawab</h2>
-      <p>Layanan disediakan &quot;sebagaimana adanya&quot; selama masa beta tanpa jaminan apa pun.</p>
+      <p>Layanan disediakan &quot;sebagaimana adanya&quot;. Sejauh diizinkan hukum, tanggung jawab kami terbatas pada jumlah yang kamu bayarkan untuk periode berjalan.</p>
     </LegalPage>
   );
 }

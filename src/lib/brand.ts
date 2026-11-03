@@ -18,3 +18,10 @@ export const BRAND_TAGLINES = ["Think like a brand.", "Otak marketing untuk bran
 export const BRAND_SOCIALS = {
   instagram: { handle: "marqthink.ai", url: "https://www.instagram.com/marqthink.ai/" },
 } as const;
+
+/** Kontak resmi (halaman /kontak, footer). Kosong = belum ditampilkan. Isi setelah founder memberi data. */
+export const BRAND_CONTACT = {
+  email: "",
+  whatsapp: "", // format 62xxxxxxxxxx
+  address: "",
+} as const;

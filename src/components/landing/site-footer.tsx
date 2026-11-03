@@ -16,6 +16,8 @@ export function SiteFooter() {
           <Link href="/harga" className="hover:text-foreground">Harga</Link>
           <Link href="/terms" className="hover:text-foreground">Syarat Layanan</Link>
           <Link href="/privacy" className="hover:text-foreground">Kebijakan Privasi</Link>
+          <Link href="/refund" className="hover:text-foreground">Kebijakan Refund</Link>
+          <Link href="/kontak" className="hover:text-foreground">Kontak</Link>
           <a
             href={BRAND_SOCIALS.instagram.url}
             target="_blank"

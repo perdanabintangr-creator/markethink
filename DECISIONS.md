@@ -522,3 +522,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Template email Supabase (konfirmasi daftar, reset, magic link, ganti email, undangan): `node scripts/build-email-templates.mts` → `supabase/email-templates/*.html`, ditempel founder di Supabase → Authentication → Emails → Templates.
 - Nama pengirim "Marqthink <noreply@marqthink.com>": menunggu domain terverifikasi di Resend (EMAIL_FROM di Vercel) + Custom SMTP Supabase (smtp.resend.com).
 - 2026-11-01: domain marqthink.com Verified di Resend (DKIM + SPF via CNAME rsend/send, DMARC p=none). `EMAIL_FROM="Marqthink <noreply@marqthink.com>"` di Vercel. Supabase Custom SMTP → smtp.resend.com (sender Marqthink).
+
+## 2026-11-03 — Persiapan daftar ulang Midtrans
+- Halaman `/refund` (refund penuh ≤3×24 jam bila pemakaian ≤10%; setelah itu tidak ada refund, langganan tidak diperpanjang otomatis) & `/kontak` (Instagram; email/WA/alamat diisi di `BRAND_CONTACT` setelah founder memberi data). Syarat Layanan diperbarui (paket berbayar, pembayaran, refund) — tidak lagi "beta gratis".
+- Founder dipandu membuat NIB (OSS, Usaha Perseorangan Mikro, KBLI 62019) untuk daftar ulang Midtrans.
