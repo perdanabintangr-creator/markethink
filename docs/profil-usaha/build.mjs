@@ -12,8 +12,8 @@ const CONTACT = {
   owner: "Perdana Bintang Rinaldi",
   email: "perdanabintangr@gmail.com",
   whatsapp: "", // contoh: "+62 812-3456-7890"
-  address: "", // samakan dengan alamat di NIB
-  nib: "", // isi setelah NIB terbit
+  address: "Jorong Simancung, Desa/Kelurahan Padang Sibusuk, Kec. Kupitan, Kab. Sijunjung, Provinsi Sumatera Barat", // sama dengan NIB
+  nib: "0311260132635",
 };
 const blank = (v, hint) => (v ? v : `<span class="blank">${hint}</span>`);
 const img = (p) => `data:image/png;base64,${readFileSync(join(root, p)).toString("base64")}`;

@@ -526,3 +526,4 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-11-03 — Persiapan daftar ulang Midtrans
 - Halaman `/refund` (refund penuh ≤3×24 jam bila pemakaian ≤10%; setelah itu tidak ada refund, langganan tidak diperpanjang otomatis) & `/kontak` (Instagram; email/WA/alamat diisi di `BRAND_CONTACT` setelah founder memberi data). Syarat Layanan diperbarui (paket berbayar, pembayaran, refund) — tidak lagi "beta gratis".
 - Founder dipandu membuat NIB (OSS, Usaha Perseorangan Mikro, KBLI 62019) untuk daftar ulang Midtrans.
+- 2026-11-03: NIB terbit (0311260132635, Kab. Sijunjung, Sumbar). Dicantumkan di /kontak & Profil Usaha PDF.

@@ -21,7 +21,8 @@ export const BRAND_SOCIALS = {
 
 /** Kontak resmi (halaman /kontak, footer). Kosong = belum ditampilkan. Isi setelah founder memberi data. */
 export const BRAND_CONTACT = {
-  email: "",
+  email: "perdanabintangr@gmail.com",
   whatsapp: "", // format 62xxxxxxxxxx
-  address: "",
+  address: "Jorong Simancung, Padang Sibusuk, Kec. Kupitan, Kab. Sijunjung, Sumatera Barat",
+  nib: "0311260132635",
 } as const;

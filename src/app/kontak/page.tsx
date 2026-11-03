@@ -6,7 +6,7 @@ export const metadata = { title: "Kontak", description: `Hubungi tim ${BRAND}: b
 const waDisplay = (n: string) => `+62 ${n.slice(2, 5)}-${n.slice(5, 9)}-${n.slice(9)}`;
 
 export default function ContactPage() {
-  const c = BRAND_CONTACT as { email: string; whatsapp: string; address: string };
+  const c = BRAND_CONTACT as { email: string; whatsapp: string; address: string; nib: string };
   return (
     <LegalPage title="Kontak">
       <p>Ada pertanyaan soal akun, pembayaran, refund, atau kerja sama? Hubungi tim {BRAND} lewat salah satu kanal berikut.</p>
@@ -32,7 +32,12 @@ export default function ContactPage() {
         </li>
         {c.address && (
           <li>
-            <strong>Alamat:</strong> {c.address}
+            <strong>Alamat usaha:</strong> {c.address}
+          </li>
+        )}
+        {c.nib && (
+          <li>
+            <strong>NIB:</strong> {c.nib} (usaha perseorangan a.n. Perdana Bintang Rinaldi)
           </li>
         )}
       </ul>
