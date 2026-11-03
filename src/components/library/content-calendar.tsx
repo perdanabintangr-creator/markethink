@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { CalendarDays, ChevronLeft, ChevronRight, Copy, ExternalLink } from "lucide-react";
+import { CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, ExternalLink, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { calendarToIcs } from "@/lib/addons/exports";
-import { initialMonth, monthGrid, shiftMonth, type CalendarEntry } from "@/lib/content-calendar";
+import { initialMonth, monthGrid, postedKey, shiftMonth, type CalendarEntry } from "@/lib/content-calendar";
+import { setPosted } from "@/app/(app)/kalender/actions";
 import { downloadText } from "@/lib/i18n/exports";
 import { libraryText } from "@/lib/i18n/library";
 import type { Lang } from "@/lib/i18n/dict";
@@ -23,10 +24,36 @@ const PLATFORM_TONE: [RegExp, string][] = [
 const tone = (platform: string) => PLATFORM_TONE.find(([re]) => re.test(platform))?.[1] ?? "bg-primary/10 text-primary";
 
 /** Kalender konten gabungan: tampilan bulan di laptop, daftar per hari di HP. */
-export function ContentCalendar({ lang, entries, today }: { lang: Lang; entries: CalendarEntry[]; today: string }) {
+export function ContentCalendar({ lang, entries, today, posted: initialPosted = [] }: { lang: Lang; entries: CalendarEntry[]; today: string; posted?: string[] }) {
   const t = libraryText(lang);
   const [month, setMonth] = useState(() => initialMonth(entries, today.slice(0, 7)));
   const [open, setOpen] = useState<CalendarEntry | null>(null);
+  const [posted, setPostedKeys] = useState(() => new Set(initialPosted));
+  const [saving, startSaving] = useTransition();
+  const isPosted = (e: CalendarEntry) => posted.has(postedKey(e));
+  const togglePosted = (e: CalendarEntry) => {
+    const key = postedKey(e);
+    const next = !posted.has(key);
+    // Langsung tampil (optimistis); dikembalikan bila gagal tersimpan.
+    setPostedKeys((s) => {
+      const n = new Set(s);
+      if (next) n.add(key);
+      else n.delete(key);
+      return n;
+    });
+    startSaving(async () => {
+      const res = await setPosted(key, next);
+      if (!res.ok) {
+        toast.error(t.postedFailed);
+        setPostedKeys((s) => {
+          const n = new Set(s);
+          if (next) n.delete(key);
+          else n.add(key);
+          return n;
+        });
+      } else if (next) toast.success(t.postedSaved);
+    });
+  };
 
   const byDate = useMemo(() => {
     const m = new Map<string, CalendarEntry[]>();
@@ -58,7 +85,10 @@ export function ContentCalendar({ lang, entries, today }: { lang: Lang; entries:
           </Button>
         )}
         <div className="flex-1" />
-        <span className="text-xs text-muted-foreground">{t.postsThisMonth(monthEntries.length)}</span>
+        <span className="text-xs text-muted-foreground">
+          {t.postsThisMonth(monthEntries.length)}
+          {monthEntries.length > 0 && ` · ${t.postedOf(monthEntries.filter(isPosted).length, monthEntries.length)}`}
+        </span>
         {monthEntries.length > 0 && (
           <Button
             size="sm"
@@ -100,9 +130,13 @@ export function ContentCalendar({ lang, entries, today }: { lang: Lang; entries:
                           key={e.key}
                           type="button"
                           onClick={() => setOpen(e)}
-                          className={cn("block w-full truncate rounded-md px-1.5 py-1 text-left text-[11px] font-medium hover:opacity-80", tone(e.platform))}
-                          title={`${e.platform} · ${e.title}`}
+                          className={cn(
+                            "block w-full truncate rounded-md px-1.5 py-1 text-left text-[11px] font-medium hover:opacity-80",
+                            isPosted(e) ? "bg-muted text-muted-foreground line-through decoration-1" : tone(e.platform),
+                          )}
+                          title={`${e.platform} · ${e.title}${isPosted(e) ? ` · ${t.posted}` : ""}`}
                         >
+                          {isPosted(e) && <Check className="mr-0.5 inline size-3 text-emerald-600" />}
                           {e.time && <span className="opacity-70">{e.time} </span>}
                           {e.title}
                         </button>
@@ -132,7 +166,8 @@ export function ContentCalendar({ lang, entries, today }: { lang: Lang; entries:
                   <li key={e.key}>
                     <button type="button" onClick={() => setOpen(e)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
                       <span className={cn("shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold", tone(e.platform))}>{e.platform}</span>
-                      <span className="min-w-0 flex-1 truncate text-sm">{e.title}</span>
+                      <span className={cn("min-w-0 flex-1 truncate text-sm", isPosted(e) && "text-muted-foreground line-through")}>{e.title}</span>
+                      {isPosted(e) && <CheckCircle2 className="size-4 shrink-0 text-emerald-600" aria-label={t.posted} />}
                       {e.time && <span className="shrink-0 text-xs text-muted-foreground">{e.time}</span>}
                     </button>
                   </li>
@@ -153,6 +188,11 @@ export function ContentCalendar({ lang, entries, today }: { lang: Lang; entries:
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <span className={cn("rounded-md px-1.5 py-0.5 font-semibold", tone(open.platform))}>{open.platform}</span>
                   {open.format && <span className="rounded-md bg-muted px-1.5 py-0.5">{open.format}</span>}
+                  {isPosted(open) && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/12 px-1.5 py-0.5 font-semibold text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle2 className="size-3.5" /> {t.posted}
+                    </span>
+                  )}
                   <span className="text-muted-foreground">
                     {dayLabel(open.date)}
                     {open.time ? ` · ${open.time}` : ""}
@@ -175,9 +215,27 @@ export function ContentCalendar({ lang, entries, today }: { lang: Lang; entries:
                 {open.visual && <Field label={t.visual}>{open.visual}</Field>}
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant={isPosted(open) ? "outline" : "default"}
+                  disabled={saving}
+                  onClick={() => togglePosted(open)}
+                  className={isPosted(open) ? undefined : "bg-emerald-600 text-white hover:bg-emerald-600/90"}
+                >
+                  {isPosted(open) ? (
+                    <>
+                      <Undo2 /> {t.unmarkPosted}
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 /> {t.markPosted}
+                    </>
+                  )}
+                </Button>
                 {open.caption && (
                   <Button
                     size="sm"
+                    variant="outline"
                     onClick={() => {
                       const tags = open.hashtags?.length ? `\n\n${open.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ")}` : "";
                       void navigator.clipboard.writeText(`${open.caption}${tags}`).then(() => toast.success(t.copied));

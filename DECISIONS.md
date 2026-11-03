@@ -527,3 +527,7 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Halaman `/refund` (refund penuh ≤3×24 jam bila pemakaian ≤10%; setelah itu tidak ada refund, langganan tidak diperpanjang otomatis) & `/kontak` (Instagram; email/WA/alamat diisi di `BRAND_CONTACT` setelah founder memberi data). Syarat Layanan diperbarui (paket berbayar, pembayaran, refund) — tidak lagi "beta gratis".
 - Founder dipandu membuat NIB (OSS, Usaha Perseorangan Mikro, KBLI 62019) untuk daftar ulang Midtrans.
 - 2026-11-03: NIB terbit (0311260132635, Kab. Sijunjung, Sumbar). Dicantumkan di /kontak & Profil Usaha PDF.
+
+## 2026-11-03 — Kalender: tanda "Sudah diposting" + logo Google bertulisan
+- Tabel `content_posts_done` (user_id, post_key = `<runId>:<urutan>@<tanggal>`, RLS milik sendiri). Kalender konten: tombol "Tandai sudah diposting"/"Batalkan tanda" di detail, posting yang sudah tayang dicentang & dicoret, ringkasan "x/y sudah diposting" per bulan.
+- Logo OAuth Google versi Q + tulisan MARQTHINK (`public/brand/marqthink-google-logo-wordmark-120.png`) karena logo Q saja ditolak pemeriksaan otomatis Google.

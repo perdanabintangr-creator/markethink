@@ -109,3 +109,6 @@ export function dateBucket(iso: string, now = Date.now()): "today" | "week" | "o
   if (wib(t) === wib(now)) return "today";
   return now - t < 7 * 86_400_000 ? "week" : "older";
 }
+
+/** Kunci tanda "sudah diposting": hasil asal + urutan + tanggal (tetap sama selama posting itu tidak dipindah tanggal). */
+export const postedKey = (e: Pick<CalendarEntry, "key" | "date">) => `${e.key}@${e.date}`;

@@ -15,23 +15,38 @@ export default async function CalendarPage() {
   const t = libraryText(lang);
 
   // Semua hasil Kalender Konten (asal + revisi) — yang ditampilkan versi terbarunya saja.
-  const { data } = await supabase
-    .from("tool_runs")
-    .select("id, revision_of, created_at, title, hidden, posts:output->posts")
-    .eq("tool", "calendar")
-    .eq("status", "ok")
-    .order("created_at", { ascending: false })
-    .limit(80);
+  const [{ data }, { data: done }] = await Promise.all([
+    supabase
+      .from("tool_runs")
+      .select("id, revision_of, created_at, title, hidden, posts:output->posts")
+      .eq("tool", "calendar")
+      .eq("status", "ok")
+      .order("created_at", { ascending: false })
+      .limit(80),
+    supabase.from("content_posts_done").select("post_key").limit(2000),
+  ]);
   // Hasil yang disembunyikan user (beserta revisinya) tidak ikut tampil.
-  const hiddenRoots = new Set((data ?? []).filter((r) => r.hidden && !r.revision_of).map((r) => r.id as string));
+  const hiddenRoots = new Set(
+    (data ?? [])
+      .filter((r) => r.hidden && !r.revision_of)
+      .map((r) => r.id as string),
+  );
   const entries = collectPosts(
-    (data ?? []).filter((r) => !r.hidden && !hiddenRoots.has((r.revision_of as string | null) ?? (r.id as string))).map((r) => ({
-      id: r.id as string,
-      revision_of: (r.revision_of as string | null) ?? null,
-      created_at: r.created_at as string,
-      title: (r.title as string | null) ?? null,
-      output: { posts: (r as { posts?: unknown }).posts },
-    })),
+    (data ?? [])
+      .filter(
+        (r) =>
+          !r.hidden &&
+          !hiddenRoots.has(
+            (r.revision_of as string | null) ?? (r.id as string),
+          ),
+      )
+      .map((r) => ({
+        id: r.id as string,
+        revision_of: (r.revision_of as string | null) ?? null,
+        created_at: r.created_at as string,
+        title: (r.title as string | null) ?? null,
+        output: { posts: (r as { posts?: unknown }).posts },
+      })),
     t.calTitle,
   );
   const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
@@ -41,7 +56,9 @@ export default async function CalendarPage() {
       <div className="mx-auto max-w-6xl px-4 pb-12 pt-8 sm:pt-12">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{t.calTitle}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {t.calTitle}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">{t.calSub}</p>
           </div>
           <Button asChild size="sm">
@@ -51,7 +68,12 @@ export default async function CalendarPage() {
           </Button>
         </div>
         {entries.length ? (
-          <ContentCalendar lang={lang} entries={entries} today={today} />
+          <ContentCalendar
+            lang={lang}
+            entries={entries}
+            today={today}
+            posted={(done ?? []).map((d) => d.post_key as string)}
+          />
         ) : (
           <div className="rounded-xl border border-dashed p-10 text-center">
             <p className="text-sm text-muted-foreground">{t.calEmpty}</p>

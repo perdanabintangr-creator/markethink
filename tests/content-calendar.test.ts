@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectPosts, dateBucket, initialMonth, latestPerChain, monthGrid, shiftMonth } from "@/lib/content-calendar";
+import { collectPosts, dateBucket, initialMonth, latestPerChain, monthGrid, postedKey as pk, shiftMonth } from "@/lib/content-calendar";
 
 const post = (date: string, title: string, time = "19.00") => ({ date, time, platform: "Instagram", format: "Reels", title, caption: "Halo", hashtags: ["kopi"] });
 
@@ -38,5 +38,13 @@ describe("kalender konten gabungan", () => {
     expect(dateBucket("2026-10-28T18:00:00Z", now)).toBe("today"); // 29 Okt 01.00 WIB
     expect(dateBucket("2026-10-25T05:00:00Z", now)).toBe("week");
     expect(dateBucket("2026-10-01T05:00:00Z", now)).toBe("older");
+  });
+});
+
+describe("tanda sudah diposting", () => {
+  it("kunci menggabungkan id hasil, urutan, dan tanggal", () => {
+    const k = pk({ key: "0b5d1c1e-1111-4222-8333-444455556666:3", date: "2026-11-05" });
+    expect(k).toBe("0b5d1c1e-1111-4222-8333-444455556666:3@2026-11-05");
+    expect(/^[0-9a-f-]{36}:\d+@\d{4}-\d{2}-\d{2}$/.test(k)).toBe(true);
   });
 });
