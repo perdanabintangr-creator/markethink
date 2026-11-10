@@ -531,3 +531,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 ## 2026-11-03 — Kalender: tanda "Sudah diposting" + logo Google bertulisan
 - Tabel `content_posts_done` (user_id, post_key = `<runId>:<urutan>@<tanggal>`, RLS milik sendiri). Kalender konten: tombol "Tandai sudah diposting"/"Batalkan tanda" di detail, posting yang sudah tayang dicentang & dicoret, ringkasan "x/y sudah diposting" per bulan.
 - Logo OAuth Google versi Q + tulisan MARQTHINK (`public/brand/marqthink-google-logo-wordmark-120.png`) karena logo Q saja ditolak pemeriksaan otomatis Google.
+
+## 2026-11-10 — Midtrans production aktif
+- Midtrans menyetujui akun (dokumen pendukung: NIB + Profil Usaha). Founder memasang Server Key production + `MIDTRANS_IS_PRODUCTION=true`, Notification URL `https://marqthink.com/api/webhooks/midtrans`.
+- `PAYMENT_PROVIDER=midtrans` di Vercel → semua pembayaran baru lewat Midtrans; tagihan lama tetap dicek ke gateway asalnya. Duitku = cadangan.
+- `/api/admin/integrations` kini menampilkan `gateway_aktif` & `uji_midtrans` (cek kunci tanpa membuat transaksi).

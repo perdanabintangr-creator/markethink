@@ -3,6 +3,8 @@ import { apiSession, jsonError } from "@/lib/api";
 import { serperEnabled, serperSearch } from "@/lib/ai/research";
 import { env } from "@/lib/env";
 import { emails, sendEmail } from "@/lib/email";
+import { activeProvider } from "@/lib/payments/gateway";
+import { pingMidtrans } from "@/lib/payments/midtrans";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,11 @@ export async function GET(req: Request) {
     }
   }
 
+  const midtransTest = has("MIDTRANS_SERVER_KEY") ? await pingMidtrans() : "MIDTRANS_SERVER_KEY belum terpasang";
+
   return NextResponse.json({
+    gateway_aktif: activeProvider(),
+    uji_midtrans: midtransTest,
     terpasang: {
       anthropic_claude: has("ANTHROPIC_API_KEY"),
       google_gemini: has("GOOGLE_GENERATIVE_AI_API_KEY"),

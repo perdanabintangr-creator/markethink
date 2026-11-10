@@ -124,3 +124,26 @@ export function newOrderId(kind: "plan" | "addon" | "bundle") {
   const rand = Math.random().toString(36).slice(2, 6);
   return `MTK-${kind[0].toUpperCase()}-${Date.now().toString(36)}-${rand}`;
 }
+
+/**
+ * Uji kunci tanpa membuat transaksi: cek status order yang pasti tidak ada.
+ * 404 = kunci diterima (cocok dengan mode), 401 = kunci salah / beda mode (sandbox vs production).
+ */
+export async function pingMidtrans(): Promise<{ ok: boolean; mode: "sandbox" | "production"; detail: string }> {
+  const m = mode();
+  if (!serverKey()) return { ok: false, mode: m, detail: "MIDTRANS_SERVER_KEY kosong" };
+  try {
+    const res = await fetch(`${CORE[m]}/v2/marqthink-ping-${Date.now()}/status`, {
+      headers: { Authorization: auth(), Accept: "application/json" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+    const body = (await res.json().catch(() => ({}))) as { status_code?: string; status_message?: string };
+    const code = body.status_code ?? String(res.status);
+    if (code === "404") return { ok: true, mode: m, detail: "kunci diterima Midtrans" };
+    if (code === "401") return { ok: false, mode: m, detail: "kunci ditolak (salah salin, atau kunci sandbox dipakai di mode production / sebaliknya)" };
+    return { ok: false, mode: m, detail: `jawaban Midtrans ${code}: ${body.status_message ?? ""}`.slice(0, 200) };
+  } catch (err) {
+    return { ok: false, mode: m, detail: err instanceof Error ? err.message : String(err) };
+  }
+}
