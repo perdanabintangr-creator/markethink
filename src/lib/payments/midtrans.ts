@@ -14,7 +14,8 @@ const serverKey = () => process.env.MIDTRANS_SERVER_KEY?.trim() ?? "";
  * sandbox tanpa awalan "SB-", jadi tebakan bisa salah dan mengirim transaksi uji ke server live.
  */
 export function modeOf(_key: string, flag = process.env.MIDTRANS_IS_PRODUCTION): "sandbox" | "production" {
-  return flag === "true" ? "production" : "sandbox";
+  // Toleran terhadap spasi, huruf besar, atau tanda kutip yang ikut tersalin di Vercel.
+  return flag?.trim().replace(/^["']|["']$/g, "").toLowerCase() === "true" ? "production" : "sandbox";
 }
 const mode = () => modeOf(serverKey());
 

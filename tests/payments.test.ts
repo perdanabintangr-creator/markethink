@@ -30,6 +30,9 @@ describe("pembayaran Midtrans", () => {
   it("mode: sandbox kecuali MIDTRANS_IS_PRODUCTION=true (key sandbox baru tanpa awalan SB-)", () => {
     expect(modeOf("Mid-server-abc", undefined)).toBe("sandbox");
     expect(modeOf("SB-Mid-server-abc", undefined)).toBe("sandbox");
+    expect(modeOf("x", " TRUE ")).toBe("production");
+    expect(modeOf("x", '"true"')).toBe("production");
+    expect(modeOf("x", "false")).toBe("sandbox");
     expect(modeOf("Mid-server-abc", "true")).toBe("production");
   });
 
