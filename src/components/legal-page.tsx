@@ -6,9 +6,6 @@ export function LegalPage({ title, children }: { title: string; children: React.
       <Logo />
       <article className="prose prose-neutral dark:prose-invert mt-8 max-w-none">
         <h1>{title}</h1>
-        <p className="text-sm">
-          <em>Draf placeholder untuk masa beta. Perlu ditinjau konsultan hukum sebelum peluncuran komersial.</em>
-        </p>
         {children}
       </article>
     </div>

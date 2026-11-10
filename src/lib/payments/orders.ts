@@ -6,6 +6,7 @@ import { splitBundleAmount } from "@/lib/addons/addon-quota";
 import { getTransactionStatus, paymentStatusOf, type MidtransStatus } from "./midtrans";
 import { duitkuStatusOf, getDuitkuStatus } from "./duitku";
 import { getMayarStatus } from "./mayar";
+import { sendPaymentReceipt } from "./receipt";
 
 export type PaymentKind = "plan" | "addon" | "bundle";
 const PAID_PLANS = ["starter", "pro", "promax"];
@@ -181,5 +182,7 @@ export async function syncPayment(admin: SupabaseClient, orderId: string, known?
       .eq("order_id", orderId);
     return "pending";
   }
+  // Email "Pembayaran berhasil" + invoice (sekali, karena aktivasi hanya diklaim sekali).
+  await sendPaymentReceipt(admin, orderId);
   return "paid";
 }

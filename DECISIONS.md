@@ -536,3 +536,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Midtrans menyetujui akun (dokumen pendukung: NIB + Profil Usaha). Founder memasang Server Key production + `MIDTRANS_IS_PRODUCTION=true`, Notification URL `https://marqthink.com/api/webhooks/midtrans`.
 - `PAYMENT_PROVIDER=midtrans` di Vercel → semua pembayaran baru lewat Midtrans; tagihan lama tetap dicek ke gateway asalnya. Duitku = cadangan.
 - `/api/admin/integrations` kini menampilkan `gateway_aktif` & `uji_midtrans` (cek kunci tanpa membuat transaksi).
+
+## 2026-11-10 — Email "Pembayaran berhasil" + invoice
+- Setelah aktivasi pembayaran (sekali per order, semua gateway) dikirim email bermerek: "Kamu sekarang berlangganan Marqthink <Paket>" + rincian invoice (no., tanggal, pelanggan, item, masa aktif, metode, LUNAS, total) + tombol ke dashboard. Gagal kirim email tidak membatalkan pembayaran.
+- Halaman `/invoice/[orderId]` (login, hanya pemilik) — bisa dicetak/disimpan PDF; memuat alamat, NIB, email penjual.
+- Label "Draf placeholder untuk masa beta" di halaman legal dihapus.
