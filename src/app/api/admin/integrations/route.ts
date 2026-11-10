@@ -5,6 +5,8 @@ import { env } from "@/lib/env";
 import { emails, sendEmail } from "@/lib/email";
 import { activeProvider } from "@/lib/payments/gateway";
 import { pingMidtrans } from "@/lib/payments/midtrans";
+import { sendPaymentReceipt } from "@/lib/payments/receipt";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,7 @@ const has = (name: string) => Boolean(process.env[name]?.trim());
  * Cek integrasi (khusus admin): kunci mana yang terpasang (ya/tidak — isi kunci TIDAK ditampilkan)
  * + uji 1 pencarian Serper (±Rp16) untuk memastikan kuncinya benar-benar jalan.
  * `?email=1` → kirim 1 email uji (Resend) ke email admin sendiri.
+ * `?invoice=MTK-…` → kirim ulang email invoice pembayaran itu ke pemiliknya.
  */
 export async function GET(req: Request) {
   const s = await apiSession();
@@ -40,9 +43,21 @@ export async function GET(req: Request) {
     }
   }
 
+  // `?invoice=<order_id>` → kirim ulang email "Pembayaran berhasil" + invoice (untuk tes / pelanggan minta ulang).
+  const invoiceOrder = new URL(req.url).searchParams.get("invoice");
+  let invoiceTest: string | undefined;
+  if (invoiceOrder) {
+    if (!/^MTK-[PAB]-[a-z0-9-]+$/i.test(invoiceOrder)) invoiceTest = "format nomor invoice tidak valid";
+    else {
+      await sendPaymentReceipt(createAdminClient(), invoiceOrder);
+      invoiceTest = `email invoice ${invoiceOrder} diproses — cek inbox pemilik pembayaran (dan folder Spam/Promosi)`;
+    }
+  }
+
   const midtransTest = has("MIDTRANS_SERVER_KEY") ? await pingMidtrans() : "MIDTRANS_SERVER_KEY belum terpasang";
 
   return NextResponse.json({
+    ...(invoiceTest && { kirim_invoice: invoiceTest }),
     gateway_aktif: activeProvider(),
     uji_midtrans: midtransTest,
     terpasang: {
