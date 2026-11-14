@@ -14,6 +14,7 @@ export function SiteFooter() {
         </div>
         <div className="flex flex-wrap justify-center gap-5">
           <Link href="/harga" className="hover:text-foreground">Harga</Link>
+          <Link href="/ai-marketing-indonesia" className="hover:text-foreground">AI Marketing Indonesia</Link>
           <Link href="/terms" className="hover:text-foreground">Syarat Layanan</Link>
           <Link href="/privacy" className="hover:text-foreground">Kebijakan Privasi</Link>
           <Link href="/refund" className="hover:text-foreground">Kebijakan Refund</Link>

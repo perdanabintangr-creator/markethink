@@ -7,6 +7,7 @@ import { FeatureExplorer } from "@/components/landing/feature-explorer";
 import { HeroChat } from "@/components/landing/hero-chat";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { NeuralField } from "@/components/landing/neural-field";
+import { LANDING_FAQ } from "@/lib/landing-faq";
 import { QAdvantages } from "@/components/landing/q-advantages";
 import { QuotePopup } from "@/components/landing/quote-popup";
 import { Reveal } from "@/components/landing/reveal";
@@ -58,6 +59,10 @@ function brandJsonLd(base: string) {
         offers: { "@type": "Offer", price: "0", priceCurrency: "IDR", description: "Mulai gratis, upgrade mulai Rp60.000/bulan" },
         publisher: { "@id": `${base}/#org` },
       },
+      {
+        "@type": "FAQPage",
+        mainEntity: LANDING_FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+      },
     ],
   };
 }
@@ -86,7 +91,8 @@ export default async function LandingPage() {
               <span className="text-cyan-300/60">·</span>
               <span className="font-brand font-black text-cyan-300">Rp60rb/bulan</span>
             </span>
-            <h1 className="mt-6 font-brand text-5xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-[3.5rem] xl:text-6xl">
+            <p className="mt-6 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-300/90 sm:text-sm">{BRAND} · AI Marketing Indonesia</p>
+            <h1 className="mt-3 font-brand text-5xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-[3.5rem] xl:text-6xl">
               <span className="lg:whitespace-nowrap">Otak marketing</span>
               <br />
               <span className="mq-motion animate-[mq-shimmer_6s_linear_infinite] bg-[linear-gradient(90deg,#3b8bff,#12b8f5,#5ef0ff,#ffffff,#5ef0ff,#12b8f5,#3b8bff)] bg-[length:200%_auto] bg-clip-text text-transparent">
@@ -228,6 +234,30 @@ export default async function LandingPage() {
           <div className="mt-14">
             <FeatureExplorer loggedIn={Boolean(user)} />
           </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- FAQ */}
+      <section id="faq" className="scroll-mt-16 border-t bg-muted/40">
+        <div className="mx-auto max-w-3xl px-4 py-20 sm:py-24">
+          <Reveal className="text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Pertanyaan umum</p>
+            <h2 className="mt-3 font-brand text-3xl font-black tracking-tight sm:text-4xl">Seputar {BRAND}, AI marketing Indonesia</h2>
+          </Reveal>
+          <div className="mt-10 divide-y rounded-2xl border bg-card">
+            {LANDING_FAQ.map((f) => (
+              <details key={f.q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
+                  {f.q}
+                  <span className="text-xl leading-none text-primary transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+              </details>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Mau tahu lebih jauh? Baca <a href="/ai-marketing-indonesia" className="font-medium text-primary hover:underline">panduan AI marketing Indonesia</a>.
+          </p>
         </div>
       </section>
 

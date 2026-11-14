@@ -542,3 +542,8 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Halaman `/invoice/[orderId]` (login, hanya pemilik) — bisa dicetak/disimpan PDF; memuat alamat, NIB, email penjual.
 - Label "Draf placeholder untuk masa beta" di halaman legal dihapus.
 - 2026-11-14: alamat publik (halaman Kontak, invoice) diganti "Jakarta, Indonesia" atas permintaan founder. Profil Usaha PDF untuk payment gateway tetap memakai alamat sesuai NIB.
+
+## 2026-11-14 — SEO kata kunci "Marqthink", "AI marketing Indonesia"
+- Judul default "Marqthink: AI Marketing Indonesia untuk Brand & UMKM", deskripsi & keywords memuat "AI marketing Indonesia". Label kecil "Marqthink · AI Marketing Indonesia" di atas judul beranda.
+- FAQ di beranda (6 pertanyaan) + data terstruktur FAQPage. Halaman panduan `/ai-marketing-indonesia` (Article schema), ditaut dari footer, FAQ, dan sitemap.
+- Peringkat kata kunci umum tidak bisa dijamin; perlu waktu + tautan dari luar (medsos, direktori, artikel).
