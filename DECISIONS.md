@@ -541,3 +541,4 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Setelah aktivasi pembayaran (sekali per order, semua gateway) dikirim email bermerek: "Kamu sekarang berlangganan Marqthink <Paket>" + rincian invoice (no., tanggal, pelanggan, item, masa aktif, metode, LUNAS, total) + tombol ke dashboard. Gagal kirim email tidak membatalkan pembayaran.
 - Halaman `/invoice/[orderId]` (login, hanya pemilik) — bisa dicetak/disimpan PDF; memuat alamat, NIB, email penjual.
 - Label "Draf placeholder untuk masa beta" di halaman legal dihapus.
+- 2026-11-14: alamat publik (halaman Kontak, invoice) diganti "Jakarta, Indonesia" atas permintaan founder. Profil Usaha PDF untuk payment gateway tetap memakai alamat sesuai NIB.

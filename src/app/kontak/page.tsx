@@ -32,7 +32,7 @@ export default function ContactPage() {
         </li>
         {c.address && (
           <li>
-            <strong>Alamat usaha:</strong> {c.address}
+            <strong>Lokasi:</strong> {c.address}
           </li>
         )}
         {c.nib && (

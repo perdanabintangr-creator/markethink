@@ -23,6 +23,6 @@ export const BRAND_SOCIALS = {
 export const BRAND_CONTACT = {
   email: "perdanabintangr@gmail.com",
   whatsapp: "6282284647968", // format 62xxxxxxxxxx
-  address: "Jorong Simancung, Padang Sibusuk, Kec. Kupitan, Kab. Sijunjung, Sumatera Barat",
+  address: "Jakarta, Indonesia",
   nib: "0311260132635",
 } as const;
