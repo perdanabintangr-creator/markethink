@@ -31,7 +31,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useApp } from "@/components/app/app-context";
 import { getTiers } from "@/lib/ai/models.config";
 import type { LinkPart, MtMessage } from "@/lib/types";
-import { REVIEW_STATUS, type ReviewPart } from "@/lib/ai/team-review";
+import { MIN_REVIEW_CHARS, REVIEW_STATUS, type ReviewPart } from "@/lib/ai/team-review";
+import { OutcomeReport, type SavedOutcome } from "./outcome-report";
 import { TeamReviewCard } from "./team-review-card";
 import { cn } from "@/lib/utils";
 import { isTransparent, textBlocks } from "@/lib/message-text";
@@ -110,6 +111,9 @@ export function ChatMessage({
   applyHighlight,
   statusLabel,
   onApplyReview,
+  question,
+  outcome,
+  onOutcome,
 }: {
   message: MtMessage;
   chatId: string;
@@ -129,6 +133,11 @@ export function ChatMessage({
   statusLabel?: string | null;
   /** Kartu Pemeriksaan Tim: kirim pesan "Terapkan perbaikan". */
   onApplyReview?: (text: string) => void;
+  /** Pertanyaan user sebelum jawaban ini (untuk Ingatan Hasil). */
+  question?: string;
+  /** Ingatan Hasil: laporan hasil untuk jawaban ini (undefined = fitur tidak ditampilkan). */
+  outcome?: SavedOutcome | null;
+  onOutcome?: (o: SavedOutcome | null) => void;
 }) {
   const { t, lang } = useApp();
   const c = chatText(lang);
@@ -311,6 +320,18 @@ export function ChatMessage({
             <ShieldCheck className="size-3.5 animate-pulse" /> {statusLabel}
           </p>
         )
+      )}
+
+      {showActions && onOutcome && outcome !== undefined && text.length >= MIN_REVIEW_CHARS && (
+        <OutcomeReport
+          chatId={chatId}
+          messageId={message.id}
+          question={question ?? ""}
+          answer={text}
+          lang={lang}
+          saved={outcome}
+          onChange={onOutcome}
+        />
       )}
 
       {showActions && (

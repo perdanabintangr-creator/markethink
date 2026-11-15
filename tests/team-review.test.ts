@@ -4,6 +4,7 @@ import {
   APPLY_MARKER,
   MIN_REVIEW_CHARS,
   buildApplyMessage,
+  buildReviseNote,
   buildReviewPrompt,
   reviewSchema,
   reviewerFor,
@@ -102,5 +103,17 @@ describe("Tim Otak: pesan & prompt", () => {
     expect(p).toContain("JANGAN menyarankan memasukkan nama/brand dari catatan user");
     expect(p).toContain("chat ini tidak di dalam project");
     expect(p).toContain("jangan menghukum karena detail yang memang tidak diberikan user");
+  });
+});
+
+describe("Tim Otak: catatan revisi Smart Tools", () => {
+  it("berisi perbaikan & klaim keliru, maks 3000 karakter", () => {
+    const note = buildReviseNote(
+      { claims: [{ status: "keliru", claim: "Total 110%", note: "harus 100%" }], fixes: [{ issue: "Persona generik", suggestion: "Tambah data usia & kota" }] },
+      false,
+    );
+    expect(note).toBe("Perbaiki sesuai Pemeriksaan Tim:\n- Persona generik → Tambah data usia & kota\n- Keliru: Total 110% (harus 100%)");
+    const long = buildReviseNote({ claims: [], fixes: Array.from({ length: 5 }, () => ({ issue: "x".repeat(240), suggestion: "y".repeat(400) })) }, true);
+    expect(long.length).toBeLessThanOrEqual(3000);
   });
 });

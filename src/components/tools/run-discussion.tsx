@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, MessageSquareText, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -47,12 +47,26 @@ export function DiscussInChat({ runId }: { runId: string }) {
 }
 
 /** "Perbaiki hasil": buat versi baru sesuai koreksi user (memakai kuota, lebih hemat dari membuat baru; terbatas per hasil). */
+/** Event untuk membuka dialog Perbaiki hasil dengan catatan terisi. */
+export const REVISE_EVENT = "mq:revise";
+
 export function ReviseButton({ runId, tool, revisionsLeft }: { runId: string; tool: string; revisionsLeft: number }) {
   const router = useRouter();
   const T = toolsText(useApp().lang);
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  // Kartu Pemeriksaan Tim → "Terapkan perbaikan" membuka dialog ini dengan catatan perbaikan terisi.
+  useEffect(() => {
+    const open = (e: Event) => {
+      const text = (e as CustomEvent<string>).detail;
+      if (typeof text !== "string" || revisionsLeft <= 0) return;
+      setNote(text);
+      setOpen(true);
+    };
+    window.addEventListener(REVISE_EVENT, open);
+    return () => window.removeEventListener(REVISE_EVENT, open);
+  }, [revisionsLeft]);
 
   async function submit() {
     if (note.trim().length < 5) return toast.error(T.reviseNoteTooShort);

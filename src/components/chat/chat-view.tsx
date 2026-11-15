@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { chatText } from "@/lib/i18n/chat";
 import { workspaceUiText } from "@/lib/i18n/workspace-ui";
 import { ChatMessage, messageToText } from "./message";
+import type { SavedOutcome } from "./outcome-report";
 import { buildQuotedMessage } from "@/lib/quote";
 import { Composer, type PendingAttachment } from "./composer";
 import { ModelSelector, type TierOption } from "./model-selector";
@@ -98,6 +99,22 @@ export function ChatView({
   const [canvasIds, setCanvasIds] = useState(initialCanvasIds);
   const [shareToken, setShareToken] = useState(initialShareToken);
   const [persisted, setPersisted] = useState(!isNew);
+  // Ingatan Hasil: laporan hasil strategi per jawaban (message id → hasil).
+  const [outcomes, setOutcomes] = useState<Record<string, SavedOutcome | null>>({});
+  useEffect(() => {
+    if (isNew) return;
+    let alive = true;
+    fetch(`/api/outcome?chatId=${chatId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { outcomes?: { message_id: string; result: SavedOutcome["result"]; note: string | null }[] } | null) => {
+        if (!alive || !d?.outcomes) return;
+        setOutcomes(Object.fromEntries(d.outcomes.map((o) => [o.message_id, { result: o.result, note: o.note }])));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [chatId, isNew]);
   const [atBottom, setAtBottom] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoCanvasDone = useRef(initialCanvasIds.length > 0);
@@ -615,6 +632,9 @@ export function ChatView({
                   }
                   applyHighlight={i === lastAssistantIndex}
                   onApplyReview={i === lastAssistantIndex && !busy ? (text) => send(text) : undefined}
+                  question={m.role === "assistant" && i > 0 ? messageToText(messages[i - 1]) : undefined}
+                  outcome={m.role === "assistant" && persisted ? (outcomes[m.id] ?? null) : undefined}
+                  onOutcome={(o) => setOutcomes((prev) => ({ ...prev, [m.id]: o }))}
                   onExplain={
                     m.role === "assistant" && !busy ? (text) => send(buildQuotedMessage(text, t.explainPrompt)) : undefined
                   }

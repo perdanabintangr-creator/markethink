@@ -553,3 +553,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Otak Senior ke atas memakai "kerangka konsultan" di system prompt (diagnosis → insight → eksekusi → angka → risiko; tanpa statistik tanpa sumber).
 - Setelah jawaban selesai (≥700 karakter, bukan PPT, bukan hasil "Terapkan perbaikan"), AI pemeriksa (Senior → Haiku 5.5, Head/Director → Sonnet 5.5, effort low) memberi label klaim, Skor Khas Brand, dan ≤5 perbaikan → data part `data-review` tersimpan di pesan. Kredit = biaya nyata (min 1); hasil gagal dibaca tidak dipotong. Dicatat di usage_logs tier `review`.
 - Tombol "Terapkan perbaikan" mengirim pesan biasa (kredit normal); jawabannya tidak dicek ulang.
+
+## 2026-11-15 — Tim Otak tahap 2
+- **Pengetahuan Pasar Indonesia** (`src/lib/ai/market-id.ts`): momen marketing 75 hari ke depan (tanggal tetap + Imlek/Ramadan/Lebaran/Idul Adha 2027 berlabel perkiraan), siklus gajian, dan kisaran biaya iklan Meta Indonesia (sumber Olakses 2026, ditandai perkiraan). Disisipkan ke konteks giliran (bukan system prompt) supaya cache tetap jalan. Benchmark per industri sengaja tidak dimasukkan karena tidak ada sumber Indonesia yang andal. Perbarui daftar VARIABLE tiap tahun.
+- **Ingatan Hasil** (tabel `strategy_outcomes`, API `/api/outcome`): di bawah jawaban ≥700 karakter user melaporkan Berhasil / Biasa saja / Tidak berhasil + catatan. 8 laporan terbaru (lingkup project sama seperti memory) masuk konteks chat & Pemeriksaan Tim. Daftar + hapus di Pengaturan → Memori.
+- **Pemeriksaan di Smart Tools**: Kampanye, Persona, Kompetitor, Kalender konten diperiksa setelah hasil jadi (kolom `tool_runs.review`), kredit sesuai biaya nyata. Dilewati untuk add-on terpisah, revisi, misi Agent, dan bila waktu request >220 dtk. "Terapkan perbaikan" membuka dialog Perbaiki hasil dengan catatan terisi.
+- Logika pemeriksaan dipindah ke `runTeamReview` (dipakai chat & Smart Tools).

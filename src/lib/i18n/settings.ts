@@ -31,6 +31,12 @@ const id = {
   descProfile: "Marqthink menyesuaikan contoh, istilah, dan saran dengan peran & industrimu.",
   descPersonalization: "Atur cara Marqthink menjawab di semua chat, seperti punya asisten yang sudah hafal kebiasaanmu.",
   descMemory: "Hal yang diingat Marqthink tentang kamu (gaya bahasa, industri, brand). Dipakai untuk personalisasi semua chat.",
+  outcomesTitle: "Ingatan Hasil",
+  outcomesDesc:
+    "Hasil strategi yang kamu laporkan dari chat (berhasil / biasa / tidak berhasil). Marqthink memakainya agar saran berikutnya melanjutkan yang berhasil dan tidak mengulang yang gagal.",
+  outcomesEmpty: "Belum ada laporan. Di bawah jawaban strategi, pilih “Berhasil”, “Biasa saja”, atau “Tidak berhasil” setelah kamu mencobanya.",
+  outcomeLabels: { berhasil: "Berhasil", biasa: "Biasa saja", gagal: "Tidak berhasil" },
+  outcomeDeleted: "Laporan hasil dihapus",
   descProject:
     "Tiap project punya Brand Kit sendiri (logo, warna, gaya desain, tone, target audience). Semua chat, PPT, carousel & foto produk di project itu otomatis mengikuti Brand Kit-nya.",
   descStorage: "Ruang untuk file yang kamu upload di chat & dokumen project.",
@@ -291,6 +297,12 @@ const en: typeof id = {
   descProfile: "Marqthink tailors its examples, terms, and suggestions to your role & industry.",
   descPersonalization: "Set how Marqthink answers in every chat, like an assistant who already knows your habits.",
   descMemory: "What Marqthink remembers about you (writing style, industry, brand). Used to personalize every chat.",
+  outcomesTitle: "Results Memory",
+  outcomesDesc:
+    "Strategy results you reported from chats (worked / so-so / didn't work). Marqthink uses them to build on what worked and avoid repeating what failed.",
+  outcomesEmpty: "No reports yet. Under a strategy answer, pick “Worked”, “So-so”, or “Didn't work” after you try it.",
+  outcomeLabels: { berhasil: "Worked", biasa: "So-so", gagal: "Didn't work" },
+  outcomeDeleted: "Result report removed",
   descProject:
     "Each project has its own Brand Kit (logo, colors, design style, tone, target audience). All chats, decks, carousels & product photos in that project automatically follow its Brand Kit.",
   descStorage: "Space for files you upload in chats & project documents.",

@@ -152,8 +152,18 @@ export async function buildSystemPrompt(
 }
 
 /** Konteks khusus pesan ini (hasil pencarian dokumen workspace & riset web) — disisipkan di pesan user terakhir. */
-export function buildTurnContext(extras: { knowledge?: string | null; research?: string | null; links?: string | null }) {
+export function buildTurnContext(extras: {
+  knowledge?: string | null;
+  research?: string | null;
+  links?: string | null;
+  /** Pengetahuan Pasar Indonesia (momen & biaya iklan). */
+  market?: string | null;
+  /** Ingatan Hasil: strategi yang pernah dicoba user & hasilnya. */
+  outcomes?: string | null;
+}) {
   const parts: string[] = [];
+  if (extras.market) parts.push(extras.market);
+  if (extras.outcomes) parts.push(extras.outcomes);
   if (extras.links) {
     parts.push(
       `[Konteks sistem] User menempelkan tautan; isinya sudah dibaca sistem di bawah ini. Pakai isinya untuk menjawab (sebut sumbernya). ` +

@@ -7,7 +7,6 @@ import {
   createIdGenerator,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  generateText,
   stepCountIs,
   streamText,
   tool,
@@ -19,10 +18,12 @@ import { getSession, hasAppAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/lib/credits";
-import { createFallbackModel, isProviderConfigured, routeTier } from "@/lib/ai/router";
+import { isProviderConfigured, routeTier } from "@/lib/ai/router";
 import { brandVisualOf, buildSystemPrompt, buildTurnContext, formatBrandKit, formatPersonalization } from "@/lib/ai/prompt";
-import { CONSULTANT_FRAME, REVIEW_STATUS, buildReviewPrompt, reviewSchema, reviewerFor, shouldReview, tidyReview } from "@/lib/ai/team-review";
-import { extractJson } from "@/lib/addons/json-output";
+import { CONSULTANT_FRAME, REVIEW_STATUS, reviewerFor, shouldReview } from "@/lib/ai/team-review";
+import { runTeamReview } from "@/lib/ai/team-review-run";
+import { marketContext } from "@/lib/ai/market-id";
+import { formatOutcomes, type OutcomeRow } from "@/lib/ai/outcomes";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
 import { clampToSchema } from "@/lib/schema-clamp";
 import { presentationSchema } from "@/lib/pptx";
@@ -255,7 +256,7 @@ export async function POST(req: Request) {
         messageMetadata: { tier: tierId, createdAt: Date.now(), credits: cost, remainingCredits: credit.remaining },
       });
       // --- konteks: agent, workspace, memory, riset ---
-      const [{ data: agent }, { data: memories }, wsCtx] = await Promise.all([
+      const [{ data: agent }, { data: memories }, wsCtx, { data: outcomeRows }] = await Promise.all([
         chatAgentId
           ? supabase.from("agents").select("name, instructions").eq("id", chatAgentId).maybeSingle()
           : Promise.resolve({ data: null }),
@@ -263,7 +264,12 @@ export async function POST(req: Request) {
           .order("created_at", { ascending: false })
           .limit(30),
         loadWorkspaceContext(supabase, workspaceId, lastText),
+        // Ingatan Hasil: laporan hasil strategi user (lingkup project sama seperti memory).
+        scopeMemories(supabase.from("strategy_outcomes").select("result, topic, note, created_at"), workspaceId)
+          .order("created_at", { ascending: false })
+          .limit(8),
       ]);
+      const outcomesCtx = formatOutcomes((outcomeRows ?? []) as OutcomeRow[]);
 
       // Tautan yang ditempel user: dibaca server (gratis), isinya jadi konteks jawaban & tersimpan ringkas di pesan jawaban.
       const linkUrls = extractLinks(lastText);
@@ -336,6 +342,8 @@ export async function POST(req: Request) {
       const system = runPrompt ? `${freshBase}\n\n${runPrompt}` : freshBase;
       // Konteks yang berubah tiap pesan ditaruh di pesan user terakhir agar system prompt tetap bisa di-cache.
       const turnContext = buildTurnContext({
+        market: marketContext(new Date()),
+        outcomes: outcomesCtx,
         knowledge: wsCtx.knowledge,
         links: links.length ? linkContext(links) : null,
         research: sources.length
@@ -630,61 +638,26 @@ export async function POST(req: Request) {
         data: { state: "reading", label: en ? REVIEW_STATUS.en : REVIEW_STATUS.id },
         transient: true,
       });
-      const reviewStarted = Date.now();
-      try {
-        const brand = wsCtx.brandKit ? formatBrandKit(wsCtx.brandKit) : null;
-        const userNotes = (memories ?? []).slice(0, 10).map((m) => `- ${m.content as string}`).join("\n");
-        const { text: reviewText, usage: reviewUsage } = await generateText({
-          model: createFallbackModel([reviewer]).model,
-          maxOutputTokens: 3000,
-          maxRetries: 1,
-          abortSignal: AbortSignal.timeout(60_000),
-          providerOptions: { anthropic: { effort: "low" } },
-          prompt: buildReviewPrompt({ question: lastText, answer: finalAnswer, sources: citedSources, brand, userNotes, en }),
-        });
-        const parsedReview = reviewSchema.safeParse(tidyReview(extractJson(reviewText)));
-        const reviewCost = estimateCostUsd(reviewer, reviewUsage.inputTokens ?? 0, reviewUsage.outputTokens ?? 0);
-        // Hasil tidak terbaca → tidak ditampilkan & tidak dipotong kredit (ditanggung Marqthink).
-        const reviewCredits = parsedReview.success ? creditsForUsd(reviewCost) : 0;
-        let remaining: number | null = null;
-        if (reviewCredits > 0) {
-          const charged = await consumeCredits(user.id, reviewCredits, "team_review", { chatId, tier: tierId });
-          remaining = charged.remaining;
+      const reviewed = await runTeamReview({
+        admin,
+        userId: user.id,
+        tier: tierId,
+        question: lastText,
+        answer: finalAnswer,
+        sources: citedSources,
+        brand: wsCtx.brandKit ? formatBrandKit(wsCtx.brandKit) : null,
+        userNotes: (memories ?? []).slice(0, 10).map((m) => `- ${m.content as string}`).join("\n"),
+        outcomes: outcomesCtx,
+        en,
+        chatId,
+        reason: "team_review",
+      });
+      if (reviewed) {
+        writer.write({ type: "data-review", data: reviewed.review });
+        if (reviewed.remaining !== null) {
+          remainingAfter = reviewed.remaining;
+          writer.write({ type: "message-metadata", messageMetadata: { remainingCredits: reviewed.remaining } });
         }
-        await admin.from("usage_logs").insert({
-          user_id: user.id,
-          chat_id: chatId,
-          tier: "review",
-          provider: reviewer.provider,
-          model: reviewer.modelId,
-          input_tokens: reviewUsage.inputTokens ?? 0,
-          output_tokens: reviewUsage.outputTokens ?? 0,
-          est_cost_usd: reviewCost,
-          credits: reviewCredits,
-          status: parsedReview.success ? "ok" : "error",
-          error: parsedReview.success ? null : `hasil pemeriksaan tidak terbaca: ${parsedReview.error.issues[0]?.message ?? "?"}`.slice(0, 1000),
-          latency_ms: Date.now() - reviewStarted,
-        });
-        if (parsedReview.success) {
-          writer.write({ type: "data-review", data: { ...parsedReview.data, credits: reviewCredits } });
-          if (remaining !== null) {
-            remainingAfter = remaining;
-            writer.write({ type: "message-metadata", messageMetadata: { remainingCredits: remaining } });
-          }
-        }
-      } catch (err) {
-        console.error("[team-review] gagal", err);
-        await admin.from("usage_logs").insert({
-          user_id: user.id,
-          chat_id: chatId,
-          tier: "review",
-          provider: reviewer.provider,
-          model: reviewer.modelId,
-          credits: 0,
-          status: "error",
-          error: (err instanceof Error ? err.message : String(err)).slice(0, 1000),
-          latency_ms: Date.now() - reviewStarted,
-        });
       }
       writer.write({ type: "data-status", data: { state: "done", label: "" }, transient: true });
     },

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { settingsText, type SettingsText } from "@/lib/i18n/settings";
 import { ProfileForm } from "./profile-form";
 import { MemoryList } from "./memory-list";
+import { OutcomeList } from "./outcome-list";
+import type { OutcomeResult } from "@/lib/ai/outcomes";
 import { DangerZone } from "./danger-zone";
 import { GeneralPrefs } from "./general-prefs";
 import { PersonalizationForm } from "./personalization-form";
@@ -115,10 +117,14 @@ function Desc({ children }: { children: React.ReactNode }) {
 }
 
 async function MemorySection({ t, supabase }: { t: SettingsText; supabase: Supa }) {
-  const { data: memories } = await supabase
-    .from("memories")
-    .select("id, content, source, created_at, workspace:workspaces(name)")
-    .order("created_at", { ascending: false });
+  const [{ data: memories }, { data: outcomeRows }] = await Promise.all([
+    supabase.from("memories").select("id, content, source, created_at, workspace:workspaces(name)").order("created_at", { ascending: false }),
+    supabase
+      .from("strategy_outcomes")
+      .select("id, chat_id, result, topic, note, created_at, workspace:workspaces(name)")
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
   return (
     <>
       <Desc>{t.descMemory}</Desc>
@@ -128,6 +134,17 @@ async function MemorySection({ t, supabase }: { t: SettingsText; supabase: Supa 
           content: m.content as string,
           source: m.source as string,
           project: (m.workspace as unknown as { name?: string } | null)?.name ?? null,
+        }))}
+      />
+      <OutcomeList
+        items={(outcomeRows ?? []).map((o) => ({
+          id: o.id as string,
+          chatId: o.chat_id as string,
+          result: o.result as OutcomeResult,
+          topic: o.topic as string,
+          note: (o.note as string | null) ?? null,
+          date: (o.created_at as string).slice(0, 10),
+          project: (o.workspace as unknown as { name?: string } | null)?.name ?? null,
         }))}
       />
     </>

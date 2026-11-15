@@ -7,6 +7,14 @@ import { RUNNERS, isAiTool } from "./tools";
 import type { ToolCtx } from "./runtime";
 import { MAX_REVISIONS, TOOL_CREDIT_ESTIMATE, revisionEstimate } from "./format";
 import { DEFAULT_TOOL_TIER, type ToolTier } from "./tool-tier";
+import { resultToMarkdown } from "./to-markdown";
+import { runTeamReview } from "@/lib/ai/team-review-run";
+import { formatOutcomes, type OutcomeRow } from "@/lib/ai/outcomes";
+
+/** Tool strategi yang hasilnya diperiksa Tim Otak (founder ACC rancangan tahap 2). */
+const REVIEWED_TOOLS = new Set(["campaign", "persona", "competitor", "calendar"]);
+/** Pemeriksaan hanya dijalankan bila waktu request masih cukup (batas fungsi 300 dtk). */
+const REVIEW_TIME_BUDGET_MS = 220_000;
 
 export type ExecResult =
   | { ok: true; runId: string; title: string; output: unknown; credits: number }
@@ -174,7 +182,35 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
       latency_ms: Date.now() - started,
       status: "ok",
     });
-    return { ok: true, runId: run.id, title, output: result.output, credits };
+    // Tim Otak: Pemeriksaan Tim untuk tool strategi (bukan add-on terpisah & bukan revisi; kredit dipotong sesuai biaya nyata).
+    let reviewCredits = 0;
+    if (!viaAddon && !revision && !agentRunId && REVIEWED_TOOLS.has(tool) && Date.now() - (ctx.startedAt ?? started) < REVIEW_TIME_BUDGET_MS) {
+      const { data: pref } = await admin.from("profiles").select("team_review").eq("id", userId).maybeSingle();
+      if (pref?.team_review !== false) {
+        const { data: outcomeRows } = await admin
+          .from("strategy_outcomes")
+          .select("result, topic, note, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(8);
+        const reviewed = await runTeamReview({
+          admin,
+          userId,
+          tier: useTier,
+          question: `${info.name}. Data dari user: ${JSON.stringify(parsed.data).slice(0, 2500)}`,
+          answer: resultToMarkdown(result.output, 30_000),
+          sources: (result.output as { sources?: { title: string; url: string }[] } | null)?.sources ?? [],
+          outcomes: formatOutcomes((outcomeRows ?? []) as OutcomeRow[]),
+          en,
+          reason: `team_review:${tool}`,
+        });
+        if (reviewed) {
+          reviewCredits = reviewed.review.credits;
+          await admin.from("tool_runs").update({ review: reviewed.review }).eq("id", run.id);
+        }
+      }
+    }
+    return { ok: true, runId: run.id, title, output: result.output, credits: credits + reviewCredits };
   } catch (err) {
     const msg = (err instanceof Error ? err.message : String(err)).slice(0, 1500);
     console.error(`[tool:${tool}] gagal`, msg);

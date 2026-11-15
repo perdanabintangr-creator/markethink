@@ -88,6 +88,8 @@ export function buildReviewPrompt(o: {
   brand: string | null;
   /** Memori umum tentang user — bisa membahas bisnis lain, jadi hanya latar belakang. */
   userNotes?: string | null;
+  /** Ingatan Hasil: strategi yang pernah dicoba user & hasilnya. */
+  outcomes?: string | null;
   en: boolean;
 }) {
   const lang = o.en ? "English" : "Bahasa Indonesia yang santai dan jelas";
@@ -103,11 +105,13 @@ Tugas:
    Nilai berdasarkan bisnis di pertanyaan. Brand Kit/catatan user hanya dipakai bila pertanyaan jelas membahas brand itu. Bila pertanyaan membahas bisnis lain atau contoh/hipotesis, JANGAN menyarankan memasukkan nama/brand dari catatan user dan jangan mengurangi skor karena brand itu tidak disebut.
    Bila user hanya memberi info umum (mis. "brand skincare lokal" tanpa nama/produk), nilai seberapa baik jawaban memakai info yang ADA dan apakah asumsinya ditulis jelas — jangan menghukum karena detail yang memang tidak diberikan user; cukup sarankan info apa yang perlu ditambahkan user agar hasil lebih khas.
 3. Perbaikan: maksimal 5 perbaikan paling berdampak (kalimat klise, klaim tanpa dasar, langkah yang kurang jelas, angka tidak masuk akal). Saran harus konkret dan langsung bisa dipakai (beri contoh kalimat penggantinya).
-4. summary: satu kalimat penilaian keseluruhan.
+4. Bila ada "Hasil strategi sebelumnya" di bawah: tandai sebagai perbaikan bila jawaban mengulang taktik yang TIDAK BERHASIL tanpa perubahan jelas, atau melewatkan pola yang BERHASIL padahal relevan.
+5. summary: satu kalimat penilaian keseluruhan.
 Jangan mengulang isi jawaban. Jangan memuji berlebihan. Bila jawaban sudah bagus, perbaikan boleh kosong.
 
 Brand Kit project: ${o.brand?.trim() || "(chat ini tidak di dalam project / belum diisi)"}
 Catatan tentang user (latar belakang, bisa membahas bisnis lain): ${o.userNotes?.trim() || "(tidak ada)"}
+Hasil strategi sebelumnya (laporan user): ${o.outcomes?.replace(/^\[Konteks sistem\][^\n]*\n/, "").trim() || "(belum ada)"}
 
 Sumber yang tercantum:
 ${sources}
@@ -163,4 +167,14 @@ export function buildApplyMessage(r: Pick<ReviewResult, "claims" | "fixes">, en:
   return en
     ? `${APPLY_MARKER.en}:\n${body}\n\nRewrite the previous answer in full with these fixes applied. Keep everything that was already good, and mark numbers without a source as (estimate).`
     : `${APPLY_MARKER.id}:\n${body}\n\nTulis ulang jawaban sebelumnya secara utuh dengan perbaikan di atas. Pertahankan bagian yang sudah bagus, dan tandai angka tanpa sumber sebagai (perkiraan).`;
+}
+
+/** Catatan revisi Smart Tools dari hasil pemeriksaan (dipakai tombol "Terapkan perbaikan" → Perbaiki hasil). */
+export function buildReviseNote(r: Pick<ReviewResult, "claims" | "fixes">, en: boolean) {
+  const lines = [
+    ...r.fixes.map((f) => `- ${f.issue} → ${f.suggestion}`),
+    ...r.claims.filter((c) => c.status === "keliru").map((c) => `- ${en ? "Incorrect" : "Keliru"}: ${c.claim} (${c.note})`),
+  ];
+  const head = en ? "Fix based on the Team Check:" : "Perbaiki sesuai Pemeriksaan Tim:";
+  return `${head}\n${lines.join("\n")}`.slice(0, 3000);
 }

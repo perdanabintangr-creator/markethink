@@ -11,6 +11,8 @@ import { ResultView } from "@/components/tools/result-view";
 import { ToolIcon } from "@/components/tools/tool-icon";
 import { DiscussInChat, ReviseButton } from "@/components/tools/run-discussion";
 import { ResearchNotes } from "@/components/tools/research-notes";
+import { ToolReview } from "@/components/tools/tool-review";
+import type { ReviewPart } from "@/lib/ai/team-review";
 import { MAX_REVISIONS } from "@/lib/addons/format";
 import { WatchButton, WatchChanges } from "@/components/tools/watch-button";
 import { isWatchable } from "@/lib/addons/watchers";
@@ -30,7 +32,7 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
   if (!info || !/^[0-9a-f-]{36}$/i.test(runId)) notFound();
   const { data: run } = await supabase
     .from("tool_runs")
-    .select("id, tool, title, status, source, input, output, files, error, created_at, revision_of, revision_note")
+    .select("id, tool, title, status, source, input, output, files, error, created_at, revision_of, revision_note, review")
     .eq("id", runId)
     .eq("tool", tool)
     .maybeSingle();
@@ -89,6 +91,9 @@ export default async function ToolResultPage({ params }: { params: Promise<{ too
               <ReviseButton runId={run.id} tool={tool} revisionsLeft={Math.max(0, MAX_REVISIONS - (revisions ?? 0))} />
               {isWatchable(tool) && <WatchButton runId={run.id} />}
             </div>
+            {run.review && (
+              <ToolReview review={run.review as ReviewPart} canRevise={MAX_REVISIONS - (revisions ?? 0) > 0} />
+            )}
             <WatchChanges output={run.output} />
             <ResultView tool={tool} output={run.output} input={(run.input ?? {}) as Record<string, unknown>} runId={run.id} />
             <ResearchNotes output={run.output} />
