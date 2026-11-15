@@ -101,6 +101,7 @@ Tugas:
    Hitung ulang penjumlahan budget, persentase, dan target; laporkan bila tidak pas (status "keliru").
 2. Skor Khas Brand (0-100): seberapa spesifik jawaban untuk bisnis yang DITANYAKAN user vs nasihat umum yang bisa dipakai bisnis mana pun. 80+ = sangat khas; <50 = generik. Sebut di distinctNote bagian mana yang paling generik.
    Nilai berdasarkan bisnis di pertanyaan. Brand Kit/catatan user hanya dipakai bila pertanyaan jelas membahas brand itu. Bila pertanyaan membahas bisnis lain atau contoh/hipotesis, JANGAN menyarankan memasukkan nama/brand dari catatan user dan jangan mengurangi skor karena brand itu tidak disebut.
+   Bila user hanya memberi info umum (mis. "brand skincare lokal" tanpa nama/produk), nilai seberapa baik jawaban memakai info yang ADA dan apakah asumsinya ditulis jelas — jangan menghukum karena detail yang memang tidak diberikan user; cukup sarankan info apa yang perlu ditambahkan user agar hasil lebih khas.
 3. Perbaikan: maksimal 5 perbaikan paling berdampak (kalimat klise, klaim tanpa dasar, langkah yang kurang jelas, angka tidak masuk akal). Saran harus konkret dan langsung bisa dipakai (beri contoh kalimat penggantinya).
 4. summary: satu kalimat penilaian keseluruhan.
 Jangan mengulang isi jawaban. Jangan memuji berlebihan. Bila jawaban sudah bagus, perbaikan boleh kosong.

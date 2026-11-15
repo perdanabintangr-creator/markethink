@@ -101,5 +101,6 @@ describe("Tim Otak: pesan & prompt", () => {
     expect(p).toContain("Catatan tentang user (latar belakang, bisa membahas bisnis lain): - Punya usaha photobox");
     expect(p).toContain("JANGAN menyarankan memasukkan nama/brand dari catatan user");
     expect(p).toContain("chat ini tidak di dalam project");
+    expect(p).toContain("jangan menghukum karena detail yang memang tidak diberikan user");
   });
 });
