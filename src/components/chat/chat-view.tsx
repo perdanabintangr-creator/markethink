@@ -252,6 +252,13 @@ export function ChatView({
         setLockedTier(`${c.thisBrain}|pro`);
         setQuotaOpen(true);
       } else if (code === "server_not_configured") toast.error(c.serverNotConfigured);
+      else if (code === "still_generating") {
+        // Jawaban sebelumnya masih ditulis di server: hapus pesan dobel & tunggu jawaban itu muncul.
+        clearError();
+        setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
+        setRemoteWaiting(true);
+        return;
+      }
       const res = await fetch("/api/credits");
       if (res.ok) emitCredits((await res.json()).remaining);
     },

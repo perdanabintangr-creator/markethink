@@ -46,7 +46,7 @@ import {
 import { carouselSchema } from "@/lib/deck/carousel";
 import { deckImageMaxFor, deckStyleFor, premiumVisualsFor, capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
 import { imageGenerationEnabled } from "@/lib/ai/image";
-import type { MtMessage } from "@/lib/types";
+import { isGenerating, type MtMessage } from "@/lib/types";
 import { truncate } from "@/lib/utils";
 import { env } from "@/lib/env";
 import { experienceLabel, roleLabel } from "@/lib/personas";
@@ -159,6 +159,16 @@ export async function POST(req: Request) {
   // --- batas harian paket (mis. Free 20 chat/hari) ---
   const chatLimit = await dailyLimitReached(dailyLimits, user.id, "chat", profile.language);
   if (chatLimit) return json(429, { error: "daily_limit", kind: "chat", message: chatLimit });
+
+  // Jawaban sebelumnya di chat ini masih ditulis di server (mis. koneksi HP sempat putus lalu user menekan "Coba lagi")
+  // → jangan memproses dua kali; layar chat menunggu jawaban yang sedang berjalan.
+  const { data: running } = await supabase.from("chats").select("generating_at, stop_requested_at").eq("id", chatId).maybeSingle();
+  if (running && isGenerating(running.generating_at as string | null) && !running.stop_requested_at) {
+    return json(409, {
+      error: "still_generating",
+      message: en ? "The previous answer is still being written. Please wait a moment." : "Jawaban sebelumnya masih ditulis. Tunggu sebentar ya.",
+    });
+  }
 
   // --- kredit ---
   const tier = getTier(tierId);
