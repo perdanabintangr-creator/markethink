@@ -4,6 +4,8 @@
  * ikut jadi konteks jawaban berikutnya dan bahan Pemeriksaan Tim. Modul murni (diuji vitest).
  */
 
+import { APPLY_MARKER } from "@/lib/ai/team-review";
+
 export const OUTCOME_RESULTS = ["berhasil", "biasa", "gagal"] as const;
 export type OutcomeResult = (typeof OUTCOME_RESULTS)[number];
 
@@ -25,7 +27,9 @@ const clean = (s: string) =>
 /** Ringkasan "apa yang dicoba": judul pertama jawaban, atau pertanyaan user. Maks 200 karakter. */
 export function outcomeTopic(question: string, answer: string) {
   const heading = answer.split("\n").find((l) => /^#{1,3}\s+\S/.test(l.trim()));
-  const q = clean(question).slice(0, 140);
+  // Jawaban hasil "Terapkan perbaikan": pertanyaannya berisi daftar perbaikan, bukan topik → pakai judul saja.
+  const isApply = question.trimStart().startsWith(APPLY_MARKER.id) || question.trimStart().startsWith(APPLY_MARKER.en);
+  const q = isApply ? "" : clean(question).slice(0, 140);
   const h = heading ? clean(heading).slice(0, 120) : "";
   const topic = h && q ? `${h} (permintaan: ${q})` : h || q;
   return topic.slice(0, 200) || "Strategi dari chat";

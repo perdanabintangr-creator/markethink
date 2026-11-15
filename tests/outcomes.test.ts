@@ -7,6 +7,7 @@ describe("Ingatan Hasil", () => {
     expect(t).toBe("Rencana Promo Weekend 30 Hari (permintaan: Buatkan strategi promo weekend)");
     expect(outcomeTopic("q".repeat(500), "tanpa judul").length).toBeLessThanOrEqual(200);
     expect(outcomeTopic("", "")).toBe("Strategi dari chat");
+    expect(outcomeTopic("Terapkan perbaikan dari Pemeriksaan Tim:\n- a → b", "# Rencana Promo Desember\nisi")).toBe("Rencana Promo Desember");
   });
   it("konteks: label hasil, catatan sebagai data, maksimal 8", () => {
     const rows = Array.from({ length: 10 }, (_, i) => ({
