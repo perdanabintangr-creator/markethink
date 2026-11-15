@@ -632,19 +632,15 @@ export async function POST(req: Request) {
       });
       const reviewStarted = Date.now();
       try {
-        const brand = [
-          wsCtx.brandKit ? formatBrandKit(wsCtx.brandKit) : null,
-          ...(memories ?? []).slice(0, 10).map((m) => `- ${m.content as string}`),
-        ]
-          .filter(Boolean)
-          .join("\n");
+        const brand = wsCtx.brandKit ? formatBrandKit(wsCtx.brandKit) : null;
+        const userNotes = (memories ?? []).slice(0, 10).map((m) => `- ${m.content as string}`).join("\n");
         const { text: reviewText, usage: reviewUsage } = await generateText({
           model: createFallbackModel([reviewer]).model,
           maxOutputTokens: 3000,
           maxRetries: 1,
           abortSignal: AbortSignal.timeout(60_000),
           providerOptions: { anthropic: { effort: "low" } },
-          prompt: buildReviewPrompt({ question: lastText, answer: finalAnswer, sources: citedSources, brand: brand || null, en }),
+          prompt: buildReviewPrompt({ question: lastText, answer: finalAnswer, sources: citedSources, brand, userNotes, en }),
         });
         const parsedReview = reviewSchema.safeParse(tidyReview(extractJson(reviewText)));
         const reviewCost = estimateCostUsd(reviewer, reviewUsage.inputTokens ?? 0, reviewUsage.outputTokens ?? 0);

@@ -96,4 +96,10 @@ describe("Tim Otak: pesan & prompt", () => {
     expect(p).toContain("[1] Katadata — https://katadata.co.id/a");
     expect(p).toContain("Bahasa Indonesia");
   });
+  it("catatan user hanya latar belakang: tidak dipaksakan ke bisnis lain", () => {
+    const p = buildReviewPrompt({ question: "Kedai kopi saya…", answer: "A.", sources: [], brand: null, userNotes: "- Punya usaha photobox", en: false });
+    expect(p).toContain("Catatan tentang user (latar belakang, bisa membahas bisnis lain): - Punya usaha photobox");
+    expect(p).toContain("JANGAN menyarankan memasukkan nama/brand dari catatan user");
+    expect(p).toContain("chat ini tidak di dalam project");
+  });
 });

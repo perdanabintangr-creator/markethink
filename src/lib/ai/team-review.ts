@@ -84,7 +84,10 @@ export function buildReviewPrompt(o: {
   question: string;
   answer: string;
   sources: { title?: string | null; url: string }[];
+  /** Brand Kit project (hanya bila chat ada di dalam project). */
   brand: string | null;
+  /** Memori umum tentang user — bisa membahas bisnis lain, jadi hanya latar belakang. */
+  userNotes?: string | null;
   en: boolean;
 }) {
   const lang = o.en ? "English" : "Bahasa Indonesia yang santai dan jelas";
@@ -96,12 +99,14 @@ export function buildReviewPrompt(o: {
 Tugas:
 1. Klaim & angka: pilih maksimal 6 angka/klaim terpenting. Beri status: ${STATUS_HELP}
    Hitung ulang penjumlahan budget, persentase, dan target; laporkan bila tidak pas (status "keliru").
-2. Skor Khas Brand (0-100): seberapa spesifik jawaban untuk brand/pasar ini vs nasihat umum yang bisa dipakai bisnis mana pun. 80+ = sangat khas; <50 = generik. Sebut di distinctNote bagian mana yang paling generik.
+2. Skor Khas Brand (0-100): seberapa spesifik jawaban untuk bisnis yang DITANYAKAN user vs nasihat umum yang bisa dipakai bisnis mana pun. 80+ = sangat khas; <50 = generik. Sebut di distinctNote bagian mana yang paling generik.
+   Nilai berdasarkan bisnis di pertanyaan. Brand Kit/catatan user hanya dipakai bila pertanyaan jelas membahas brand itu. Bila pertanyaan membahas bisnis lain atau contoh/hipotesis, JANGAN menyarankan memasukkan nama/brand dari catatan user dan jangan mengurangi skor karena brand itu tidak disebut.
 3. Perbaikan: maksimal 5 perbaikan paling berdampak (kalimat klise, klaim tanpa dasar, langkah yang kurang jelas, angka tidak masuk akal). Saran harus konkret dan langsung bisa dipakai (beri contoh kalimat penggantinya).
 4. summary: satu kalimat penilaian keseluruhan.
 Jangan mengulang isi jawaban. Jangan memuji berlebihan. Bila jawaban sudah bagus, perbaikan boleh kosong.
 
-Konteks brand: ${o.brand?.trim() || "(belum diisi)"}
+Brand Kit project: ${o.brand?.trim() || "(chat ini tidak di dalam project / belum diisi)"}
+Catatan tentang user (latar belakang, bisa membahas bisnis lain): ${o.userNotes?.trim() || "(tidak ada)"}
 
 Sumber yang tercantum:
 ${sources}
