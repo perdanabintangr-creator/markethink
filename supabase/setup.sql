@@ -2771,3 +2771,9 @@ drop policy if exists "own posted marks" on public.content_posts_done;
 create policy "own posted marks" on public.content_posts_done for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 grant select, insert, delete on public.content_posts_done to authenticated;
+
+
+-- ===== 20261115000055_profiles_team_review.sql =====
+-- Tim Otak: pemeriksaan jawaban oleh Kritikus + Pemeriksa Fakta (bawaan menyala; bisa dimatikan di Pengaturan → Personalisasi).
+alter table public.profiles add column if not exists team_review boolean not null default true;
+grant update (team_review) on public.profiles to authenticated;

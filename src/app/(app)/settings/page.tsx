@@ -12,6 +12,7 @@ import { MemoryList } from "./memory-list";
 import { DangerZone } from "./danger-zone";
 import { GeneralPrefs } from "./general-prefs";
 import { PersonalizationForm } from "./personalization-form";
+import { TeamReviewToggle } from "./team-review-toggle";
 import { PasswordForm, SignOutEverywhere } from "./security-form";
 import { SharedLinks, type SharedItem } from "./shared-links";
 import { SETTINGS_TABS, SettingRow, SettingsNav, settingsTabOf } from "./settings-nav";
@@ -78,6 +79,10 @@ async function Section({ tab, t, supabase, user, profile }: { tab: string; t: Se
       return (
         <>
           <Desc>{t.descPersonalization}</Desc>
+          <TeamReviewToggle
+            enabled={profile.team_review !== false}
+            freePlan={profile.role !== "admin" && profile.plan_id === "beta"}
+          />
           <PersonalizationForm style={profile.response_style ?? "seimbang"} instructions={profile.custom_instructions ?? ""} />
         </>
       );

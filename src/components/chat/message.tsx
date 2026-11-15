@@ -16,6 +16,7 @@ import {
   Pencil,
   Presentation,
   RefreshCw,
+  ShieldCheck,
   ThumbsDown,
   ThumbsUp,
   Wand2,
@@ -30,6 +31,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useApp } from "@/components/app/app-context";
 import { getTiers } from "@/lib/ai/models.config";
 import type { LinkPart, MtMessage } from "@/lib/types";
+import { REVIEW_STATUS, type ReviewPart } from "@/lib/ai/team-review";
+import { TeamReviewCard } from "./team-review-card";
 import { cn } from "@/lib/utils";
 import { isTransparent, textBlocks } from "@/lib/message-text";
 import { parseQuotedMessage } from "@/lib/quote";
@@ -106,6 +109,7 @@ export function ChatMessage({
   onApplyToResult,
   applyHighlight,
   statusLabel,
+  onApplyReview,
 }: {
   message: MtMessage;
   chatId: string;
@@ -123,6 +127,8 @@ export function ChatMessage({
   /** Jawaban terakhir: tampilkan ajakan memperbarui hasil yang lebih menonjol. */
   applyHighlight?: boolean;
   statusLabel?: string | null;
+  /** Kartu Pemeriksaan Tim: kirim pesan "Terapkan perbaikan". */
+  onApplyReview?: (text: string) => void;
 }) {
   const { t, lang } = useApp();
   const c = chatText(lang);
@@ -140,6 +146,7 @@ export function ChatMessage({
     .filter((s, i, all) => all.findIndex((x) => x.url === s.url) === i);
   const files = message.parts.filter((p): p is FileUIPart => p.type === "file");
   const links = message.parts.flatMap((p) => (p.type === "data-link" ? [p.data as LinkPart] : []));
+  const review = message.parts.find((p) => p.type === "data-review")?.data as ReviewPart | undefined;
   // Percobaan PPT yang gagal lalu berhasil diulang AI tidak perlu ditampilkan sebagai error.
   const allBlocks = assistantBlocks(message);
   const lastDeckOk = allBlocks.findLastIndex(
@@ -292,6 +299,19 @@ export function ChatMessage({
           ),
         )}
       </MaybeSelectionAsk>
+
+      {review ? (
+        <TeamReviewCard review={review} lang={lang} onApply={onApplyReview} />
+      ) : (
+        isLast &&
+        isStreaming &&
+        text &&
+        (statusLabel === REVIEW_STATUS.id || statusLabel === REVIEW_STATUS.en) && (
+          <p className="flex w-fit items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs text-primary">
+            <ShieldCheck className="size-3.5 animate-pulse" /> {statusLabel}
+          </p>
+        )
+      )}
 
       {showActions && (
         <div className="flex flex-wrap items-center gap-0.5 text-muted-foreground">

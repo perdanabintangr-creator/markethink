@@ -85,6 +85,19 @@ export async function updatePersonalization(_prev: FormState, formData: FormData
   return { ok: true };
 }
 
+/** Tim Otak: nyalakan/matikan Pemeriksaan Tim (Kritikus + Pemeriksa Fakta). */
+export async function setTeamReview(enabled: boolean): Promise<FormState> {
+  const { supabase, user, profile } = await requireUser();
+  const t = settingsText(profile.language);
+  const { error } = await supabase
+    .from("profiles")
+    .update({ team_review: enabled === true, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+  if (error) return { error: t.errSaveFailed };
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
 export async function changePassword(_prev: FormState, formData: FormData): Promise<FormState> {
   const { supabase, profile } = await requireUser();
   const t = settingsText(profile.language);

@@ -547,3 +547,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Judul default "Marqthink: AI Marketing Indonesia untuk Brand & UMKM", deskripsi & keywords memuat "AI marketing Indonesia". Label kecil "Marqthink · AI Marketing Indonesia" di atas judul beranda.
 - FAQ di beranda (6 pertanyaan) + data terstruktur FAQPage. Halaman panduan `/ai-marketing-indonesia` (Article schema), ditaut dari footer, FAQ, dan sitemap.
 - Peringkat kata kunci umum tidak bisa dijamin; perlu waktu + tautan dari luar (medsos, direktori, artikel).
+
+## 2026-11-15 — Tim Otak tahap 1 (Kritikus + Pemeriksa Fakta)
+- Founder ACC rancangan (artifact "Tim Otak Marqthink"): pilihan A — biaya pemeriksaan dipotong dari kredit pelanggan; Free tidak dicek; pelanggan boleh mematikan (Pengaturan → Personalisasi, bawaan menyala).
+- Otak Senior ke atas memakai "kerangka konsultan" di system prompt (diagnosis → insight → eksekusi → angka → risiko; tanpa statistik tanpa sumber).
+- Setelah jawaban selesai (≥700 karakter, bukan PPT, bukan hasil "Terapkan perbaikan"), AI pemeriksa (Senior → Haiku 5.5, Head/Director → Sonnet 5.5, effort low) memberi label klaim, Skor Khas Brand, dan ≤5 perbaikan → data part `data-review` tersimpan di pesan. Kredit = biaya nyata (min 1); hasil gagal dibaca tidak dipotong. Dicatat di usage_logs tier `review`.
+- Tombol "Terapkan perbaikan" mengirim pesan biasa (kredit normal); jawabannya tidak dicek ulang.

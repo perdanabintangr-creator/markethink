@@ -7,6 +7,7 @@ import {
   createIdGenerator,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  generateText,
   stepCountIs,
   streamText,
   tool,
@@ -18,8 +19,10 @@ import { getSession, hasAppAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/lib/credits";
-import { routeTier } from "@/lib/ai/router";
-import { brandVisualOf, buildSystemPrompt, buildTurnContext, formatPersonalization } from "@/lib/ai/prompt";
+import { createFallbackModel, isProviderConfigured, routeTier } from "@/lib/ai/router";
+import { brandVisualOf, buildSystemPrompt, buildTurnContext, formatBrandKit, formatPersonalization } from "@/lib/ai/prompt";
+import { CONSULTANT_FRAME, REVIEW_STATUS, buildReviewPrompt, reviewSchema, reviewerFor, shouldReview, tidyReview } from "@/lib/ai/team-review";
+import { extractJson } from "@/lib/addons/json-output";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
 import { clampToSchema } from "@/lib/schema-clamp";
 import { presentationSchema } from "@/lib/pptx";
@@ -226,6 +229,11 @@ export async function POST(req: Request) {
   let actualCredits: number | null = null;
   let remainingAfter: number | null = null;
   const errors: string[] = [];
+  // Jawaban AI selesai (true = ada hasil) → dipakai untuk memulai Pemeriksaan Tim setelah jawaban tampil.
+  let markLlmDone: (produced: boolean) => void = () => {};
+  const llmDone = new Promise<boolean>((resolve) => (markLlmDone = resolve));
+  let finalAnswer = "";
+  const citedSources: { title?: string | null; url: string }[] = [];
   let markDone: () => void = () => {};
   const done = new Promise<void>((resolve) => (markDone = resolve));
 
@@ -286,6 +294,7 @@ export async function POST(req: Request) {
           sources = await webSearch(lastText);
           for (const s of sources) {
             writer.write({ type: "source-url", sourceId: String(s.id), url: s.url, title: s.title });
+            citedSources.push({ title: s.title, url: s.url });
           }
         } catch (err) {
           console.error("[research] gagal", err);
@@ -322,7 +331,8 @@ export async function POST(req: Request) {
         ? await toolRunChatPrompt(admin, existing.source_run_id as string)
         : await toolRunsIndexPrompt(admin, user.id);
       // Semua jawaban (terutama yang memakai riset web): hanya sumber ≤ 2 tahun.
-      const freshBase = `${baseSystem}\n\n${recencyRule()}`;
+      // Tim Otak: otak Senior ke atas memakai kerangka konsultan (diagnosis → insight → eksekusi → angka → risiko).
+      const freshBase = `${baseSystem}\n\n${recencyRule()}${tierId !== "junior" ? `\n\n${CONSULTANT_FRAME}` : ""}`;
       const system = runPrompt ? `${freshBase}\n\n${runPrompt}` : freshBase;
       // Konteks yang berubah tiap pesan ditaruh di pesan user terakhir agar system prompt tetap bisa di-cache.
       const turnContext = buildTurnContext({
@@ -430,7 +440,10 @@ export async function POST(req: Request) {
                         if (r.status === "fulfilled" && r.value) f.content = `${f.content}\n\nIsi halaman (cuplikan):\n${r.value}`;
                       });
                       const numbered = found.map((s) => ({ ...s, id: ++nextSourceId }));
-                      for (const s of numbered) writer.write({ type: "source-url", sourceId: String(s.id), url: s.url, title: s.title });
+                      for (const s of numbered) {
+                        writer.write({ type: "source-url", sourceId: String(s.id), url: s.url, title: s.title });
+                        citedSources.push({ title: s.title, url: s.url });
+                      }
                       writer.write({ type: "data-status", data: { state: "done", label: en ? `${numbered.length} sources found` : `${numbered.length} sumber ditemukan` }, transient: true });
                       return { results: formatSources(numbered) };
                     } catch (err) {
@@ -470,6 +483,7 @@ export async function POST(req: Request) {
           // Dihentikan user: kuota disesuaikan ke pemakaian sejauh ini.
           endStopWatch();
           settled = true;
+          markLlmDone(false);
           const used = routed.resolved() ?? routed.candidates[0];
           const inTok = steps.reduce((a, s) => a + (s.usage.inputTokens ?? 0), 0);
           const outTok = steps.reduce((a, s) => a + (s.usage.outputTokens ?? 0), 0);
@@ -541,10 +555,18 @@ export async function POST(req: Request) {
             attachments: attachCount,
             latency_ms: Date.now() - startedAt,
           });
+          finalAnswer = steps.map((s) => s.text.trim()).filter(Boolean).join("\n\n");
+          for (const step of steps) {
+            for (const src of step.sources ?? []) {
+              if (src.sourceType === "url") citedSources.push({ title: src.title, url: src.url });
+            }
+          }
+          markLlmDone(produced);
         },
         onError: async ({ error }) => {
           endStopWatch();
           settled = true;
+          markLlmDone(false);
           console.error("[chat] stream error", error);
           await refundOnce();
           await admin.from("usage_logs").insert({
@@ -579,6 +601,96 @@ export async function POST(req: Request) {
           },
         }),
       );
+
+      // --- Tim Otak: Kritikus + Pemeriksa Fakta (setelah jawaban tampil; biaya dipotong dari kredit, pilihan A) ---
+      // Pengaman: bila onFinish gagal/tertahan, jangan biarkan stream menggantung — anggap tanpa pemeriksaan.
+      void Promise.resolve(result.finishReason)
+        .catch(() => null)
+        .finally(() => setTimeout(() => markLlmDone(false), 15_000));
+      const produced = await llmDone;
+      const reviewer = reviewerFor(tierId);
+      if (
+        !produced ||
+        !reviewer ||
+        !isProviderConfigured(reviewer.provider) ||
+        !shouldReview({
+          tier: tierId,
+          freePlan: isFreePlan,
+          enabled: profile.team_review !== false,
+          answer: finalAnswer,
+          question: lastText,
+          deck: deckRequest,
+          remainingCredits: remainingAfter,
+        })
+      ) {
+        return;
+      }
+      writer.write({
+        type: "data-status",
+        data: { state: "reading", label: en ? REVIEW_STATUS.en : REVIEW_STATUS.id },
+        transient: true,
+      });
+      const reviewStarted = Date.now();
+      try {
+        const brand = [
+          wsCtx.brandKit ? formatBrandKit(wsCtx.brandKit) : null,
+          ...(memories ?? []).slice(0, 10).map((m) => `- ${m.content as string}`),
+        ]
+          .filter(Boolean)
+          .join("\n");
+        const { text: reviewText, usage: reviewUsage } = await generateText({
+          model: createFallbackModel([reviewer]).model,
+          maxOutputTokens: 3000,
+          maxRetries: 1,
+          abortSignal: AbortSignal.timeout(60_000),
+          providerOptions: { anthropic: { effort: "low" } },
+          prompt: buildReviewPrompt({ question: lastText, answer: finalAnswer, sources: citedSources, brand: brand || null, en }),
+        });
+        const parsedReview = reviewSchema.safeParse(tidyReview(extractJson(reviewText)));
+        const reviewCost = estimateCostUsd(reviewer, reviewUsage.inputTokens ?? 0, reviewUsage.outputTokens ?? 0);
+        // Hasil tidak terbaca → tidak ditampilkan & tidak dipotong kredit (ditanggung Marqthink).
+        const reviewCredits = parsedReview.success ? creditsForUsd(reviewCost) : 0;
+        let remaining: number | null = null;
+        if (reviewCredits > 0) {
+          const charged = await consumeCredits(user.id, reviewCredits, "team_review", { chatId, tier: tierId });
+          remaining = charged.remaining;
+        }
+        await admin.from("usage_logs").insert({
+          user_id: user.id,
+          chat_id: chatId,
+          tier: "review",
+          provider: reviewer.provider,
+          model: reviewer.modelId,
+          input_tokens: reviewUsage.inputTokens ?? 0,
+          output_tokens: reviewUsage.outputTokens ?? 0,
+          est_cost_usd: reviewCost,
+          credits: reviewCredits,
+          status: parsedReview.success ? "ok" : "error",
+          error: parsedReview.success ? null : `hasil pemeriksaan tidak terbaca: ${parsedReview.error.issues[0]?.message ?? "?"}`.slice(0, 1000),
+          latency_ms: Date.now() - reviewStarted,
+        });
+        if (parsedReview.success) {
+          writer.write({ type: "data-review", data: { ...parsedReview.data, credits: reviewCredits } });
+          if (remaining !== null) {
+            remainingAfter = remaining;
+            writer.write({ type: "message-metadata", messageMetadata: { remainingCredits: remaining } });
+          }
+        }
+      } catch (err) {
+        console.error("[team-review] gagal", err);
+        await admin.from("usage_logs").insert({
+          user_id: user.id,
+          chat_id: chatId,
+          tier: "review",
+          provider: reviewer.provider,
+          model: reviewer.modelId,
+          credits: 0,
+          status: "error",
+          error: (err instanceof Error ? err.message : String(err)).slice(0, 1000),
+          latency_ms: Date.now() - reviewStarted,
+        });
+      }
+      writer.write({ type: "data-status", data: { state: "done", label: "" }, transient: true });
     },
     onFinish: async ({ messages: finalMessages, outcome }) => {
       markDone();

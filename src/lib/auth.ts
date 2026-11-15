@@ -21,6 +21,8 @@ export interface Profile {
   /** Gaya jawaban pilihan user (Pengaturan → Personalisasi). */
   response_style?: string | null;
   custom_instructions?: string | null;
+  /** Tim Otak: jawaban Senior+ diperiksa Kritikus & Pemeriksa Fakta (bawaan true). */
+  team_review?: boolean;
   onboarded: boolean;
   consent_at: string | null;
   banned: boolean;

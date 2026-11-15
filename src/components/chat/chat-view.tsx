@@ -614,6 +614,7 @@ export function ChatView({
                       : undefined
                   }
                   applyHighlight={i === lastAssistantIndex}
+                  onApplyReview={i === lastAssistantIndex && !busy ? (text) => send(text) : undefined}
                   onExplain={
                     m.role === "assistant" && !busy ? (text) => send(buildQuotedMessage(text, t.explainPrompt)) : undefined
                   }

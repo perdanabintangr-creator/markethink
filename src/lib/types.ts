@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
 import type { TierId } from "@/lib/ai/models.config";
+import type { ReviewPart } from "@/lib/ai/team-review";
 
 export interface MessageMeta {
   tier?: TierId;
@@ -25,6 +26,8 @@ export interface LinkPart {
 export type DataParts = {
   status: { state: "searching" | "reading" | "done"; label: string };
   link: LinkPart;
+  /** Hasil Pemeriksaan Tim (Kritikus + Pemeriksa Fakta) di bawah jawaban. */
+  review: ReviewPart;
 };
 
 export type MtMessage = UIMessage<MessageMeta, DataParts>;

@@ -143,6 +143,12 @@ const id = {
   charLimit: "1.500",
   savePersonalization: "Simpan personalisasi",
   personalizationSaved: "Personalisasi tersimpan, berlaku di chat berikutnya",
+  teamReview: "Pemeriksaan Tim",
+  teamReviewDesc:
+    "Jawaban otak Senior, Head, dan Director dicek ulang oleh Kritikus & Pemeriksa Fakta: angka tanpa sumber ditandai, kalimat yang terlalu umum diberi saran perbaikan. Memakai ±1 kredit (Senior) sampai ±8 kredit (Head/Director) per jawaban.",
+  teamReviewFree: "Tersedia mulai paket Starter.",
+  teamReviewOn: "Pemeriksaan Tim dinyalakan",
+  teamReviewOff: "Pemeriksaan Tim dimatikan",
 
   // ── Memori ──
   memoryPlaceholder: "Tambah memory, mis. 'Saya suka jawaban singkat pakai bullet'",
@@ -389,6 +395,12 @@ const en: typeof id = {
   charLimit: "1,500",
   savePersonalization: "Save personalization",
   personalizationSaved: "Personalization saved. It applies from your next chat",
+  teamReview: "Team Check",
+  teamReviewDesc:
+    "Answers from the Senior, Head, and Director brains are re-checked by a Critic & Fact Checker: unsourced numbers are flagged and generic sentences get suggested fixes. Uses about 1 credit (Senior) to about 8 credits (Head/Director) per answer.",
+  teamReviewFree: "Available from the Starter plan.",
+  teamReviewOn: "Team Check turned on",
+  teamReviewOff: "Team Check turned off",
 
   memoryPlaceholder: "Add a memory, e.g. 'I prefer short answers with bullet points'",
   add: "Add",
