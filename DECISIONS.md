@@ -573,3 +573,10 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Header: HSTS, CSP (frame-ancestors none, object-src none, base-uri self), COOP. Back office: batas login per IP (20/15 mnt), cookie sameSite strict, form-action self.
 - Library: Next.js 15.5.27 → 15.5.29 (celah kritis RCE image optimizer & DoS server actions) di kedua aplikasi. Sisa temuan tinggi (image-size tidak dipakai, undici/busboy hanya membaca respons API AI, postcss saat build) dinilai tidak bisa dieksploitasi.
 - Disarankan berikutnya: 2FA (TOTP) untuk owner back office; Leaked Password Protection Supabase (fitur paket Pro).
+
+## 2026-11-19 — Fase 1 jatah mingguan + harian selesai
+- Fungsi baru `quota_consume` / `quota_settle` (nama baru, fungsi lama dibiarkan agar tidak perlu DROP yang memicu konfirmasi). Alasan penolakan: daily | weekly | director.
+- Kredit pecahan: biaya AI → kredit per 0,01 (minimal 0,25); chat ringan ±0,3–0,5 kredit, bukan 1. `usage_logs.credits` numeric.
+- Pesan habis dibedakan (hari ini → 00.00 WIB; minggu ini → Senin; porsi Director 50%). Ukuran Pasar maks Starter/Pro 1×, Promax 2× per minggu (revisi tidak dihitung). Refund/settle mencatat tier agar porsi Director akurat.
+- Teks "bulan ini / tanggal 1" diganti di seluruh aplikasi; lingkaran pemakaian & Pengaturan menampilkan bar Hari ini + Minggu ini.
+- Back office: jatah per paket diatur mingguan + harian; `monthly_credits` disimpan setara-bulan (× 52/12) untuk hitungan margin.

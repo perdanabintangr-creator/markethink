@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   }
   if (maxSteps < 1) {
     return jsonError(402, "credits_low", {
-      message: "Sisa kuota bulan ini tidak cukup untuk menjalankan Agent. Kuota direset tiap tanggal 1, atau upgrade paket.",
+      message: "Sisa jatah minggu ini tidak cukup untuk menjalankan Agent. Jatah terisi lagi Senin pukul 00.00 WIB, atau upgrade paket.",
     });
   }
   // Semua Tools Pro tersedia; jumlah langkah dibatasi sisa kredit.

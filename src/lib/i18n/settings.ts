@@ -50,10 +50,12 @@ const id = {
   // ── Paket & penggunaan ──
   activePlan: "Paket aktif",
   viewUpgradePlan: "Lihat / upgrade paket",
-  monthQuota: "Kuota bulan ini",
+  monthQuota: "Jatah minggu ini",
   unlimited: "Tanpa batas",
   pctLeft: (n: number) => `${n}% tersisa`,
-  quotaResetOn: (date: string) => `Kuota terisi ulang tanggal ${date}, pukul 00.00 WIB.`,
+  quotaResetOn: (date: string) => `Jatah mingguan terisi lagi Senin, ${date} pukul 00.00 WIB.`,
+  dayQuota: "Jatah hari ini",
+  dayQuotaReset: "Terisi lagi setiap pukul 00.00 WIB.",
   dailyLimits: "Batas harian",
   dailyReset: "Reset setiap pukul 00.00 WIB.",
   /** Judul batas harian; kosong = pakai LIMIT_LABEL (bahasa Indonesia). */
@@ -206,9 +208,9 @@ const id = {
   // ── Paket & harga ──
   pricingTitle: "Paket & harga",
   pricingDesc:
-    "Satu paket untuk semuanya: chat, riset, gambar, Smart Tools & Agent memakai kuota bulanan yang sama. Kuota direset tiap tanggal 1.",
+    "Satu paket untuk semuanya: chat, riset, gambar, Smart Tools & Agent memakai jatah yang sama. Jatah harian terisi lagi tiap 00.00 WIB, jatah mingguan tiap Senin.",
   pricingQuotaUnlimited: "Kuota kamu: tanpa batas (admin)",
-  pricingQuotaLeft: (pct: number) => `Kuota bulan ini tersisa ${pct}%`,
+  pricingQuotaLeft: (pct: number) => `Jatah minggu ini tersisa ${pct}%`,
 
   // ── Projects ──
   projectsDesc:
@@ -317,7 +319,9 @@ const en: typeof id = {
   monthQuota: "This month's quota",
   unlimited: "Unlimited",
   pctLeft: (n) => `${n}% left`,
-  quotaResetOn: (date) => `Quota refills on ${date} at 00:00 WIB (UTC+7).`,
+  quotaResetOn: (date) => `The weekly allowance refills on Monday, ${date} at 00:00 WIB (UTC+7).`,
+  dayQuota: "Today's allowance",
+  dayQuotaReset: "Refills every day at 00:00 WIB (UTC+7).",
   dailyLimits: "Daily limits",
   dailyReset: "Resets daily at 00:00 WIB (UTC+7).",
   limitTitles: { chat: "Chat", image: "Images", pptx: "PPT/carousel", search: "Paid web search" },
@@ -460,9 +464,9 @@ const en: typeof id = {
 
   pricingTitle: "Plans & pricing",
   pricingDesc:
-    "One plan for everything: chat, research, images, Smart Tools & Agent all share the same monthly quota. Quota resets on the 1st of each month.",
+    "One plan for everything: chat, research, images, Smart Tools & Agent share the same allowance. The daily allowance refills at 00:00 WIB, the weekly one every Monday.",
   pricingQuotaUnlimited: "Your quota: unlimited (admin)",
-  pricingQuotaLeft: (pct) => `${pct}% of this month's quota left`,
+  pricingQuotaLeft: (pct) => `${pct}% of this week's allowance left`,
 
   projectsDesc:
     "One project per brand/client. Fill in the Brand Kit & upload documents. Every chat in a project automatically uses only that project's context, kept separate from other projects (including its memory).",

@@ -108,7 +108,7 @@ export function quotaShare(estimate: number, monthLimit: number) {
 export function creditText(a: ToolAccessLite) {
   if (a.isAdmin) return "Admin · tanpa batas";
   if (!a.allowed) return a.isFree ? "🔒 Terkunci di paket Free" : "🔒 Tidak termasuk paket kamu";
-  return `Kuota bulan ini tersisa ${quotaLeftPct(a.remaining, a.monthLimit)}%`;
+  return `Jatah minggu ini tersisa ${quotaLeftPct(a.remaining, a.monthLimit)}%`;
 }
 
 export function quotaText(s: AddonStatusLite) {

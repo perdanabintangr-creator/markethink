@@ -36,6 +36,7 @@ import { ContextPanel } from "./context-panel";
 import { ProjectHome, type ProjectHomeData } from "./project-home";
 import { QuickStarts, type QuickStart } from "./quick-starts";
 import { QuotaDialog } from "./quota-dialog";
+import type { QuotaBlock } from "@/lib/quota";
 import { VoiceMode } from "./voice-mode";
 import { voiceSupported } from "./use-voice";
 import { voiceText } from "@/lib/i18n/voice";
@@ -89,6 +90,7 @@ export function ChatView({
   const [tier, setTier] = useState<TierChoice>(() => pickTierChoice(initialTier, allowedTiers));
   const [lockedTier, setLockedTier] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
+  const [quotaReason, setQuotaReason] = useState<QuotaBlock | null>(null);
   const [quote, setQuote] = useState<string | null>(null);
   const [research, setResearch] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string | null>(initialWorkspaceId);
@@ -228,10 +230,12 @@ export function ChatView({
       setVoiceFailures((n) => n + 1);
       let code = "";
       let serverMessage = "";
+      let reason: QuotaBlock | null = null;
       try {
         const body = JSON.parse(err.message);
         code = body.error;
         serverMessage = body.message ?? "";
+        reason = body.reason ?? null;
       } catch {}
       if (code === "daily_limit") {
         setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
@@ -241,6 +245,7 @@ export function ChatView({
         track("daily_limit");
       } else if (code === "quota_exceeded") {
         setLimitNotice(null);
+        setQuotaReason(reason);
         setMessages((ms) => (ms[ms.length - 1]?.role === "user" ? ms.slice(0, -1) : ms));
         setQuotaOpen(true);
         track("quota_exceeded");
@@ -260,7 +265,10 @@ export function ChatView({
         return;
       }
       const res = await fetch("/api/credits");
-      if (res.ok) emitCredits((await res.json()).remaining);
+      if (res.ok) {
+        const d = (await res.json()) as { monthLimit: number; used: number };
+        emitCredits(Math.max(0, d.monthLimit - d.used));
+      }
     },
   });
 
@@ -723,10 +731,12 @@ export function ChatView({
           if (!v) {
             setLockedTier(null);
             setLimitNotice(null);
+            setQuotaReason(null);
           }
         }}
         lockedTier={lockedTier}
         notice={limitNotice}
+        reason={quotaReason}
       />
     </div>
   );

@@ -6,18 +6,22 @@ const { TOOL_CREDIT_ESTIMATE, revisionEstimate, creditText, quotaLeftPct, quotaS
 const { toPlanOffer } = await import("@/lib/plan-offers");
 const { plansText } = await import("@/lib/i18n/plans");
 
-describe("Kredit bulanan (1 kredit ≈ Rp100 modal AI)", () => {
-  it("USD → kredit dibulatkan ke atas, minimal 1", () => {
+describe("Kredit (1 kredit ≈ Rp100 modal AI, jatah mingguan + harian)", () => {
+  it("USD → kredit pecahan (per 0,01, ke atas), minimal 0,25", () => {
     expect(IDR_PER_CREDIT).toBe(100);
-    expect(creditsForUsd(0)).toBe(1);
-    expect(creditsForUsd(-1)).toBe(1);
+    expect(creditsForUsd(0)).toBe(0.25);
+    expect(creditsForUsd(-1)).toBe(0.25);
+    // Chat ringan ±$0,0031 ≈ Rp51 → 0,52 kredit (bukan 1).
+    expect(creditsForUsd(0.0031)).toBe(0.52);
     expect(creditsForUsd(100 / IDR_PER_USD)).toBe(1);
-    expect(creditsForUsd(1)).toBe(Math.ceil(IDR_PER_USD / 100));
+    expect(creditsForUsd(1)).toBe(IDR_PER_USD / 100);
   });
 
-  it("margin ≥50% bila kredit paket habis terpakai", () => {
-    const plans = { starter: [60_000, 250], pro: [200_000, 900], promax: [300_000, 1350] } as const;
-    for (const [id, [price, credits]] of Object.entries(plans)) expect(credits * IDR_PER_CREDIT, id).toBeLessThanOrEqual(price * 0.5);
+  it("margin ≥50% bila jatah mingguan habis terpakai setiap minggu", () => {
+    const plans = { starter: [60_000, 60], pro: [200_000, 210], promax: [300_000, 315] } as const;
+    for (const [id, [price, weekly]] of Object.entries(plans)) {
+      expect(((weekly * 52) / 12) * IDR_PER_CREDIT, id).toBeLessThanOrEqual(price * 0.5);
+    }
   });
 
   it("perkiraan Tools Pro: otak lebih pintar lebih mahal, revisi lebih hemat", () => {

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { guardRequest } from "@/lib/ratelimit";
 import { getToolAccess } from "@/lib/addons/access";
 import { toolInfo } from "@/lib/addons/catalog";
+import { quotaMessage } from "@/lib/quota";
 import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/lib/credits";
 import { interviewPersona, labBody, testWithPersonas, type Persona } from "@/lib/addons/persona-lab";
 import type { ToolCtx } from "@/lib/addons/runtime";
@@ -45,7 +46,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const charge = await consumeCredits(s.user.id, estimate, `persona_lab:${body.mode}`, { runId: id });
   if (!charge.ok)
     return jsonError(402, "credits_low", {
-      message: en ? "Not enough quota left this month." : "Sisa kuota bulan ini tidak cukup. Kuota direset tiap tanggal 1.",
+      reason: charge.reason,
+      message: quotaMessage(charge.reason, en),
     });
 
   const ctx: ToolCtx = { admin, userId: s.user.id, runId: id, cost: { usd: 0, model: null }, startedAt: Date.now(), tier: "senior", lang: en ? "en" : "id" };

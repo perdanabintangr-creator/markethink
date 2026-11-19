@@ -47,6 +47,7 @@ import { carouselSchema } from "@/lib/deck/carousel";
 import { deckImageMaxFor, deckStyleFor, premiumVisualsFor, capabilitiesPrompt, createChatTools } from "@/lib/ai/tools";
 import { imageGenerationEnabled } from "@/lib/ai/image";
 import { isGenerating, type MtMessage } from "@/lib/types";
+import { quotaMessage } from "@/lib/quota";
 import { truncate } from "@/lib/utils";
 import { env } from "@/lib/env";
 import { experienceLabel, roleLabel } from "@/lib/personas";
@@ -176,7 +177,7 @@ export async function POST(req: Request) {
   const cost = messageCreditCost(tier, { research, attachments: attachCount });
   const credit = await consumeCredits(user.id, cost, "chat", { chatId, tier: tierId, research, attachments: attachCount });
   if (!credit.ok) {
-    return json(402, { error: "quota_exceeded", remaining: credit.remaining, cost });
+    return json(402, { error: "quota_exceeded", reason: credit.reason, message: quotaMessage(credit.reason, en), remaining: credit.remaining, cost });
   }
 
   // --- chat: ambil atau buat ---
@@ -214,7 +215,7 @@ export async function POST(req: Request) {
       stop_requested_at: null,
         });
       if (retry.error) {
-        await refundCredits(user.id, cost, "chat_create_failed");
+        await refundCredits(user.id, cost, "chat_create_failed", { chatId, tier: tierId });
         return json(400, { error: "chat_create_failed" });
       }
     }
@@ -231,7 +232,7 @@ export async function POST(req: Request) {
   const refundOnce = async () => {
     if (refunded) return;
     refunded = true;
-    await refundCredits(user.id, cost, "llm_error");
+    await refundCredits(user.id, cost, "llm_error", { chatId, tier: tierId });
   };
   // `settled` = hasil LLM sudah tercatat (sukses / error). Kalau stream berakhir tanpa itu
   // (error sebelum LLM jalan, timeout, crash), tugas `after()` di bawah me-refund & mencatat error.

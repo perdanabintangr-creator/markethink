@@ -7,12 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { PLAN_LABEL, type PlanId } from "@/lib/ai/models.config";
 import { useApp } from "@/components/app/app-context";
 import { chatText } from "@/lib/i18n/chat";
+import { quotaMessage, type QuotaBlock } from "@/lib/quota";
 
 export function QuotaDialog({
   open,
   onOpenChange,
   lockedTier,
   notice,
+  reason,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -20,8 +22,11 @@ export function QuotaDialog({
   lockedTier?: string | null;
   /** Bila diisi: batas harian paket Free (mis. 20 chat/hari) tercapai. */
   notice?: string | null;
+  /** Jatah ditolak: harian, mingguan, atau porsi Director. */
+  reason?: QuotaBlock | null;
 }) {
-  const c = chatText(useApp().lang);
+  const { lang } = useApp();
+  const c = chatText(lang);
   const [tierLabel, planId] = lockedTier?.split("|") ?? [];
   const planLabel = PLAN_LABEL[(planId as PlanId) ?? "pro"] ?? "Pro";
 
@@ -31,14 +36,24 @@ export function QuotaDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />{" "}
-            {lockedTier ? c.tierLockedTitle(tierLabel, planLabel) : notice ? c.dailyLimitTitle : c.quotaTitle}
+            {lockedTier
+              ? c.tierLockedTitle(tierLabel, planLabel)
+              : notice
+                ? c.dailyLimitTitle
+                : reason === "daily"
+                  ? c.quotaDailyTitle
+                  : reason === "director"
+                    ? c.quotaDirectorTitle
+                    : c.quotaTitle}
           </DialogTitle>
           <DialogDescription>
             {notice
               ? c.dailyLimitDesc(notice)
               : lockedTier
                 ? c.tierLockedDesc
-                : c.quotaDesc}
+                : reason === "daily" || reason === "director"
+                  ? quotaMessage(reason, lang === "en")
+                  : c.quotaDesc}
           </DialogDescription>
         </DialogHeader>
         <Button asChild className="w-full" onClick={() => onOpenChange(false)}>

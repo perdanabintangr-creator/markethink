@@ -42,12 +42,12 @@ const id = {
   getFree: "Pakai gratis",
   monthly: "/ bulan",
   footer:
-    "Satu kuota bulanan untuk semua fitur (chat, riset, gambar, PPT, Smart Tools & Agent), dihitung dari pemakaian nyata dan direset tiap tanggal 1.",
+    "Satu jatah untuk semua fitur (chat, riset, gambar, PPT, Smart Tools & Agent), dihitung dari pemakaian nyata. Jatah harian terisi lagi tiap 00.00 WIB, jatah mingguan tiap Senin.",
   plans: {
     beta: {
       headline: "Kenalan dengan Marqthink",
       desc: "Coba asisten marketing AI untuk kebutuhan ringan sehari-hari.",
-      quota: "Kuota percobaan",
+      quota: "Jatah percobaan",
       features: [
         { icon: "chat", text: "Chat harian dengan otak Junior" },
         { icon: "web", text: "Riset web, baca file & link" },
@@ -60,10 +60,10 @@ const id = {
     starter: {
       headline: "Asisten marketing harian",
       desc: "Untuk UMKM & freelancer yang butuh konten dan strategi rutin.",
-      quota: "Kuota bulanan standar",
+      quota: "Jatah mingguan standar",
       includes: "Semua di Free, plus:",
       features: [
-        { icon: "brain", text: "Otak Junior & Senior, tanpa batas harian" },
+        { icon: "brain", text: "Otak Junior & Senior, jatah terisi ulang tiap hari" },
         { icon: "deck", text: "PPT, carousel & poster IG/TikTok" },
         { icon: "photo", text: "Gambar AI & Foto Produk Studio" },
         { icon: "privacy", text: "Otak Claude dengan privasi penuh" },
@@ -73,7 +73,7 @@ const id = {
     pro: {
       headline: "Untuk marketer profesional",
       desc: "Hasil lebih tajam & kerja otomatis untuk marketing officer dan agency kecil.",
-      quota: "Kuota lebih besar",
+      quota: "Jatah lebih besar",
       includes: "Semua di Starter, plus:",
       features: [
         { icon: "tools", text: "Semua Smart Tools: strategi, riset, konten, iklan & laporan" },
@@ -87,12 +87,12 @@ const id = {
     promax: {
       headline: "Kualitas setara agency",
       desc: "Untuk agency & tim yang presentasi ke klien setiap minggu.",
-      quota: "Kuota paling besar",
+      quota: "Jatah paling besar",
       includes: "Semua di Pro, plus:",
       features: [
         { icon: "crown", text: "Otak Director (paling cerdas)" },
         { icon: "signature", text: "PPT Signature: desain ala agency + PDF" },
-        { icon: "quota", text: "Kuota paling besar" },
+        { icon: "quota", text: "Jatah paling besar" },
         { icon: "project", text: "Project & penyimpanan paling lega" },
       ],
     },
@@ -105,7 +105,7 @@ const id = {
     features: [
       { icon: "team", text: "Banyak anggota tim dalam satu akun" },
       { icon: "project", text: "Project & Brand Kit per klien, dipakai bersama" },
-      { icon: "quota", text: "Kuota bersama, tagihan satu pintu" },
+      { icon: "quota", text: "Jatah bersama, tagihan satu pintu" },
       { icon: "support", text: "Pendampingan onboarding tim" },
     ] as PlanDetail["features"],
     cta: "Daftar minat",
@@ -120,12 +120,12 @@ const en: typeof id = {
   getFree: "Use for free",
   monthly: "/ month",
   footer:
-    "One monthly quota for everything (chat, research, images, PPT, Smart Tools & Agent), based on actual usage and reset on the 1st of each month.",
+    "One allowance for everything (chat, research, images, PPT, Smart Tools & Agent), based on actual usage. The daily allowance refills at 00:00 WIB, the weekly one every Monday.",
   plans: {
     beta: {
       headline: "Meet Marqthink",
       desc: "Try an AI marketing assistant for light everyday needs.",
-      quota: "Trial quota",
+      quota: "Trial allowance",
       features: [
         { icon: "chat", text: "Daily chats with the Junior brain" },
         { icon: "web", text: "Web research, read files & links" },
@@ -138,10 +138,10 @@ const en: typeof id = {
     starter: {
       headline: "Your daily marketing assistant",
       desc: "For small businesses & freelancers who need content and strategy every day.",
-      quota: "Standard monthly quota",
+      quota: "Standard weekly allowance",
       includes: "Everything in Free, plus:",
       features: [
-        { icon: "brain", text: "Junior & Senior brains, no daily limits" },
+        { icon: "brain", text: "Junior & Senior brains, allowance refills daily" },
         { icon: "deck", text: "PPT, carousels & IG/TikTok posters" },
         { icon: "photo", text: "AI images & Product Photo Studio" },
         { icon: "privacy", text: "Claude brain with full privacy" },
@@ -151,7 +151,7 @@ const en: typeof id = {
     pro: {
       headline: "For professional marketers",
       desc: "Sharper results & automated work for marketing officers and small agencies.",
-      quota: "Bigger quota",
+      quota: "Bigger allowance",
       includes: "Everything in Starter, plus:",
       features: [
         { icon: "tools", text: "All Smart Tools: strategy, research, content, ads & reports" },
@@ -165,12 +165,12 @@ const en: typeof id = {
     promax: {
       headline: "Agency-grade quality",
       desc: "For agencies & teams presenting to clients every week.",
-      quota: "Largest quota",
+      quota: "Largest allowance",
       includes: "Everything in Pro, plus:",
       features: [
         { icon: "crown", text: "Director brain (smartest)" },
         { icon: "signature", text: "Signature PPT: agency-style design + PDF" },
-        { icon: "quota", text: "Largest quota" },
+        { icon: "quota", text: "Largest allowance" },
         { icon: "project", text: "Most room for projects & storage" },
       ],
     },
@@ -183,7 +183,7 @@ const en: typeof id = {
     features: [
       { icon: "team", text: "Multiple team members in one account" },
       { icon: "project", text: "Shared projects & Brand Kits per client" },
-      { icon: "quota", text: "Shared quota, single invoice" },
+      { icon: "quota", text: "Shared allowance, single invoice" },
       { icon: "support", text: "Guided team onboarding" },
     ],
     cta: "Join the waitlist",

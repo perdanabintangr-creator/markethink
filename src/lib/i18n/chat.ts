@@ -42,17 +42,19 @@ const id = {
   chooseBrainTitle: "Pilih otak marketing",
   recommended: "Disarankan",
   autoDesc: "Junior untuk hal ringan, Senior untuk strategi",
-  brainCostNote: "Makin pintar otaknya, makin banyak kuota bulanan terpakai.",
+  brainCostNote: "Makin pintar otaknya, makin banyak jatah terpakai.",
 
   // Dialog kuota
   tierLockedTitle: (tier: string, plan: string) => `${tier} mulai paket ${plan}`,
   dailyLimitTitle: "Batas harian tercapai",
-  quotaTitle: "Kuota bulan ini sudah habis",
-  dailyLimitDesc: (notice: string) => `${notice} Paket berbayar tidak punya batas harian, cukup kuota bulanan.`,
+  quotaTitle: "Jatah minggu ini sudah habis",
+  quotaDailyTitle: "Jatah hari ini sudah habis",
+  quotaDirectorTitle: "Porsi otak Director minggu ini habis",
+  dailyLimitDesc: (notice: string) => `${notice} Paket berbayar punya jatah jauh lebih besar yang terisi ulang setiap hari dan setiap minggu.`,
   tierLockedDesc:
     "Starter membuka Senior (strategi & campaign) & Riset Web. Pro menambah Head (sekelas Head of Marketing), semua Smart Tools & Marqthink Agent. Promax membuka Director, otak paling cerdas.",
   quotaDesc:
-    "Kuota direset otomatis tiap tanggal 1 pukul 00.00 WIB. Butuh lebih banyak sekarang? Upgrade paket untuk kuota bulanan yang lebih besar.",
+    "Jatah minggu ini terisi lagi otomatis Senin pukul 00.00 WIB. Butuh lebih banyak sekarang? Upgrade paket untuk jatah yang lebih besar.",
   seePlansPricing: "Lihat paket & harga",
 
   // Halaman project
@@ -153,7 +155,7 @@ const id = {
   contextPlaceholder:
     "mis.\n- Brand: Aisyah Hijab, jualan di Shopee & Instagram\n- Harga Rp89-149 ribu, pembeli kebanyakan mahasiswi & pekerja muda\n- Kompetitor: Elzatta, Buttonscarves\n- Kendala: follower banyak tapi jarang beli",
   planNote: (share: string | null) =>
-    `Agent menyusun rencana dulu, jadi kamu bisa cek & buang langkah sebelum dijalankan. Setiap langkah memakai ${share ?? "sebagian"} kuota bulanan.`,
+    `Agent menyusun rencana dulu, jadi kamu bisa cek & buang langkah sebelum dijalankan. Setiap langkah memakai ${share ?? "sebagian"} jatah mingguan.`,
   buildPlan: "Susun rencana",
   planning: "Agent sedang menyusun rencana…",
 
@@ -171,7 +173,7 @@ const id = {
   openChatFailed: "Gagal membuka chat. Coba lagi.",
   newMission: "Misi baru",
   stepsCount: (n: number) => `${n} langkah`,
-  missionEstimate: (share: string | null, minutes: number) => ` · ${share ?? "sebagian"} kuota bulanan · ±${minutes} menit.`,
+  missionEstimate: (share: string | null, minutes: number) => ` · ${share ?? "sebagian"} jatah mingguan · ±${minutes} menit.`,
   removeStepsHint: "Buang langkah yang tidak perlu (✕), lalu jalankan. Biarkan halaman ini terbuka selama Agent bekerja.",
   runAllSteps: "Jalankan semua langkah",
   stepsLeft: "Masih ada langkah yang belum dijalankan.",
@@ -225,16 +227,18 @@ const en: typeof id = {
   chooseBrainTitle: "Choose your marketing brain",
   recommended: "Recommended",
   autoDesc: "Junior for light tasks, Senior for strategy",
-  brainCostNote: "Smarter brains use more of your monthly usage.",
+  brainCostNote: "Smarter brains use more of your allowance.",
 
   tierLockedTitle: (tier, plan) => `${tier} is available from the ${plan} plan`,
   dailyLimitTitle: "Daily limit reached",
-  quotaTitle: "This month's quota is used up",
-  dailyLimitDesc: (notice) => `${notice} Paid plans have no daily limit, just a monthly quota.`,
+  quotaTitle: "This week's allowance is used up",
+  quotaDailyTitle: "Today's allowance is used up",
+  quotaDirectorTitle: "This week's Director portion is used up",
+  dailyLimitDesc: (notice) => `${notice} Paid plans have a much bigger allowance that refills every day and every week.`,
   tierLockedDesc:
     "Starter unlocks Senior (strategy & campaigns) & Web Research. Pro adds Head (Head of Marketing level), all Smart Tools & Marqthink Agent. Promax unlocks Director, the smartest brain.",
   quotaDesc:
-    "Your quota resets automatically on the 1st of every month at 00:00 WIB. Need more now? Upgrade your plan for a bigger monthly quota.",
+    "This week's allowance refills automatically on Monday at 00:00 WIB. Need more now? Upgrade your plan for a bigger allowance.",
   seePlansPricing: "See plans & pricing",
 
   project: "Project",
@@ -329,7 +333,7 @@ const en: typeof id = {
   contextPlaceholder:
     "e.g.\n- Brand: Aisyah Hijab, selling on Shopee & Instagram\n- Price Rp89-149k, buyers are mostly college students & young professionals\n- Competitors: Elzatta, Buttonscarves\n- Problem: lots of followers but few purchases",
   planNote: (share) =>
-    `The Agent builds a plan first, so you can review & remove steps before running it. Each step uses ${share ?? "part of your"} monthly quota.`,
+    `The Agent builds a plan first, so you can review & remove steps before running it. Each step uses ${share ?? "part of your"} weekly allowance.`,
   buildPlan: "Build plan",
   planning: "The Agent is building a plan…",
 
@@ -346,7 +350,7 @@ const en: typeof id = {
   openChatFailed: "Couldn't open the chat. Try again.",
   newMission: "New mission",
   stepsCount: (n) => `${n} ${n === 1 ? "step" : "steps"}`,
-  missionEstimate: (share, minutes) => ` · ${share ?? "part of your"} monthly quota · ~${minutes} min.`,
+  missionEstimate: (share, minutes) => ` · ${share ?? "part of your"} weekly allowance · ~${minutes} min.`,
   removeStepsHint: "Remove any steps you don't need (✕), then run. Keep this page open while the Agent works.",
   runAllSteps: "Run all steps",
   stepsLeft: "Some steps haven't run yet.",

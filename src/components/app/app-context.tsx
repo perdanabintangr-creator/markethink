@@ -12,8 +12,8 @@ export interface AppContextValue {
   lang: Lang;
   t: Dict;
   workspaces: WorkspaceSummary[];
-  /** Kredit bulan ini (reset tgl 1, 00.00 WIB). */
-  credits: { monthLimit: number; remaining: number };
+  /** Jatah minggu ini (reset Senin 00.00 WIB); remaining = 0 bila jatah hari ini habis. */
+  credits: { monthLimit: number; remaining: number; dayLimit?: number; dayUsed?: number };
   /** Tier otak yang boleh dipakai sesuai paket user. */
   allowedTiers: TierId[];
   planName: string;

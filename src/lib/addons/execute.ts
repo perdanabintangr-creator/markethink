@@ -9,7 +9,11 @@ import { MAX_REVISIONS, TOOL_CREDIT_ESTIMATE, revisionEstimate } from "./format"
 import { DEFAULT_TOOL_TIER, type ToolTier } from "./tool-tier";
 import { resultToMarkdown } from "./to-markdown";
 import { runTeamReview } from "@/lib/ai/team-review-run";
+import { quotaMessage, weekStartWib } from "@/lib/quota";
 import { formatOutcomes, type OutcomeRow } from "@/lib/ai/outcomes";
+
+/** Porsi mingguan tool termahal per paket (jumlah hasil baru per minggu; revisi tidak dihitung). */
+const WEEKLY_TOOL_CAP: Record<string, Record<string, number>> = { sizing: { starter: 1, pro: 1, promax: 2 } };
 
 /** Tool strategi yang hasilnya diperiksa Tim Otak (founder ACC rancangan tahap 2). */
 const REVIEWED_TOOLS = new Set(["campaign", "persona", "competitor", "calendar"]);
@@ -97,6 +101,28 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
         : "Kuota add-on bulan ini sudah habis. Kuota terisi lagi di tanggal yang sama bulan depan, atau upgrade paket untuk kuota lebih besar.",
     };
   }
+  // Tool termahal (Ukuran Pasar) punya porsi mingguan sendiri (ACC founder 15 Nov): Starter & Pro 1×, Promax 2×.
+  const weeklyCap = WEEKLY_TOOL_CAP[tool]?.[profile.plan_id];
+  if (!access.isAdmin && !revision && weeklyCap !== undefined) {
+    const { count } = await admin
+      .from("tool_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("tool", tool)
+      .is("revision_of", null)
+      .neq("status", "error")
+      .gte("created_at", weekStartWib().toISOString());
+    if ((count ?? 0) >= weeklyCap) {
+      return {
+        ok: false,
+        status: 429,
+        code: "weekly_tool_limit",
+        message: en
+          ? `${info.name} can be used ${weeklyCap}× per week on your plan. It refills on Monday at 00:00 WIB. You can still revise last week's result for free.`
+          : `${info.name} bisa dipakai ${weeklyCap}× per minggu di paket kamu. Terisi lagi Senin pukul 00.00 WIB. Hasil sebelumnya tetap bisa diperbaiki gratis.`,
+      };
+    }
+  }
   const useTier = viaAddon ? DEFAULT_TOOL_TIER : (tier ?? DEFAULT_TOOL_TIER);
   const estimate = viaAddon ? 0 : revision ? revisionEstimate(useTier) : TOOL_CREDIT_ESTIMATE[useTier];
   if (!viaAddon) {
@@ -106,9 +132,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
         ok: false,
         status: 402,
         code: "credits_low",
-        message: en
-          ? "Not enough quota left this month for this result. Quota resets on the 1st of each month, or upgrade for a bigger quota."
-          : "Sisa kuota bulan ini tidak cukup untuk hasil ini. Kuota direset tiap tanggal 1, atau upgrade paket untuk kuota lebih besar.",
+        message: quotaMessage(charge.reason, en),
       };
   }
   const source = access.isAdmin ? "admin" : viaAddon ? "addon" : "paid";
@@ -130,7 +154,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
     .select("id")
     .single();
   if (runErr || !run) {
-    await refundCredits(userId, estimate, `tool_failed:${tool}`);
+    await refundCredits(userId, estimate, `tool_failed:${tool}`, { tier: useTier });
     return { ok: false, status: 500, code: "run_failed" };
   }
 
@@ -171,7 +195,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
       .eq("id", run.id);
     // Add-on tidak memakai kredit paket; biaya nyatanya tercatat di tool_runs.cost_usd (batas modal add-on).
     const credits = viaAddon ? 0 : creditsForUsd(ctx.cost.usd);
-    if (!viaAddon) await settleCredits(userId, estimate, credits, `tool_settle:${tool}`, { runId: run.id });
+    if (!viaAddon) await settleCredits(userId, estimate, credits, `tool_settle:${tool}`, { runId: run.id, tier: useTier });
     await admin.from("usage_logs").insert({
       user_id: userId,
       tier: `tool:${tool}`,
@@ -215,7 +239,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
     const msg = (err instanceof Error ? err.message : String(err)).slice(0, 1500);
     console.error(`[tool:${tool}] gagal`, msg);
     // Gagal → kredit dikembalikan penuh (biaya AI ditanggung Marqthink).
-    await refundCredits(userId, estimate, `tool_failed:${tool}`);
+    await refundCredits(userId, estimate, `tool_failed:${tool}`, { tier: useTier });
     await admin
       .from("tool_runs")
       .update({ status: "error", error: msg, cost_usd: ctx.cost.usd, cost_breakdown: ctx.breakdown ?? [], finished_at: new Date().toISOString() })

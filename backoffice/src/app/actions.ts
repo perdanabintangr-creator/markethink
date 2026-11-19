@@ -304,9 +304,19 @@ export async function setAppSetting(key: "access_mode" | "web_search" | "image_g
 
 export async function updatePlanCredits(planId: string, formData: FormData) {
   await requireOwner();
-  const credits = z.coerce.number().int().min(0).max(1_000_000).safeParse(formData.get("monthly_credits"));
-  if (!credits.success) return;
-  await createAdminClient().from("plans").update({ monthly_credits: credits.data }).eq("id", planId);
+  // Jatah mingguan (reset Senin 00.00 WIB) + batas harian (reset 00.00 WIB). Kredit bulanan disimpan sebagai
+  // setara-bulan (mingguan × 52/12) agar hitungan margin di Harga paket & Laba rugi tetap benar.
+  const weekly = z.coerce.number().int().min(0).max(1_000_000).safeParse(formData.get("weekly_credits"));
+  const daily = z.coerce.number().int().min(0).max(1_000_000).safeParse(formData.get("daily_credits"));
+  if (!weekly.success || !daily.success) return;
+  await createAdminClient()
+    .from("plans")
+    .update({
+      weekly_credits: weekly.data,
+      daily_credits: Math.min(daily.data, weekly.data),
+      monthly_credits: Math.round((weekly.data * 52) / 12),
+    })
+    .eq("id", planId);
   revalidatePath("/settings");
 }
 

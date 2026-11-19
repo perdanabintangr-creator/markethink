@@ -17,7 +17,7 @@ export default async function AppSettingsPage() {
   if (!isOwner) redirect("/");
   const admin = createAdminClient();
   const [{ data: plans }, { data: settings }, { data: flags }] = await Promise.all([
-    admin.from("plans").select("id, name, description, monthly_credits, sort_order").order("sort_order"),
+    admin.from("plans").select("id, name, description, monthly_credits, weekly_credits, daily_credits, sort_order").order("sort_order"),
     admin.from("app_settings").select("key, value").in("key", ["access_mode", "web_search", "image_gen"]),
     admin.from("feature_flags").select("plan_id, key, value").in("key", ["storage", "uploads"]),
   ]);
@@ -72,8 +72,12 @@ export default async function AppSettingsPage() {
       </div>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Kredit bulanan per paket</CardTitle>
-          <p className="text-xs text-muted-foreground">Jatah kredit yang direset tiap tanggal 1 (WIB). 1 kredit ≈ Rp100 biaya AI; dipotong sesuai pemakaian nyata. Batas harian Free (20 chat, 2 gambar, 1 PPT) tetap berlaku.</p>
+          <CardTitle className="text-base">Jatah kredit per paket</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Jatah mingguan terisi lagi Senin 00.00 WIB; batas harian terisi lagi tiap 00.00 WIB (selama jatah hari itu belum habis, satu pekerjaan besar tetap
+            boleh berjalan). 1 kredit ≈ Rp100 biaya AI, dipotong sesuai pemakaian nyata. Otak Director maksimal 50% jatah mingguan. Batas harian Free (20 chat,
+            2 gambar, 1 PPT) tetap berlaku.
+          </p>
         </CardHeader>
         <CardContent className="divide-y p-0">
           {(plans ?? []).map((p) => (
@@ -82,9 +86,12 @@ export default async function AppSettingsPage() {
                 <p className="font-medium">{PLAN_NAME[p.id] ?? p.name}</p>
                 {p.description && <p className="text-xs text-muted-foreground">{p.description}</p>}
               </div>
-              <div className="flex items-center gap-2">
-                <Input name="monthly_credits" defaultValue={p.monthly_credits} inputMode="numeric" className="w-28" aria-label={`Kredit bulanan ${p.name}`} />
-                <span className="text-sm text-muted-foreground">kredit/bulan</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input name="weekly_credits" defaultValue={Number(p.weekly_credits)} inputMode="numeric" className="w-24" aria-label={`Jatah mingguan ${p.name}`} />
+                <span className="text-sm text-muted-foreground">/minggu</span>
+                <Input name="daily_credits" defaultValue={p.daily_credits} inputMode="numeric" className="w-20" aria-label={`Batas harian ${p.name}`} />
+                <span className="text-sm text-muted-foreground">/hari</span>
+                <span className="text-xs text-muted-foreground">≈ {Number(p.monthly_credits).toLocaleString("id-ID")}/bulan</span>
                 <Button size="sm">Simpan</Button>
               </div>
             </form>

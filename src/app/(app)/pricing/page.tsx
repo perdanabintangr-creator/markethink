@@ -36,7 +36,7 @@ export default async function PricingPage() {
           <p className="mt-1 text-muted-foreground">{t.pricingDesc}</p>
           <p className="mt-3 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-sm">
             <Zap className="size-4 text-primary" />
-            {unlimited ? t.pricingQuotaUnlimited : t.pricingQuotaLeft(quotaLeftPct(credits.remaining, credits.monthLimit))}
+            {unlimited ? t.pricingQuotaUnlimited : t.pricingQuotaLeft(quotaLeftPct(Math.max(0, credits.monthLimit - credits.used), credits.monthLimit))}
           </p>
         </div>
 

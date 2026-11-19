@@ -245,9 +245,10 @@ async function UsageSection({ t, supabase, user, profile }: { t: SettingsText; s
     (Object.entries(limits) as [DailyLimitKind, number][]).filter(([, n]) => n > 0).map(async ([kind, limit]) => ({ kind, limit, used: await countToday(user.id, kind) })),
   );
   const unlimited = credits.monthLimit >= UNLIMITED_CREDITS;
-  const leftPct = unlimited ? 100 : quotaLeftPct(credits.remaining, credits.monthLimit);
-  const now = new Date(Date.now() + 7 * 3600_000);
-  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toLocaleDateString(t.locale, { day: "numeric", month: "long", timeZone: "UTC" });
+  const leftPct = unlimited ? 100 : quotaLeftPct(Math.max(0, credits.monthLimit - credits.used), credits.monthLimit);
+  const dayLeftPct = unlimited ? 100 : quotaLeftPct(Math.max(0, credits.day.limit - credits.day.used), credits.day.limit);
+  const reset = new Date(credits.weekResetAt).toLocaleDateString(t.locale, { day: "numeric", month: "long", timeZone: "Asia/Jakarta" });
+  const bar = (pct: number) => (pct <= 10 ? "bg-red-500" : pct <= 30 ? "bg-amber-500" : "bg-primary");
 
   return (
     <div className="space-y-8">
@@ -261,6 +262,18 @@ async function UsageSection({ t, supabase, user, profile }: { t: SettingsText; s
             <Link href="/pricing">{t.viewUpgradePlan}</Link>
           </Button>
         </div>
+        {!unlimited && (
+          <div className="mt-4">
+            <div className="flex items-baseline justify-between text-sm">
+              <span>{t.dayQuota}</span>
+              <span className="font-semibold">{t.pctLeft(dayLeftPct)}</span>
+            </div>
+            <div className="mt-2 h-2 rounded-full bg-muted">
+              <div className={`h-2 rounded-full ${bar(dayLeftPct)}`} style={{ width: `${Math.max(2, dayLeftPct)}%` }} />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">{t.dayQuotaReset}</p>
+          </div>
+        )}
         <div className="mt-4">
           <div className="flex items-baseline justify-between text-sm">
             <span>{t.monthQuota}</span>
@@ -269,7 +282,7 @@ async function UsageSection({ t, supabase, user, profile }: { t: SettingsText; s
           {!unlimited && (
             <div className="mt-2 h-2 rounded-full bg-muted">
               <div
-                className={`h-2 rounded-full ${leftPct <= 10 ? "bg-red-500" : leftPct <= 30 ? "bg-amber-500" : "bg-primary"}`}
+                className={`h-2 rounded-full ${bar(leftPct)}`}
                 style={{ width: `${Math.max(2, leftPct)}%` }}
               />
             </div>

@@ -172,7 +172,7 @@ export function localizedCreditText(a: ToolAccessLite, lang: Lang | null | undef
     return en ? "🔒 Not included in your plan" : "🔒 Tidak termasuk paket kamu";
   }
   const pct = quotaLeftPct(a.remaining, a.monthLimit);
-  return en ? `${pct}% of this month's quota left` : `Kuota bulan ini tersisa ${pct}%`;
+  return en ? `${pct}% of this week's allowance left` : `Jatah minggu ini tersisa ${pct}%`;
 }
 
 /** "Doesn't use quota" label for no-quota tools (e.g. the calculator). */

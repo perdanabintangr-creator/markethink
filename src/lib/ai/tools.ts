@@ -3,6 +3,7 @@ import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { quotaMessage } from "@/lib/quota";
 import { consumeCredits, creditsForUsd, refundCredits, settleCredits } from "@/lib/credits";
 import { PREMIUM_EDIT_COST_USD, generateImage } from "@/lib/ai/image";
 import {
@@ -232,7 +233,7 @@ export function createChatTools(ctx: ToolCtx) {
           charged = IMAGE_CREDIT_COST;
           credit = await consumeCredits(ctx.userId, charged, "image", { chatId: ctx.chatId });
         }
-        if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat gambar. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
+        if (!credit.ok) return { ok: false, error: `Sisa jatah tidak cukup untuk membuat gambar. Sampaikan ke user tanpa menyebut angka: ${quotaMessage(credit.reason, false)}` };
         try {
           const refs = await loadReferences(ctx, reference_ids ?? []);
           const brandColors = [ctx.brand?.colorPrimary, ctx.brand?.colorSecondary].filter(Boolean).join(" and ");
@@ -284,7 +285,7 @@ export function createChatTools(ctx: ToolCtx) {
         const pptxLimit = await ctx.dailyLimit?.("pptx");
         if (pptxLimit) return { ok: false, error: pptxLimit };
         const credit = await consumeCredits(ctx.userId, PPTX_CREDIT_COST, "presentation", { chatId: ctx.chatId });
-        if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat PPT. Sampaikan ke user tanpa menyebut angka; kuota reset tiap tanggal 1 atau upgrade paket." };
+        if (!credit.ok) return { ok: false, error: `Sisa jatah tidak cukup untuk membuat PPT. Sampaikan ke user tanpa menyebut angka: ${quotaMessage(credit.reason, false)}` };
         try {
           const style = ctx.deckStyle ?? "standard";
           if (style === "signature") return await signatureDeck(ctx, input);
@@ -341,7 +342,7 @@ export function createChatTools(ctx: ToolCtx) {
         const limit = await ctx.dailyLimit?.("pptx");
         if (limit) return { ok: false, error: limit };
         const credit = await consumeCredits(ctx.userId, CAROUSEL_CREDIT_COST, "carousel", { chatId: ctx.chatId });
-        if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat carousel. Sampaikan ke user tanpa menyebut angka." };
+        if (!credit.ok) return { ok: false, error: `Sisa jatah tidak cukup untuk membuat carousel. Sampaikan ke user tanpa menyebut angka: ${quotaMessage(credit.reason, false)}` };
         try {
           const input = applyBrand(raw, ctx.brand);
           const design = { theme: input.theme ?? ("midnight" as const), brand_color: input.brand_color, design: input.design };
@@ -408,7 +409,7 @@ export function createChatTools(ctx: ToolCtx) {
         const refs = await loadReferences(ctx, [image_id]);
         if (!refs.length) return { ok: false, error: "Foto produk tidak ditemukan. Minta user melampirkan foto produknya lagi." };
         const credit = await consumeCredits(ctx.userId, n * IMAGE_CREDIT_COST, "image", { chatId: ctx.chatId });
-        if (!credit.ok) return { ok: false, error: "Sisa kuota bulan ini tidak cukup untuk membuat foto produk. Sampaikan ke user tanpa menyebut angka." };
+        if (!credit.ok) return { ok: false, error: `Sisa jatah tidak cukup untuk membuat foto produk. Sampaikan ke user tanpa menyebut angka: ${quotaMessage(credit.reason, false)}` };
         const results = await Promise.all(
           Array.from({ length: n }, async (_, k) => {
             const prompt =
