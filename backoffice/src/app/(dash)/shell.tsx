@@ -16,6 +16,7 @@ import {
   KeyRound,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Menu,
   PlusCircle,
   Receipt,
@@ -96,6 +97,7 @@ function menu(c: ShellCounts): Group[] {
       title: "Aplikasi AI",
       items: [
         { href: "/agents", label: "Marketing Agents", icon: Bot, ownerOnly: true },
+        { href: "/promos", label: "Promosi sidebar", icon: Megaphone, ownerOnly: true },
         { href: "/settings", label: "Pengaturan aplikasi", icon: Settings2, ownerOnly: true },
       ],
     },

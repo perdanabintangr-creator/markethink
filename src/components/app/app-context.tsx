@@ -1,5 +1,6 @@
 "use client";
 
+import type { Promo } from "@/lib/promos";
 import { createContext, useContext } from "react";
 import type { Dict, Lang } from "@/lib/i18n/dict";
 import type { WorkspaceSummary } from "@/lib/types";
@@ -26,6 +27,8 @@ export interface AppContextValue {
   payEnabled?: boolean;
   /** Mode Ngobrol memakai pendeteksi suara + Groq Whisper (cepat, tahan bising). Tanpa ini: pengenal suara browser. */
   voiceStt?: boolean;
+  /** Slot promosi di sidebar kiri (slide otomatis). */
+  promos?: Promo[];
   /** Peran user dari onboarding (umkm_owner, marketing_pro, freelancer, …) — untuk template. */
   personaRole?: string | null;
 }

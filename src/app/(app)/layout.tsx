@@ -6,10 +6,11 @@ import { AppShell } from "@/components/app/app-shell";
 import { anyPaymentsEnabled } from "@/lib/payments/gateway";
 import { sttEnabled } from "@/lib/voice/stt";
 import { WhatsappGate } from "@/components/app/whatsapp-gate";
+import { PROMO_COLUMNS, type Promo } from "@/lib/promos";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, profile } = await requireUser();
-  const [{ data: workspaces }, credits, allowedTiers, { data: plan }, { data: flags }] = await Promise.all([
+  const [{ data: workspaces }, credits, allowedTiers, { data: plan }, { data: flags }, { data: promos }] = await Promise.all([
     supabase
       .from("workspaces")
       .select("id, name")
@@ -19,6 +20,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getAllowedTiers(supabase, profile),
     supabase.from("plans").select("name").eq("id", profile.plan_id).maybeSingle(),
     supabase.from("feature_flags").select("key, enabled").eq("plan_id", profile.plan_id).in("key", ["free_models", "research"]),
+    // Slot promosi sidebar: yang aktif & untuk paket user (RLS menyaring tanggal tayang).
+    supabase
+      .from("promos")
+      .select(PROMO_COLUMNS)
+      .or(`plans.is.null,plans.cs.{${profile.plan_id}}`)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false })
+      .limit(8),
   ]);
   return (
     <AppShell
@@ -42,6 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         researchAllowed: profile.role === "admin" || Boolean(flags?.find((f) => f.key === "research")?.enabled),
         payEnabled: anyPaymentsEnabled(),
         voiceStt: sttEnabled(),
+        promos: (promos ?? []) as Promo[],
       }}
     >
       {children}

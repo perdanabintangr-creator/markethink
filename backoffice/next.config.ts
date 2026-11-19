@@ -4,6 +4,8 @@ import path from "node:path";
 /** Back Office Markethink — aplikasi terpisah (project Vercel sendiri, Root Directory = backoffice). */
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
+  // Upload gambar promosi (maks 2 MB) lewat server action.
+  experimental: { serverActions: { bodySizeLimit: "3mb" } },
   async headers() {
     return [
       {

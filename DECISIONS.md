@@ -559,3 +559,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - **Ingatan Hasil** (tabel `strategy_outcomes`, API `/api/outcome`): di bawah jawaban ≥700 karakter user melaporkan Berhasil / Biasa saja / Tidak berhasil + catatan. 8 laporan terbaru (lingkup project sama seperti memory) masuk konteks chat & Pemeriksaan Tim. Daftar + hapus di Pengaturan → Memori.
 - **Pemeriksaan di Smart Tools**: Kampanye, Persona, Kompetitor, Kalender konten diperiksa setelah hasil jadi (kolom `tool_runs.review`), kredit sesuai biaya nyata. Dilewati untuk add-on terpisah, revisi, misi Agent, dan bila waktu request >220 dtk. "Terapkan perbaikan" membuka dialog Perbaiki hasil dengan catatan terisi.
 - Logika pemeriksaan dipindah ke `runTeamReview` (dipakai chat & Smart Tools).
+
+## 2026-11-19 — Riwayat chat ke panel kanan + slot promosi di sidebar kiri
+- Founder ACC: riwayat chat pindah ke panel kanan yang bisa dibuka-tutup (bawaan tertutup, pilihan diingat per browser). Laptop: strip tombol "Riwayat" di tepi kanan; HP: tombol jam di bar atas → laci kanan. Sidebar dirender dua tampilan dari komponen yang sama (`view="nav" | "history"`); geser chat dari riwayat ke project kini lewat menu "Pindahkan ke project".
+- Tempat riwayat di sidebar kiri diganti slot promosi bergeser otomatis (6 dtk, berhenti saat disorot/disentuh, swipe di HP). Tampil untuk Free & berbayar (bisa dibatasi per paket). Brand lain diberi label "Sponsor" dan link `rel="sponsored"`.
+- Data: tabel `promos` + `promo_stats` (tayangan sekali per sesi, klik) + RPC `promo_track`; gambar di bucket publik `promos` (maks 2 MB, saran 600×400). Dikelola di back office → "Promosi sidebar" (owner).
+- 3 slide awal Marqthink: Tim Otak (/chat), Smart Tools (/tools), Upgrade (/pricing, hanya Free/Starter/Pro).

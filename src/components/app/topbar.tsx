@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, Search, SquarePen } from "lucide-react";
+import { History, Menu, Search, SquarePen } from "lucide-react";
 import { LogoMark, Wordmark } from "@/components/logo";
 import { shellText } from "@/lib/i18n/shell";
 import { workspaceUiText } from "@/lib/i18n/workspace-ui";
@@ -9,7 +9,7 @@ import { useApp } from "./app-context";
 import { openCommandPalette } from "./command-palette";
 
 /** Bar atas khusus HP: buka menu, logo, cari & chat baru. Di laptop semuanya ada di sidebar. */
-export function Topbar({ onMenu }: { onMenu: () => void }) {
+export function Topbar({ onMenu, onHistory }: { onMenu: () => void; onHistory: () => void }) {
   const { lang } = useApp();
   const t = workspaceUiText(lang);
 
@@ -29,6 +29,9 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
       <Link href="/chat" className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label={t.newChat}>
         <SquarePen className="size-5" />
       </Link>
+      <button onClick={onHistory} className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label={shellText(lang).openHistory}>
+        <History className="size-5" />
+      </button>
     </header>
   );
 }

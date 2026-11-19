@@ -31,6 +31,7 @@ import {
   ChevronRight,
   Crown,
   Folder,
+  History,
   FolderInput,
   FolderOpen,
   FolderOutput,
@@ -47,6 +48,7 @@ import {
   MoreHorizontal,
   Pencil,
   Pin,
+  PanelRightClose,
   PinOff,
   Plus,
   Search,
@@ -124,8 +126,13 @@ import { shellText } from "@/lib/i18n/shell";
 import { workspaceUiText } from "@/lib/i18n/workspace-ui";
 import { useApp } from "./app-context";
 import { openCommandPalette } from "./command-palette";
+import { PromoCarousel } from "./promo-carousel";
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+/**
+ * Sidebar dua tampilan: "nav" (kiri: menu, project, slot promosi, akun) dan "history" (panel kanan: chat disematkan & riwayat).
+ */
+export function Sidebar({ onNavigate, view = "nav", onClose }: { onNavigate?: () => void; view?: "nav" | "history"; onClose?: () => void }) {
+  const isNav = view === "nav";
   const { t, user, lang, workspaces, planName, planId } = useApp();
   const s = shellText(lang);
   const w = workspaceUiText(lang);
@@ -461,6 +468,37 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col gap-3 bg-muted/40 p-3">
+      {!isNav && (
+        <div className="flex items-center justify-between gap-2 px-1">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <History className="size-4 text-primary" /> {s.history}
+          </p>
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={openCommandPalette}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+              aria-label={s.searchHistory}
+              title={`${s.searchHistory} (Ctrl K)`}
+            >
+              <Search className="size-4" />
+            </button>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label={s.closeHistory}
+                title={s.closeHistory}
+              >
+                <PanelRightClose className="size-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {isNav && (
+      <>
       <div className="flex items-center justify-between gap-2 px-1">
         <Logo href="/dashboard" />
         <button
@@ -495,6 +533,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           {w.calendar}
         </NavLink>
       </nav>
+      </>
+      )}
 
       <DndContext
         id="sidebar-dnd"
@@ -510,6 +550,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         }}
       >
       <div className="-mx-1 flex-1 overflow-y-auto px-1">
+        {isNav && (
         <div className="mb-3">
           <div className="flex items-center justify-between px-2 pb-1">
             <p className="text-xs font-medium text-muted-foreground">{t.projects}</p>
@@ -553,8 +594,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             </button>
           )}
         </div>
+        )}
 
-        {pinned.length > 0 && (
+        {!isNav && pinned.length > 0 && (
           <PinZone highlight={over?.id === PIN_ZONE && Boolean(activeItem) && !isPinned(activeItem!)}>
             <SortableContext items={pinned.map((c) => itemKey(c.id))} strategy={onlyWhen(Boolean(activeItem && isPinned(activeItem)))}>
               {pinned.map((c) => (
@@ -581,6 +623,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </PinZone>
         )}
 
+        {!isNav && (
         <HistoryZone highlight={over?.id === HISTORY_ZONE}>
           {loaded && !history.length && !pinned.length && (
             <p className="px-2 py-4 text-sm text-muted-foreground">{t.noChats}</p>
@@ -616,6 +659,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             ))}
           </SortableContext>
         </HistoryZone>
+        )}
       </div>
 
       <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
@@ -639,6 +683,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </DragOverlay>
       </DndContext>
 
+      {isNav && <PromoCarousel onNavigate={onNavigate} />}
+
+      {isNav && (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-2 rounded-lg p-2 text-left hover:bg-accent">
@@ -709,6 +756,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </form>
         </DropdownMenuContent>
       </DropdownMenu>
+      )}
 
       <Dialog open={dlg !== null} onOpenChange={(open) => !open && setDlg(null)}>
         <DialogContent>
