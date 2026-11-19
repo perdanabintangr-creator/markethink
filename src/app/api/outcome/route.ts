@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiSession, jsonError } from "@/lib/api";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { OUTCOME_RESULTS } from "@/lib/ai/outcomes";
 
 /** Ingatan Hasil: laporan hasil strategi per jawaban AI (GET daftar per chat, POST simpan, DELETE hapus). */
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
   if (s.error) return s.error;
   const parsed = postSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "invalid_body");
+  if (!(await checkRateLimit("light", `outcome:${s.user.id}`)).ok) return jsonError(429, "rate_limited");
   const { chatId, messageId, result, topic, note } = parsed.data;
   // Lingkup project mengikuti chat (RLS: hanya chat milik user yang terbaca).
   const { data: chat } = await s.supabase.from("chats").select("workspace_id").eq("id", chatId).maybeSingle();

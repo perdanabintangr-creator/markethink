@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 
 /**
  * Midtrans Snap (halaman bayar QRIS, VA, e-wallet). Alamat API sama dengan paket resmi `midtrans-client`.
@@ -98,7 +98,9 @@ export function getTransactionStatus(orderId: string) {
 export function validSignature(n: MidtransStatus, key = serverKey()) {
   if (!n.signature_key || !n.order_id || !n.status_code || !n.gross_amount || !key) return false;
   const expected = createHash("sha512").update(`${n.order_id}${n.status_code}${n.gross_amount}${key}`).digest("hex");
-  return expected === n.signature_key;
+  const got = Buffer.from(n.signature_key);
+  const want = Buffer.from(expected);
+  return got.length === want.length && timingSafeEqual(got, want);
 }
 
 /** Status Midtrans → status pembayaran Marqthink. */

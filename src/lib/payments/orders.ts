@@ -150,7 +150,8 @@ export async function syncPayment(admin: SupabaseClient, orderId: string, known?
   if (s.notFound) return pay.status as string;
   const status = s.status;
   // Nominal harus sama dengan tagihan (menolak manipulasi nominal).
-  const amountOk = s.amount === null || s.amount === pay.amount_idr;
+  // Gateway tanpa data nominal di status (Mayar) dicek lewat tagihannya; Midtrans/Duitku wajib cocok persis.
+  const amountOk = s.amount === null ? pay.provider === "mayar" : s.amount === pay.amount_idr;
   await admin
     .from("payments")
     .update({

@@ -69,5 +69,9 @@ export async function requireUser(opts: { allowNotOnboarded?: boolean } = {}) {
 export async function syncAdminRole(userId: string, email: string | undefined | null) {
   if (!email || !env.adminEmails.includes(email.toLowerCase())) return;
   const admin = createAdminClient();
+  // Hanya email yang sudah terverifikasi (cegah mendaftar memakai email admin yang belum dikonfirmasi).
+  const { data: authUser } = await admin.auth.admin.getUserById(userId);
+  const u = authUser?.user;
+  if (!u || u.email?.toLowerCase() !== email.toLowerCase() || !u.email_confirmed_at) return;
   await admin.from("profiles").update({ role: "admin" }).eq("id", userId).neq("role", "admin");
 }

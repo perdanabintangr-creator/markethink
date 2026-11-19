@@ -54,9 +54,27 @@ let dummyHash: Promise<string> | null = null;
 
 export type LoginResult = { ok: true } | { ok: false; error: string };
 
+/** IP pengirim (Vercel mengisi x-real-ip). */
+async function clientIp() {
+  const h = await headers();
+  return h.get("x-real-ip") || h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
+/**
+ * Batas percobaan login per IP (20 / 15 menit) — mencegah menebak password ke banyak username sekaligus.
+ * Memakai fungsi database rate_limit_hit; bila gagal dicek, login tetap diproses (kunci per akun tetap berlaku).
+ */
+async function loginAllowed(admin: ReturnType<typeof createAdminClient>) {
+  const { data, error } = await admin.rpc("rate_limit_hit", { p_key: `bo-login:${await clientIp()}`, p_limit: 20, p_window_seconds: 900 });
+  return error ? true : data !== false;
+}
+
 export async function loginBackoffice(rawUsername: string, password: string): Promise<LoginResult> {
   const username = normalizeUsername(rawUsername);
   const admin = createAdminClient();
+  if (!(await loginAllowed(admin))) {
+    return { ok: false, error: "Terlalu banyak percobaan login dari jaringan ini. Coba lagi 15 menit lagi." };
+  }
   const { data: user } = await admin
     .from("backoffice_users")
     .select("id, password_hash, active, failed_attempts, locked_until")
@@ -110,7 +128,8 @@ export async function createSession(userId: string) {
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    // Back office tidak pernah dibuka dari situs lain → strict (cookie tidak ikut permintaan lintas situs).
+    sameSite: "strict",
     path: "/",
     expires,
   });

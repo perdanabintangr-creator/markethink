@@ -85,7 +85,7 @@ export function isPrivateAddress(ip: string): boolean {
   return v === "::" || v === "::1" || /^f[cd]/.test(v) || /^fe[89ab]/.test(v) || v.startsWith("ff");
 }
 
-async function assertPublicUrl(url: URL) {
+export async function assertPublicUrl(url: URL) {
   if (!/^https?:$/.test(url.protocol)) throw new Error("protocol");
   if (url.username || url.password) throw new Error("credentials");
   if (url.port && !["80", "443"].includes(url.port)) throw new Error("port");

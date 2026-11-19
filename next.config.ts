@@ -20,7 +20,12 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), payment=(self)" },
+          // Selalu HTTPS (2 tahun, termasuk subdomain office.marqthink.com).
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          // Tidak boleh ditanam di situs lain (anti-clickjacking), tanpa plugin, base URL tidak bisa dibajak.
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
         ],
       },
     ];

@@ -12,11 +12,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // RLS: hanya lampiran milik user sendiri yang terbaca.
   const { data: row } = await s.supabase.from("attachments").select("name, storage_path").eq("id", id).maybeSingle();
   if (!row) return jsonError(404, "not_found");
+  // Pertahanan berlapis: file hanya boleh dari folder milik user sendiri.
+  const path = String(row.storage_path ?? "");
+  if (!path.startsWith(`${s.user.id}/`) || path.includes("..")) return jsonError(404, "not_found");
 
   const download = new URL(req.url).searchParams.has("download");
   const { data, error } = await createAdminClient()
     .storage.from("uploads")
-    .createSignedUrl(row.storage_path, 300, download ? { download: row.name } : undefined);
+    .createSignedUrl(path, 300, download ? { download: row.name } : undefined);
   if (error || !data) return jsonError(500, "sign_failed");
   return NextResponse.redirect(data.signedUrl, { headers: { "Cache-Control": "private, max-age=240" } });
 }

@@ -565,3 +565,11 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Tempat riwayat di sidebar kiri diganti slot promosi bergeser otomatis (6 dtk, berhenti saat disorot/disentuh, swipe di HP). Tampil untuk Free & berbayar (bisa dibatasi per paket). Brand lain diberi label "Sponsor" dan link `rel="sponsored"`.
 - Data: tabel `promos` + `promo_stats` (tayangan sekali per sesi, klik) + RPC `promo_track`; gambar di bucket publik `promos` (maks 2 MB, saran 600×400). Dikelola di back office → "Promosi sidebar" (owner).
 - 3 slide awal Marqthink: Tim Otak (/chat), Smart Tools (/tools), Upgrade (/pricing, hanya Free/Starter/Pro).
+
+## 2026-11-19 — Audit keamanan menyeluruh (app + back office + database)
+- Database: fungsi internal (get_quota_status, promo_track lama) dicabut dari anon/authenticated; aturan RLS "with check" mewajibkan data turunan (pesan, versi kanvas, potongan dokumen, feedback, laporan hasil, memori) menempel ke induk milik user; path file lampiran/workspace wajib di folder user; hak tulis langsung dicabut dari tabel yang hanya ditulis server; INSERT profiles dicabut; kolom personalisasi (response_style, custom_instructions) dibuka (sebelumnya simpan Personalisasi gagal).
+- Rate limit kini aktif tanpa Upstash: fungsi database `rate_limit_hit` (tabel rate_limits). Lupa password dibatasi per IP & per email; waitlist hanya mengirim email ke email akun sendiri; statistik promosi dihitung server sekali per user/hari.
+- Kode: unduh lampiran wajib dari folder user; konteks "Bahas di Chat" dibatasi ke hasil milik user; status admin hanya untuk email terverifikasi; pembaca halaman riset menolak alamat internal (SSRF); nominal pembayaran Midtrans/Duitku wajib cocok persis; tanda tangan Midtrans dibandingkan waktu-konstan.
+- Header: HSTS, CSP (frame-ancestors none, object-src none, base-uri self), COOP. Back office: batas login per IP (20/15 mnt), cookie sameSite strict, form-action self.
+- Library: Next.js 15.5.27 → 15.5.29 (celah kritis RCE image optimizer & DoS server actions) di kedua aplikasi. Sisa temuan tinggi (image-size tidak dipakai, undici/busboy hanya membaca respons API AI, postcss saat build) dinilai tidak bisa dieksploitasi.
+- Disarankan berikutnya: 2FA (TOTP) untuk owner back office; Leaked Password Protection Supabase (fitur paket Pro).

@@ -4,6 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { emails, sendEmail } from "@/lib/email";
+import { resolveAppUrl } from "@/lib/env";
+import { checkRateLimit, clientIp } from "@/lib/ratelimit";
 
 const body = z.object({ email: z.string().trim().toLowerCase().email().max(200) });
 
@@ -17,7 +19,15 @@ export async function POST(req: Request) {
   const parsed = body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_email", message: "Format email belum benar." }, { status: 400 });
   const { email } = parsed.data;
-  const origin = new URL(req.url).origin;
+  // Batas: per IP (10 / 10 menit) dan per alamat email (3 / jam) — cegah membanjiri kotak masuk orang lain.
+  const [byIp, byEmail] = await Promise.all([checkRateLimit("auth", `forgot:${clientIp(req.headers)}`), checkRateLimit("email", `forgot:${email}`)]);
+  if (!byIp.ok) {
+    return NextResponse.json({ error: "rate_limited", message: "Terlalu banyak permintaan reset. Coba lagi beberapa menit lagi." }, { status: 429 });
+  }
+  // Batas per email terlampaui: jawab "terkirim" tanpa mengirim (tidak membocorkan status akun).
+  if (!byEmail.ok) return NextResponse.json({ ok: true });
+  // Alamat tujuan link selalu domain resmi (bukan dari header permintaan).
+  const origin = resolveAppUrl();
   const redirectTo = `${origin}/auth/callback?next=/reset-password`;
 
   if (env.resendKey && env.supabaseServiceKey) {

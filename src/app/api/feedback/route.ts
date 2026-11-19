@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiSession, jsonError } from "@/lib/api";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 const schema = z.object({
   chatId: z.string().uuid(),
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
   if (s.error) return s.error;
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "invalid_body");
+  if (!(await checkRateLimit("light", `feedback:${s.user.id}`)).ok) return jsonError(429, "rate_limited");
   const { chatId, messageId, rating, reason, comment } = parsed.data;
   const { error } = await s.supabase.from("message_feedback").upsert(
     { chat_id: chatId, message_id: messageId, user_id: s.user.id, rating, reason: reason ?? null, comment: comment ?? null },

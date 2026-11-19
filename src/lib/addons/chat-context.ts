@@ -5,11 +5,15 @@ import { isAiTool } from "./tools";
 import { resultToMarkdown } from "./to-markdown";
 
 /** Versi terbaru (berhasil) dari rantai hasil Tools Pro: hasil asal + revisinya. */
-export async function latestRunInChain(db: SupabaseClient, rootId: string) {
-  const { data } = await db
+export async function latestRunInChain(db: SupabaseClient, rootId: string, userId?: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(rootId)) return null;
+  let q = db
     .from("tool_runs")
     .select("id, tool, title, output, created_at")
-    .or(`id.eq.${rootId},revision_of.eq.${rootId}`)
+    .or(`id.eq.${rootId},revision_of.eq.${rootId}`);
+  // Kunci server dipakai → wajib dibatasi ke hasil milik user sendiri.
+  if (userId) q = q.eq("user_id", userId);
+  const { data } = await q
     .eq("status", "ok")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -21,8 +25,8 @@ export async function latestRunInChain(db: SupabaseClient, rootId: string) {
  * Instruksi tambahan untuk chat yang dibuka dari hasil Tools Pro ("Bahas di Chat"):
  * AI tahu versi hasil terbaru dan bisa meminta sistem memperbarui hasil (panel kanan) lewat blok [[PERBARUI_HASIL]].
  */
-export async function toolRunChatPrompt(db: SupabaseClient, rootId: string) {
-  const latest = await latestRunInChain(db, rootId);
+export async function toolRunChatPrompt(db: SupabaseClient, rootId: string, userId: string) {
+  const latest = await latestRunInChain(db, rootId, userId);
   if (!latest) return "";
   const info = toolInfo(latest.tool as string);
   const revisable = isAiTool(latest.tool as string);
@@ -90,7 +94,7 @@ membuka hasil itu dan klik "Bahas di Chat" agar versinya bisa diperbarui otomati
 export async function readToolResult(db: SupabaseClient, userId: string, runId: string, maxChars = 7_000) {
   const { data: run } = await db.from("tool_runs").select("id, revision_of").eq("id", runId).eq("user_id", userId).maybeSingle();
   if (!run) return { ok: false as const, error: "Hasil tidak ditemukan. Cek id-nya di daftar hasil Smart Tools." };
-  const latest = await latestRunInChain(db, (run.revision_of as string | null) ?? (run.id as string));
+  const latest = await latestRunInChain(db, (run.revision_of as string | null) ?? (run.id as string), userId);
   if (!latest) return { ok: false as const, error: "Hasil belum selesai atau gagal dibuat." };
   const name = toolInfo(latest.tool as string)?.name ?? (latest.tool as string);
   return {

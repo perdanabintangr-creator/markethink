@@ -1,3 +1,4 @@
+import { assertPublicUrl } from "@/lib/ai/links";
 import "server-only";
 import { untrusted } from "./prompt";
 import { googleDateRange, isRecentSource } from "./recency";
@@ -88,11 +89,23 @@ const SKIP_FETCH = /(instagram|tiktok|facebook|fb\.|twitter|x\.com|youtube|youtu
 export async function fetchPageText(url: string, opts: { timeoutMs?: number; maxChars?: number } = {}): Promise<string | null> {
   if (SKIP_FETCH.test(url) || !/^https?:\/\//.test(url)) return null;
   try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; MarqthinkResearch/1.0)", Accept: "text/html,application/xhtml+xml" },
-      redirect: "follow",
-      signal: AbortSignal.timeout(opts.timeoutMs ?? 7000),
-    });
+    // Hanya alamat publik (cek ulang di setiap pengalihan) — server tidak boleh disuruh membuka jaringan internal.
+    const signal = AbortSignal.timeout(opts.timeoutMs ?? 7000);
+    let target = new URL(url);
+    let res: Response | null = null;
+    for (let hop = 0; hop < 4; hop++) {
+      await assertPublicUrl(target);
+      res = await fetch(target, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; MarqthinkResearch/1.0)", Accept: "text/html,application/xhtml+xml" },
+        redirect: "manual",
+        signal,
+      });
+      const loc = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+      if (!loc) break;
+      target = new URL(loc, target);
+      res = null;
+    }
+    if (!res) return null;
     const type = res.headers.get("content-type") ?? "";
     if (!res.ok || !type.includes("html")) return null;
     const text = htmlToText((await res.text()).slice(0, 600_000));

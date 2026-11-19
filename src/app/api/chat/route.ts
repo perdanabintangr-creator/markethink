@@ -344,7 +344,7 @@ export async function POST(req: Request) {
       // Chat dari hasil Tools Pro: AI tahu versi terbaru & bisa memicu pembaruan hasil di panel kanan.
       // Chat biasa: AI tahu daftar hasil Tools Pro user & bisa membacanya (tool read_tool_result).
       const runPrompt = existing?.source_run_id
-        ? await toolRunChatPrompt(admin, existing.source_run_id as string)
+        ? await toolRunChatPrompt(admin, existing.source_run_id as string, user.id)
         : await toolRunsIndexPrompt(admin, user.id);
       // Semua jawaban (terutama yang memakai riset web): hanya sumber ≤ 2 tahun.
       // Tim Otak: otak Senior ke atas memakai kerangka konsultan (diagnosis → insight → eksekusi → angka → risiko).
