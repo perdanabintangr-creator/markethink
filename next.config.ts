@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
   // prompts/system.md & font deck Signature (PDF/ukur teks) dibaca saat runtime oleh route chat.
   outputFileTracingIncludes: {
     "/api/chat": ["./prompts/**/*", "./public/fonts/deck/**/*"],
+    // Autopilot Konten: font & logo bawaan untuk render slide (SVG → JPEG).
+    "/api/autopilot/**/*": ["./public/fonts/autopilot/**/*", "./public/brand/autopilot-logo-*.png"],
+    "/api/cron/autopilot/**/*": ["./public/fonts/autopilot/**/*", "./public/brand/autopilot-logo-*.png"],
+    "/autopilot": ["./public/fonts/autopilot/**/*", "./public/brand/autopilot-logo-*.png"],
   },
   serverExternalPackages: ["unpdf", "mammoth", "exceljs", "pptxgenjs", "jszip"],
   experimental: {

@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import {
   BrainCircuit,
   CalendarDays,
+  Rocket,
   ChevronRight,
   Crown,
   Folder,
@@ -531,6 +532,9 @@ export function Sidebar({ onNavigate, view = "nav", onClose }: { onNavigate?: ()
         </NavLink>
         <NavLink href="/kalender" icon={CalendarDays} active={pathname === "/kalender"} onNavigate={onNavigate}>
           {w.calendar}
+        </NavLink>
+        <NavLink href="/autopilot" icon={Rocket} active={pathname === "/autopilot"} onNavigate={onNavigate}>
+          {w.autopilot}
         </NavLink>
       </nav>
       </>
