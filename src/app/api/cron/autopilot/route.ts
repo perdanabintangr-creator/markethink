@@ -4,6 +4,7 @@ import { cronAuthorized } from "@/lib/cron";
 import { autopilotAllowance } from "@/lib/autopilot/quota";
 import { addDays, todayWib } from "@/lib/autopilot/plan";
 import { needsBatch } from "@/lib/autopilot/schedule";
+import { igEnabled, refreshInstagramTokens } from "@/lib/instagram";
 
 export const maxDuration = 60;
 
@@ -14,13 +15,15 @@ export const maxDuration = 60;
 export async function GET(req: Request) {
   if (!cronAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
   const admin = createAdminClient();
+  // Perpanjang token Instagram yang akan habis (token jangka panjang berlaku ±60 hari).
+  const refreshed = igEnabled() ? await refreshInstagramTokens().catch(() => 0) : 0;
   const { data: settings } = await admin
     .from("autopilot_settings")
     .select("user_id, cadence")
     .eq("enabled", true)
     .order("last_generated_at", { ascending: true, nullsFirst: true })
     .limit(200);
-  if (!settings?.length) return NextResponse.json({ ok: true, started: 0 });
+  if (!settings?.length) return NextResponse.json({ ok: true, started: 0, refreshed });
   const ids = settings.map((s) => s.user_id as string);
   const [{ data: profiles }, { data: last }] = await Promise.all([
     admin.from("profiles").select("id, plan_id, role, banned").in("id", ids),
@@ -50,5 +53,5 @@ export async function GET(req: Request) {
       }).catch(() => null),
     ),
   );
-  return NextResponse.json({ ok: true, started: due.length });
+  return NextResponse.json({ ok: true, started: due.length, refreshed });
 }

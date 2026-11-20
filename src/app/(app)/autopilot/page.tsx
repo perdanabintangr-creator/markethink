@@ -5,6 +5,7 @@ import { postsThisMonth } from "@/lib/autopilot/generate";
 import { addDays, todayWib } from "@/lib/autopilot/plan";
 import { AutopilotView, type ApPost, type ApSettings, type ApWorkspace } from "@/components/autopilot/autopilot-view";
 import { AutopilotUpsell } from "@/components/autopilot/autopilot-upsell";
+import { instagramStatus } from "@/lib/instagram";
 
 export const metadata = { title: "Autopilot Konten" };
 export const dynamic = "force-dynamic";
@@ -29,16 +30,17 @@ export default async function AutopilotPage() {
   if (!allowance) return <AutopilotUpsell lang={lang} workspaces={workspaces} />;
 
   const today = todayWib();
-  const [{ data: settingsRow }, { data: postRows }, used] = await Promise.all([
-    supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, generating_at").maybeSingle(),
+  const [{ data: settingsRow }, { data: postRows }, used, instagram] = await Promise.all([
+    supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, generating_at").maybeSingle(),
     supabase
       .from("social_posts")
-      .select("id, post_date, post_time, kind, design, image_regens, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
+      .select("id, post_date, post_time, kind, design, image_regens, permalink, error, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
       .gte("post_date", addDays(today, -14))
       .order("post_date", { ascending: true })
       .order("post_time", { ascending: true })
       .limit(300),
     postsThisMonth(createAdminClient(), profile.id),
+    instagramStatus(profile.id),
   ]);
 
   const settings: ApSettings = {
@@ -48,6 +50,7 @@ export default async function AutopilotPage() {
     postsPerWeek: Math.min(Number(settingsRow?.posts_per_week ?? 7), allowance.postsPerWeek),
     slotTimes: ((settingsRow?.slot_times as string[] | null) ?? ["12:00", "19:00"]).map((t) => t.slice(0, 5)),
     focus: (settingsRow?.focus as string | null) ?? "",
+    autoPublish: Boolean(settingsRow?.auto_publish),
     design: ((settingsRow?.design as ApSettings["design"] | undefined) ?? "auto"),
     configured: Boolean(settingsRow),
   };
@@ -62,6 +65,7 @@ export default async function AutopilotPage() {
       workspaces={workspaces}
       allowance={allowance}
       usedThisMonth={used}
+      instagram={instagram}
     />
   );
 }

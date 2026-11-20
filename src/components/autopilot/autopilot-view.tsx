@@ -50,6 +50,7 @@ export interface ApSettings {
   postsPerWeek: number;
   slotTimes: string[];
   focus: string;
+  autoPublish: boolean;
   design: "auto" | "glossy" | "bold" | "photo" | "classic";
   configured: boolean;
 }
@@ -72,11 +73,22 @@ export interface ApPost {
   lint: { fails: string[]; warns: string[] } | null;
   status: "draft" | "approved" | "script_ok" | "rejected" | "posted" | "failed" | "manual";
   media: string[] | null;
+  permalink?: string | null;
+  error?: string | null;
   updated_at: string;
 }
 
+export interface IgStatus {
+  enabled: boolean;
+  connected: boolean;
+  username: string | null;
+  picture: string | null;
+  status: "active" | "expired" | "revoked" | null;
+  canPublish: boolean;
+}
+
 type Tab = "pending" | "scheduled" | "video" | "rejected";
-type Action = "approve" | "reject" | "restore" | "posted" | "regen_image";
+type Action = "approve" | "reject" | "restore" | "posted" | "regen_image" | "publish_now" | "retry";
 const TAB_STATUS: Record<Tab, ApPost["status"][]> = {
   pending: ["draft"],
   scheduled: ["approved", "posted", "manual", "failed"],
@@ -112,6 +124,7 @@ export function AutopilotView(props: {
   workspaces: ApWorkspace[];
   allowance: { postsPerWeek: number; postsPerMonth: number };
   usedThisMonth: number;
+  instagram: IgStatus;
 }) {
   const t = autopilotText(props.lang);
   const router = useRouter();
@@ -143,11 +156,13 @@ export function AutopilotView(props: {
     const r = await call<{ post: ApPost }>(`/api/autopilot/posts/${post.id}`, { action });
     if (!r.ok) {
       toast.error(errText(t, r.error));
+      if (action === "publish_now") router.refresh();
       return false;
     }
     replace(r.data.post);
     if (!quiet && action === "approve") toast.success(t.approvedToast);
     if (action === "regen_image") toast.success(t.regenDone);
+    if (action === "publish_now") toast.success(t.ig.published);
     return true;
   }
 
@@ -250,14 +265,17 @@ export function AutopilotView(props: {
           />
         )}
 
-        {/* Info posting otomatis */}
-        <div className="mt-4 flex gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
-          <Send className="mt-0.5 size-4 shrink-0 text-primary" />
-          <div>
-            <p className="font-medium">{t.publishTitle}</p>
-            <p className="mt-0.5 text-muted-foreground">{t.publishBody}</p>
+        {props.instagram.enabled ? (
+          <InstagramCard t={t} ig={props.instagram} settings={props.initialSettings} onChanged={() => router.refresh()} confirm={confirm} />
+        ) : (
+          <div className="mt-4 flex gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
+            <Send className="mt-0.5 size-4 shrink-0 text-primary" />
+            <div>
+              <p className="font-medium">{t.publishTitle}</p>
+              <p className="mt-0.5 text-muted-foreground">{t.publishBody}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Tabs */}
         <div className="sticky top-0 z-10 -mx-4 mt-6 flex flex-wrap items-center justify-between gap-3 bg-background/85 px-4 py-3 backdrop-blur">
@@ -301,7 +319,7 @@ export function AutopilotView(props: {
                 </h2>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {list.map((p) => (
-                    <PostCard key={p.id} t={t} post={p} today={props.today} onAct={(a) => act(p, a)} onSaved={replace} />
+                    <PostCard key={p.id} t={t} post={p} today={props.today} igReady={props.instagram.connected && props.instagram.status === "active" && props.instagram.canPublish} onAct={(a) => act(p, a)} onSaved={replace} />
                   ))}
                 </div>
               </section>
@@ -338,6 +356,7 @@ function SetupPanel({ t, workspaces, initial, maxPerWeek, onSaved }: { t: Autopi
       slotTimes: s.slotTimes,
       focus: s.focus.trim() || null,
       design: s.design,
+      autoPublish: s.autoPublish,
     });
     setSaving(false);
     if (!r.ok) return void toast.error(errText(t, r.error));
@@ -445,7 +464,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function PostCard({ t, post, today, onAct, onSaved }: { t: AutopilotText; post: ApPost; today: string; onAct: (a: Action) => Promise<boolean>; onSaved: (p: ApPost) => void }) {
+function PostCard({ t, post, today, igReady, onAct, onSaved }: { t: AutopilotText; post: ApPost; today: string; igReady: boolean; onAct: (a: Action) => Promise<boolean>; onSaved: (p: ApPost) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -531,6 +550,12 @@ function PostCard({ t, post, today, onAct, onSaved }: { t: AutopilotText; post: 
           )}
         </div>
         {post.kind === "reel" && post.status !== "posted" && <p className="text-xs text-muted-foreground">{t.reelHint}</p>}
+        {post.error && (post.status === "failed" || post.status === "approved") && (
+          <p className={cn("rounded-lg p-2.5 text-xs", post.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-700 dark:text-amber-400")}>
+            {post.status === "approved" ? `${t.ig.willRetry} ` : ""}
+            {post.error.replace(/\s*\[.*\]\s*$/, "")}
+          </p>
+        )}
 
         <div className="flex flex-wrap items-center gap-1.5 border-t pt-3">
           {post.status === "draft" && (
@@ -543,7 +568,24 @@ function PostCard({ t, post, today, onAct, onSaved }: { t: AutopilotText; post: 
               </Button>
             </>
           )}
-          {(post.status === "approved" || post.status === "script_ok") && post.post_date <= today && (
+          {post.status === "approved" && igReady && post.kind !== "reel" && (
+            <Button size="sm" onClick={() => run("publish_now")} disabled={!!busy} className="rounded-full">
+              {busy === "publish_now" ? <Loader2 className="animate-spin" /> : <Send />} {busy === "publish_now" ? t.ig.publishing : t.ig.publishNow}
+            </Button>
+          )}
+          {post.status === "failed" && (
+            <Button size="sm" variant="outline" onClick={() => run("retry")} disabled={!!busy} className="rounded-full">
+              {busy === "retry" ? <Loader2 className="animate-spin" /> : <RotateCcw />} {t.ig.retry}
+            </Button>
+          )}
+          {post.status === "posted" && post.permalink && (
+            <Button size="sm" variant="outline" asChild className="rounded-full">
+              <a href={post.permalink} target="_blank" rel="noopener noreferrer">
+                <Send /> {t.ig.view}
+              </a>
+            </Button>
+          )}
+          {(post.status === "approved" || post.status === "script_ok" || post.status === "failed") && post.post_date <= today && !(igReady && post.status === "approved" && post.kind !== "reel") && (
             <Button size="sm" onClick={() => run("posted")} disabled={!!busy} className="rounded-full">
               {busy === "posted" ? <Loader2 className="animate-spin" /> : <Send />} {t.markPosted}
             </Button>
@@ -644,5 +686,92 @@ function ReelScript({ t, script }: { t: AutopilotText; script: string | null }) 
       </p>
       <pre className="relative max-h-80 overflow-y-auto whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-white/85">{script || "—"}</pre>
     </div>
+  );
+}
+
+function InstagramCard({
+  t,
+  ig,
+  settings,
+  onChanged,
+  confirm,
+}: {
+  t: AutopilotText;
+  ig: IgStatus;
+  settings: ApSettings;
+  onChanged: () => void;
+  confirm: (o: { title: string; description?: string; confirmLabel?: string; destructive?: boolean }) => Promise<boolean>;
+}) {
+  const [auto, setAuto] = useState(settings.autoPublish);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    // Hasil kembali dari halaman izin Instagram (?ig=connected / denied / error / personal).
+    const q = new URLSearchParams(window.location.search).get("ig");
+    if (!q) return;
+    const msg = t.ig.toasts[q];
+    if (msg) (q === "connected" ? toast.success : toast.error)(msg);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, [t]);
+  const ok = ig.connected && ig.status === "active" && ig.canPublish;
+
+  async function toggle(v: boolean) {
+    setAuto(v);
+    const r = await call("/api/autopilot/settings", {
+      workspaceId: settings.workspaceId,
+      enabled: settings.enabled,
+      cadence: settings.cadence,
+      postsPerWeek: settings.postsPerWeek,
+      slotTimes: settings.slotTimes,
+      focus: settings.focus.trim() || null,
+      design: settings.design,
+      autoPublish: v,
+    });
+    if (!r.ok) {
+      setAuto(!v);
+      toast.error(errText(t, r.error));
+    } else onChanged();
+  }
+  async function disconnect() {
+    if (!(await confirm({ title: t.ig.disconnectConfirm, description: t.ig.disconnectDesc, confirmLabel: t.ig.disconnect, destructive: true }))) return;
+    setBusy(true);
+    await call("/api/instagram/disconnect");
+    setBusy(false);
+    onChanged();
+  }
+
+  return (
+    <section className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
+      <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] text-white">
+        {ig.picture ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={ig.picture} alt="" className="size-full object-cover" referrerPolicy="no-referrer" />
+        ) : (
+          <Send className="size-5" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{ig.connected && ig.username ? t.ig.connectedAs(ig.username) : t.ig.title}</p>
+        <p className="text-xs text-muted-foreground">
+          {!ig.connected ? t.ig.connectSub : !ig.canPublish ? t.ig.personal : ig.status !== "active" ? t.ig.expired : t.ig.autoPublishHint}
+        </p>
+      </div>
+      {ok && (
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <Switch checked={auto} onCheckedChange={toggle} /> {t.ig.autoPublish}
+        </label>
+      )}
+      {!ig.connected || !ok ? (
+        <Button asChild className="rounded-full">
+          <a href="/api/instagram/start">
+            <Send /> {ig.connected ? t.ig.reconnect : t.ig.connect}
+          </a>
+        </Button>
+      ) : null}
+      {ig.connected && (
+        <Button variant="ghost" size="sm" onClick={disconnect} disabled={busy} className="text-muted-foreground">
+          {busy ? <Loader2 className="animate-spin" /> : <X />} {t.ig.disconnect}
+        </Button>
+      )}
+    </section>
   );
 }

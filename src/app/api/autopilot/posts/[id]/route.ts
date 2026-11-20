@@ -10,14 +10,17 @@ import { removeMedia, renderAndStore, type PostRow } from "@/lib/autopilot/media
 import { todayWib } from "@/lib/autopilot/plan";
 import { isHero, type Slide } from "@/lib/autopilot/slides";
 import { createVisual, MAX_IMAGE_REGENS } from "@/lib/autopilot/visuals";
+import { publishPost } from "@/lib/autopilot/publish";
 
-export const maxDuration = 60;
+export const maxDuration = 180;
 
 const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("approve") }),
   z.object({ action: z.literal("reject") }),
   z.object({ action: z.literal("restore") }),
   z.object({ action: z.literal("posted") }),
+  z.object({ action: z.literal("publish_now") }),
+  z.object({ action: z.literal("retry") }),
   z.object({ action: z.literal("regen_image"), visual: z.string().trim().min(3).max(400).optional() }),
   z.object({
     action: z.literal("update"),
@@ -29,7 +32,7 @@ const schema = z.discriminatedUnion("action", [
   }),
 ]);
 
-const COLS = "id, user_id, workspace_id, kind, design, status, slides, caption, title, script, alt_text, post_date, post_time, media, image_regens, updated_at";
+const COLS = "id, user_id, workspace_id, kind, design, status, slides, caption, title, script, alt_text, post_date, post_time, media, image_regens, permalink, error, updated_at";
 
 /** ACC / tolak / kembalikan ke draf / tandai sudah tayang / edit satu konten Autopilot. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -70,6 +73,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (row.status === "posted") return jsonError(409, "already_posted");
       await removeMedia(admin, s.user.id, row.media);
       return NextResponse.json({ post: await save({ status: "draft", media: null, reviewed_at: null }) });
+    }
+    if (b.action === "publish_now") {
+      // Posting sekarang ke Instagram yang terhubung (konten harus sudah di-ACC).
+      if (row.status !== "approved" || !row.media?.length) return jsonError(409, "not_approved");
+      if (!(await checkRateLimit("user", `autopilot-pub:${s.user.id}`)).ok) return jsonError(429, "rate_limited");
+      const r = await publishPost(admin, row.id, { force: true });
+      const { data: fresh } = await admin.from("social_posts").select(COLS).eq("id", id).single();
+      if (r.result === "skipped") return jsonError(409, r.reason === "no_account" ? "ig_not_connected" : "busy", { post: fresh });
+      if (r.result !== "posted") return jsonError(502, "publish_failed", { post: fresh, detail: r.error });
+      return NextResponse.json({ post: fresh });
+    }
+    if (b.action === "retry") {
+      if (row.status !== "failed") return jsonError(409, "not_failed");
+      return NextResponse.json({ post: await save({ status: "approved", publish_attempts: 0, error: null, publish_started_at: null }) });
     }
     if (b.action === "regen_image") {
       // Buat ulang visual utama cover (maks 3× per konten; biaya gambar AI ditanggung paket).

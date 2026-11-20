@@ -13,6 +13,7 @@ const schema = z.object({
   slotTimes: z.array(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)).min(1).max(3),
   focus: z.string().trim().max(600).nullable(),
   design: z.enum(["auto", "glossy", "bold", "photo", "classic"]).default("auto"),
+  autoPublish: z.boolean().default(false),
 });
 
 /** Simpan pengaturan Autopilot Konten (project/brand, mingguan/bulanan, jumlah post, jam tayang, fokus). */
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
       slot_times: [...new Set(b.slotTimes)].sort(),
       focus: b.focus || null,
       design: b.design,
+      auto_publish: b.autoPublish,
       updated_at: new Date().toISOString(),
     });
   if (error) return jsonError(500, "save_failed");

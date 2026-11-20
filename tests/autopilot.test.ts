@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto";
+import { canPublish, cleanIgCode, decryptToken, encryptToken, igAuthorizeUrl, igErrorText, isDue, parseSignedRequest, tokenKey } from "@/lib/instagram-core";
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, pickLook, planSlots, todayWib, visualPrompt } from "@/lib/autopilot/plan";
@@ -216,3 +218,40 @@ describe("autopilot studio looks", () => {
   }, 120_000);
 });
 
+
+describe("instagram core", () => {
+  it("authorize url carries scopes, state and redirect", () => {
+    const u = new URL(igAuthorizeUrl({ appId: "123", redirectUri: "https://marqthink.com/api/instagram/callback", state: "abc" }));
+    expect(u.host).toBe("www.instagram.com");
+    expect(u.searchParams.get("scope")).toBe("instagram_business_basic,instagram_business_content_publish");
+    expect(u.searchParams.get("state")).toBe("abc");
+    expect(cleanIgCode("xyz#_")).toBe("xyz");
+  });
+  it("token encryption round-trips and rejects tampering", () => {
+    const k = tokenKey("secret");
+    const sealed = encryptToken("IGQV-token", k);
+    expect(sealed).not.toContain("IGQV");
+    expect(decryptToken(sealed, k)).toBe("IGQV-token");
+    expect(() => decryptToken(sealed, tokenKey("other"))).toThrow();
+  });
+  it("signed_request is verified with the app secret", () => {
+    const payload = Buffer.from(JSON.stringify({ algorithm: "HMAC-SHA256", user_id: "999" })).toString("base64url");
+    const sig = createHmac("sha256", "appsecret").update(payload).digest("base64url");
+    expect(parseSignedRequest(`${sig}.${payload}`, "appsecret")?.user_id).toBe("999");
+    expect(parseSignedRequest(`${sig}.${payload}`, "wrong")).toBeNull();
+    expect(parseSignedRequest("garbage", "appsecret")).toBeNull();
+  });
+  it("isDue respects WIB time and grace window", () => {
+    const now = new Date("2026-11-21T05:00:00Z"); // 12:00 WIB
+    expect(isDue("2026-11-21", "12:00", now)).toBe(true);
+    expect(isDue("2026-11-21", "19:00", now)).toBe(false);
+    expect(isDue("2026-11-19", "19:00", now)).toBe(true);
+    expect(isDue("2026-11-15", "19:00", now)).toBe(false);
+  });
+  it("account types & friendly errors", () => {
+    expect(canPublish("BUSINESS")).toBe(true);
+    expect(canPublish("MEDIA_CREATOR")).toBe(true);
+    expect(canPublish("PERSONAL")).toBe(false);
+    expect(igErrorText('{"code":190,"message":"Error validating access token"}')).toMatch(/Hubungkan ulang/);
+  });
+});
