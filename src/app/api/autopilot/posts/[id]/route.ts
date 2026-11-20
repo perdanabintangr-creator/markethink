@@ -8,6 +8,8 @@ import { fixCaption, lintCaption, lintSlides } from "@/lib/autopilot/lint";
 import { loadBrand } from "@/lib/autopilot/generate";
 import { removeMedia, renderAndStore, type PostRow } from "@/lib/autopilot/media";
 import { todayWib } from "@/lib/autopilot/plan";
+import { isHero, type Slide } from "@/lib/autopilot/slides";
+import { createVisual, MAX_IMAGE_REGENS } from "@/lib/autopilot/visuals";
 
 export const maxDuration = 60;
 
@@ -16,6 +18,7 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reject") }),
   z.object({ action: z.literal("restore") }),
   z.object({ action: z.literal("posted") }),
+  z.object({ action: z.literal("regen_image"), visual: z.string().trim().min(3).max(400).optional() }),
   z.object({
     action: z.literal("update"),
     caption: z.string().max(2200).optional(),
@@ -26,7 +29,7 @@ const schema = z.discriminatedUnion("action", [
   }),
 ]);
 
-const COLS = "id, user_id, workspace_id, kind, status, slides, caption, title, script, alt_text, post_date, post_time, media";
+const COLS = "id, user_id, workspace_id, kind, design, status, slides, caption, title, script, alt_text, post_date, post_time, media, image_regens, updated_at";
 
 /** ACC / tolak / kembalikan ke draf / tandai sudah tayang / edit satu konten Autopilot. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -68,6 +71,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       await removeMedia(admin, s.user.id, row.media);
       return NextResponse.json({ post: await save({ status: "draft", media: null, reviewed_at: null }) });
     }
+    if (b.action === "regen_image") {
+      // Buat ulang visual utama cover (maks 3× per konten; biaya gambar AI ditanggung paket).
+      if (row.status === "posted") return jsonError(409, "already_posted");
+      const cover = row.slides?.[0];
+      const regens = Number((row as PostRow & { image_regens?: number }).image_regens ?? 0);
+      if (!cover || row.kind === "reel" || (row.design ?? "classic") === "classic" || !isHero(cover, 0)) return jsonError(400, "no_visual");
+      if (regens >= MAX_IMAGE_REGENS) return jsonError(429, "regen_limit");
+      const visual = b.visual ?? cover.visual;
+      if (!visual) return jsonError(400, "no_visual");
+      if (!(await checkRateLimit("user", `autopilot-img:${s.user.id}`)).ok) return jsonError(429, "rate_limited");
+      const brand = await loadBrand(admin, s.user.id, row.workspace_id, s.profile.full_name);
+      const path = await createVisual(admin, { userId: s.user.id, postId: row.id, look: row.design!, visual, brand: brand.palette });
+      if (!path) return jsonError(502, "image_failed");
+      const old = cover.image && cover.image !== path ? [cover.image] : [];
+      await removeMedia(admin, s.user.id, [...old, ...(row.media ?? [])]);
+      return NextResponse.json({
+        post: await save({
+          slides: [{ ...cover, visual, image: path }, ...row.slides.slice(1)],
+          image_regens: regens + 1,
+          ...(row.status === "approved" ? { status: "draft", media: null, reviewed_at: null } : {}),
+        }),
+      });
+    }
     if (b.action === "posted") {
       if (!["approved", "script_ok", "manual", "failed"].includes(row.status)) return jsonError(409, "not_approved");
       return NextResponse.json({ post: await save({ status: "posted", posted_at: now }) });
@@ -81,7 +107,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (b.script !== undefined && row.kind === "reel") patch.script = b.script.trim();
     if (b.postDate) patch.post_date = b.postDate;
     if (b.postTime) patch.post_time = b.postTime;
-    if (b.slides && row.kind !== "reel") patch.slides = row.kind === "image" ? b.slides.slice(0, 1) : b.slides;
+    if (b.slides && row.kind !== "reel") {
+      // `image` tidak pernah diambil dari input pengguna: path visual dipertahankan dari data lama per posisi slide.
+      const next = (row.kind === "image" ? b.slides.slice(0, 1) : b.slides).map((sl: Slide, k: number) => {
+        const c = { ...sl };
+        delete c.image;
+        const prevImage = row.slides?.[k]?.image;
+        return prevImage ? { ...c, image: prevImage } : c;
+      });
+      patch.slides = next;
+    }
     const contentChanged = patch.caption !== undefined || patch.slides !== undefined || patch.script !== undefined;
     if (contentChanged) {
       const brand = await loadBrand(admin, s.user.id, row.workspace_id, s.profile.full_name);

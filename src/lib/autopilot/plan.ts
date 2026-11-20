@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { slideSchema, POST_KINDS, type PostKind } from "./slides";
+import { slideSchema, LOOKS, POST_KINDS, type Look, type PostKind } from "./slides";
 
 /**
  * Autopilot Konten — perencanaan slot & prompt generator (murni, diuji vitest).
@@ -53,6 +53,7 @@ export const generatedPostSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{2}:\d{2}$/),
   kind: z.enum(POST_KINDS),
+  design: z.enum(LOOKS).optional(),
   pillar: z.string().max(40).optional(),
   funnel: z.string().max(40).optional(),
   title: z.string().min(1).max(160),
@@ -98,7 +99,22 @@ export const SLIDE_SPEC = `Format slide (JSON) — tiap slide punya "type":
 Carousel 5-8 slide: 1 cover (hook + janji) → 1 takaran (kenapa penting, type point/statement) → poin-poin (satu ide per slide)
 → 1 rangkuman (type list, slide yang di-screenshot orang) → 1 cta (satu ajakan saja).
 Single image: tepat 1 slide (statement, poll, atau cover). Reel: "slides": [] dan naskah di "script".
-Teks slide: kalimat pendek, tanpa emoji, tanpa tanda pisah panjang (—), tanpa tanda kutip miring.`;
+Teks slide: kalimat pendek, tanpa emoji, tanpa tanda pisah panjang (—), tanpa tanda kutip miring.
+
+DESAIN STUDIO (kolom "design" per post, untuk carousel & single image):
+- "glossy": latar terang, visual 3D glossy di bawah judul. Cocok untuk edukasi, tips, daftar alat/cara.
+- "bold": latar hitam, huruf condensed raksasa, objek 3D dramatis. Cocok untuk tren, angka besar, pernyataan berani.
+- "photo": foto penuh suasana nyata + judul putih besar. Cocok untuk relatable, cerita pelanggan, produk/BTS.
+Variasikan dalam seminggu (jangan dua desain sama berurutan bila bisa).
+Slide pertama (cover / statement single image) WAJIB punya:
+- "visual": deskripsi gambar utama dalam BAHASA INGGRIS, satu subjek konkret yang langsung terkait topik
+  (mis. "a glossy 3D coffee cup with steam and a small calendar icon", "a young Indonesian barista smiling while pouring latte art").
+  Tanpa teks, huruf, logo, atau merek lain di gambar.
+- "corners" (khusus glossy): 4 frasa sangat pendek (2-3 kata) untuk teks kecil di 4 sudut, mis. ["Kopi enak tiap hari", ...].
+- Boleh "num" di cover untuk konten daftar ("7", "5") — tampil sebagai angka raksasa.
+- Boleh satu kata di judul diapit bintang (*kata*) untuk tampil serif miring sebagai penekanan.
+- Untuk "photo": "label" = frasa pendek pembuka (mis. "cara bangun") yang tampil sebagai stiker sorot.
+Judul cover maks 7 kata + aksen maks 5 kata, supaya hurufnya bisa besar.`;
 
 export interface PromptInput {
   brandBlock: string;
@@ -151,5 +167,24 @@ ATURAN MUTLAK:
 - Semua teks dalam ${lang}.
 
 Balas HANYA JSON tanpa teks lain:
-{"posts":[{"date":"YYYY-MM-DD","time":"HH:MM","kind":"carousel|image|reel","pillar":"Edukasi|Relatable|Insight & momen|Produk/BTS","funnel":"Awareness|Consideration|Acquisition","title":"judul internal singkat","hook":"nomor formula + alasan singkat","slides":[...],"caption":"...","alt_text":"1-2 kalimat deskripsi gambar (carousel/image)","script":"(Reel saja)","note":"catatan singkat untuk pemilik brand bila perlu"}]}`;
+{"posts":[{"date":"YYYY-MM-DD","time":"HH:MM","kind":"carousel|image|reel","design":"glossy|bold|photo","pillar":"Edukasi|Relatable|Insight & momen|Produk/BTS","funnel":"Awareness|Consideration|Acquisition","title":"judul internal singkat","hook":"nomor formula + alasan singkat","slides":[...],"caption":"...","alt_text":"1-2 kalimat deskripsi gambar (carousel/image)","script":"(Reel saja)","note":"catatan singkat untuk pemilik brand bila perlu"}]}`;
+}
+
+/** Prompt gambar visual utama per gaya (tanpa teks; latar disesuaikan agar menyatu dengan desain). */
+export function visualPrompt(look: Look, visual: string, colors: { primary: string; accent: string }) {
+  const subject = visual.replace(/\s+/g, " ").trim().slice(0, 380);
+  const no = "Absolutely no text, letters, numbers, captions, logos, brand names or watermarks anywhere in the image.";
+  if (look === "photo")
+    return `${subject}. Editorial lifestyle photograph for an Instagram cover, natural light, authentic Indonesian setting and people where relevant, shallow depth of field, rich colour grading with subtle ${colors.primary} tones, main subject in the upper two thirds, calm darker area at the bottom. Portrait 3:4. ${no}`;
+  if (look === "bold")
+    return `${subject}. Premium 3D render, single hero object centered with generous empty space around it, isolated on a pure black background, dramatic rim lighting in ${colors.primary} and ${colors.accent}, glossy glass and metal materials, high detail, studio product shot. ${no}`;
+  return `${subject}. Premium glossy 3D render, soft clay and glass materials with ${colors.primary} and ${colors.accent} accents, single hero subject centered with generous empty space around it, isolated on a seamless very light lavender-white background, soft studio lighting, gentle shadow, high detail, Apple-style product illustration. ${no}`;
+}
+
+/** Desain untuk satu post: pilihan pengguna, pilihan AI, atau bergiliran. */
+export function pickLook(setting: string, ai: Look | undefined, index: number, kind: PostKind): Look {
+  if (kind === "reel") return "classic";
+  if (setting !== "auto" && (LOOKS as readonly string[]).includes(setting)) return setting as Look;
+  if (ai && ai !== "classic") return ai;
+  return (["glossy", "bold", "photo"] as const)[index % 3];
 }

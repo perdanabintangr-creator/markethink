@@ -2,9 +2,8 @@ import JSZip from "jszip";
 import { z } from "zod";
 import { apiSession, jsonError } from "@/lib/api";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { loadBrand } from "@/lib/autopilot/generate";
 import { renderSlides } from "@/lib/autopilot/render";
-import { downloadMedia, type PostRow } from "@/lib/autopilot/media";
+import { downloadMedia, renderOptions, type PostRow } from "@/lib/autopilot/media";
 
 export const maxDuration = 60;
 
@@ -16,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!z.string().uuid().safeParse(id).success) return jsonError(400, "invalid_id");
   const { data: row } = await s.supabase
     .from("social_posts")
-    .select("id, user_id, workspace_id, kind, status, slides, caption, title, script, alt_text, post_date, post_time, media")
+    .select("id, user_id, workspace_id, kind, design, status, slides, caption, title, script, alt_text, post_date, post_time, media")
     .eq("id", id)
     .maybeSingle<PostRow>();
   if (!row || row.user_id !== s.user.id) return jsonError(404, "not_found");
@@ -26,10 +25,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     let jpgs: Buffer[] = [];
     if (row.kind !== "reel" && row.slides?.length) {
       if (row.media?.length) jpgs = await downloadMedia(admin, s.user.id, row.media);
-      else {
-        const brand = await loadBrand(admin, s.user.id, row.workspace_id, s.profile.full_name);
-        jpgs = await renderSlides(row.slides, { brand: brand.palette, logo: brand.logo, marqthinkLogo: brand.marqthinkLogo, en: s.profile.language === "en" });
-      }
+      else jpgs = await renderSlides(row.slides, await renderOptions(admin, row, s.profile.language, s.profile.full_name));
     }
     jpgs.forEach((b, i) => zip.file(`slide-${String(i + 1).padStart(2, "0")}.jpg`, b));
     zip.file("caption.txt", row.caption);

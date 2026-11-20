@@ -24,8 +24,18 @@ export const slideSchema = z.object({
   tag: text(30).optional(),
   cta: text(30).optional(),
   theme: z.enum(["dark", "light"]).optional(),
+  /** Deskripsi visual utama (bahasa Inggris) untuk dibuatkan gambar AI — cover & single image. */
+  visual: text(400).optional(),
+  /** Path gambar visual di storage (diisi server, bukan dari input pengguna). */
+  image: text(300).optional(),
+  /** Teks kecil di 4 sudut cover gaya Glossy (maks 4 frasa pendek). */
+  corners: z.array(text(40)).max(4).optional(),
 });
 export type Slide = z.infer<typeof slideSchema>;
+
+/** Gaya desain: classic (navy bercahaya), glossy (terang 3D), bold (gelap condensed), photo (foto penuh). */
+export const LOOKS = ["glossy", "bold", "photo", "classic"] as const;
+export type Look = (typeof LOOKS)[number];
 
 export const POST_KINDS = ["carousel", "image", "reel"] as const;
 export type PostKind = (typeof POST_KINDS)[number];
@@ -36,10 +46,21 @@ export type PostStatus = (typeof POST_STATUSES)[number];
 export const PILLARS = ["Edukasi", "Relatable", "Insight & momen", "Produk/BTS"] as const;
 export const FUNNELS = ["Awareness", "Consideration", "Acquisition"] as const;
 
-/** Tema slide: pertama & terakhir gelap, sisanya terang (kecuali diatur). */
-export function slideTheme(s: Slide, i: number, n: number): "dark" | "light" {
+/** Tema slide: Klasik = pertama & terakhir gelap; Glossy & Photo terang; Bold gelap (cover Photo memakai foto). */
+export function slideTheme(s: Slide, i: number, n: number, look: Look = "classic"): "dark" | "light" {
+  if (look === "bold") return "dark";
+  if (look === "glossy") return "light";
+  if (look === "photo") return i === 0 && isHero(s, i) ? "dark" : "light";
   return s.theme ?? (i === 0 || i === n - 1 ? "dark" : "light");
 }
+
+/** Slide yang memakai tata letak cover besar dengan visual utama (gaya studio). */
+export function isHero(s: Slide, i: number) {
+  return i === 0 && (s.type === "cover" || s.type === "statement");
+}
+
+/** Hapus penanda serif (*kata*) untuk teks polos. */
+export const plainText = (s: string) => s.replace(/\*([^*]+)\*/g, "$1");
 
 /** Teks pojok kanan atas ("2/6") dan kanan bawah ("Geser →"). */
 export function slideCorners(s: Slide, i: number, n: number, en = false) {
@@ -51,7 +72,7 @@ export function slideCorners(s: Slide, i: number, n: number, en = false) {
 /** Teks polos semua slide (untuk lint & pencarian). */
 export function slidesText(slides: Slide[]) {
   return slides
-    .map((s) => [s.title, s.accent, s.sub, s.body, s.label, ...(s.options ?? []), ...(s.items ?? []), s.button].filter(Boolean).join(" "))
+    .map((s) => [s.title && plainText(s.title), s.accent, s.sub, s.body, s.label, ...(s.options ?? []), ...(s.items ?? []), s.button].filter(Boolean).join(" "))
     .join("\n");
 }
 

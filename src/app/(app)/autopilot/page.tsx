@@ -30,10 +30,10 @@ export default async function AutopilotPage() {
 
   const today = todayWib();
   const [{ data: settingsRow }, { data: postRows }, used] = await Promise.all([
-    supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, generating_at").maybeSingle(),
+    supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, generating_at").maybeSingle(),
     supabase
       .from("social_posts")
-      .select("id, post_date, post_time, kind, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
+      .select("id, post_date, post_time, kind, design, image_regens, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
       .gte("post_date", addDays(today, -14))
       .order("post_date", { ascending: true })
       .order("post_time", { ascending: true })
@@ -48,6 +48,7 @@ export default async function AutopilotPage() {
     postsPerWeek: Math.min(Number(settingsRow?.posts_per_week ?? 7), allowance.postsPerWeek),
     slotTimes: ((settingsRow?.slot_times as string[] | null) ?? ["12:00", "19:00"]).map((t) => t.slice(0, 5)),
     focus: (settingsRow?.focus as string | null) ?? "",
+    design: ((settingsRow?.design as ApSettings["design"] | undefined) ?? "auto"),
     configured: Boolean(settingsRow),
   };
   const posts = (postRows ?? []).map((p) => ({ ...p, post_time: String(p.post_time).slice(0, 5) })) as ApPost[];

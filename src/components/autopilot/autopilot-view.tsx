@@ -15,6 +15,7 @@ import {
   Clapperboard,
   Copy,
   Download,
+  ImagePlus,
   Images,
   Loader2,
   Pencil,
@@ -49,6 +50,7 @@ export interface ApSettings {
   postsPerWeek: number;
   slotTimes: string[];
   focus: string;
+  design: "auto" | "glossy" | "bold" | "photo" | "classic";
   configured: boolean;
 }
 
@@ -57,6 +59,8 @@ export interface ApPost {
   post_date: string;
   post_time: string;
   kind: "carousel" | "image" | "reel";
+  design: "glossy" | "bold" | "photo" | "classic";
+  image_regens: number;
   title: string;
   pillar: string | null;
   funnel: string | null;
@@ -72,6 +76,7 @@ export interface ApPost {
 }
 
 type Tab = "pending" | "scheduled" | "video" | "rejected";
+type Action = "approve" | "reject" | "restore" | "posted" | "regen_image";
 const TAB_STATUS: Record<Tab, ApPost["status"][]> = {
   pending: ["draft"],
   scheduled: ["approved", "posted", "manual", "failed"],
@@ -133,7 +138,7 @@ export function AutopilotView(props: {
 
   const replace = (p: ApPost) => setPosts((list) => list.map((x) => (x.id === p.id ? { ...p, post_time: String(p.post_time).slice(0, 5) } : x)));
 
-  async function act(post: ApPost, action: "approve" | "reject" | "restore" | "posted", quiet = false) {
+  async function act(post: ApPost, action: Action, quiet = false) {
     if (action === "reject" && !(await confirm({ title: t.rejectConfirm, description: t.rejectDesc, confirmLabel: t.reject, destructive: true }))) return false;
     const r = await call<{ post: ApPost }>(`/api/autopilot/posts/${post.id}`, { action });
     if (!r.ok) {
@@ -142,6 +147,7 @@ export function AutopilotView(props: {
     }
     replace(r.data.post);
     if (!quiet && action === "approve") toast.success(t.approvedToast);
+    if (action === "regen_image") toast.success(t.regenDone);
     return true;
   }
 
@@ -331,6 +337,7 @@ function SetupPanel({ t, workspaces, initial, maxPerWeek, onSaved }: { t: Autopi
       postsPerWeek: s.postsPerWeek,
       slotTimes: s.slotTimes,
       focus: s.focus.trim() || null,
+      design: s.design,
     });
     setSaving(false);
     if (!r.ok) return void toast.error(errText(t, r.error));
@@ -396,6 +403,17 @@ function SetupPanel({ t, workspaces, initial, maxPerWeek, onSaved }: { t: Autopi
           </div>
         </Field>
         <div className="md:col-span-2">
+          <Field label={t.design} hint={t.designHint}>
+            <div className="grid grid-cols-2 gap-1 rounded-lg border bg-muted/40 p-1 sm:grid-cols-5">
+              {(["auto", "glossy", "bold", "photo", "classic"] as const).map((d) => (
+                <button key={d} onClick={() => set("design", d)} className={cn("h-8 rounded-md text-sm font-medium transition", s.design === d ? "bg-background shadow-sm" : "text-muted-foreground")}>
+                  {t.designs[d]}
+                </button>
+              ))}
+            </div>
+          </Field>
+        </div>
+        <div className="md:col-span-2">
           <Field label={t.focus}>
             <textarea value={s.focus} onChange={(e) => set("focus", e.target.value.slice(0, 600))} placeholder={t.focusPh} rows={2} className="w-full rounded-lg border bg-background px-3 py-2 text-sm" />
           </Field>
@@ -427,13 +445,13 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function PostCard({ t, post, today, onAct, onSaved }: { t: AutopilotText; post: ApPost; today: string; onAct: (a: "approve" | "reject" | "restore" | "posted") => Promise<boolean>; onSaved: (p: ApPost) => void }) {
+function PostCard({ t, post, today, onAct, onSaved }: { t: AutopilotText; post: ApPost; today: string; onAct: (a: Action) => Promise<boolean>; onSaved: (p: ApPost) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const fails = post.lint?.fails ?? [];
   const warns = post.lint?.warns ?? [];
-  const run = async (a: "approve" | "reject" | "restore" | "posted") => {
+  const run = async (a: Action) => {
     setBusy(a);
     await onAct(a);
     setBusy(null);
@@ -442,6 +460,7 @@ function PostCard({ t, post, today, onAct, onSaved }: { t: AutopilotText; post: 
     await navigator.clipboard.writeText(post.caption);
     toast.success(t.copied);
   };
+  const canRegen = post.kind !== "reel" && post.design !== "classic" && post.status !== "posted" && (post.image_regens ?? 0) < 3 && !!post.slides[0]?.visual;
   const KindIcon = post.kind === "reel" ? Clapperboard : post.kind === "carousel" ? Images : Square;
   const status =
     post.status === "posted" ? t.posted : post.status === "approved" ? t.approvedBadge : post.status === "script_ok" ? t.scriptOk : post.status === "rejected" ? t.tabs.rejected : null;
@@ -455,6 +474,7 @@ function PostCard({ t, post, today, onAct, onSaved }: { t: AutopilotText; post: 
             <KindIcon className="size-3.5 text-primary" /> {t.kind[post.kind]}
             {post.kind === "carousel" && <span className="text-muted-foreground">· {t.slides(post.slides.length)}</span>}
           </span>
+          {post.kind !== "reel" && post.design !== "classic" && <span className="hidden rounded-full bg-primary/10 px-2 py-0.5 text-primary sm:inline">{t.designs[post.design]}</span>}
           {post.pillar && <span className="truncate rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{post.pillar}</span>}
         </div>
         {status && (
@@ -469,7 +489,18 @@ function PostCard({ t, post, today, onAct, onSaved }: { t: AutopilotText; post: 
         )}
       </div>
 
-      {post.kind === "reel" ? <ReelScript t={t} script={post.script} /> : <SlideStrip post={post} />}
+      {post.kind === "reel" ? (
+        <ReelScript t={t} script={post.script} />
+      ) : (
+        <div className="relative">
+          <SlideStrip post={post} />
+          {busy === "regen_image" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/45 text-sm font-medium text-white backdrop-blur-sm">
+              <Loader2 className="mr-2 size-4 animate-spin" /> {t.regening}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-3 p-4">
         <h3 className="text-sm font-semibold leading-snug">{post.title}</h3>
@@ -523,6 +554,11 @@ function PostCard({ t, post, today, onAct, onSaved }: { t: AutopilotText; post: 
             </Button>
           )}
           <div className="ml-auto flex items-center gap-0.5">
+            {canRegen && (
+              <IconBtn label={`${t.regen} · ${t.regenLeft(Math.max(0, 3 - (post.image_regens ?? 0)))}`} onClick={() => run("regen_image")}>
+                {busy === "regen_image" ? <Loader2 className="animate-spin" /> : <ImagePlus />}
+              </IconBtn>
+            )}
             {post.status !== "posted" && (
               <IconBtn label={t.edit} onClick={() => setEditing(true)}>
                 <Pencil />

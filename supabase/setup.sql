@@ -3203,3 +3203,10 @@ drop policy if exists "own social posts" on public.social_posts;
 create policy "own social posts" on public.social_posts for select to authenticated using (user_id = auth.uid());
 -- Semua perubahan lewat server (cek paket, render, statistik); user tidak menulis langsung.
 revoke insert, update, delete on public.social_posts from anon, authenticated;
+
+
+-- ===== 20261120000062_autopilot_design.sql =====
+-- Autopilot Konten: gaya desain studio (referensi founder 20 Nov) + visual utama buatan AI per cover.
+alter table public.social_posts add column if not exists design text not null default 'classic' check (design in ('glossy', 'bold', 'photo', 'classic'));
+alter table public.social_posts add column if not exists image_regens integer not null default 0;
+alter table public.autopilot_settings add column if not exists design text not null default 'auto' check (design in ('auto', 'glossy', 'bold', 'photo', 'classic'));

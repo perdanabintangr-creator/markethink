@@ -10,8 +10,10 @@ import { marketContext } from "@/lib/ai/market-id";
 import { formatOutcomes, type OutcomeRow } from "@/lib/ai/outcomes";
 import { brandHashtag } from "./lint";
 import { tidyPost } from "./tidy";
+import { createVisual, pool } from "./visuals";
 import { brandPalette, type SlideBrand } from "./slides";
-import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, planSlots, todayWib, type GeneratedPost } from "./plan";
+import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, pickLook, planSlots, todayWib, type GeneratedPost } from "./plan";
+import { isHero, type Look, type Slide } from "./slides";
 import { autopilotAllowance, monthStartWib } from "./quota";
 
 export interface AutopilotSettings {
@@ -22,6 +24,7 @@ export interface AutopilotSettings {
   posts_per_week: number;
   slot_times: string[];
   focus: string | null;
+  design: "auto" | Look;
   generating_at: string | null;
   last_generated_at: string | null;
 }
@@ -115,6 +118,7 @@ export async function generateWeek(
     posts_per_week: 7,
     slot_times: ["12:00", "19:00"],
     focus: null,
+    design: "auto",
     generating_at: null,
     last_generated_at: null,
   };
@@ -224,8 +228,9 @@ export async function generateWeek(
     const rows = parsed.data.posts
       .map((p) => ({ p, slot: takeSlot(p) }))
       .filter((x): x is { p: GeneratedPost; slot: { date: string; time: string } } => !!x.slot)
-      .map(({ p, slot }) => {
+      .map(({ p, slot }, k) => {
         const t = tidyPost(p, brandName, keywords);
+        const design = pickLook(settings.design ?? "auto", p.design, k, p.kind);
         return {
           user_id: o.userId,
           workspace_id: settings.workspace_id,
@@ -233,6 +238,7 @@ export async function generateWeek(
           post_date: slot.date,
           post_time: slot.time,
           kind: p.kind,
+          design,
           title: p.title.slice(0, 160),
           pillar: p.pillar ?? null,
           funnel: p.funnel ?? null,
@@ -245,9 +251,21 @@ export async function generateWeek(
           status: "draft",
         };
       });
-    const { error: insErr } = await admin.from("social_posts").insert(rows);
+    const { data: inserted, error: insErr } = await admin.from("social_posts").insert(rows).select("id, design, kind, slides");
     if (insErr) throw insErr;
     await admin.from("usage_logs").insert({ ...logBase, status: "ok" });
+
+    // Visual utama AI untuk tiap cover gaya studio (paralel 3; berhenti memulai gambar baru bila waktu hampir habis).
+    const needs = (inserted ?? []).filter((r) => {
+      const sl = (r.slides ?? []) as Slide[];
+      return r.design !== "classic" && r.kind !== "reel" && sl[0] && isHero(sl[0], 0) && sl[0].visual;
+    });
+    await pool(needs, 3, async (r) => {
+      if (Date.now() - started > 230_000) return;
+      const sl = r.slides as Slide[];
+      const path = await createVisual(admin, { userId: o.userId, postId: r.id as string, look: r.design as Look, visual: sl[0].visual!, brand: brand.palette, timeoutMs: 60_000 });
+      if (path) await admin.from("social_posts").update({ slides: [{ ...sl[0], image: path }, ...sl.slice(1)] }).eq("id", r.id).eq("user_id", o.userId);
+    });
     await release({ last_generated_at: new Date().toISOString() });
     return { ok: true, created: rows.length, start, batchId };
   } catch (err) {

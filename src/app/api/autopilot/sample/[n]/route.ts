@@ -20,6 +20,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ n: strin
   const ws = new URL(req.url).searchParams.get("ws");
   const workspaceId = ws && z.string().uuid().safeParse(ws).success ? ws : null;
   const brand = await loadBrand(createAdminClient(), s.user.id, workspaceId, s.profile.full_name);
-  const jpg = await renderSlide(slides, i, { brand: brand.palette, logo: brand.logo, marqthinkLogo: brand.marqthinkLogo, en }, 540);
+  const jpg = await renderSlide(slides, i, { brand: brand.palette, logo: brand.logo, marqthinkLogo: brand.marqthinkLogo, en, look: "glossy" }, 540);
   return new Response(new Uint8Array(jpg), { headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=300" } });
 }

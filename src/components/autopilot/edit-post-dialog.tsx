@@ -36,7 +36,17 @@ export function EditPostDialog({ t, post, today, onClose, onSaved }: { t: Autopi
       const res = await fetch(`/api/autopilot/posts/${post.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(String(data.error ?? "generic"));
-      onSaved(data.post as ApPost);
+      let saved = data.post as ApPost;
+      // Deskripsi visual cover berubah → buat gambar baru (dihitung ke batas 3× per konten).
+      const newVisual = slides[0]?.visual?.trim();
+      if (post.design !== "classic" && newVisual && newVisual !== (post.slides[0]?.visual ?? "").trim() && (post.image_regens ?? 0) < 3) {
+        toast.message(t.regening);
+        const r2 = await fetch(`/api/autopilot/posts/${post.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "regen_image", visual: newVisual }) });
+        const d2 = await r2.json().catch(() => ({}));
+        if (r2.ok) saved = d2.post as ApPost;
+        else toast.error((t.errors as Record<string, string>)[String(d2.error)] ?? t.errors.generic);
+      }
+      onSaved(saved);
     } catch (e) {
       const k = e instanceof Error ? e.message : "generic";
       toast.error((t.errors as Record<string, string>)[k] ?? t.errors.generic);
@@ -90,6 +100,13 @@ export function EditPostDialog({ t, post, today, onClose, onSaved }: { t: Autopi
                 )}
                 {s.type === "poll" && (
                   <textarea value={(s.options ?? []).join("\n")} onChange={(e) => setSlide(i, { options: lines(e.target.value).slice(0, 3) })} placeholder={t.fOptions} rows={3} className={input} />
+                )}
+                {i === 0 && post.design !== "classic" && (s.visual !== undefined || s.image) && (
+                  <label className="block text-xs text-muted-foreground">
+                    {t.fVisual}
+                    <textarea value={s.visual ?? ""} onChange={(e) => setSlide(i, { visual: e.target.value })} rows={2} maxLength={400} className={`${input} mt-1`} />
+                    <span className="mt-1 block">{t.visualHint}</span>
+                  </label>
                 )}
                 {s.type === "cta" && <input value={s.button ?? ""} onChange={(e) => setSlide(i, { button: e.target.value })} placeholder={t.fButton} className={input} maxLength={40} />}
               </fieldset>

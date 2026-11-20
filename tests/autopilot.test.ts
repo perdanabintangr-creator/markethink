@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
-import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, planSlots, todayWib } from "@/lib/autopilot/plan";
+import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, pickLook, planSlots, todayWib, visualPrompt } from "@/lib/autopilot/plan";
 import { needsBatch } from "@/lib/autopilot/schedule";
 import { brandHashtag, capHashtags, fixCaption, lintCaption, lintSlides } from "@/lib/autopilot/lint";
-import { brandPalette, slideCorners, slideTheme, type Slide } from "@/lib/autopilot/slides";
+import { brandPalette, isHero, plainText, slideCorners, slideTheme, slidesText, type Slide } from "@/lib/autopilot/slides";
 import { tidyPost } from "@/lib/autopilot/tidy";
 import { autopilotAllowance, monthStartWib } from "@/lib/autopilot/quota";
 import { renderSlides } from "@/lib/autopilot/render";
@@ -166,3 +166,53 @@ describe("autopilot slides & render", () => {
     expect([meta.width, meta.height, meta.format]).toEqual([1080, 1350, "jpeg"]);
   }, 60_000);
 });
+
+describe("autopilot studio looks", () => {
+  it("visualPrompt forbids text and matches background per look", () => {
+    const c = { primary: "#0A3DFF", accent: "#00E5FF" };
+    expect(visualPrompt("glossy", "a coffee cup", c)).toMatch(/lavender-white background/);
+    expect(visualPrompt("bold", "a coffee cup", c)).toMatch(/pure black background/);
+    expect(visualPrompt("photo", "a barista", c)).toMatch(/photograph/);
+    for (const l of ["glossy", "bold", "photo"] as const) expect(visualPrompt(l, "x", c)).toMatch(/no text/i);
+  });
+  it("pickLook honours setting, AI choice, rotation; reels stay classic", () => {
+    expect(pickLook("bold", "glossy", 0, "carousel")).toBe("bold");
+    expect(pickLook("auto", "photo", 0, "image")).toBe("photo");
+    expect([0, 1, 2].map((k) => pickLook("auto", undefined, k, "carousel"))).toEqual(["glossy", "bold", "photo"]);
+    expect(pickLook("glossy", "glossy", 0, "reel")).toBe("classic");
+  });
+  it("themes & hero detection", () => {
+    const c: Slide = { type: "cover" };
+    expect(isHero(c, 0)).toBe(true);
+    expect(isHero({ type: "point" }, 0)).toBe(false);
+    expect(slideTheme(c, 0, 5, "glossy")).toBe("light");
+    expect(slideTheme({ type: "point" }, 2, 5, "bold")).toBe("dark");
+    expect(slideTheme(c, 0, 5, "photo")).toBe("dark");
+    expect(slideTheme({ type: "list" }, 3, 5, "photo")).toBe("light");
+  });
+  it("serif markers are stripped for plain text", () => {
+    expect(plainText("Aku *hapus* semua")).toBe("Aku hapus semua");
+    expect(slidesText([{ type: "cover", title: "Cek *ini*" }])).toContain("Cek ini");
+  });
+  it("tidyPost never keeps an image path from AI output", () => {
+    const p = generatedWeekSchema.parse({
+      posts: [{ date: "2026-11-23", time: "12:00", kind: "image", title: "x", caption: "Kopi pagi? Komen ya.\n\n#kopi #pagi #KopiSenja", slides: [{ type: "cover", title: "a", image: "other-user/secret.png", visual: "cup" }] }],
+    }).posts[0];
+    const t = tidyPost(p, "Kopi Senja", []);
+    expect(t.slides[0].image).toBeUndefined();
+    expect(t.slides[0].visual).toBe("cup");
+  });
+  it("renders every look at 1080×1350, with and without a visual", async () => {
+    const hero = await sharp({ create: { width: 600, height: 600, channels: 3, background: "#3366ff" } }).png().toBuffer();
+    const slides: Slide[] = [{ ...sampleSlides()[0], image: "u/autopilot/p/v.png", num: "5" }, ...sampleSlides().slice(1)];
+    for (const look of ["glossy", "bold", "photo", "classic"] as const) {
+      for (const images of [{ "u/autopilot/p/v.png": hero }, {}] as Record<string, Buffer>[]) {
+        const out = await renderSlides(slides, { brand: brandPalette({ name: "Kopi Senja", primary: "#7A3E1D" }), look, images });
+        expect(out).toHaveLength(4);
+        const m = await sharp(out[0]).metadata();
+        expect([m.width, m.height]).toEqual([1080, 1350]);
+      }
+    }
+  }, 120_000);
+});
+

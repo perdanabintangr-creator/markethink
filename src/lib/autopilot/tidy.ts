@@ -4,7 +4,12 @@ import type { GeneratedPost } from "./plan";
 
 /** Rapikan satu post hasil AI: format slide sesuai jenis, caption dibersihkan, hashtag merek, hasil linter. */
 export function tidyPost(p: GeneratedPost, brandName: string, keywords: string[]) {
-  let slides: Slide[] = p.slides ?? [];
+  // `image` hanya boleh diisi server (path storage), bukan dari keluaran AI.
+  let slides: Slide[] = (p.slides ?? []).map((sl) => {
+    const c = { ...sl };
+    delete c.image;
+    return c;
+  });
   if (p.kind === "reel") slides = [];
   else if (p.kind === "image") slides = slides.slice(0, 1);
   else slides = slides.slice(0, 10);
