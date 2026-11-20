@@ -1,5 +1,7 @@
+import { engagementScore, summarizePerformance, type MediaStat } from "@/lib/autopilot/performance";
+import { brandKeywordsOf, forbiddenHits, splitList, voiceRules } from "@/lib/autopilot/voice";
 import { createHmac } from "node:crypto";
-import { canPublish, cleanIgCode, decryptToken, encryptToken, igAuthorizeUrl, igErrorText, isDue, parseSignedRequest, tokenKey } from "@/lib/instagram-core";
+import { canPublish, cleanIgCode, decryptToken, encryptToken, igAuthorizeUrl, igErrorText, insightValues, isDue, parseSignedRequest, tokenKey } from "@/lib/instagram-core";
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, pickLook, planSlots, todayWib, visualPrompt } from "@/lib/autopilot/plan";
@@ -223,7 +225,7 @@ describe("instagram core", () => {
   it("authorize url carries scopes, state and redirect", () => {
     const u = new URL(igAuthorizeUrl({ appId: "123", redirectUri: "https://marqthink.com/api/instagram/callback", state: "abc" }));
     expect(u.host).toBe("www.instagram.com");
-    expect(u.searchParams.get("scope")).toBe("instagram_business_basic,instagram_business_content_publish");
+    expect(u.searchParams.get("scope")).toBe("instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights");
     expect(u.searchParams.get("state")).toBe("abc");
     expect(cleanIgCode("xyz#_")).toBe("xyz");
   });
@@ -253,5 +255,54 @@ describe("instagram core", () => {
     expect(canPublish("MEDIA_CREATOR")).toBe(true);
     expect(canPublish("PERSONAL")).toBe(false);
     expect(igErrorText('{"code":190,"message":"Error validating access token"}')).toMatch(/Hubungkan ulang/);
+  });
+});
+
+describe("autopilot performance learning", () => {
+  const base = { posted_at: "2026-11-15T05:00:00Z", caption: "x", likes: 0, comments: 0, reach: 0, saved: 0, shares: 0 };
+  const rows: MediaStat[] = [
+    { ...base, ig_media_id: "1", media_type: "CAROUSEL_ALBUM", caption: "Takaran gula aren yang pas\nisi", reach: 3000, saved: 120, shares: 40, likes: 200, comments: 30 },
+    { ...base, ig_media_id: "2", media_type: "CAROUSEL_ALBUM", caption: "Cara seduh kopi susu", reach: 2000, saved: 80, shares: 20, likes: 150, comments: 10 },
+    { ...base, ig_media_id: "3", media_type: "IMAGE", caption: "Selamat pagi", reach: 400, saved: 1, likes: 20 },
+    { ...base, ig_media_id: "4", media_type: "IMAGE", caption: "Promo hari ini", reach: 300, likes: 10 },
+  ];
+  it("ranks by saves/shares and finds the strongest format", () => {
+    expect(engagementScore(rows[0])).toBeGreaterThan(engagementScore(rows[2]));
+    const s = summarizePerformance(rows, new Date("2026-11-20T00:00:00Z"))!;
+    expect(s).toContain("Takaran gula aren yang pas");
+    expect(s).toMatch(/Format paling kuat: carousel/);
+    expect(s).toContain("Terlemah");
+  });
+  it("needs at least 3 recent posts", () => {
+    expect(summarizePerformance(rows.slice(0, 2), new Date("2026-11-20T00:00:00Z"))).toBeNull();
+    expect(summarizePerformance(rows, new Date("2027-02-01T00:00:00Z"))).toBeNull();
+  });
+  it("parses insight values in both formats", () => {
+    expect(insightValues([{ name: "reach", values: [{ value: 10 }] }, { name: "saved", total_value: { value: 3 } }])).toEqual({ reach: 10, saved: 3 });
+  });
+});
+
+describe("brand voice", () => {
+  const kit = { voice_dont: "termurah, dijamin\nAnda", seo_keywords: "kopi susu gula aren, kopi Bandung", brand_lines: "Kopi Senja adalah kedai kopi.", caption_examples: "Contoh caption" };
+  it("lists, keywords & rules", () => {
+    expect(splitList("a, bb; cc\n- dd")).toEqual(["bb", "cc", "dd"]);
+    expect(brandKeywordsOf(kit)).toEqual(["kopi susu gula aren", "kopi Bandung"]);
+    expect(brandKeywordsOf({ products: "Kopi susu literan, roti bakar" })).toEqual(["Kopi susu", "roti bakar"]);
+    const r = voiceRules(kit)!;
+    expect(r).toContain('"termurah"');
+    expect(r).toContain("Kopi Senja adalah kedai kopi.");
+    expect(voiceRules({})).toBeNull();
+  });
+  it("forbidden words fail the linter (whole words only)", () => {
+    expect(forbiddenHits("Kopi termurah se-Bandung", kit.voice_dont)).toEqual(["termurah"]);
+    expect(forbiddenHits("Kopi termurahnya", kit.voice_dont)).toEqual([]);
+    const l = lintCaption("Kopi susu gula aren termurah! Simpan ya.\n\n#kopi #kopisusu #KopiSenja", { forbidden: kit.voice_dont });
+    expect(l.fails.some((f) => f.includes("termurah"))).toBe(true);
+    expect(lintSlides([{ type: "cover", title: "Dijamin enak" }], "image", kit.voice_dont).fails.length).toBe(1);
+  });
+  it("prompt includes performance & voice blocks", () => {
+    const p = buildGeneratePrompt({ brandBlock: "", brandName: "K", handle: "", brandTag: "#K", slots: [{ date: "2026-11-23", time: "12:00" }], mix: formatMix(1), recentTitles: [], market: null, outcomes: null, focus: null, en: false, performance: "PERFORMA X", voice: "SUARA BRAND Y" });
+    expect(p).toContain("PERFORMA X");
+    expect(p).toContain("SUARA BRAND Y");
   });
 });

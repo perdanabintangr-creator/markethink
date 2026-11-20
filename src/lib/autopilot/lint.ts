@@ -1,4 +1,5 @@
 import { slidesText, type Slide } from "./slides";
+import { forbiddenHits } from "./voice";
 
 /**
  * Pemeriksa caption & slide Autopilot Konten (port lint.py dari skill konten @marqthink.ai, adaptasi Instagram Agent
@@ -62,7 +63,7 @@ export function brandHashtag(name: string) {
   return t ? `#${t}` : "";
 }
 
-export function lintCaption(cap: string, o: { brandName?: string; keywords?: string[] } = {}): LintResult {
+export function lintCaption(cap: string, o: { brandName?: string; keywords?: string[]; forbidden?: string | null } = {}): LintResult {
   const fails: string[] = [];
   const warns: string[] = [];
   const low = cap.toLowerCase();
@@ -84,6 +85,7 @@ export function lintCaption(cap: string, o: { brandName?: string; keywords?: str
   if (o.keywords?.length && !o.keywords.some((k) => cap.slice(0, 125).toLowerCase().includes(k.toLowerCase()))) {
     warns.push("125 karakter pertama belum memuat kata kunci utama brand.");
   }
+  for (const w of forbiddenHits(cap, o.forbidden)) fails.push(`Memakai kata yang dilarang brand: "${w}".`);
   if (/\bAnda\b/.test(cap)) warns.push("Pakai 'Anda'; sapaan 'kamu' terasa lebih dekat di Instagram.");
   for (const w of SLOP) if (low.includes(w)) warns.push(`Frasa klise: "${w}".`);
   const nCta = CTA.filter((re) => re.test(low)).length;
@@ -94,7 +96,7 @@ export function lintCaption(cap: string, o: { brandName?: string; keywords?: str
   return { fails, warns };
 }
 
-export function lintSlides(slides: Slide[], kind: "carousel" | "image" | "reel"): LintResult {
+export function lintSlides(slides: Slide[], kind: "carousel" | "image" | "reel", forbidden?: string | null): LintResult {
   const fails: string[] = [];
   const warns: string[] = [];
   if (kind === "reel") return { fails, warns };
@@ -110,5 +112,6 @@ export function lintSlides(slides: Slide[], kind: "carousel" | "image" | "reel")
     }
   });
   if (/[—]/.test(slidesText(slides))) fails.push("Ada tanda pisah panjang (—) di slide.");
+  for (const w of forbiddenHits(slidesText(slides), forbidden)) fails.push(`Slide memakai kata yang dilarang brand: "${w}".`);
   return { fails, warns };
 }

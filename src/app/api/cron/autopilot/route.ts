@@ -4,7 +4,7 @@ import { cronAuthorized } from "@/lib/cron";
 import { autopilotAllowance } from "@/lib/autopilot/quota";
 import { addDays, todayWib } from "@/lib/autopilot/plan";
 import { needsBatch } from "@/lib/autopilot/schedule";
-import { igEnabled, refreshInstagramTokens } from "@/lib/instagram";
+import { igEnabled, refreshInstagramTokens, syncAllInsights } from "@/lib/instagram";
 
 export const maxDuration = 60;
 
@@ -17,6 +17,8 @@ export async function GET(req: Request) {
   const admin = createAdminClient();
   // Perpanjang token Instagram yang akan habis (token jangka panjang berlaku ±60 hari).
   const refreshed = igEnabled() ? await refreshInstagramTokens().catch(() => 0) : 0;
+  // Statistik post untuk "belajar dari performa" (sebelum konten minggu berikutnya dibuat).
+  if (igEnabled()) await syncAllInsights(25_000).catch(() => 0);
   const { data: settings } = await admin
     .from("autopilot_settings")
     .select("user_id, cadence")

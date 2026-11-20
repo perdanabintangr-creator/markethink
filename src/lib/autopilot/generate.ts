@@ -10,6 +10,8 @@ import { marketContext } from "@/lib/ai/market-id";
 import { formatOutcomes, type OutcomeRow } from "@/lib/ai/outcomes";
 import { brandHashtag } from "./lint";
 import { tidyPost } from "./tidy";
+import { brandKeywordsOf, voiceRules } from "./voice";
+import { summarizePerformance, type MediaStat } from "./performance";
 import { createVisual, pool } from "./visuals";
 import { brandPalette, type SlideBrand } from "./slides";
 import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, pickLook, planSlots, todayWib, type GeneratedPost } from "./plan";
@@ -88,15 +90,6 @@ export async function postsThisMonth(admin: SupabaseClient, userId: string) {
 
 export type GenerateError = "plan" | "quota" | "busy" | "no_slots" | "ai" | "parse";
 
-/** Kata kunci bisnis brand (untuk cek 125 karakter pertama caption). */
-function brandKeywords(kit: BrandKit | null) {
-  const src = [kit?.products].filter(Boolean).join(",");
-  return src
-    .split(/[,;\n/]+/)
-    .map((w) => w.trim().split(/\s+/).slice(0, 2).join(" "))
-    .filter((w) => w.length >= 4)
-    .slice(0, 6);
-}
 
 /**
  * Buat konten SATU minggu (7 hari mulai `start`, default: hari sesudah konten terakhir / besok) sebagai DRAF.
@@ -172,6 +165,25 @@ export async function generateWeek(
       .order("created_at", { ascending: false })
       .limit(8);
 
+    // Belajar dari performa: statistik post Instagram 30 hari (bila akun terhubung & tersinkron).
+    const { data: statRows } = await admin
+      .from("instagram_media_stats")
+      .select("ig_media_id, post_id, posted_at, media_type, caption, likes, comments, reach, saved, shares, views")
+      .eq("user_id", o.userId)
+      .gte("posted_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
+      .limit(60);
+    const linkedIds = (statRows ?? []).map((r) => r.post_id).filter(Boolean) as string[];
+    const { data: linkedPosts } = linkedIds.length
+      ? await admin.from("social_posts").select("id, title, pillar, design, kind").in("id", linkedIds)
+      : { data: [] as { id: string; title: string; pillar: string | null; design: string | null; kind: string }[] };
+    const meta = new Map((linkedPosts ?? []).map((p) => [p.id as string, p]));
+    const performance = summarizePerformance(
+      (statRows ?? []).map((r) => {
+        const m = r.post_id ? meta.get(r.post_id as string) : undefined;
+        return { ...(r as unknown as MediaStat), title: m?.title ?? null, pillar: m?.pillar ?? null, design: m?.design ?? null, kind: m?.kind ?? null };
+      }),
+    );
+
     const brandName = brand.palette.name;
     const prompt = buildGeneratePrompt({
       brandBlock: brand.kit ? untrusted("brand_kit", formatBrandKit(brand.kit)) : "",
@@ -183,6 +195,8 @@ export async function generateWeek(
       recentTitles: (existing ?? []).filter((r) => String(r.post_date) < start).map((r) => String(r.title)).slice(0, 30),
       market: marketContext(new Date(`${start}T05:00:00Z`), 21),
       outcomes: formatOutcomes((outcomeRows ?? []) as OutcomeRow[]) || null,
+      performance,
+      voice: voiceRules(brand.kit),
       focus: settings.focus ? untrusted("fokus_pemilik_brand", settings.focus) : null,
       en: o.language === "en",
     });
@@ -224,12 +238,12 @@ export async function generateWeek(
       return k >= 0 ? free.splice(k, 1)[0] : free.shift();
     };
     const batchId = randomUUID();
-    const keywords = brandKeywords(brand.kit);
+    const keywords = brandKeywordsOf(brand.kit);
     const rows = parsed.data.posts
       .map((p) => ({ p, slot: takeSlot(p) }))
       .filter((x): x is { p: GeneratedPost; slot: { date: string; time: string } } => !!x.slot)
       .map(({ p, slot }, k) => {
-        const t = tidyPost(p, brandName, keywords);
+        const t = tidyPost(p, brandName, keywords, brand.kit?.voice_dont);
         const design = pickLook(settings.design ?? "auto", p.design, k, p.kind);
         return {
           user_id: o.userId,

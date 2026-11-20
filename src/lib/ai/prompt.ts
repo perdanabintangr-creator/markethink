@@ -12,6 +12,11 @@ export interface BrandKit {
   channels?: string;
   budget_range?: string;
   notes?: string;
+  /** Suara brand untuk konten (Autopilot & chat Instagram) — padanan voice.md skill marqthink-ig. */
+  voice_dont?: string;
+  seo_keywords?: string;
+  brand_lines?: string;
+  caption_examples?: string;
   /** Identitas visual (dipakai otomatis di PPT, carousel & gambar). */
   color_primary?: string;
   color_secondary?: string;
@@ -55,6 +60,10 @@ export const BRAND_KIT_FIELDS: { key: keyof BrandKit; label: string }[] = [
   { key: "channels", label: "Channel aktif" },
   { key: "budget_range", label: "Budget range" },
   { key: "notes", label: "Catatan lain / instruksi khusus project" },
+  { key: "voice_dont", label: "Kata/frasa yang TIDAK boleh dipakai di konten" },
+  { key: "seo_keywords", label: "Kata kunci utama (SEO/GEO) untuk caption" },
+  { key: "brand_lines", label: "Kalimat baku brand (dipakai apa adanya)" },
+  { key: "caption_examples", label: "Contoh caption terbaik brand (tiru gayanya, jangan disalin)" },
 ];
 
 export interface PromptContext {

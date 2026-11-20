@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth";
-import { connectInstagram, IG_OAUTH_COOKIE, IG_OAUTH_COOKIE_PATH, igAppSecret, igEnabled, igRedirectUri, saveInstagram } from "@/lib/instagram";
+import { connectInstagram, IG_OAUTH_COOKIE, IG_OAUTH_COOKIE_PATH, igAppSecret, igEnabled, igRedirectUri, saveInstagram, syncInsights } from "@/lib/instagram";
 import { canPublish } from "@/lib/instagram-core";
 import { openOAuthCookie, sameState } from "@/lib/connectors/oauth";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /** Instagram mengarahkan balik ke sini: cek state & user, tukar code jadi token jangka panjang, simpan terenkripsi. */
 export async function GET(req: Request) {
@@ -27,6 +28,8 @@ export async function GET(req: Request) {
     const c = await connectInstagram(code, igRedirectUri(url.origin));
     if (!canPublish(c.accountType)) return back("personal");
     await saveInstagram(user.id, c);
+    // Statistik awal (maks ±15 detik) supaya minggu pertama langsung belajar dari post lama.
+    await syncInsights(user.id, { budgetMs: 15_000 }).catch((err) => console.warn("[instagram] sinkron awal gagal", String(err).slice(0, 200)));
     return back("connected");
   } catch (err) {
     console.error("[instagram] callback gagal", err instanceof Error ? err.message.slice(0, 300) : String(err));

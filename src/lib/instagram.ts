@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAppUrl } from "@/lib/env";
-import { canPublish, cleanIgCode, decryptToken, encryptToken, tokenKey } from "@/lib/instagram-core";
+import { canPublish, cleanIgCode, decryptToken, encryptToken, insightValues, tokenKey } from "@/lib/instagram-core";
 
 /**
  * Integrasi Instagram (Instagram API with Instagram Login): hubungkan akun Bisnis/Kreator pelanggan, simpan token
@@ -191,4 +191,81 @@ export async function publishToInstagram(account: IgAccount, imageUrls: string[]
     /* tautan tidak wajib */
   }
   return { mediaId: pub.id, permalink };
+}
+
+/**
+ * Sinkron statistik post 45 hari terakhir (maks 40 post) ke instagram_media_stats. Gagal satu post → dilewati.
+ * Butuh izin instagram_business_manage_insights; tanpa izin itu hanya like & komentar yang tersimpan.
+ */
+export async function syncInsights(userId: string, opts: { budgetMs?: number } = {}) {
+  const started = Date.now();
+  const admin = createAdminClient();
+  const a = await getInstagram(userId);
+  if (!a || a.status !== "active") return 0;
+  const token = decryptToken(a.token_enc, key());
+  const since = Date.now() - 45 * 86_400_000;
+  const list = await igFetch<{ data: { id: string; caption?: string; media_type?: string; media_product_type?: string; timestamp?: string; permalink?: string; like_count?: number; comments_count?: number }[] }>(
+    `${GRAPH}/${a.ig_user_id}/media?${new URLSearchParams({ fields: "id,caption,media_type,media_product_type,timestamp,permalink,like_count,comments_count", limit: "40", access_token: token })}`,
+  );
+  const media = (list.data ?? []).filter((m) => !m.timestamp || Date.parse(m.timestamp) >= since);
+  const { data: linked } = await admin.from("social_posts").select("id, ig_media_id").eq("user_id", userId).in("ig_media_id", media.map((m) => m.id).length ? media.map((m) => m.id) : ["-"]);
+  const postOf = new Map((linked ?? []).map((r) => [r.ig_media_id as string, r.id as string]));
+  const rows = [];
+  for (const m of media) {
+    if (Date.now() - started > (opts.budgetMs ?? 45_000)) break;
+    let v: Record<string, number> = {};
+    for (const metric of ["reach,saved,shares,views", "reach,saved"]) {
+      try {
+        const ins = await igFetch<{ data: { name: string; values?: { value: number }[]; total_value?: { value: number } }[] }>(
+          `${GRAPH}/${m.id}/insights?${new URLSearchParams({ metric, access_token: token })}`,
+        );
+        v = insightValues(ins.data);
+        break;
+      } catch (err) {
+        if (err instanceof IgError && err.expired) throw err;
+      }
+    }
+    rows.push({
+      user_id: userId,
+      ig_media_id: m.id,
+      post_id: postOf.get(m.id) ?? null,
+      posted_at: m.timestamp ?? null,
+      media_type: m.media_product_type === "REELS" ? "REELS" : (m.media_type ?? null),
+      caption: (m.caption ?? "").slice(0, 600),
+      permalink: m.permalink ?? null,
+      likes: m.like_count ?? 0,
+      comments: m.comments_count ?? 0,
+      reach: v.reach ?? 0,
+      saved: v.saved ?? 0,
+      shares: v.shares ?? 0,
+      views: v.views ?? 0,
+      fetched_at: new Date().toISOString(),
+    });
+  }
+  if (rows.length) await admin.from("instagram_media_stats").upsert(rows, { onConflict: "user_id,ig_media_id" });
+  await admin.from("instagram_accounts").update({ insights_synced_at: new Date().toISOString() }).eq("user_id", userId);
+  return rows.length;
+}
+
+/** Sinkron statistik semua akun aktif yang belum disinkron ±20 jam (cron harian). */
+export async function syncAllInsights(budgetMs = 40_000) {
+  const started = Date.now();
+  const cutoff = new Date(Date.now() - 20 * 3_600_000).toISOString();
+  const { data } = await createAdminClient()
+    .from("instagram_accounts")
+    .select("user_id")
+    .eq("status", "active")
+    .or(`insights_synced_at.is.null,insights_synced_at.lt.${cutoff}`)
+    .limit(30);
+  let n = 0;
+  for (const r of data ?? []) {
+    if (Date.now() - started > budgetMs) break;
+    try {
+      n += await syncInsights(r.user_id as string, { budgetMs: 15_000 });
+    } catch (err) {
+      if (err instanceof IgError && err.expired) await markInstagram(r.user_id as string, "expired", "Akses kedaluwarsa, hubungkan ulang.");
+      console.warn("[instagram] sinkron statistik gagal", r.user_id, String(err).slice(0, 200));
+    }
+  }
+  return n;
 }

@@ -4,7 +4,7 @@ import { MOOD_LABELS, type MoodId } from "@/lib/deck/moods";
 
 /** Teks halaman Pengaturan, Paket & harga, dan Projects/Brand Kit (ID + EN). */
 
-type BrandKitFieldKey = "products" | "target_audience" | "brand_voice" | "usp" | "competitors" | "channels" | "budget_range" | "notes";
+type BrandKitFieldKey = "products" | "target_audience" | "brand_voice" | "usp" | "competitors" | "channels" | "budget_range" | "notes" | "voice_dont" | "seo_keywords" | "brand_lines" | "caption_examples";
 type SettingsTabId = "umum" | "profil" | "personalisasi" | "memori" | "project" | "aplikasi" | "paket" | "penyimpanan" | "link" | "akun";
 type UsageGroupId = "chat" | "image" | "pptx" | "carousel" | "tools" | "agent";
 
@@ -253,7 +253,13 @@ const id = {
     channels: { label: "Channel aktif", placeholder: "IG, TikTok, Shopee, WhatsApp, website" },
     budget_range: { label: "Budget range", placeholder: "mis. Rp5-15 juta/bulan" },
     notes: { label: "Catatan lain", placeholder: "Do & don't, momen penting, dll" },
+    voice_dont: { label: "Kata/frasa yang dilarang", placeholder: "Contoh: murah banget, termurah, Anda, dijamin" },
+    seo_keywords: { label: "Kata kunci utama", placeholder: "Contoh: kopi susu gula aren, kopi kekinian Bandung, kopi literan" },
+    brand_lines: { label: "Kalimat baku brand", placeholder: "Contoh: Kopi Senja adalah kedai kopi susu gula aren di Bandung sejak 2021." },
+    caption_examples: { label: "Contoh caption terbaik", placeholder: "Tempel 1–3 caption yang paling kamu suka (tim AI meniru gayanya)" },
   } as Record<BrandKitFieldKey, { label: string; placeholder: string }>,
+  contentVoice: "Suara brand untuk konten Instagram",
+  contentVoiceDesc: "Dipakai tim AI Autopilot & chat saat menulis caption dan slide untuk brand ini.",
   visualIdentity: "Identitas visual",
   visualIdentityDesc: "Otomatis dipakai di PPT, carousel & gambar yang dibuat di project ini.",
   primaryColor: "Warna utama",
@@ -513,7 +519,13 @@ const en: typeof id = {
     channels: { label: "Active channels", placeholder: "IG, TikTok, Shopee, WhatsApp, website" },
     budget_range: { label: "Budget range", placeholder: "e.g. Rp5-15 million/month" },
     notes: { label: "Other notes", placeholder: "Do's & don'ts, key moments, etc." },
+    voice_dont: { label: "Banned words/phrases", placeholder: "e.g. cheapest, guaranteed, best in the world" },
+    seo_keywords: { label: "Main keywords", placeholder: "e.g. palm sugar iced coffee, Bandung coffee shop" },
+    brand_lines: { label: "Brand boilerplate", placeholder: "e.g. Kopi Senja is a palm-sugar coffee bar in Bandung since 2021." },
+    caption_examples: { label: "Best caption examples", placeholder: "Paste 1–3 captions you love (the AI team mirrors their style)" },
   },
+  contentVoice: "Brand voice for Instagram content",
+  contentVoiceDesc: "Used by the Autopilot AI team & chat when writing captions and slides for this brand.",
   visualIdentity: "Visual identity",
   visualIdentityDesc: "Used automatically in decks, carousels & images created in this project.",
   primaryColor: "Primary color",

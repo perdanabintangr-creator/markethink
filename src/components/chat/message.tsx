@@ -1,6 +1,7 @@
 "use client";
 
 import { UPDATE_RESULT_BLOCK } from "@/lib/addons/format";
+import { InstagramPostResult } from "./instagram-post-result";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -71,6 +72,7 @@ const RENDERED_TOOLS = new Set([
   "tool-create_carousel",
   "tool-product_photo",
   "tool-send_to_canva",
+  "tool-instagram_post",
 ]);
 
 /** Urutan tampilan jawaban: teks (potongan bersebelahan digabung) diselingi hasil gambar/PPT. */
@@ -301,6 +303,8 @@ export function ChatMessage({
             <CarouselResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
           ) : b.part.type === "tool-product_photo" ? (
             <ProductPhotoResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
+          ) : b.part.type === "tool-instagram_post" ? (
+            <InstagramPostResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} lang={lang} />
           ) : b.part.type === "tool-send_to_canva" ? (
             <SendToCanvaResult key={b.part.toolCallId ?? i} part={b.part} streaming={isLast && isStreaming} />
           ) : (

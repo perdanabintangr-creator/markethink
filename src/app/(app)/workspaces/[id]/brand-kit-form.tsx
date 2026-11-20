@@ -23,6 +23,8 @@ const FIELDS = [
   { key: "notes", long: true },
 ] as const satisfies readonly { key: keyof BrandKit; long?: boolean }[];
 
+const VOICE_FIELDS = ["voice_dont", "seo_keywords", "brand_lines", "caption_examples"] as const satisfies readonly (keyof BrandKit)[];
+
 export function BrandKitForm({ workspaceId, name, kit }: { workspaceId: string; name: string; kit: BrandKit }) {
   const [state, action, pending] = useActionState(saveBrandKit.bind(null, workspaceId), undefined);
   const t = settingsText(useApp().lang);
@@ -50,6 +52,20 @@ export function BrandKitForm({ workspaceId, name, kit }: { workspaceId: string; 
           </div>
         );
       })}
+
+      <fieldset className="space-y-4 rounded-xl border p-4">
+        <legend className="px-1 text-sm font-semibold">{t.contentVoice}</legend>
+        <p className="-mt-2 text-xs text-muted-foreground">{t.contentVoiceDesc}</p>
+        {VOICE_FIELDS.map((key) => {
+          const { label, placeholder } = t.brandFields[key];
+          return (
+            <div key={key} className="space-y-1.5">
+              <Label htmlFor={key}>{label}</Label>
+              <Textarea id={key} name={key} defaultValue={kit[key] ?? ""} placeholder={placeholder} rows={key === "caption_examples" ? 5 : 2} maxLength={2000} />
+            </div>
+          );
+        })}
+      </fieldset>
 
       <fieldset className="space-y-4 rounded-xl border p-4">
         <legend className="px-1 text-sm font-semibold">{t.visualIdentity}</legend>

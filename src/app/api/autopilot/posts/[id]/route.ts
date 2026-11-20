@@ -11,6 +11,7 @@ import { todayWib } from "@/lib/autopilot/plan";
 import { isHero, type Slide } from "@/lib/autopilot/slides";
 import { createVisual, MAX_IMAGE_REGENS } from "@/lib/autopilot/visuals";
 import { publishPost } from "@/lib/autopilot/publish";
+import { brandKeywordsOf } from "@/lib/autopilot/voice";
 
 export const maxDuration = 180;
 
@@ -139,8 +140,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const brand = await loadBrand(admin, s.user.id, row.workspace_id, s.profile.full_name);
       const caption = (patch.caption as string | undefined) ?? row.caption;
       const slides = (patch.slides as PostRow["slides"] | undefined) ?? row.slides;
-      const c = lintCaption(caption, { brandName: brand.palette.name });
-      const sl = lintSlides(slides, row.kind);
+      const c = lintCaption(caption, { brandName: brand.palette.name, keywords: brandKeywordsOf(brand.kit), forbidden: brand.kit?.voice_dont });
+      const sl = lintSlides(slides, row.kind, brand.kit?.voice_dont);
       patch.lint = { fails: [...c.fails, ...sl.fails], warns: [...c.warns, ...sl.warns] };
       if (row.status !== "rejected") {
         await removeMedia(admin, s.user.id, row.media);

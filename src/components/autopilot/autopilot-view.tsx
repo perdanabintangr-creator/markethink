@@ -34,6 +34,8 @@ import { cn } from "@/lib/utils";
 import { autopilotText, type AutopilotText } from "@/lib/i18n/autopilot";
 import type { Slide } from "@/lib/autopilot/slides";
 import { EditPostDialog } from "./edit-post-dialog";
+import { PerformancePanel } from "./performance-panel";
+import type { MediaStat } from "@/lib/autopilot/performance";
 
 export interface ApWorkspace {
   id: string;
@@ -125,6 +127,7 @@ export function AutopilotView(props: {
   allowance: { postsPerWeek: number; postsPerMonth: number };
   usedThisMonth: number;
   instagram: IgStatus;
+  stats: MediaStat[];
 }) {
   const t = autopilotText(props.lang);
   const router = useRouter();
@@ -276,6 +279,8 @@ export function AutopilotView(props: {
             </div>
           </div>
         )}
+
+        <PerformancePanel rows={props.stats} lang={props.lang} />
 
         {/* Tabs */}
         <div className="sticky top-0 z-10 -mx-4 mt-6 flex flex-wrap items-center justify-between gap-3 bg-background/85 px-4 py-3 backdrop-blur">

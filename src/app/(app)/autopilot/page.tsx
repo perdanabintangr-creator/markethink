@@ -6,6 +6,7 @@ import { addDays, todayWib } from "@/lib/autopilot/plan";
 import { AutopilotView, type ApPost, type ApSettings, type ApWorkspace } from "@/components/autopilot/autopilot-view";
 import { AutopilotUpsell } from "@/components/autopilot/autopilot-upsell";
 import { instagramStatus } from "@/lib/instagram";
+import type { MediaStat } from "@/lib/autopilot/performance";
 
 export const metadata = { title: "Autopilot Konten" };
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export default async function AutopilotPage() {
   if (!allowance) return <AutopilotUpsell lang={lang} workspaces={workspaces} />;
 
   const today = todayWib();
-  const [{ data: settingsRow }, { data: postRows }, used, instagram] = await Promise.all([
+  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }] = await Promise.all([
     supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, generating_at").maybeSingle(),
     supabase
       .from("social_posts")
@@ -41,6 +42,11 @@ export default async function AutopilotPage() {
       .limit(300),
     postsThisMonth(createAdminClient(), profile.id),
     instagramStatus(profile.id),
+    supabase
+      .from("instagram_media_stats")
+      .select("ig_media_id, posted_at, media_type, caption, permalink, likes, comments, reach, saved, shares, views")
+      .gte("posted_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
+      .limit(60),
   ]);
 
   const settings: ApSettings = {
@@ -66,6 +72,7 @@ export default async function AutopilotPage() {
       allowance={allowance}
       usedThisMonth={used}
       instagram={instagram}
+      stats={(statRows ?? []) as MediaStat[]}
     />
   );
 }

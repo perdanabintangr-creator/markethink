@@ -22,6 +22,8 @@ import { isProviderConfigured, routeTier } from "@/lib/ai/router";
 import { brandVisualOf, buildSystemPrompt, buildTurnContext, formatBrandKit, formatPersonalization } from "@/lib/ai/prompt";
 import { CONSULTANT_FRAME, REVIEW_STATUS, reviewerFor, shouldReview } from "@/lib/ai/team-review";
 import { runTeamReview } from "@/lib/ai/team-review-run";
+import { createInstagramTools, instagramCapabilities } from "@/lib/autopilot/chat-tools";
+import { autopilotAllowance } from "@/lib/autopilot/quota";
 import { marketContext } from "@/lib/ai/market-id";
 import { formatOutcomes, type OutcomeRow } from "@/lib/ai/outcomes";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
@@ -336,7 +338,7 @@ export async function POST(req: Request) {
           tierInstructions: isFreePlan
             ? `${tier.skillPrompt}\n- Batas panjang jawaban di paket ini ±1.200 kata. Untuk permintaan besar (strategi lengkap, rencana berbulan-bulan), kerjakan inti paling penting secara utuh sampai selesai — jangan sampai terpotong — lalu tawarkan lanjut ke bagian berikutnya.`
             : tier.skillPrompt,
-          capabilities: capabilitiesPrompt(imageBlockedReason, { webSearch: researchAllowed }),
+          capabilities: `${capabilitiesPrompt(imageBlockedReason, { webSearch: researchAllowed })}\n${instagramCapabilities(Boolean(autopilotAllowance(profile.plan_id, profile.role)))}`,
           agentInstructions: agent?.instructions ?? null,
           project: wsCtx.name,
           personalization: formatPersonalization(profile.response_style, profile.custom_instructions),
@@ -437,6 +439,16 @@ export async function POST(req: Request) {
             // Semua paket: gambar baru memakai Muse (±$0,01). Edit dari foto/gambar acuan tetap Gemini.
             budgetImages: true,
             brand: brandVisualOf(wsCtx.brandKit),
+          }),
+          // Mode chat Instagram: konten berdesain studio → antrean ACC Autopilot (Pro/Promax), cek caption (semua paket).
+          ...createInstagramTools({
+            admin,
+            userId: user.id,
+            planId: profile.plan_id,
+            role: profile.role,
+            language: profile.language,
+            fullName: profile.full_name,
+            workspaceId,
           }),
           ...(serperOn
             ? {

@@ -126,6 +126,10 @@ export interface PromptInput {
   recentTitles: string[];
   market: string | null;
   outcomes: string | null;
+  /** Ringkasan performa Instagram 30 hari (lihat performance.ts). */
+  performance?: string | null;
+  /** Aturan suara brand dari Brand Kit (voice.ts). */
+  voice?: string | null;
   focus: string | null;
   en: boolean;
 }
@@ -144,7 +148,7 @@ ${slots}
 CAMPURAN FORMAT: ${p.mix.carousel} carousel, ${p.mix.image} single image, ${p.mix.reel} Reel. Jangan dua format atau dua pilar sama berurutan.
 Pilar: ±40% Edukasi, ±30% Relatable/hiburan, ±10% Insight & momen, ±20% Produk/BTS. Funnel: Awareness, Consideration, Acquisition.
 Format: carousel untuk edukasi bertahap (target simpan), single image untuk satu punchline/pertanyaan/polling (target komen), Reel untuk menjangkau non-follower.
-${p.recentTitles.length ? `\nJANGAN mengulang tema yang sudah dipakai 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}
+${p.recentTitles.length ? `\nJANGAN mengulang tema yang sudah dipakai 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}${p.performance ? `\n${p.performance}\n` : ""}${p.voice ? `\n${p.voice}\n` : ""}
 ${HOOKS}
 
 ${SLIDE_SPEC}

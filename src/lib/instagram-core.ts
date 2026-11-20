@@ -5,7 +5,7 @@ import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, 
  * verifikasi signed_request Meta, dan penentuan konten yang jatuh tempo. Diuji vitest.
  */
 
-export const IG_SCOPES = ["instagram_business_basic", "instagram_business_content_publish"] as const;
+export const IG_SCOPES = ["instagram_business_basic", "instagram_business_content_publish", "instagram_business_manage_insights"] as const;
 export const IG_AUTHORIZE_URL = "https://www.instagram.com/oauth/authorize";
 
 export function igAuthorizeUrl(o: { appId: string; redirectUri: string; state: string }) {
@@ -88,4 +88,11 @@ export function igErrorText(raw: string) {
   if (/aspect ratio|image ratio/.test(s)) return "Ukuran gambar ditolak Instagram.";
   if (/media download|could not be fetched|download/.test(s)) return "Instagram gagal mengambil gambar. Dicoba lagi otomatis.";
   return "Instagram menolak posting ini. Coba lagi atau posting manual.";
+}
+
+/** Ambil nilai metrik dari respons /insights (format values[] atau total_value). */
+export function insightValues(data: { name: string; values?: { value: number }[]; total_value?: { value: number } }[] | undefined) {
+  const out: Record<string, number> = {};
+  for (const d of data ?? []) out[d.name] = Number(d.values?.[0]?.value ?? d.total_value?.value ?? 0) || 0;
+  return out;
 }

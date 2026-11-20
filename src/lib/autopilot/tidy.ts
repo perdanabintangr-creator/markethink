@@ -3,7 +3,7 @@ import type { Slide } from "./slides";
 import type { GeneratedPost } from "./plan";
 
 /** Rapikan satu post hasil AI: format slide sesuai jenis, caption dibersihkan, hashtag merek, hasil linter. */
-export function tidyPost(p: GeneratedPost, brandName: string, keywords: string[]) {
+export function tidyPost(p: GeneratedPost, brandName: string, keywords: string[], forbidden?: string | null) {
   // `image` hanya boleh diisi server (path storage), bukan dari keluaran AI.
   let slides: Slide[] = (p.slides ?? []).map((sl) => {
     const c = { ...sl };
@@ -19,8 +19,8 @@ export function tidyPost(p: GeneratedPost, brandName: string, keywords: string[]
   if (tag && tags.length < 5 && !tags.some((t) => t.toLowerCase() === tag.toLowerCase())) {
     caption = /\n#[^\n]*$/.test(caption) ? `${caption} ${tag}` : `${caption}\n\n${tag}`;
   }
-  const c = lintCaption(caption, { brandName, keywords });
-  const s = lintSlides(slides, p.kind);
+  const c = lintCaption(caption, { brandName, keywords, forbidden });
+  const s = lintSlides(slides, p.kind, forbidden);
   if (p.kind === "reel" && !p.script?.trim()) s.fails.push("Naskah Reel belum ada.");
   return {
     slides,
