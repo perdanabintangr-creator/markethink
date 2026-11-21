@@ -1,7 +1,7 @@
 # Skema Bisnis Marqthink — sebelum launching berbayar
 
 Disusun 21 Nov 2026 dari kode (`src/`), database production (Supabase), dan harga publik terbaru. **Analisis saja**: tidak ada kode, database, atau deploy yang diubah.
-Semua angka dalam Rupiah dengan kurs **Rp18.270/USD** (penutupan 20 Nov 2026). Angka bisa diubah di `unit-economics.xlsx` → sheet *Asumsi*.
+Semua angka dalam **Rupiah** (harga vendor dalam dolar dikonversi dengan kurs **Rp18.270/USD**, penutupan 20 Nov 2026). Angka bisa diubah di `unit-economics.xlsx` → sheet *Asumsi*.
 Label: **[DATA ASLI]** = dari log `usage_logs` / tabel database · **[HARGA RESMI]** = harga publik vendor · **[ESTIMASI]** = hitungan/asumsi saya.
 
 ---
@@ -130,22 +130,22 @@ Chat Junior dan gambar biasa adalah komoditas, cukup dipakai sebagai umpan paket
 
 | Item | Biaya | Status | Sumber |
 |---|---|---|---|
-| Vercel Pro | $20 = **Rp365.400** | **Wajib**: Hobby hanya untuk non-komersial | HARGA RESMI vercel.com/pricing |
-| Supabase Pro | $25 = **Rp456.750** (sudah termasuk $10 kredit compute Micro, 8 GB DB, 100 GB file) | **Wajib**: free tier bisa di-pause, storage 1 GB (sudah terpakai 176 MB) | HARGA RESMI supabase.com/pricing |
+| Vercel Pro | **Rp365.400** (USD 20) | **Wajib**: Hobby hanya untuk non-komersial | HARGA RESMI vercel.com/pricing |
+| Supabase Pro | **Rp456.750** (USD 25; termasuk kredit compute Micro ±Rp182.700, 8 GB DB, 100 GB file) | **Wajib**: free tier bisa di-pause, storage 1 GB (sudah terpakai 176 MB) | HARGA RESMI supabase.com/pricing |
 | Domain marqthink.com | Rp209.900/th = **Rp17.492/bln** | sudah | Hostinger (belum PPN) |
 | Email bisnis Hostinger | 2 × Rp6.900 = **Rp13.800/bln** | belum dibeli | Hostinger (belum PPN) |
-| Resend (email aplikasi) | Rp0 s.d. 3.000 email/bln; $20 bila lewat | aktif | resend.com |
+| Resend (email aplikasi) | Rp0 s.d. 3.000 email/bln; Rp365.400 bila lewat | aktif | resend.com |
 | PostHog (analytics) | Rp0 s.d. 1 jt event | **belum aktif** (kunci belum dipasang) | posthog.com |
 | Midtrans | Rp0 biaya tetap | aktif (production) | — |
 | Meta Developer, Canva Connect | Rp0 | — | — |
 | **Total dasar** | **±Rp853.442/bln** | | sheet *Asumsi* |
-| Upgrade compute Supabase (Small) | +$15 ≈ Rp274rb bila ≥300 customer | ESTIMASI | — |
+| Upgrade compute Supabase (Small) | +Rp274.050 bila ≥300 customer | ESTIMASI | — |
 | Tools founder (Claude, desain, dll.) | **? (perlu diisi)** | | pertanyaan |
 
 ### 2b. Biaya variabel
 
 - **API AI**: lihat 1c. Satu kredit di aplikasi dihitung Rp100 pada kurs Rp16.500. Pada kurs riil Rp18.270 modalnya **Rp110,73/kredit**, jadi kurs di kode perlu diperbarui.
-- **Storage gambar**: ±2,5 MB per post Autopilot [ESTIMASI]. 100 GB pertama sudah termasuk Supabase Pro, setelahnya $0,021/GB. Ini dapat diabaikan sampai ±40.000 post.
+- **Storage gambar**: ±2,5 MB per post Autopilot [ESTIMASI]. 100 GB pertama sudah termasuk Supabase Pro, setelahnya Rp384/GB/bln. Ini dapat diabaikan sampai ±40.000 post.
 - **Payment gateway (Midtrans)**:
 
   | Metode | Biaya |
@@ -236,8 +236,8 @@ Rincian modal pemakai berat Promax: kredit Rp151.143 + **Autopilot Rp311.883** +
 | InstaDeck PRO (ID) | Rp49.000 / Rp149.000 | 100 / 300 kredit, multi akun |
 | ChatGPT Go / Plus (ID) | Rp75.000 / Rp349.000 | termasuk PPN |
 | Canva Pro (ID) | Rp95.000 | per orang |
-| Predis.ai Core | $19–32 (Rp347rb–585rb) | sumber berbeda |
-| Jasper Pro | $69 (Rp1,26 jt) | $59 bila tahunan |
+| Predis.ai Core | Rp347.130–Rp584.640 | sumber berbeda (USD 19–32) |
+| Jasper Pro | Rp1.260.630 | Rp1.077.930 bila tahunan |
 
 ### 3e. Sumber pendapatan tambahan (margin dihitung di sheet *Paket & Margin* bagian C)
 
