@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { slideSchema, plainText, type Slide } from "./slides";
+import { dedupeAccent } from "./tidy";
 
 /**
  * Tim senior Autopilot: AI pemeriksa membaca konten sebagai kritikus + pemeriksa fakta, memberi skor 1–10, dan
@@ -67,5 +68,5 @@ Balas HANYA JSON: {"reviews":[{"i":0,"score":8,"issues":["..."],"fix":null}]}`;
 /** Gabungkan slide perbaikan dengan slide asli (field visual & ornamen dari aslinya dipertahankan). */
 export function mergeFixedSlides(orig: Slide[], fixed: Slide[] | undefined) {
   if (!fixed?.length || fixed.length !== orig.length) return orig;
-  return fixed.map((f, k) => ({ ...f, type: orig[k].type, visual: orig[k].visual ?? f.visual, image: orig[k].image, corners: orig[k].corners ?? f.corners }));
+  return fixed.map((f, k) => dedupeAccent({ ...f, type: orig[k].type, visual: orig[k].visual ?? f.visual, image: orig[k].image, corners: orig[k].corners ?? f.corners }));
 }

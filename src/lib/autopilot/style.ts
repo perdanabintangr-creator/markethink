@@ -124,3 +124,11 @@ export function styleNote(d: StyleDna) {
 - Visual utama cover berupa ${visual[d.visualStyle]}; tulis "visual" yang cocok dengan gaya ini${d.imageHint ? ` (${d.imageHint})` : ""}.
 - ${d.ornaments.includes("corners") ? 'Isi "corners" di cover.' : 'Tidak perlu "corners".'} ${d.upper ? "Judul tampil KAPITAL: pilih kata yang tetap enak dibaca kapital." : ""}`.trim();
 }
+
+/** Prompt visual slide isi (layar penuh 3:4, ±80% slide): subjek di 60% atas, area bawah tenang untuk teks. */
+export function slideVisualPromptFor(d: StyleDna, visual: string, colors: { primary: string; accent: string }) {
+  const subject = visual.replace(/\s+/g, " ").trim().slice(0, 380);
+  const style = VISUAL_TEXT[d.visualStyle];
+  const tone = d.bg === "dark" ? "moody low-key lighting" : d.bg === "cream" ? "warm soft daylight, cream tones" : "bright airy lighting";
+  return `${subject}. ${style}, full-frame scene filling the whole portrait canvas (no isolated object on blank background), ${tone}, subtle ${colors.primary} and ${colors.accent} colour accents, main subject in the upper 60% of the frame, calmer simpler area in the bottom third for text overlay. Portrait 3:4.${d.imageHint ? ` ${d.imageHint.slice(0, 300)}.` : ""} Absolutely no text, letters, numbers, captions, logos, brand names or watermarks anywhere in the image.`;
+}

@@ -1,3 +1,6 @@
+import { dedupeAccent } from "@/lib/autopilot/tidy";
+import { slideVisualPromptFor } from "@/lib/autopilot/style";
+import { SLIDE_SPEC } from "@/lib/autopilot/plan";
 import { mergeIntoKit, researchPrompt, researchSchema, visualSubjectsBlock } from "@/lib/autopilot/research-shape";
 import { mixFor, pillarCounts, strategyBlock } from "@/lib/autopilot/strategy";
 import { buildTeamReviewPrompt, mergeFixedSlides, reviewSchema } from "@/lib/autopilot/review";
@@ -464,5 +467,24 @@ describe("brand research", () => {
     const p = researchPrompt({ name: "Photobebaz", handle: "@photobebaz", website: null, kitSummary: "", sources: [{ title: "t", url: "https://x.id", content: "photobox" }], imageCount: 3, igImages: 0, en: false });
     expect(p).toContain("Photobebaz");
     expect(p).toContain("JANGAN default biru");
+  });
+});
+
+describe("visual sense", () => {
+  it("dedupes title/accent repetition", () => {
+    expect(dedupeAccent({ type: "point", title: "Pilih pose natural", accent: "natural" })).toMatchObject({ title: "Pilih pose", accent: "natural" });
+    expect(dedupeAccent({ type: "point", title: "Perhatikan arah cahaya", accent: "cahaya" }).title).toBe("Perhatikan arah");
+    expect(dedupeAccent({ type: "point", title: "Cahaya", accent: "cahaya." }).accent).toBeUndefined();
+    expect(dedupeAccent({ type: "point", title: "Berdiri rapat", accent: "sedikit miring" }).title).toBe("Berdiri rapat");
+  });
+  it("full-frame slide visual prompt", () => {
+    const p = slideVisualPromptFor(presetById("fnb-photo")!.dna, "friends posing in a photobox", { primary: "#FF4F8B", accent: "#FFD23F" });
+    expect(p).toMatch(/full-frame/);
+    expect(p).toMatch(/Portrait 3:4/);
+    expect(p).toMatch(/no text/i);
+  });
+  it("writer prompt carries the visual-sense rules", () => {
+    expect(SLIDE_SPEC).toContain("SENSE VISUAL");
+    expect(SLIDE_SPEC).toContain("JANGAN mengulang kata");
   });
 });

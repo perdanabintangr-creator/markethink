@@ -8,7 +8,7 @@ export function tidyPost(p: GeneratedPost, brandName: string, keywords: string[]
   let slides: Slide[] = (p.slides ?? []).map((sl) => {
     const c = { ...sl };
     delete c.image;
-    return c;
+    return dedupeAccent(c);
   });
   if (p.kind === "reel") slides = [];
   else if (p.kind === "image") slides = slides.slice(0, 1);
@@ -31,3 +31,18 @@ export function tidyPost(p: GeneratedPost, brandName: string, keywords: string[]
   };
 }
 
+
+/** Cegah kata dobel judul–aksen ("Pilih pose natural" + "natural"): buang bagian judul yang diulang aksen. */
+export function dedupeAccent(s: Slide): Slide {
+  if (!s.title || !s.accent) return s;
+  const norm = (x: string) => x.replace(/\*/g, "").replace(/[.,!?]+$/g, "").trim().toLowerCase();
+  const t = norm(s.title);
+  const a = norm(s.accent);
+  if (!a) return s;
+  if (t === a) return { ...s, accent: undefined };
+  if (t.endsWith(` ${a}`)) {
+    const cut = s.title.replace(/\*/g, "").trim().slice(0, -a.length - 1).trim();
+    return cut ? { ...s, title: cut } : s;
+  }
+  return s;
+}

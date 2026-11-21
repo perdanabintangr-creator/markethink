@@ -11,6 +11,7 @@ import { capHashtags, brandHashtag, fixCaption, lintCaption, lintSlides } from "
 import { brandKeywordsOf, voiceRules } from "./voice";
 import { createVisual, pool } from "./visuals";
 import { isHero, type Look, type Slide } from "./slides";
+import { IMAGE_SLIDE_TYPES } from "./render";
 import type { ProductRow } from "./products";
 
 interface Row {
@@ -84,41 +85,71 @@ async function teamReview(admin: SupabaseClient, userId: string, rows: Row[], la
   );
 }
 
-/** Visual utama AI untuk cover gaya studio (foto produk asli bila post menampilkan produk berfoto). */
+/** Batas visual slide isi per carousel (di luar cover) — biaya gambar terkendali. */
+export const INNER_VISUALS: Record<string, number> = { pro: 3, promax: 5, admin: 5 };
+
+/**
+ * Visual AI: cover gaya studio (foto produk asli bila ada) + slide isi yang diberi "visual" oleh copywriter
+ * (tampil layar penuh ±80%). Cover dulu, lalu slide isi sampai batas paket.
+ */
 async function visuals(admin: SupabaseClient, userId: string, batchId: string, budgetMs: number) {
   const started = Date.now();
   const { data } = await admin.from("social_posts").select("id, workspace_id, kind, design, style, slides, product_id").eq("user_id", userId).eq("batch_id", batchId);
   const rows = (data ?? []) as Row[];
   if (!rows.length) return;
+  const { data: prof } = await admin.from("profiles").select("plan_id, role").eq("id", userId).maybeSingle();
+  const cap = prof?.role === "admin" ? INNER_VISUALS.admin : (INNER_VISUALS[String(prof?.plan_id)] ?? 0);
   const brand = await loadBrand(admin, userId, rows[0].workspace_id);
   const ids = rows.map((r) => r.product_id).filter(Boolean) as string[];
   const { data: prods } = ids.length ? await admin.from("brand_products").select("id, name, photo_paths").in("id", ids).eq("user_id", userId) : { data: [] };
   const products = (prods ?? []) as Pick<ProductRow, "id" | "name" | "photo_paths">[];
-  const needs = rows.filter((r) => {
+
+  type Job = { r: Row; k: number; cover: boolean };
+  const jobs: Job[] = [];
+  for (const r of rows) {
+    if (r.design === "classic" || r.kind === "reel") continue;
     const sl = r.slides ?? [];
     const prod = products.find((x) => x.id === r.product_id);
-    return r.design !== "classic" && r.kind !== "reel" && sl[0] && isHero(sl[0], 0) && !sl[0].image && (sl[0].visual || prod?.photo_paths.length);
-  });
-  await pool(needs, 3, async (r) => {
+    if (sl[0] && isHero(sl[0], 0) && !sl[0].image && (sl[0].visual || prod?.photo_paths.length)) jobs.push({ r, k: 0, cover: true });
+  }
+  for (const r of rows) {
+    if (r.design === "classic" || r.kind !== "carousel") continue;
+    let n = 0;
+    (r.slides ?? []).forEach((s, k) => {
+      if (k > 0 && n < cap && s.visual && !s.image && IMAGE_SLIDE_TYPES.has(s.type)) {
+        jobs.push({ r, k, cover: false });
+        n++;
+      }
+    });
+  }
+  // Satu penulis per post agar slide tidak saling menimpa.
+  const locks = new Map<string, Promise<unknown>>();
+  await pool(jobs, 4, async ({ r, k, cover }) => {
     if (Date.now() - started > budgetMs) return;
-    const prod = products.find((x) => x.id === r.product_id) ?? null;
+    const prod = cover ? (products.find((x) => x.id === r.product_id) ?? null) : null;
     const path = await createVisual(admin, {
       userId,
       postId: r.id,
       look: r.design,
-      visual: r.slides[0].visual || `${prod?.name ?? "product"} hero shot`,
+      visual: r.slides[k].visual || `${prod?.name ?? "product"} hero shot`,
       brand: brand.palette,
       style: r.style,
       product: prod?.photo_paths.length ? prod : null,
+      frame: cover ? "cover" : "slide",
       timeoutMs: 60_000,
     });
     if (!path) return;
-    // Ambil slide terbaru (mungkin sudah diperbaiki tim senior) lalu pasang visual.
-    const { data: cur } = await admin.from("social_posts").select("slides").eq("id", r.id).single();
-    const sl = ((cur?.slides as Slide[]) ?? r.slides).slice();
-    if (sl[0]) sl[0] = { ...sl[0], image: path };
-    // updated_at ikut berubah → URL pratinjau berganti, cache browser lama tidak dipakai lagi.
-    await admin.from("social_posts").update({ slides: sl, updated_at: new Date().toISOString() }).eq("id", r.id).eq("user_id", userId);
+    const prev = locks.get(r.id) ?? Promise.resolve();
+    const next = prev.then(async () => {
+      // Ambil slide terbaru (mungkin sudah diperbaiki tim senior) lalu pasang visual.
+      const { data: cur } = await admin.from("social_posts").select("slides").eq("id", r.id).single();
+      const sl = ((cur?.slides as Slide[]) ?? r.slides).slice();
+      if (sl[k]) sl[k] = { ...sl[k], image: path };
+      // updated_at ikut berubah → URL pratinjau berganti, cache browser lama tidak dipakai lagi.
+      await admin.from("social_posts").update({ slides: sl, updated_at: new Date().toISOString() }).eq("id", r.id).eq("user_id", userId);
+    });
+    locks.set(r.id, next);
+    await next;
   });
 }
 

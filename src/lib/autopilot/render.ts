@@ -640,12 +640,85 @@ function heroSlide(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
 }
 
 // ---------------------------------------------------------------------------
+// Slide isi bervisual (±80% gambar): foto/visual penuh + teks ringkas di bawah di atas gradasi
+// ---------------------------------------------------------------------------
+/** Jenis slide yang boleh tampil bervisual penuh (rangkuman, polling & ajakan tetap teks bersih). */
+export const IMAGE_SLIDE_TYPES = new Set<Slide["type"]>(["point", "statement", "cover"]);
+
+function imageSlide(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
+  const b = o.brand;
+  const id = `v${i}`;
+  const defs: string[] = [];
+  // Gaya terang → gradasi putih (teks gelap); gaya gelap/foto → gradasi gelap (teks putih).
+  const lightOverlay = !dnaDark(d, false) && d.bg !== "photo";
+  const ink = lightOverlay ? "#0B1026" : "#FFFFFF";
+  const muted = lightOverlay ? "#3F4659" : "#E2E6EE";
+  const P = dnaPaint(d, !lightOverlay);
+  const main = font(P.titleFont);
+  const condensed = CONDENSED.has(P.titleFont);
+  const serifTitle = SERIF_FONTS.has(P.titleFont);
+  const base = lightOverlay ? "#FFFFFF" : "#05060A";
+  defs.push(
+    `<linearGradient id="${id}top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity=".5"/><stop offset=".16" stop-color="#000000" stop-opacity="0"/></linearGradient>`,
+    `<linearGradient id="${id}bot" x1="0" y1="0" x2="0" y2="1"><stop offset=".42" stop-color="${base}" stop-opacity="0"/><stop offset=".66" stop-color="${base}" stop-opacity="${lightOverlay ? 0.88 : 0.78}"/><stop offset="1" stop-color="${base}" stop-opacity="${lightOverlay ? 0.98 : 0.94}"/></linearGradient>`,
+    `<linearGradient id="${id}acc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${lightOverlay ? b.royal : mix(b.royal, "#FFFFFF", 0.3)}"/><stop offset=".55" stop-color="${b.blue}"/><stop offset="1" stop-color="${b.cyan}"/></linearGradient>`,
+    `<linearGradient id="${id}diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${b.royal}"/><stop offset="1" stop-color="${b.cyan}"/></linearGradient>`,
+  );
+  const accFill = lightOverlay ? `url(#${id}acc)` : mix(b.cyan, "#FFFFFF", 0.15);
+  let out = `<image href="${o.hero}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice"/>`;
+  out += `<rect width="${W}" height="${H}" fill="url(#${id}top)"/><rect width="${W}" height="${H}" fill="url(#${id}bot)"/>`;
+  out += dnaOverlay(id, { ...d, ornaments: d.ornaments.filter((x) => x === "grain" || x === "frame") }, !lightOverlay, defs);
+
+  // Kepala: logo (versi terang di atas gradasi gelap) + penanda halaman
+  const { tag, cta } = slideCorners(s, i, n, o.en);
+  out += logoMark(o, PAD_X, PAD_TOP + 10, 50, "#FFFFFF", id);
+  if (tag) out += pill(tag, W - PAD_X + 20, PAD_TOP + 10, true, "photo");
+
+  // Teks di bawah: label, judul + aksen, isi singkat
+  const lsOf = (size: number) => (condensed ? size * 0.005 : serifTitle ? -size * 0.01 : -size * 0.02);
+  const lhT = condensed ? 0.98 : 1.04;
+  const size = fitRich(main, [s.title ?? "", s.accent ?? ""], INNER, 3, Math.round((condensed ? 112 : 84) * Math.min(1.1, d.titleScale)), 56, lsOf, P.upper);
+  const lines = [
+    ...richWrap(main, s.title ?? "", size, INNER, lsOf(size), P.upper).map((l) => ({ l, acc: false })),
+    ...(s.accent ? richWrap(main, s.accent, size, INNER, lsOf(size), P.upper) : []).map((l) => ({ l, acc: true })),
+  ];
+  const R = font("regular");
+  const text = s.body || s.sub || "";
+  const bodyLines = text ? wrap(R, text, 32, INNER).slice(0, 3) : [];
+  const labelH = s.label ? 49 + 24 : 0;
+  const blockH = labelH + lines.length * size * lhT + (bodyLines.length ? 22 + bodyLines.length * 44 : 0);
+  let y = H - 150 - blockH;
+  if (s.label) {
+    const F = font("bold");
+    const t = clean(F, s.label.toUpperCase());
+    const w = widthOf(F, t, 24, 2) + 40;
+    out += `<rect x="${PAD_X}" y="${y}" width="${r2(w)}" height="49" rx="24.5" fill="${lightOverlay ? mix(b.royal, "#FFFFFF", 0.86) : mix(b.cyan, "#FFFFFF", 0.15)}"/>` + line(F, t, PAD_X + 20, y + 10, 24, 1.21, lightOverlay ? b.royal : "#0B1026", 2);
+    y += labelH;
+  }
+  lines.forEach((x, k) => (out += richDraw(main, x.l, PAD_X, y + k * size * lhT, size, lhT, x.acc ? accFill : ink, lightOverlay ? accFill : "#FFFFFF", lsOf(size))));
+  y += lines.length * size * lhT + 22;
+  bodyLines.forEach((l, k) => (out += line(R, l, PAD_X, y + k * 44, 32, 1.37, muted)));
+
+  // Nomor kecil di sudut (pengganti angka raksasa) & kaki
+  if (s.num) {
+    const D = font(P.titleFont);
+    const t = clean(D, s.num).slice(0, 3);
+    out += `<g opacity=".9">${line(D, t, W - PAD_X - widthOf(D, t, 64), H - 150 - blockH - 84, 64, 1, accFill)}</g>`;
+  }
+  const handle = clean(R, b.handle);
+  if (handle) out += line(R, handle, PAD_X, H - PAD_BOTTOM - 28, 24, 1.23, lightOverlay ? "#5B6478" : "#C3C8D4");
+  if (cta) out += swipePill(cta, W - PAD_X + 20, H - PAD_BOTTOM - 14, !lightOverlay, b);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${defs.join("")}</defs>${out}</svg>`;
+}
+
+// ---------------------------------------------------------------------------
 // Slide isi (semua gaya) + cover klasik
 // ---------------------------------------------------------------------------
 export function slideSvg(s: Slide, i: number, n: number, o: Prepared) {
   const look: Look = o.look ?? "classic";
   const dna = o.dna ?? null;
   if (dna && isHero(s, i)) return heroSlide(s, i, n, o, dna);
+  if (dna && o.hero && IMAGE_SLIDE_TYPES.has(s.type)) return imageSlide(s, i, n, o, dna);
   const b = o.brand;
   const theme = dna ? (dnaDark(dna, false) ? "dark" : "light") : slideTheme(s, i, n, look);
   const dark = theme === "dark";
@@ -906,12 +979,14 @@ async function prepare(slides: Slide[], i: number, o: RenderOptions, logos: Part
   const look = o.look ?? "classic";
   const dna = o.style ?? (look === "classic" ? null : LOOK_DNA[look]);
   const s = slides[i];
-  const logoTheme: "dark" | "light" = dna ? (dnaDark(dna, isHero(s, i)) ? "dark" : "light") : slideTheme(s, i, slides.length, look);
+  // Slide isi bervisual: logo di atas gradasi gelap → versi terang.
+  const innerVisual = Boolean(dna && !isHero(s, i) && s.image && o.images?.[s.image] && IMAGE_SLIDE_TYPES.has(s.type));
+  const logoTheme: "dark" | "light" = innerVisual ? "dark" : dna ? (dnaDark(dna, isHero(s, i)) ? "dark" : "light") : slideTheme(s, i, slides.length, look);
   if (!(logoTheme in logos)) logos[logoTheme] = await logoData(o, logoTheme);
   let hero: string | null = null;
-  if (dna && isHero(s, i) && s.image && o.images?.[s.image]) {
+  if (dna && (isHero(s, i) || innerVisual) && s.image && o.images?.[s.image]) {
     try {
-      hero = await heroData(o.images[s.image], dna.hero === "full" || dna.bg === "photo");
+      hero = await heroData(o.images[s.image], innerVisual || dna.hero === "full" || dna.bg === "photo");
     } catch (err) {
       console.error("[autopilot] visual gagal dibaca", err);
     }

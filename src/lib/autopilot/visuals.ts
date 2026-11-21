@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateImage } from "@/lib/ai/image";
-import { imageAspectFor, LOOK_DNA, parseDna, visualPromptFor, type StyleDna } from "./style";
+import { imageAspectFor, LOOK_DNA, parseDna, slideVisualPromptFor, visualPromptFor, type StyleDna } from "./style";
 import type { Look, Slide, SlideBrand } from "./slides";
 import { productVisualPrompt } from "./products";
 import sharp from "sharp";
@@ -22,6 +22,8 @@ export async function createVisual(
     timeoutMs?: number;
     /** Produk dari katalog: foto aslinya dipakai sebagai acuan (produk tidak diubah). */
     product?: { name: string; photo_paths: string[] } | null;
+    /** "slide" = visual layar penuh untuk slide isi (3:4). */
+    frame?: "cover" | "slide";
   },
 ): Promise<string | null> {
   const started = Date.now();
@@ -35,14 +37,16 @@ export async function createVisual(
       refs.push({ mime: "image/jpeg", data: jpg.toString("base64") });
     }
   }
-  const prompt = refs.length && o.product ? productVisualPrompt(dna, o.product, o.visual) : visualPromptFor(dna, o.visual, { primary: o.brand.royal, accent: o.brand.cyan });
+  const colors = { primary: o.brand.royal, accent: o.brand.cyan };
+  const slideFrame = o.frame === "slide";
+  const prompt = refs.length && o.product ? productVisualPrompt(slideFrame ? { ...dna, hero: "full" } : dna, o.product, o.visual) : slideFrame ? slideVisualPromptFor(dna, o.visual, colors) : visualPromptFor(dna, o.visual, colors);
   try {
     const img = await Promise.race([
-      generateImage(prompt, imageAspectFor(dna), refs, { premiumEdit: refs.length > 0 }),
+      generateImage(prompt, slideFrame ? "3:4" : imageAspectFor(dna), refs, { premiumEdit: refs.length > 0 }),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout gambar")), o.timeoutMs ?? 75_000)),
     ]);
     const ext = img.mime.includes("jpeg") || img.mime.includes("jpg") ? "jpg" : img.mime.includes("webp") ? "webp" : "png";
-    const p = `${o.userId}/autopilot/${o.postId}/visual-${Date.now().toString(36)}.${ext}`;
+    const p = `${o.userId}/autopilot/${o.postId}/visual-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}.${ext}`;
     const { error } = await admin.storage.from(BUCKET).upload(p, Buffer.from(img.bytes), { contentType: img.mime, upsert: true });
     if (error) throw error;
     await admin.from("usage_logs").insert({

@@ -101,6 +101,16 @@ Carousel 5-8 slide: 1 cover (hook + janji) → 1 takaran (kenapa penting, type p
 → 1 rangkuman (type list, slide yang di-screenshot orang) → 1 cta (satu ajakan saja).
 Single image: tepat 1 slide (statement, poll, atau cover). Reel: "slides": [] dan naskah di "script".
 Teks slide: kalimat pendek, tanpa emoji, tanpa tanda pisah panjang (—), tanpa tanda kutip miring.
+"title" + "accent" dibaca BERSAMBUNG sebagai satu kalimat: "accent" adalah lanjutan/penekanan, JANGAN mengulang kata yang sudah ada di "title"
+(benar: title "Pilih pose", accent "yang bergerak"; salah: title "Pilih pose natural", accent "natural").
+
+SENSE VISUAL (kamu art director — putuskan per slide, target komposisi ±80% visual di slide bervisual):
+- Beri "visual" (bahasa Inggris, satu adegan konkret, tanpa teks/logo) pada slide "point"/"statement" yang isinya BISA DILIHAT:
+  pose/cara/gerakan, produk dipakai, suasana/tempat, sebelum-sesudah, contoh hasil, emosi pelanggan. Slide ini tampil foto/visual layar penuh
+  dengan teks ringkas di bawah → judul ≤ 6 kata, body ≤ 18 kata.
+- JANGAN beri visual pada slide yang isinya abstrak/data: rangkuman (list), polling, angka/statistik, ajakan (cta), definisi. Tampil teks bersih.
+- Carousel: biasanya 2–4 slide isi bervisual + cover. Visual tiap slide harus BERBEDA dan nyambung dengan isi slide itu (bukan objek generik).
+- Gunakan SUBJEK VISUAL KHAS BRAND (bila ada) agar produk/layanan asli brand terlihat.
 
 DESAIN STUDIO (kolom "design" per post, untuk carousel & single image):
 - "glossy": latar terang, visual 3D glossy di bawah judul. Cocok untuk edukasi, tips, daftar alat/cara.

@@ -22,7 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // Visual hanya dimuat untuk slide yang memakainya (cover).
   const opts = await renderOptions(
     createAdminClient(),
-    { user_id: s.user.id, workspace_id: row.workspace_id as string | null, slides: i === 0 ? slides : slides.map((x) => ({ ...x, image: undefined })), design: row.design as Look, style: row.style },
+    { user_id: s.user.id, workspace_id: row.workspace_id as string | null, slides: slides.map((x, k) => (k === i ? x : { ...x, image: undefined })), design: row.design as Look, style: row.style },
     s.profile.language,
     s.profile.full_name,
   );
