@@ -271,154 +271,159 @@ export function OnboardingView({ lang, data, workspaces }: { lang: "id" | "en"; 
   }, [data.assets]);
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 pb-28 md:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/autopilot" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> {t.back}
-        </Link>
-        {workspaces.length > 1 && (
-          <select className="h-9 rounded-lg border bg-background px-2 text-sm" value={data.workspaceId} onChange={(e) => router.push(`/autopilot/onboarding?ws=${e.target.value}`)}>
-            {workspaces.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">{t.sub}</p>
-      </header>
-
-      {/* Kelengkapan */}
-      <section className="rounded-2xl border bg-card p-4 md:p-5" data-testid="completeness">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-sm font-medium">{t.progress}</span>
-          <span className="text-2xl font-semibold tabular-nums">{percent}%</span>
-        </div>
-        <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-500 transition-all" style={{ width: `${percent}%` }} />
-        </div>
-        {missing.length > 0 ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            <Lock className="mr-1 inline size-3.5" />
-            {t.missing} {missing.map((m) => m.label).join(" · ")}
-          </p>
-        ) : (
-          <p className="mt-3 text-xs text-emerald-600">
-            <Check className="mr-1 inline size-3.5" />
-            {lang === "en" ? "All required fields are complete." : "Semua data wajib lengkap."}
-          </p>
-        )}
-      </section>
-
-      {/* 1. Wajib */}
-      <section className="space-y-4 rounded-2xl border bg-card p-4 md:p-5">
-        <h2 className="font-semibold">{t.required}</h2>
-        <Field label="Nama brand">
-          <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
-        </Field>
-        <div className="grid gap-4 md:grid-cols-2">
-          {REQ_TEXT.map((f) => (
-            <Field key={f.key} label={f.label} wide={f.long}>
-              {f.long ? (
-                <Textarea rows={3} value={kit[f.key] ?? ""} placeholder={f.ph} onChange={(e) => set(f.key, e.target.value)} />
-              ) : (
-                <Input value={kit[f.key] ?? ""} placeholder={f.ph} onChange={(e) => set(f.key, e.target.value)} />
-              )}
-            </Field>
-          ))}
-        </div>
-        <Field label="Tujuan konten utama">
-          <Chips
-            options={CONTENT_GOALS.map((g) => ({
-              value: g,
-              label: GOAL_LABEL[g],
-            }))}
-            value={kit.content_goal ?? ""}
-            onChange={(v) => set("content_goal", v)}
-          />
-        </Field>
-        <Field label="CTA utama">
-          <Chips options={CTA_TYPES.map((g) => ({ value: g, label: CTA_LABEL[g] }))} value={kit.cta_primary ?? ""} onChange={(v) => set("cta_primary", v)} />
-          {(kit.cta_primary === "whatsapp" || kit.cta_primary === "link_booking") && (
-            <Input
-              className="mt-2"
-              value={kit.cta_link ?? ""}
-              placeholder={kit.cta_primary === "whatsapp" ? "Nomor/Link WhatsApp" : "Link booking"}
-              onChange={(e) => set("cta_link", e.target.value)}
-            />
-          )}
-        </Field>
-      </section>
-
-      {/* 2. Aset */}
-      <section className="space-y-5 rounded-2xl border bg-card p-4 md:p-5">
-        <h2 className="font-semibold">{t.assets}</h2>
-        <AssetGroup t={t} workspaceId={data.workspaceId} kind="logo" title={t.logo} hint={t.logoHint} assets={data.assets.filter((a) => a.kind === "logo")} max={1} />
-        <AssetGroup
-          t={t}
-          workspaceId={data.workspaceId}
-          kind="real_photo"
-          title={`${t.photos} · ${counts.real_photo ?? 0}/${MAX_REAL_PHOTOS}`}
-          hint={t.photosHint}
-          assets={data.assets.filter((a) => a.kind === "real_photo")}
-          max={MAX_REAL_PHOTOS}
-        />
-        <div className="space-y-1">
-          <p className="text-sm font-medium">{t.shots}</p>
-          <p className="text-xs text-muted-foreground">{t.shotsHint}</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {(
-            [
-              ["feed_screenshot", t.feed],
-              ["competitor_screenshot", t.competitor],
-              ["reference_screenshot", t.reference],
-            ] as const
-          ).map(([k, label]) => (
-            <AssetGroup key={k} t={t} workspaceId={data.workspaceId} kind={k} title={label} assets={data.assets.filter((a) => a.kind === k)} max={MAX_SCREENSHOTS} compact />
-          ))}
-        </div>
-      </section>
-
-      {/* 3. Opsional */}
-      <details className="group rounded-2xl border bg-card p-4 md:p-5">
-        <summary className="cursor-pointer list-none font-semibold">{t.optional}</summary>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {OPT_TEXT.map((f) => (
-            <Field key={f.key} label={f.label} wide={f.long}>
-              {f.long ? (
-                <Textarea rows={3} value={kit[f.key] ?? ""} placeholder={f.ph} onChange={(e) => set(f.key, e.target.value)} />
-              ) : (
-                <Input value={kit[f.key] ?? ""} placeholder={f.ph} onChange={(e) => set(f.key, e.target.value)} />
-              )}
-            </Field>
-          ))}
-        </div>
-      </details>
-
-      {/* 4. Brand DNA */}
-      <section className="space-y-4 rounded-2xl border bg-card p-4 md:p-5" data-testid="dna">
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto w-full max-w-4xl space-y-6 px-4 pt-6 md:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-semibold">{t.dna}</h2>
-          <Button onClick={generate} disabled={!requiredDone || busy !== null} variant={latest ? "outline" : "default"}>
-            {busy === "dna" ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            {busy === "dna" ? t.genning : latest ? t.regen : t.gen}
-          </Button>
+          <Link href="/autopilot" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-4" /> {t.back}
+          </Link>
+          {workspaces.length > 1 && (
+            <select
+              className="h-9 rounded-lg border bg-background px-2 text-sm"
+              value={data.workspaceId}
+              onChange={(e) => router.push(`/autopilot/onboarding?ws=${e.target.value}`)}
+            >
+              {workspaces.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
-        {!requiredDone && <p className="text-xs text-muted-foreground">{t.needReq}</p>}
-        {data.kitChanged && <p className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">{t.changed}</p>}
-        {latest ? (
-          <DnaEditor lang={lang} workspaceId={data.workspaceId} versions={data.versions} approvedVersion={data.approvedVersion} />
-        ) : (
-          <p className="text-sm text-muted-foreground">{t.noDna}</p>
-        )}
-      </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/90 backdrop-blur">
+        <header className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">{t.sub}</p>
+        </header>
+
+        {/* Kelengkapan */}
+        <section className="rounded-2xl border bg-card p-4 md:p-5" data-testid="completeness">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-sm font-medium">{t.progress}</span>
+            <span className="text-2xl font-semibold tabular-nums">{percent}%</span>
+          </div>
+          <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-500 transition-all" style={{ width: `${percent}%` }} />
+          </div>
+          {missing.length > 0 ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              <Lock className="mr-1 inline size-3.5" />
+              {t.missing} {missing.map((m) => m.label).join(" · ")}
+            </p>
+          ) : (
+            <p className="mt-3 text-xs text-emerald-600">
+              <Check className="mr-1 inline size-3.5" />
+              {lang === "en" ? "All required fields are complete." : "Semua data wajib lengkap."}
+            </p>
+          )}
+        </section>
+
+        {/* 1. Wajib */}
+        <section className="space-y-4 rounded-2xl border bg-card p-4 md:p-5">
+          <h2 className="font-semibold">{t.required}</h2>
+          <Field label="Nama brand">
+            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+          </Field>
+          <div className="grid gap-4 md:grid-cols-2">
+            {REQ_TEXT.map((f) => (
+              <Field key={f.key} label={f.label} wide={f.long}>
+                {f.long ? (
+                  <Textarea rows={3} value={kit[f.key] ?? ""} placeholder={f.ph} onChange={(e) => set(f.key, e.target.value)} />
+                ) : (
+                  <Input value={kit[f.key] ?? ""} placeholder={f.ph} onChange={(e) => set(f.key, e.target.value)} />
+                )}
+              </Field>
+            ))}
+          </div>
+          <Field label="Tujuan konten utama">
+            <Chips
+              options={CONTENT_GOALS.map((g) => ({
+                value: g,
+                label: GOAL_LABEL[g],
+              }))}
+              value={kit.content_goal ?? ""}
+              onChange={(v) => set("content_goal", v)}
+            />
+          </Field>
+          <Field label="CTA utama">
+            <Chips options={CTA_TYPES.map((g) => ({ value: g, label: CTA_LABEL[g] }))} value={kit.cta_primary ?? ""} onChange={(v) => set("cta_primary", v)} />
+            {(kit.cta_primary === "whatsapp" || kit.cta_primary === "link_booking") && (
+              <Input
+                className="mt-2"
+                value={kit.cta_link ?? ""}
+                placeholder={kit.cta_primary === "whatsapp" ? "Nomor/Link WhatsApp" : "Link booking"}
+                onChange={(e) => set("cta_link", e.target.value)}
+              />
+            )}
+          </Field>
+        </section>
+
+        {/* 2. Aset */}
+        <section className="space-y-5 rounded-2xl border bg-card p-4 md:p-5">
+          <h2 className="font-semibold">{t.assets}</h2>
+          <AssetGroup t={t} workspaceId={data.workspaceId} kind="logo" title={t.logo} hint={t.logoHint} assets={data.assets.filter((a) => a.kind === "logo")} max={1} />
+          <AssetGroup
+            t={t}
+            workspaceId={data.workspaceId}
+            kind="real_photo"
+            title={`${t.photos} · ${counts.real_photo ?? 0}/${MAX_REAL_PHOTOS}`}
+            hint={t.photosHint}
+            assets={data.assets.filter((a) => a.kind === "real_photo")}
+            max={MAX_REAL_PHOTOS}
+          />
+          <div className="space-y-1">
+            <p className="text-sm font-medium">{t.shots}</p>
+            <p className="text-xs text-muted-foreground">{t.shotsHint}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {(
+              [
+                ["feed_screenshot", t.feed],
+                ["competitor_screenshot", t.competitor],
+                ["reference_screenshot", t.reference],
+              ] as const
+            ).map(([k, label]) => (
+              <AssetGroup key={k} t={t} workspaceId={data.workspaceId} kind={k} title={label} assets={data.assets.filter((a) => a.kind === k)} max={MAX_SCREENSHOTS} compact />
+            ))}
+          </div>
+        </section>
+
+        {/* 3. Opsional */}
+        <details className="group rounded-2xl border bg-card p-4 md:p-5">
+          <summary className="cursor-pointer list-none font-semibold">{t.optional}</summary>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {OPT_TEXT.map((f) => (
+              <Field key={f.key} label={f.label} wide={f.long}>
+                {f.long ? (
+                  <Textarea rows={3} value={kit[f.key] ?? ""} placeholder={f.ph} onChange={(e) => set(f.key, e.target.value)} />
+                ) : (
+                  <Input value={kit[f.key] ?? ""} placeholder={f.ph} onChange={(e) => set(f.key, e.target.value)} />
+                )}
+              </Field>
+            ))}
+          </div>
+        </details>
+
+        {/* 4. Brand DNA */}
+        <section className="space-y-4 rounded-2xl border bg-card p-4 md:p-5" data-testid="dna">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-semibold">{t.dna}</h2>
+            <Button onClick={generate} disabled={!requiredDone || busy !== null} variant={latest ? "outline" : "default"}>
+              {busy === "dna" ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              {busy === "dna" ? t.genning : latest ? t.regen : t.gen}
+            </Button>
+          </div>
+          {!requiredDone && <p className="text-xs text-muted-foreground">{t.needReq}</p>}
+          {data.kitChanged && <p className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">{t.changed}</p>}
+          {latest ? (
+            <DnaEditor lang={lang} workspaceId={data.workspaceId} versions={data.versions} approvedVersion={data.approvedVersion} />
+          ) : (
+            <p className="text-sm text-muted-foreground">{t.noDna}</p>
+          )}
+        </section>
+      </div>
+      <div className="sticky bottom-0 z-20 mt-6 border-t bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <span className="text-sm text-muted-foreground">
             {t.progress} <b className="text-foreground">{percent}%</b>

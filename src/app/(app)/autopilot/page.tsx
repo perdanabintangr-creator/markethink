@@ -42,34 +42,48 @@ export default async function AutopilotPage() {
 
   const today = todayWib();
   const { data: settingsRow0 } = await supabase.from("autopilot_settings").select("workspace_id").maybeSingle();
-  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }, { data: styleRows }, { data: productRows }, { data: researchRow }, { data: ideaRows }] = await Promise.all([
-    supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, goal, pillar_mix, review_ideas, industry, style_preset, style_id, generating_at").maybeSingle(),
-    supabase
-      .from("social_posts")
-      .select("id, post_date, post_time, kind, design, product_id, image_regens, permalink, error, team_review, created_at, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
-      .gte("post_date", addDays(today, -14))
-      .order("post_date", { ascending: true })
-      .order("post_time", { ascending: true })
-      .limit(300),
-    postsThisMonth(createAdminClient(), profile.id),
-    instagramStatus(profile.id),
-    supabase
-      .from("instagram_media_stats")
-      .select("ig_media_id, posted_at, media_type, caption, permalink, likes, comments, reach, saved, shares, views")
-      .gte("posted_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
-      .limit(60),
-    supabase.from("brand_styles").select("id, name, dna, analysis, updated_at").order("created_at", { ascending: false }).limit(20),
-    supabase.from("brand_products").select("id, name, sku, price, description, photo_paths, active, updated_at").order("created_at", { ascending: false }).limit(200),
-    // Riset brand terbaru untuk project aktif.
-    supabase
-      .from("brand_research")
-      .select("id, data, images, created_at")
-      .eq("workspace_id", (settingsRow0?.workspace_id as string | null) ?? workspaces[0]?.id ?? "00000000-0000-0000-0000-000000000000")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase.from("autopilot_ideas").select("id, batch_id, post_date, post_time, kind, pillar, funnel, title, angle, hook, reason").eq("status", "pending").order("post_date").order("post_time").limit(30),
-  ]);
+  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }, { data: styleRows }, { data: productRows }, { data: researchRow }, { data: ideaRows }] =
+    await Promise.all([
+      supabase
+        .from("autopilot_settings")
+        .select(
+          "workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, goal, pillar_mix, review_ideas, industry, style_preset, style_id, generating_at",
+        )
+        .maybeSingle(),
+      supabase
+        .from("social_posts")
+        .select(
+          "id, post_date, post_time, kind, design, product_id, image_regens, permalink, error, team_review, created_at, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at",
+        )
+        .gte("post_date", addDays(today, -14))
+        .order("post_date", { ascending: true })
+        .order("post_time", { ascending: true })
+        .limit(300),
+      postsThisMonth(createAdminClient(), profile.id),
+      instagramStatus(profile.id),
+      supabase
+        .from("instagram_media_stats")
+        .select("ig_media_id, posted_at, media_type, caption, permalink, likes, comments, reach, saved, shares, views")
+        .gte("posted_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
+        .limit(60),
+      supabase.from("brand_styles").select("id, name, dna, analysis, updated_at").order("created_at", { ascending: false }).limit(20),
+      supabase.from("brand_products").select("id, name, sku, price, description, photo_paths, active, updated_at").order("created_at", { ascending: false }).limit(200),
+      // Riset brand terbaru untuk project aktif.
+      supabase
+        .from("brand_research")
+        .select("id, data, images, created_at")
+        .eq("workspace_id", (settingsRow0?.workspace_id as string | null) ?? workspaces[0]?.id ?? "00000000-0000-0000-0000-000000000000")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("autopilot_ideas")
+        .select("id, batch_id, post_date, post_time, kind, pillar, funnel, title, angle, hook, reason")
+        .eq("status", "pending")
+        .order("post_date")
+        .order("post_time")
+        .limit(30),
+    ]);
 
   const settings: ApSettings = {
     workspaceId: (settingsRow?.workspace_id as string | null) ?? workspaces[0]?.id ?? null,
@@ -79,10 +93,10 @@ export default async function AutopilotPage() {
     slotTimes: ((settingsRow?.slot_times as string[] | null) ?? ["12:00", "19:00"]).map((t) => t.slice(0, 5)),
     focus: (settingsRow?.focus as string | null) ?? "",
     autoPublish: Boolean(settingsRow?.auto_publish),
-    goal: ((settingsRow?.goal as ApSettings["goal"] | undefined) ?? "balanced"),
+    goal: (settingsRow?.goal as ApSettings["goal"] | undefined) ?? "balanced",
     pillarMix: (settingsRow?.pillar_mix as ApSettings["pillarMix"]) ?? null,
     reviewIdeas: Boolean(settingsRow?.review_ideas),
-    design: ((settingsRow?.design as ApSettings["design"] | undefined) ?? "auto"),
+    design: (settingsRow?.design as ApSettings["design"] | undefined) ?? "auto",
     configured: Boolean(settingsRow),
   };
   const posts = (postRows ?? []).map((p) => ({ ...p, post_time: String(p.post_time).slice(0, 5) })) as ApPost[];
@@ -105,9 +119,9 @@ export default async function AutopilotPage() {
   const dnaStale = ob && active ? kitChanged(active.kit_snapshot as Record<string, unknown> | null, { ...ob.kit, _assets: ob.assets.length }) : false;
 
   return (
-    <>
+    <div className="flex h-full flex-col">
       {dnaStale && (
-        <div className="mx-auto mt-4 w-full max-w-6xl px-4 md:px-6">
+        <div className="mx-auto mt-4 w-full max-w-6xl shrink-0 px-4 md:px-6">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
             <span>Brand Kit berubah sejak Brand DNA v{ob?.approvedVersion} di-ACC.</span>
             <Link href={`/autopilot/onboarding?ws=${settings.workspaceId}`} className="font-medium underline">
@@ -116,27 +130,32 @@ export default async function AutopilotPage() {
           </div>
         </div>
       )}
-      <AutopilotView
-        lang={lang}
-        today={today}
-        initialSettings={settings}
-        initialPosts={posts}
-        workspaces={workspaces}
-        allowance={allowance}
-        usedThisMonth={used}
-        instagram={instagram}
-        stats={(statRows ?? []) as MediaStat[]}
-        products={(productRows ?? []) as ProductItem[]}
-        research={(researchRow as ResearchRow | null) ?? null}
-        ideas={(ideaRows ?? []).map((r) => ({ ...r, post_time: String(r.post_time) })) as IdeaItem[]}
-        styleState={{
-          industry: (settingsRow?.industry as string | null) ?? null,
-          presetId: (settingsRow?.style_preset as string | null) ?? null,
-          styleId: (settingsRow?.style_id as string | null) ?? null,
-          styles: (styleRows ?? []) as BrandStyleRow[],
-          samples: profile.role === "admin" ? { ready: [...(await existingSamples(createAdminClient()))].filter((id) => STYLE_PRESETS.some((p) => p.id === id)).length, total: STYLE_PRESETS.length } : null,
-        }}
-      />
-    </>
+      <div className="min-h-0 flex-1">
+        <AutopilotView
+          lang={lang}
+          today={today}
+          initialSettings={settings}
+          initialPosts={posts}
+          workspaces={workspaces}
+          allowance={allowance}
+          usedThisMonth={used}
+          instagram={instagram}
+          stats={(statRows ?? []) as MediaStat[]}
+          products={(productRows ?? []) as ProductItem[]}
+          research={(researchRow as ResearchRow | null) ?? null}
+          ideas={(ideaRows ?? []).map((r) => ({ ...r, post_time: String(r.post_time) })) as IdeaItem[]}
+          styleState={{
+            industry: (settingsRow?.industry as string | null) ?? null,
+            presetId: (settingsRow?.style_preset as string | null) ?? null,
+            styleId: (settingsRow?.style_id as string | null) ?? null,
+            styles: (styleRows ?? []) as BrandStyleRow[],
+            samples:
+              profile.role === "admin"
+                ? { ready: [...(await existingSamples(createAdminClient()))].filter((id) => STYLE_PRESETS.some((p) => p.id === id)).length, total: STYLE_PRESETS.length }
+                : null,
+          }}
+        />
+      </div>
+    </div>
   );
 }
