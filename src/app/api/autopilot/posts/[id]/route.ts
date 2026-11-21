@@ -33,7 +33,7 @@ const schema = z.discriminatedUnion("action", [
   }),
 ]);
 
-const COLS = "id, user_id, workspace_id, kind, design, status, slides, caption, title, script, alt_text, post_date, post_time, media, image_regens, permalink, error, updated_at";
+const COLS = "id, user_id, workspace_id, kind, design, style, status, slides, caption, title, script, alt_text, post_date, post_time, media, image_regens, permalink, error, updated_at";
 
 /** ACC / tolak / kembalikan ke draf / tandai sudah tayang / edit satu konten Autopilot. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -100,7 +100,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (!visual) return jsonError(400, "no_visual");
       if (!(await checkRateLimit("user", `autopilot-img:${s.user.id}`)).ok) return jsonError(429, "rate_limited");
       const brand = await loadBrand(admin, s.user.id, row.workspace_id, s.profile.full_name);
-      const path = await createVisual(admin, { userId: s.user.id, postId: row.id, look: row.design!, visual, brand: brand.palette });
+      const path = await createVisual(admin, { userId: s.user.id, postId: row.id, look: row.design!, visual, brand: brand.palette, style: row.style });
       if (!path) return jsonError(502, "image_failed");
       const old = cover.image && cover.image !== path ? [cover.image] : [];
       await removeMedia(admin, s.user.id, [...old, ...(row.media ?? [])]);

@@ -35,6 +35,7 @@ import { autopilotText, type AutopilotText } from "@/lib/i18n/autopilot";
 import type { Slide } from "@/lib/autopilot/slides";
 import { EditPostDialog } from "./edit-post-dialog";
 import { PerformancePanel } from "./performance-panel";
+import { StyleSection, type BrandStyleRow } from "./style-section";
 import type { MediaStat } from "@/lib/autopilot/performance";
 
 export interface ApWorkspace {
@@ -128,6 +129,7 @@ export function AutopilotView(props: {
   usedThisMonth: number;
   instagram: IgStatus;
   stats: MediaStat[];
+  styleState: { industry: string | null; presetId: string | null; styleId: string | null; styles: BrandStyleRow[] };
 }) {
   const t = autopilotText(props.lang);
   const router = useRouter();
@@ -265,6 +267,16 @@ export function AutopilotView(props: {
               setSetupOpen(false);
               router.refresh();
             }}
+          />
+        )}
+        {setupOpen && (
+          <StyleSection
+            lang={props.lang}
+            workspaceId={props.initialSettings.workspaceId}
+            industry={props.styleState.industry}
+            presetId={props.styleState.presetId}
+            styleId={props.styleState.styleId}
+            styles={props.styleState.styles}
           />
         )}
 

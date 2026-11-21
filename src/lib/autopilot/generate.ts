@@ -16,6 +16,8 @@ import { createVisual, pool } from "./visuals";
 import { brandPalette, type SlideBrand } from "./slides";
 import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, pickLook, planSlots, todayWib, type GeneratedPost } from "./plan";
 import { isHero, type Look, type Slide } from "./slides";
+import { activeStyle } from "./styles-server";
+import { baseOf, styleNote } from "./style";
 import { autopilotAllowance, monthStartWib } from "./quota";
 
 export interface AutopilotSettings {
@@ -184,6 +186,9 @@ export async function generateWeek(
       }),
     );
 
+    // DNA Gaya pilihan (industri / referensi) → semua post memakai gaya itu.
+    const dna = await activeStyle(admin, o.userId, settingsRow as { style_id?: string | null; style_preset?: string | null } | null);
+
     const brandName = brand.palette.name;
     const prompt = buildGeneratePrompt({
       brandBlock: brand.kit ? untrusted("brand_kit", formatBrandKit(brand.kit)) : "",
@@ -197,6 +202,7 @@ export async function generateWeek(
       outcomes: formatOutcomes((outcomeRows ?? []) as OutcomeRow[]) || null,
       performance,
       voice: voiceRules(brand.kit),
+      style: dna ? styleNote(dna) : null,
       focus: settings.focus ? untrusted("fokus_pemilik_brand", settings.focus) : null,
       en: o.language === "en",
     });
@@ -244,7 +250,7 @@ export async function generateWeek(
       .filter((x): x is { p: GeneratedPost; slot: { date: string; time: string } } => !!x.slot)
       .map(({ p, slot }, k) => {
         const t = tidyPost(p, brandName, keywords, brand.kit?.voice_dont);
-        const design = pickLook(settings.design ?? "auto", p.design, k, p.kind);
+        const design = dna && p.kind !== "reel" ? baseOf(dna) : pickLook(settings.design ?? "auto", p.design, k, p.kind);
         return {
           user_id: o.userId,
           workspace_id: settings.workspace_id,
@@ -253,6 +259,7 @@ export async function generateWeek(
           post_time: slot.time,
           kind: p.kind,
           design,
+          style: dna && p.kind !== "reel" ? dna : null,
           title: p.title.slice(0, 160),
           pillar: p.pillar ?? null,
           funnel: p.funnel ?? null,
@@ -265,7 +272,7 @@ export async function generateWeek(
           status: "draft",
         };
       });
-    const { data: inserted, error: insErr } = await admin.from("social_posts").insert(rows).select("id, design, kind, slides");
+    const { data: inserted, error: insErr } = await admin.from("social_posts").insert(rows).select("id, design, style, kind, slides");
     if (insErr) throw insErr;
     await admin.from("usage_logs").insert({ ...logBase, status: "ok" });
 
@@ -277,7 +284,7 @@ export async function generateWeek(
     await pool(needs, 3, async (r) => {
       if (Date.now() - started > 230_000) return;
       const sl = r.slides as Slide[];
-      const path = await createVisual(admin, { userId: o.userId, postId: r.id as string, look: r.design as Look, visual: sl[0].visual!, brand: brand.palette, timeoutMs: 60_000 });
+      const path = await createVisual(admin, { userId: o.userId, postId: r.id as string, look: r.design as Look, visual: sl[0].visual!, brand: brand.palette, style: r.style, timeoutMs: 60_000 });
       if (path) await admin.from("social_posts").update({ slides: [{ ...sl[0], image: path }, ...sl.slice(1)] }).eq("id", r.id).eq("user_id", o.userId);
     });
     await release({ last_generated_at: new Date().toISOString() });

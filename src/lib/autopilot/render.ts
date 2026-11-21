@@ -4,6 +4,7 @@ import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
 import { isHero, slideCorners, slideTheme, type Look, type Slide, type SlideBrand } from "./slides";
+import { LOOK_DNA, type FontId, type StyleDna } from "./style";
 
 /**
  * Renderer slide Autopilot Konten (1080×1350 JPEG). Empat gaya:
@@ -38,8 +39,20 @@ interface Fk {
 const DIR = path.join(process.cwd(), "public", "fonts", "autopilot");
 const cache = new Map<string, Fk>();
 
-type FontKey = "display" | "regular" | "medium" | "semibold" | "bold" | "heavy" | "condensed" | "serif";
+type FontKey = "display" | "regular" | "medium" | "semibold" | "bold" | "heavy" | "condensed" | "serif" | FontId;
 const FILES: Record<FontKey, string> = {
+  jakarta: "plus-jakarta-sans-800.woff",
+  montserrat: "Montserrat.ttf",
+  manrope: "manrope-800.woff",
+  anton: "anton-400.woff",
+  bebas: "bebas-neue-400.woff",
+  space: "space-grotesk-700.woff",
+  chakra: "chakra-petch-700.woff",
+  playfair: "playfair-display-700.woff",
+  fraunces: "fraunces-700.woff",
+  cormorant: "cormorant-garamond-600.woff",
+  cinzel: "cinzel-700.woff",
+  fredoka: "fredoka-600.woff",
   display: "Montserrat.ttf",
   regular: "Inter-Regular.otf",
   medium: "Inter-Medium.otf",
@@ -55,7 +68,7 @@ function font(key: FontKey): Fk {
   if (!f) {
     const base = fontkit.create(new Uint8Array(fs.readFileSync(path.join(DIR, FILES[key])))) as unknown as Fk;
     // Montserrat variabel → ExtraBold (800), sama dengan judul di desain referensi.
-    f = key === "display" && base.getVariation ? base.getVariation({ wght: 800 }) : base;
+    f = (key === "display" || key === "montserrat") && base.getVariation ? base.getVariation({ wght: 800 }) : base;
     cache.set(key, f);
   }
   return f;
@@ -221,11 +234,14 @@ export interface RenderOptions {
   marqthinkLogo?: boolean;
   en?: boolean;
   look?: Look;
+  /** DNA Gaya (pustaka industri / analisis referensi). Kosong = DNA bawaan sesuai `look`. */
+  style?: StyleDna | null;
   /** Gambar visual (path storage → isi file) untuk slide yang punya `image`. */
   images?: Record<string, Buffer>;
 }
 
 type Prepared = RenderOptions & {
+  dna?: StyleDna | null;
   logoData?: { uri: string; w: number; h: number } | null;
   hero?: string | null;
   corners?: string[];
@@ -269,7 +285,7 @@ function sphere(id: string, cx: number, cy: number, r: number, c1: string, c2: s
   );
 }
 
-function glossyBg(id: string, b: SlideBrand, cover: boolean, defs: string[]) {
+function glossyBg(id: string, b: SlideBrand, cover: boolean, defs: string[], orbs = true, orbit = true) {
   const tint = mix(b.royal, "#FFFFFF", 0.9);
   const tint2 = mix(b.cyan, "#FFFFFF", 0.85);
   defs.push(
@@ -279,11 +295,11 @@ function glossyBg(id: string, b: SlideBrand, cover: boolean, defs: string[]) {
   );
   let bg = `<rect width="${W}" height="${H}" fill="url(#${id}gbg)"/><rect width="${W}" height="${H}" fill="url(#${id}gb1)"/><rect width="${W}" height="${H}" fill="url(#${id}gb2)"/>`;
   // Garis orbit tipis
-  bg += `<g fill="none" stroke="${mix(b.royal, "#FFFFFF", 0.7)}" stroke-opacity=".55" stroke-width="2">`;
-  bg += cover
+  if (orbit) bg += `<g fill="none" stroke="${mix(b.royal, "#FFFFFF", 0.7)}" stroke-opacity=".55" stroke-width="2">`;
+  if (orbit) bg += cover
     ? `<ellipse cx="${W / 2}" cy="${H * 0.68}" rx="640" ry="190" transform="rotate(-14 ${W / 2} ${H * 0.68})"/><path d="M-40 ${H * 0.36} C 300 ${H * 0.2}, 760 ${H * 0.18}, ${W + 60} ${H * 0.05}"/>`
     : `<path d="M-40 ${H - 260} C 320 ${H - 420}, 760 ${H - 150}, ${W + 60} ${H - 330}"/>`;
-  bg += `</g>`;
+  if (orbit) bg += `</g>`;
   // Bola glossy kecil
   const spots = cover
     ? [
@@ -296,7 +312,7 @@ function glossyBg(id: string, b: SlideBrand, cover: boolean, defs: string[]) {
         [W - 64, H - 400, 18, b.blue, b.royal],
         [52, H - 250, 12, b.cyan, b.blue],
       ];
-  spots.forEach(([cx, cy, r, c1, c2], k) => {
+  if (orbs) spots.forEach(([cx, cy, r, c1, c2], k) => {
     const [d, el] = sphere(`${id}sp${k}`, cx as number, cy as number, r as number, c1 as string, c2 as string).split("|");
     defs.push(d);
     bg += el;
@@ -389,155 +405,238 @@ const DEFAULT_CORNERS = {
   en: ["Plan write post", "Brand level up", "Save share apply", "Swipe to continue"],
 };
 
+const CONDENSED = new Set<FontKey>(["anton", "bebas", "chakra", "condensed"]);
+const SERIF_FONTS = new Set<FontKey>(["playfair", "fraunces", "cormorant", "cinzel", "serif"]);
+
+const lum = (h: string) => {
+  const [r, g, b] = h.replace("#", "").match(/../g)!.map((x) => parseInt(x, 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+/** Latar DNA gelap? (cover: foto juga dihitung gelap). */
+function dnaDark(d: StyleDna, cover: boolean) {
+  if (d.bg === "dark") return true;
+  if (d.bg === "photo") return cover;
+  if (d.bg === "solid") return lum(d.bgColor ?? "#0A3DFF") < 0.5;
+  return false;
+}
+
+function dnaPaint(d: StyleDna, dark: boolean) {
+  return {
+    studio: true,
+    ink: dark ? "#FFFFFF" : "#0B1026",
+    muted: dark ? "#B2B8C8" : "#4A5168",
+    corner: dark ? "#7A8194" : "#8A93A8",
+    titleFont: d.font as FontKey,
+    upper: d.upper,
+  };
+}
+
+const CREAM = "#F4EFE6";
+
+/** Latar sesuai DNA. `cover` = slide pertama (bola/orbit lebih ramai). */
+function dnaBg(id: string, b: SlideBrand, d: StyleDna, cover: boolean, defs: string[]) {
+  const orn = new Set(d.ornaments);
+  if (d.bg === "dark") return boldBg(id, b, cover, defs);
+  if (d.bg === "light") return glossyBg(id, b, cover, defs, orn.has("orbs"), orn.has("orbit"));
+  if (d.bg === "solid") {
+    const c = d.bgColor ?? b.royal;
+    defs.push(`<radialGradient id="${id}sg" cx="${W * 0.8}" cy="${H * 0.15}" r="${W}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${mix(c, "#FFFFFF", 0.18)}"/><stop offset="1" stop-color="${c}"/></radialGradient>`);
+    return `<rect width="${W}" height="${H}" fill="url(#${id}sg)"/>`;
+  }
+  // cream & photo (slide isi foto): kertas hangat editorial
+  const c = d.bg === "cream" ? (d.bgColor ?? CREAM) : "#F6F4F0";
+  defs.push(`<radialGradient id="${id}cg" cx="${W * 0.85}" cy="0" r="${W * 1.1}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${mix(c, "#FFFFFF", 0.5)}"/><stop offset="1" stop-color="${c}"/></radialGradient>`);
+  return `<rect width="${W}" height="${H}" fill="url(#${id}cg)"/>`;
+}
+
+/** Ornamen di atas latar: butiran, bingkai, grid titik. */
+function dnaOverlay(id: string, d: StyleDna, dark: boolean, defs: string[]) {
+  const orn = new Set(d.ornaments);
+  let out = "";
+  if (orn.has("grid")) {
+    defs.push(`<pattern id="${id}dots" width="36" height="36" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="2" fill="${dark ? "#FFFFFF" : "#0B1026"}"/></pattern>`);
+    out += `<rect width="${W}" height="${H}" fill="url(#${id}dots)" opacity="${dark ? 0.06 : 0.05}"/>`;
+  }
+  if (orn.has("frame")) out += `<rect x="40" y="40" width="${W - 80}" height="${H - 80}" rx="28" fill="none" stroke="${dark ? "#FFFFFF" : "#0B1026"}" stroke-opacity=".22" stroke-width="2"/>`;
+  if (orn.has("grain")) {
+    defs.push(`<filter id="${id}gr"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>`);
+    out += `<rect width="${W}" height="${H}" filter="url(#${id}gr)" opacity="${dark ? 0.1 : 0.07}"/>`;
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
-// Cover studio (glossy / bold / photo) dengan visual utama
+// Cover studio generik (mengikuti DNA Gaya) dengan visual utama
 // ---------------------------------------------------------------------------
-function heroSlide(s: Slide, i: number, n: number, o: Prepared, look: Look) {
+function heroSlide(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
   const b = o.brand;
   const id = `h${i}`;
   const defs: string[] = [];
-  const dark = look !== "glossy";
-  const P = paint(look, dark);
+  const dark = dnaDark(d, true);
+  const P = dnaPaint(d, dark);
   const main = font(P.titleFont);
+  const condensed = CONDENSED.has(P.titleFont);
+  const serifTitle = SERIF_FONTS.has(P.titleFont);
+  const orn = new Set(d.ornaments);
+  const full = d.hero === "full" || d.bg === "photo";
+  const hero = full ? "full" : d.hero === "none" ? "none" : d.titlePos === "bottom" ? "above" : "below";
+  const center = d.align === "center";
   defs.push(
     `<linearGradient id="${id}diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${b.royal}"/><stop offset="1" stop-color="${b.cyan}"/></linearGradient>`,
     `<linearGradient id="${id}acc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${dark ? mix(b.royal, "#FFFFFF", 0.25) : b.royal}"/><stop offset=".55" stop-color="${b.blue}"/><stop offset="1" stop-color="${b.cyan}"/></linearGradient>`,
   );
   const { tag, cta } = slideCorners(s, i, n, o.en);
-  let bg = "";
-  let deco = "";
-  let text = "";
-  let hero = "";
-  const lsOf = (size: number) => (look === "bold" ? size * 0.005 : -size * 0.022);
-  const lhT = look === "bold" ? 0.98 : 1.02;
-  const serifFill = dark ? "#FFFFFF" : `url(#${id}acc)`;
 
-  if (look === "glossy") {
-    bg = glossyBg(id, b, true, defs);
-    const cs = (o.corners?.length ? o.corners : DEFAULT_CORNERS[o.en ? "en" : "id"]).slice(0, 4);
-    const cc = "#7D85A0";
-    deco += cornerStack(cs[0] ?? "", 64, 64, false, false, cc) + cornerStack(cs[1] ?? "", W - 64, 64, true, false, cc);
-    deco += cornerStack(cs[2] ?? "", 64, H - 64, false, true, cc) + cornerStack(cs[3] ?? "", W - 64, H - 64, true, true, cc);
-    deco += logoMark(o, W / 2, 92, 46, P.ink, id, true);
-
-    // Judul tengah; angka besar (s.num) di kiri judul seperti "7 GitHub Repos".
-    const num = s.num ? clean(main, s.num).slice(0, 3) : "";
-    const texts = [s.title ?? "", s.accent ?? ""];
-    let y = 196;
-    if (num) {
-      const size = fitRich(main, texts, INNER - 330, 4, 100, 60, lsOf, false);
-      const tl = richWrap(main, s.title ?? "", size, INNER - 330, lsOf(size), false);
-      const al = s.accent ? richWrap(main, s.accent, size, INNER - 330, lsOf(size), false) : [];
-      const blockH = (tl.length + al.length) * size * lhT;
-      const numSize = Math.min(440, blockH * 1.32);
-      const nw = widthOf(main, num, numSize, -numSize * 0.03);
-      const textW = Math.max(...[...tl, ...al].map((l) => richW(main, l, size, lsOf(size))));
-      const x0 = (W - (nw + 26 + textW)) / 2;
-      text += glyphs(main, num, x0, y + numSize * 0.78, numSize, `url(#${id}acc)`, -numSize * 0.03);
-      const ty = y + (numSize * 0.86 - blockH) / 2;
-      [...tl.map((l) => ({ l, acc: false })), ...al.map((l) => ({ l, acc: true }))].forEach((x, k) => {
-        text += richDraw(main, x.l, x0 + nw + 26, ty + k * size * lhT, size, lhT, x.acc ? `url(#${id}acc)` : P.ink, serifFill, lsOf(size));
-      });
-      y += numSize * 0.86;
-    } else {
-      const size = fitRich(main, texts, INNER, 3, 124, 64, lsOf, false);
-      const all = [
-        ...richWrap(main, s.title ?? "", size, INNER, lsOf(size), false).map((l) => ({ l, acc: false })),
-        ...(s.accent ? richWrap(main, s.accent, size, INNER, lsOf(size), false) : []).map((l) => ({ l, acc: true })),
-      ];
-      all.forEach((x, k) => {
-        const w = richW(main, x.l, size, lsOf(size));
-        text += richDraw(main, x.l, (W - w) / 2, y + k * size * lhT, size, lhT, x.acc ? `url(#${id}acc)` : P.ink, serifFill, lsOf(size));
-      });
-      y += all.length * size * lhT;
-    }
-    if (s.sub) {
-      const F = font("medium");
-      const ls2 = wrap(F, s.sub, 30, 800).slice(0, 2);
-      y += 22;
-      ls2.forEach((l, k) => (text += line(F, l, (W - widthOf(F, l, 30)) / 2, y + k * 42, 30, 1.4, P.muted)));
-      y += ls2.length * 42;
-    }
-    // Visual utama di bawah judul
-    const top = y + 30;
-    const bottom = H - (n > 1 ? 150 : 110);
-    const size = Math.max(420, Math.min(900, bottom - top + 60));
-    const cy = top + (bottom - top) / 2;
-    hero = o.hero
-      ? `<image href="${o.hero}" x="${r2(W / 2 - size / 2)}" y="${r2(cy - size / 2)}" width="${size}" height="${size}"/>`
-      : fallbackHero(id, b, W / 2, cy, size, false, defs);
-    if (n > 1) text += swipePill(cta || (o.en ? "Swipe →" : "Geser →"), W / 2 + widthOf(font("bold"), clean(font("bold"), (cta || "Geser →").toUpperCase()), 20, 2.4) / 2 + 24, H - 92, false, b);
-  } else if (look === "bold") {
-    bg = boldBg(id, b, true, defs);
-    deco += logoMark(o, PAD_X, PAD_TOP + 10, 50, "#FFFFFF", id);
-    if (tag) deco += pill(tag, W - PAD_X + 20, PAD_TOP + 10, true, look);
-    const size = fitRich(main, [s.title ?? "", s.accent ?? ""], INNER + 40, 3, 190, 96, lsOf, true);
-    const all = [
-      ...richWrap(main, s.title ?? "", size, INNER + 40, lsOf(size), true).map((l) => ({ l, acc: false })),
-      ...(s.accent ? richWrap(main, s.accent, size, INNER + 40, lsOf(size), true) : []).map((l) => ({ l, acc: true })),
-    ];
-    const F = font("semibold");
-    const subLines = s.sub ? wrap(F, s.sub.toUpperCase(), 26, INNER, 3).slice(0, 2) : [];
-    const blockH = all.length * size * lhT + (subLines.length ? 28 + subLines.length * 38 : 0);
-    let y = H - 170 - blockH;
-    all.forEach((x, k) => {
-      const w = richW(main, x.l, size, lsOf(size));
-      text += richDraw(main, x.l, (W - w) / 2, y + k * size * lhT, size, lhT, x.acc ? `url(#${id}acc)` : "#FFFFFF", "#FFFFFF", lsOf(size));
-    });
-    y += all.length * size * lhT + 28;
-    subLines.forEach((l, k) => (text += line(F, l, (W - widthOf(F, l, 26, 3)) / 2, y + k * 38, 26, 1.4, "#C9CEDB", 3)));
-    const top = PAD_TOP + 60;
-    const bottom = H - 170 - blockH - 20;
-    const hs = Math.max(360, Math.min(820, bottom - top));
-    const cy = top + (bottom - top) / 2;
-    hero = o.hero
-      ? `<image href="${o.hero}" x="${r2(W / 2 - hs / 2)}" y="${r2(cy - hs / 2)}" width="${hs}" height="${hs}"/>`
-      : fallbackHero(id, b, W / 2, cy, hs, true, defs);
-    const R = font("regular");
-    const handle = clean(R, b.handle);
-    if (handle) text += line(R, handle, PAD_X, H - PAD_BOTTOM - 30, 24, 1.23, "#7A8194");
-    if (cta) text += line(font("semibold"), clean(font("semibold"), `${cta.replace(/\s*→\s*$/, "")} »`), W - PAD_X - widthOf(font("semibold"), clean(font("semibold"), `${cta.replace(/\s*→\s*$/, "")} »`), 28), H - PAD_BOTTOM - 32, 28, 1.2, "#FFFFFF");
-  } else {
-    // photo
+  // Latar
+  let bg: string;
+  if (full) {
     defs.push(
       `<linearGradient id="${id}ov" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity=".45"/><stop offset=".16" stop-color="#000000" stop-opacity="0"/><stop offset=".42" stop-color="#000000" stop-opacity="0"/><stop offset=".78" stop-color="#05060A" stop-opacity=".72"/><stop offset="1" stop-color="#05060A" stop-opacity=".9"/></linearGradient>`,
       `<linearGradient id="${id}pbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${mix(b.royal, "#000000", 0.2)}"/><stop offset="1" stop-color="${mix(b.cyan, b.royal, 0.4)}"/></linearGradient>`,
     );
-    bg = o.hero ? `<image href="${o.hero}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice"/>` : `<rect width="${W}" height="${H}" fill="url(#${id}pbg)"/>` + fallbackHero(id, b, W / 2, 470, 760, true, defs);
+    bg = o.hero
+      ? `<image href="${o.hero}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice"/>`
+      : `<rect width="${W}" height="${H}" fill="url(#${id}pbg)"/>` + fallbackHero(id, b, W / 2, 470, 760, true, defs);
     bg += `<rect width="${W}" height="${H}" fill="url(#${id}ov)"/>`;
-    deco += logoMark(o, PAD_X, PAD_TOP, 50, "#FFFFFF", id);
-    if (tag) deco += pill(tag, W - PAD_X + 20, PAD_TOP, true, look);
-    const size = fitRich(main, [s.title ?? "", s.accent ?? ""], INNER, 4, 124, 70, lsOf, false);
-    const all = [
-      ...richWrap(main, s.title ?? "", size, INNER, lsOf(size), false).map((l) => ({ l, acc: false })),
-      ...(s.accent ? richWrap(main, s.accent, size, INNER, lsOf(size), false) : []).map((l) => ({ l, acc: true })),
-    ];
-    const F = font("medium");
-    const subLines = s.sub ? wrap(F, s.sub, 30, INNER - 60).slice(0, 2) : [];
-    const kick = s.label ? clean(font("heavy"), s.label) : "";
-    const kh = 64;
-    const blockH = (kick ? kh + 22 : 0) + all.length * size * lhT + (subLines.length ? 26 + subLines.length * 42 : 0);
-    let y = H - 150 - blockH;
-    if (kick) {
-      const kw = widthOf(font("heavy"), kick, 38, -0.5) + 40;
-      text += `<rect x="${PAD_X - 6}" y="${y}" width="${r2(kw)}" height="${kh}" rx="10" fill="${mix(b.cyan, "#FFFFFF", 0.15)}" transform="rotate(-2 ${PAD_X} ${y + kh / 2})"/>`;
-      text += `<g transform="rotate(-2 ${PAD_X} ${y + kh / 2})">${line(font("heavy"), kick, PAD_X + 14, y + 9, 38, 1.2, "#0B1026", -0.5)}</g>`;
-      y += kh + 22;
-    }
-    const accFill = mix(b.cyan, "#FFFFFF", 0.1);
-    all.forEach((x, k) => (text += richDraw(main, x.l, PAD_X, y + k * size * lhT, size, lhT, x.acc ? accFill : "#FFFFFF", accFill, lsOf(size))));
-    y += all.length * size * lhT + 26;
-    subLines.forEach((l, k) => (text += line(F, l, PAD_X, y + k * 42, 30, 1.4, "#E4E7EF")));
-    const R = font("regular");
-    const handle = clean(R, b.handle);
-    if (handle) text += line(R, handle, PAD_X, H - PAD_BOTTOM - 26, 24, 1.23, "#C3C8D4");
-    if (cta) {
-      const t = clean(font("semibold"), cta);
-      text += line(font("semibold"), t, W - PAD_X - widthOf(font("semibold"), t, 26), H - PAD_BOTTOM - 28, 26, 1.2, "#FFFFFF");
-    }
+  } else bg = dnaBg(id, b, d, true, defs);
+  const overlay = dnaOverlay(id, d, dark, defs);
+
+  // Kepala: logo + penanda halaman, atau logo tengah + teks 4 sudut
+  let deco = "";
+  let text = "";
+  const corners = orn.has("corners") && !full;
+  if (corners) {
+    const cs = (o.corners?.length ? o.corners : DEFAULT_CORNERS[o.en ? "en" : "id"]).slice(0, 4);
+    const cc = dark ? "#8C93A6" : "#7D85A0";
+    deco += cornerStack(cs[0] ?? "", 64, 64, false, false, cc) + cornerStack(cs[1] ?? "", W - 64, 64, true, false, cc);
+    deco += cornerStack(cs[2] ?? "", 64, H - 64, false, true, cc) + cornerStack(cs[3] ?? "", W - 64, H - 64, true, true, cc);
+    deco += logoMark(o, W / 2, 92, 46, P.ink, id, true);
+  } else {
+    deco += logoMark(o, PAD_X, PAD_TOP + 10, 50, P.ink, id);
+    if (tag) deco += pill(tag, W - PAD_X + 20, PAD_TOP + 10, dark, full ? "photo" : dark ? "bold" : "glossy");
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${defs.join("")}</defs>${bg}${hero}${deco}${text}</svg>`;
+  // Ukuran judul: condensed lebih besar & mengisi lebar; serif sedikit lebih besar.
+  const lsOf = (size: number) => (condensed ? size * 0.005 : serifTitle ? -size * 0.01 : -size * 0.022);
+  const lhT = condensed ? 0.98 : serifTitle ? 1.06 : 1.02;
+  const maxW = condensed ? INNER + 40 : INNER;
+  const start = Math.round((condensed ? 190 : serifTitle ? 132 : full ? 124 : 124) * d.titleScale);
+  const maxLines = full || hero === "none" ? 4 : 3;
+  // Foto & latar warna solid: aksen warna terang solid (gradasi brand kurang kontras di atas warna brand).
+  const accSolid = full ? mix(b.cyan, "#FFFFFF", 0.1) : d.bg === "solid" ? (dark ? mix(b.cyan, "#FFFFFF", 0.45) : mix(b.royal, "#000000", 0.35)) : null;
+  const serifFill = dark ? (accSolid ?? "#FFFFFF") : `url(#${id}acc)`;
+  const accentFill = accSolid ?? `url(#${id}acc)`;
+  const num = s.num && !full && !condensed ? clean(main, s.num).slice(0, 3) : "";
+
+  type L = { l: Word[]; acc: boolean };
+  let numSize = 0;
+  let nw = 0;
+  const textMax = num ? maxW - 330 : maxW;
+  const size = fitRich(main, [s.title ?? "", s.accent ?? ""], textMax, num ? 4 : maxLines, num ? Math.round(100 * d.titleScale) : start, 60, lsOf, P.upper);
+  const lines: L[] = [
+    ...richWrap(main, s.title ?? "", size, textMax, lsOf(size), P.upper).map((l) => ({ l, acc: false })),
+    ...(s.accent ? richWrap(main, s.accent, size, textMax, lsOf(size), P.upper) : []).map((l) => ({ l, acc: true })),
+  ];
+  let titleH = lines.length * size * lhT;
+  if (num) {
+    numSize = Math.min(440, titleH * 1.32);
+    nw = widthOf(main, num, numSize, -numSize * 0.03);
+    titleH = Math.max(titleH, numSize * 0.86);
+  }
+
+  // Label: stiker sorot (foto/sticker) atau pil kecil
+  const kickFont = font("jakarta");
+  const kick = s.label ? clean(kickFont, s.label) : "";
+  const sticker = kick && (full || orn.has("sticker"));
+  const kh = sticker ? 64 : kick ? 49 : 0;
+  const SubF = font("medium");
+  const subLines = s.sub ? (condensed ? wrap(font("semibold"), s.sub.toUpperCase(), 26, INNER, 3) : wrap(SubF, s.sub, 30, center ? 800 : INNER - 60)).slice(0, 2) : [];
+  const subLh = condensed ? 38 : 42;
+  const blockH = (kh ? kh + 22 : 0) + titleH + (subLines.length ? 24 + subLines.length * subLh : 0);
+
+  // Posisi blok judul & area visual
+  const headerBottom = corners ? 150 : PAD_TOP + 70;
+  const footerTop = H - (n > 1 || !corners ? 150 : 110);
+  let y0: number;
+  let heroTop = 0;
+  let heroBottom = 0;
+  if (hero === "below") {
+    y0 = corners ? 196 : headerBottom + 40;
+    heroTop = y0 + blockH + 30;
+    heroBottom = footerTop;
+  } else if (hero === "above") {
+    y0 = footerTop - 20 - blockH;
+    heroTop = headerBottom;
+    heroBottom = y0 - 20;
+  } else if (hero === "full") {
+    y0 = H - 150 - blockH;
+  } else {
+    y0 = headerBottom + Math.max(0, (footerTop - headerBottom - blockH) / 2);
+  }
+
+  let y = y0;
+  if (kick) {
+    if (sticker) {
+      const kw = widthOf(kickFont, kick, 38, -0.5) + 40;
+      const kx = center ? (W - kw) / 2 : PAD_X - 6;
+      const ks = dark ? mix(b.cyan, "#FFFFFF", 0.15) : mix(b.cyan, "#FFFFFF", 0.35);
+      text += `<g transform="rotate(-2 ${kx} ${y + kh / 2})"><rect x="${r2(kx)}" y="${y}" width="${r2(kw)}" height="${kh}" rx="10" fill="${ks}"/>${line(kickFont, kick, kx + 20, y + 9, 38, 1.2, "#0B1026", -0.5)}</g>`;
+    } else {
+      const F = font("bold");
+      const t = clean(F, kick.toUpperCase());
+      const kw = widthOf(F, t, 24, 2) + 40;
+      const kx = center ? (W - kw) / 2 : PAD_X;
+      text += `<rect x="${r2(kx)}" y="${y}" width="${r2(kw)}" height="${kh}" rx="${kh / 2}" fill="${dark ? mix(b.blue, "#06070B", 0.7) : mix(b.royal, "#FFFFFF", 0.88)}"/>` + line(F, t, kx + 20, y + 10, 24, 1.21, dark ? mix(b.blue, "#FFFFFF", 0.5) : b.royal, 2);
+    }
+    y += kh + 22;
+  }
+  if (num) {
+    const textW = Math.max(...lines.map((x) => richW(main, x.l, size, lsOf(size))));
+    const x0 = center ? (W - (nw + 26 + textW)) / 2 : PAD_X;
+    text += glyphs(main, num, x0, y + numSize * 0.78, numSize, `url(#${id}acc)`, -numSize * 0.03);
+    const ty = y + (numSize * 0.86 - lines.length * size * lhT) / 2;
+    lines.forEach((x, k) => (text += richDraw(main, x.l, x0 + nw + 26, ty + k * size * lhT, size, lhT, x.acc ? accentFill : P.ink, serifFill, lsOf(size))));
+  } else {
+    lines.forEach((x, k) => {
+      const w = richW(main, x.l, size, lsOf(size));
+      text += richDraw(main, x.l, center ? (W - w) / 2 : PAD_X, y + k * size * lhT, size, lhT, x.acc ? accentFill : P.ink, serifFill, lsOf(size));
+    });
+  }
+  y += titleH;
+  if (subLines.length) {
+    y += 24;
+    const F = condensed ? font("semibold") : SubF;
+    const sz = condensed ? 26 : 30;
+    const lsS = condensed ? 3 : 0;
+    const col = full ? "#E4E7EF" : condensed && dark ? "#C9CEDB" : P.muted;
+    subLines.forEach((l, k) => (text += line(F, l, center ? (W - widthOf(F, l, sz, lsS)) / 2 : PAD_X, y + k * subLh, sz, 1.4, col, lsS)));
+  }
+
+  // Visual utama
+  let heroSvg = "";
+  if (hero === "below" || hero === "above") {
+    const sz = Math.max(hero === "below" ? 420 : 360, Math.min(hero === "below" ? 900 : 820, heroBottom - heroTop + (hero === "below" ? 60 : 0)));
+    const cy = heroTop + (heroBottom - heroTop) / 2;
+    heroSvg = o.hero
+      ? `<image href="${o.hero}" x="${r2(W / 2 - sz / 2)}" y="${r2(cy - sz / 2)}" width="${sz}" height="${sz}"/>`
+      : fallbackHero(id, b, W / 2, cy, sz, dark, defs);
+  }
+
+  // Kaki
+  if (corners) {
+    if (n > 1) {
+      const lbl = cta || (o.en ? "Swipe →" : "Geser →");
+      text += swipePill(lbl, W / 2 + widthOf(font("bold"), clean(font("bold"), lbl.toUpperCase()), 20, 2.4) / 2 + 24, H - 92, dark, b);
+    }
+  } else {
+    const R = font("regular");
+    const handle = clean(R, b.handle);
+    if (handle) text += line(R, handle, PAD_X, H - PAD_BOTTOM - 28, 24, 1.23, full ? "#C3C8D4" : P.corner);
+    if (cta) text += swipePill(cta, W - PAD_X + 20, H - PAD_BOTTOM - 14, dark, b);
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${defs.join("")}</defs>${bg}${overlay}${heroSvg}${deco}${text}</svg>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -545,11 +644,13 @@ function heroSlide(s: Slide, i: number, n: number, o: Prepared, look: Look) {
 // ---------------------------------------------------------------------------
 export function slideSvg(s: Slide, i: number, n: number, o: Prepared) {
   const look: Look = o.look ?? "classic";
-  if (look !== "classic" && isHero(s, i)) return heroSlide(s, i, n, o, look);
+  const dna = o.dna ?? null;
+  if (dna && isHero(s, i)) return heroSlide(s, i, n, o, dna);
   const b = o.brand;
-  const theme = slideTheme(s, i, n, look);
+  const theme = dna ? (dnaDark(dna, false) ? "dark" : "light") : slideTheme(s, i, n, look);
   const dark = theme === "dark";
-  const P = paint(look, dark);
+  const P = dna ? dnaPaint(dna, dark) : paint(look, dark);
+  const condensed = CONDENSED.has(P.titleFont);
   const alt = dark && i === n - 1 && n > 1;
   const { ink, muted, corner } = P;
   const big = s.type === "cover" || s.type === "statement";
@@ -560,8 +661,7 @@ export function slideSvg(s: Slide, i: number, n: number, o: Prepared) {
 
   // Latar
   let bg: string;
-  if (look === "glossy") bg = glossyBg(id, b, false, defs);
-  else if (look === "bold") bg = boldBg(id, b, false, defs);
+  if (dna) bg = dnaBg(id, b, dna, false, defs) + dnaOverlay(id, dna, dark, defs);
   else {
     bg = `<rect width="${W}" height="${H}" fill="${dark ? b.navy : look === "photo" ? "#F6F4F0" : "#F7F8FC"}"/>`;
     if (dark) {
@@ -597,9 +697,9 @@ export function slideSvg(s: Slide, i: number, n: number, o: Prepared) {
   }
 
   // Judul + aksen (teks kaya: *kata* = serif miring)
-  const size = look === "bold" ? (big ? 120 : 96) : big ? 100 : look === "classic" ? 76 : 80;
-  const lh = look === "bold" ? 1.0 : big ? 1.04 : 1.08;
-  const ls = look === "bold" ? 0.5 : look === "classic" ? (big ? -1.5 : -1) : -size * 0.02;
+  const size = Math.round((condensed ? (big ? 120 : 96) : big ? 100 : !dna ? 76 : SERIF_FONTS.has(P.titleFont) ? 86 : 80) * (dna ? Math.min(1.1, dna.titleScale) : 1));
+  const lh = condensed ? 1.0 : big ? 1.04 : 1.08;
+  const ls = condensed ? 0.5 : !dna ? (big ? -1.5 : -1) : SERIF_FONTS.has(P.titleFont) ? -size * 0.008 : -size * 0.02;
   const tLines = s.title ? richWrap(D, s.title, size, INNER, ls, P.upper) : [];
   const aLines = s.accent ? richWrap(D, s.accent, size, INNER, ls, P.upper) : [];
   if (tLines.length || aLines.length) {
@@ -611,7 +711,7 @@ export function slideSvg(s: Slide, i: number, n: number, o: Prepared) {
     });
   }
 
-  const T = font(look === "classic" ? "display" : look === "bold" ? "condensed" : "heavy");
+  const T = font(P.titleFont);
   // Polling A/B/C
   if (s.type === "poll" && s.options?.length) {
     const F = font("semibold");
@@ -747,7 +847,7 @@ export function slideSvg(s: Slide, i: number, n: number, o: Prepared) {
       const nw = widthOf(D, t, 420);
       num = outlineLine(D, t, W - 40 - nw, H - 60 - 420, 420, "#E3E8F2");
     } else if (P.studio) {
-      const ns = look === "bold" ? 520 : 440;
+      const ns = condensed ? 520 : 440;
       const nw = widthOf(D, t, ns);
       const op = dark ? 0.16 : 0.13;
       num = `<g opacity="${op}">${line(D, t, W - 30 - nw, H - 70 - ns, ns, 1, `url(#${id}diag)`)}</g>`;
@@ -788,8 +888,8 @@ async function logoData(o: RenderOptions, theme: "dark" | "light") {
 }
 
 /** Visual utama → data URI. Glossy/Bold: persegi dengan tepi memudar agar menyatu ke latar. Photo: penuh 1080×1350. */
-async function heroData(buf: Buffer, look: Look) {
-  if (look === "photo") {
+async function heroData(buf: Buffer, full: boolean) {
+  if (full) {
     const jpg = await sharp(buf).resize(W, H, { fit: "cover", position: "attention" }).jpeg({ quality: 88 }).toBuffer();
     return `data:image/jpeg;base64,${jpg.toString("base64")}`;
   }
@@ -804,19 +904,19 @@ async function heroData(buf: Buffer, look: Look) {
 
 async function prepare(slides: Slide[], i: number, o: RenderOptions, logos: Partial<Record<"dark" | "light", Prepared["logoData"]>>): Promise<Prepared> {
   const look = o.look ?? "classic";
+  const dna = o.style ?? (look === "classic" ? null : LOOK_DNA[look]);
   const s = slides[i];
-  const theme = slideTheme(s, i, slides.length, look);
-  const logoTheme = look === "photo" && isHero(s, i) ? "dark" : theme;
+  const logoTheme: "dark" | "light" = dna ? (dnaDark(dna, isHero(s, i)) ? "dark" : "light") : slideTheme(s, i, slides.length, look);
   if (!(logoTheme in logos)) logos[logoTheme] = await logoData(o, logoTheme);
   let hero: string | null = null;
-  if (look !== "classic" && isHero(s, i) && s.image && o.images?.[s.image]) {
+  if (dna && isHero(s, i) && s.image && o.images?.[s.image]) {
     try {
-      hero = await heroData(o.images[s.image], look);
+      hero = await heroData(o.images[s.image], dna.hero === "full" || dna.bg === "photo");
     } catch (err) {
       console.error("[autopilot] visual gagal dibaca", err);
     }
   }
-  return { ...o, look, logoData: logos[logoTheme] ?? null, hero, corners: slides[0]?.corners };
+  return { ...o, look, dna, logoData: logos[logoTheme] ?? null, hero, corners: slides[0]?.corners };
 }
 
 const toJpeg = (svg: string, width = W, quality = 90) => {

@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!z.string().uuid().safeParse(id).success) return jsonError(400, "invalid_id");
   const { data: row } = await s.supabase
     .from("social_posts")
-    .select("id, user_id, workspace_id, kind, design, status, slides, caption, title, script, alt_text, post_date, post_time, media")
+    .select("id, user_id, workspace_id, kind, design, style, status, slides, caption, title, script, alt_text, post_date, post_time, media")
     .eq("id", id)
     .maybeSingle<PostRow>();
   if (!row || row.user_id !== s.user.id) return jsonError(404, "not_found");

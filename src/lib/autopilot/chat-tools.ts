@@ -11,6 +11,8 @@ import { tidyPost } from "./tidy";
 import { createVisual } from "./visuals";
 import { brandKeywordsOf } from "./voice";
 import { isHero, LOOKS, slideSchema, type Look, type Slide } from "./slides";
+import { activeStyle } from "./styles-server";
+import { baseOf } from "./style";
 
 /**
  * Mode chat Instagram (adaptasi "Mode chat" skill marqthink-ig): dari chat Marqthink, pelanggan Pro/Promax bisa minta
@@ -77,7 +79,7 @@ export function createInstagramTools(ctx: InstagramToolCtx) {
         if ((await postsThisMonth(ctx.admin, ctx.userId)) >= allowance.postsPerMonth)
           return { ok: false, error: "Jatah konten Autopilot bulan ini sudah habis (jatah baru mulai tanggal 1). Tawarkan create_carousel sebagai gantinya." };
         try {
-          const { data: settings } = await ctx.admin.from("autopilot_settings").select("workspace_id, slot_times, design").eq("user_id", ctx.userId).maybeSingle();
+          const { data: settings } = await ctx.admin.from("autopilot_settings").select("workspace_id, slot_times, design, style_id, style_preset").eq("user_id", ctx.userId).maybeSingle();
           const workspaceId = ctx.workspaceId ?? (settings?.workspace_id as string | null) ?? null;
           const brand = await loadBrand(ctx.admin, ctx.userId, workspaceId, ctx.fullName);
           const keywords = brandKeywordsOf(brand.kit);
@@ -96,7 +98,9 @@ export function createInstagramTools(ctx: InstagramToolCtx) {
           }
           if (!time) time = "19:00";
 
-          const design = raw.design ?? pickLook((settings?.design as string | null) ?? "auto", undefined, Math.floor(Math.random() * 3), raw.kind);
+          // Gaya tetap pilihan brand (industri/referensi) diutamakan, kecuali user menyebut gaya lain.
+          const dna = raw.design ? null : await activeStyle(ctx.admin, ctx.userId, settings ?? null);
+          const design = dna ? baseOf(dna) : raw.design ?? pickLook((settings?.design as string | null) ?? "auto", undefined, Math.floor(Math.random() * 3), raw.kind);
           const t = tidyPost({ ...raw, date, time, design, slides: raw.slides as Slide[] }, brand.palette.name, keywords, brand.kit?.voice_dont);
           const id = randomUUID();
           const { error } = await ctx.admin.from("social_posts").insert({
@@ -108,6 +112,7 @@ export function createInstagramTools(ctx: InstagramToolCtx) {
             post_time: time,
             kind: raw.kind,
             design,
+            style: dna,
             title: raw.title.slice(0, 160),
             pillar: raw.pillar ?? null,
             slides: t.slides,
@@ -122,7 +127,7 @@ export function createInstagramTools(ctx: InstagramToolCtx) {
           let hasVisual = false;
           const cover = t.slides[0];
           if (design !== "classic" && cover && isHero(cover, 0) && cover.visual) {
-            const path = await createVisual(ctx.admin, { userId: ctx.userId, postId: id, look: design, visual: cover.visual, brand: brand.palette, timeoutMs: 70_000 });
+            const path = await createVisual(ctx.admin, { userId: ctx.userId, postId: id, look: design, visual: cover.visual, brand: brand.palette, style: dna, timeoutMs: 70_000 });
             if (path) {
               hasVisual = true;
               await ctx.admin.from("social_posts").update({ slides: [{ ...cover, image: path }, ...t.slides.slice(1)] }).eq("id", id).eq("user_id", ctx.userId);

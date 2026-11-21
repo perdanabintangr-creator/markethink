@@ -1,3 +1,6 @@
+import { analyzePrompt } from "@/lib/autopilot/style-prompt";
+import { baseOf, dnaForLook, imageAspectFor, LOOK_DNA, parseDna, styleDnaSchema, styleNote, visualPromptFor } from "@/lib/autopilot/style";
+import { INDUSTRIES, presetById, presetsFor, STYLE_PRESETS } from "@/lib/autopilot/presets";
 import { engagementScore, summarizePerformance, type MediaStat } from "@/lib/autopilot/performance";
 import { brandKeywordsOf, forbiddenHits, splitList, voiceRules } from "@/lib/autopilot/voice";
 import { createHmac } from "node:crypto";
@@ -305,4 +308,47 @@ describe("brand voice", () => {
     expect(p).toContain("PERFORMA X");
     expect(p).toContain("SUARA BRAND Y");
   });
+});
+
+describe("style DNA", () => {
+  it("every industry preset is a valid DNA and industries have 3 styles", () => {
+    for (const p of STYLE_PRESETS) expect(styleDnaSchema.safeParse(p.dna).success, p.id).toBe(true);
+    for (const ind of INDUSTRIES) expect(presetsFor(ind.id)).toHaveLength(3);
+    expect(new Set(STYLE_PRESETS.map((p) => p.id)).size).toBe(STYLE_PRESETS.length);
+  });
+  it("baseOf maps DNA to the design column", () => {
+    expect(baseOf(LOOK_DNA.glossy)).toBe("glossy");
+    expect(baseOf(LOOK_DNA.bold)).toBe("bold");
+    expect(baseOf(LOOK_DNA.photo)).toBe("photo");
+    expect(baseOf(presetById("fnb-warm")!.dna)).toBe("glossy");
+    expect(dnaForLook("classic")).toBeNull();
+  });
+  it("visual prompt matches the background and keeps no-text rule", () => {
+    const c = { primary: "#7A3E1D", accent: "#E9A13B" };
+    expect(visualPromptFor(presetById("fnb-warm")!.dna, "a latte", c)).toMatch(/cream/);
+    expect(visualPromptFor(presetById("fnb-bold")!.dna, "a burger", c)).toMatch(/pure black/);
+    expect(visualPromptFor(presetById("fnb-photo")!.dna, "friends", c)).toMatch(/Portrait 3:4/);
+    expect(imageAspectFor(presetById("fnb-photo")!.dna)).toBe("3:4");
+    expect(visualPromptFor(presetById("retail-promo")!.dna, "x", c)).toMatch(/no text/i);
+  });
+  it("parseDna rejects junk and styleNote describes the style", () => {
+    expect(parseDna({ bg: "neon" })).toBeNull();
+    expect(parseDna(presetById("tech-grid")!.dna)?.font).toBe("space");
+    expect(styleNote(presetById("education-glossy")!.dna)).toMatch(/corners/);
+  });
+  it("analysis prompt lists every allowed value and feedback", () => {
+    const p = analyzePrompt({ count: 4, feedback: "lebih elegan", previous: LOOK_DNA.bold });
+    for (const f of ["anton", "cormorant", "fredoka"]) expect(p).toContain(f);
+    expect(p).toContain("lebih elegan");
+    expect(p).toContain("Jangan menyalin logo");
+  });
+  it("renders presets with and without visuals", async () => {
+    const hero = await sharp({ create: { width: 500, height: 500, channels: 3, background: "#ffaa33" } }).png().toBuffer();
+    const slides: Slide[] = [{ ...sampleSlides()[0], label: "tips", image: "u/autopilot/p/v.png" }, ...sampleSlides().slice(1, 3)];
+    for (const id of ["fnb-warm", "fashion-street", "education-board", "retail-promo", "property-premium", "beauty-model"]) {
+      const dna = presetById(id)!.dna;
+      const out = await renderSlides(slides, { brand: brandPalette({ name: "Kopi Senja", primary: "#7A3E1D" }), look: baseOf(dna), style: dna, images: { "u/autopilot/p/v.png": hero } });
+      expect((await sharp(out[0]).metadata()).height).toBe(1350);
+    }
+  }, 120_000);
 });

@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateImage } from "@/lib/ai/image";
-import { visualPrompt } from "./plan";
+import { imageAspectFor, LOOK_DNA, parseDna, visualPromptFor, type StyleDna } from "./style";
 import type { Look, Slide, SlideBrand } from "./slides";
 
 const BUCKET = "uploads";
@@ -10,13 +10,14 @@ export const MAX_IMAGE_REGENS = 3;
 /** Buat visual utama (AI) untuk cover, simpan ke storage milik user. Mengembalikan path, atau null bila gagal. */
 export async function createVisual(
   admin: SupabaseClient,
-  o: { userId: string; postId: string; look: Look; visual: string; brand: SlideBrand; timeoutMs?: number },
+  o: { userId: string; postId: string; look: Look; visual: string; brand: SlideBrand; style?: StyleDna | unknown; timeoutMs?: number },
 ): Promise<string | null> {
   const started = Date.now();
-  const prompt = visualPrompt(o.look, o.visual, { primary: o.brand.royal, accent: o.brand.cyan });
+  const dna = parseDna(o.style) ?? (o.look === "classic" ? LOOK_DNA.glossy : LOOK_DNA[o.look]);
+  const prompt = visualPromptFor(dna, o.visual, { primary: o.brand.royal, accent: o.brand.cyan });
   try {
     const img = await Promise.race([
-      generateImage(prompt, o.look === "photo" ? "3:4" : "1:1"),
+      generateImage(prompt, imageAspectFor(dna)),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout gambar")), o.timeoutMs ?? 75_000)),
     ]);
     const ext = img.mime.includes("jpeg") || img.mime.includes("jpg") ? "jpg" : img.mime.includes("webp") ? "webp" : "png";

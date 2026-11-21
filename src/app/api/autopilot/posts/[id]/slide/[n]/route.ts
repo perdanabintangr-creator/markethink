@@ -14,7 +14,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id, n } = await params;
   const i = Number(n) - 1;
   if (!z.string().uuid().safeParse(id).success || !Number.isInteger(i) || i < 0 || i > 9) return jsonError(400, "invalid");
-  const { data: row } = await s.supabase.from("social_posts").select("user_id, workspace_id, slides, design").eq("id", id).maybeSingle();
+  const { data: row } = await s.supabase.from("social_posts").select("user_id, workspace_id, slides, design, style").eq("id", id).maybeSingle();
   if (!row || row.user_id !== s.user.id) return jsonError(404, "not_found");
   const slides = (row.slides ?? []) as Slide[];
   if (i >= slides.length) return jsonError(404, "not_found");
@@ -22,7 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // Visual hanya dimuat untuk slide yang memakainya (cover).
   const opts = await renderOptions(
     createAdminClient(),
-    { user_id: s.user.id, workspace_id: row.workspace_id as string | null, slides: i === 0 ? slides : slides.map((x) => ({ ...x, image: undefined })), design: row.design as Look },
+    { user_id: s.user.id, workspace_id: row.workspace_id as string | null, slides: i === 0 ? slides : slides.map((x) => ({ ...x, image: undefined })), design: row.design as Look, style: row.style },
     s.profile.language,
     s.profile.full_name,
   );

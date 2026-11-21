@@ -7,6 +7,7 @@ import { AutopilotView, type ApPost, type ApSettings, type ApWorkspace } from "@
 import { AutopilotUpsell } from "@/components/autopilot/autopilot-upsell";
 import { instagramStatus } from "@/lib/instagram";
 import type { MediaStat } from "@/lib/autopilot/performance";
+import type { BrandStyleRow } from "@/components/autopilot/style-section";
 
 export const metadata = { title: "Autopilot Konten" };
 export const dynamic = "force-dynamic";
@@ -31,8 +32,8 @@ export default async function AutopilotPage() {
   if (!allowance) return <AutopilotUpsell lang={lang} workspaces={workspaces} />;
 
   const today = todayWib();
-  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }] = await Promise.all([
-    supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, generating_at").maybeSingle(),
+  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }, { data: styleRows }] = await Promise.all([
+    supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, industry, style_preset, style_id, generating_at").maybeSingle(),
     supabase
       .from("social_posts")
       .select("id, post_date, post_time, kind, design, image_regens, permalink, error, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
@@ -47,6 +48,7 @@ export default async function AutopilotPage() {
       .select("ig_media_id, posted_at, media_type, caption, permalink, likes, comments, reach, saved, shares, views")
       .gte("posted_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
       .limit(60),
+    supabase.from("brand_styles").select("id, name, dna, analysis, updated_at").order("created_at", { ascending: false }).limit(20),
   ]);
 
   const settings: ApSettings = {
@@ -73,6 +75,12 @@ export default async function AutopilotPage() {
       usedThisMonth={used}
       instagram={instagram}
       stats={(statRows ?? []) as MediaStat[]}
+      styleState={{
+        industry: (settingsRow?.industry as string | null) ?? null,
+        presetId: (settingsRow?.style_preset as string | null) ?? null,
+        styleId: (settingsRow?.style_id as string | null) ?? null,
+        styles: (styleRows ?? []) as BrandStyleRow[],
+      }}
     />
   );
 }
