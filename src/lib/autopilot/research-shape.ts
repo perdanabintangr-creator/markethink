@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { styleDnaSchema } from "./style";
+import { clip, styleDnaSchema } from "./style";
 
 /**
  * Hasil riset brand otomatis (bentuk data, prompt, & penggabungan ke Brand Kit). Modul murni (diuji vitest).
@@ -9,28 +9,28 @@ const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
 export const researchSchema = z.object({
   business: z.object({
-    summary: z.string().max(600),
-    category: z.string().max(80),
-    products: z.array(z.object({ name: z.string().max(120), description: z.string().max(300).optional() })).max(12).default([]),
-    target_audience: z.string().max(400).optional(),
-    usp: z.string().max(400).optional(),
-    voice: z.string().max(300).optional(),
-    location: z.string().max(200).optional(),
+    summary: clip(600),
+    category: clip(80),
+    products: z.array(z.object({ name: clip(120), description: clip(300).optional() })).transform((a) => a.slice(0, 12)).default([]),
+    target_audience: clip(400).optional(),
+    usp: clip(400).optional(),
+    voice: clip(300).optional(),
+    location: clip(200).optional(),
   }),
   kv: z.object({
     primary: hex,
     secondary: hex,
     background: hex.optional(),
-    mood: z.string().max(200),
-    reason: z.string().max(300).optional(),
+    mood: clip(200),
+    reason: clip(300).optional(),
   }),
   dna: styleDnaSchema,
   /** Subjek visual khas brand untuk gambar AI (bahasa Inggris), mis. "photobox booth with ring light and props". */
-  visual_subjects: z.array(z.string().max(200)).max(6).default([]),
+  visual_subjects: z.array(clip(200)).transform((a) => a.slice(0, 6)).default([]),
   /** Indeks gambar referensi yang menampilkan produk/layanan brand (kandidat foto produk). */
-  product_images: z.array(z.number().int().min(0)).max(8).default([]),
-  confidence: z.enum(["high", "medium", "low"]).default("medium"),
-  notes: z.string().max(400).optional(),
+  product_images: z.array(z.number().int().min(0)).transform((a) => a.slice(0, 8)).default([]),
+  confidence: z.preprocess((v) => (typeof v === "string" ? v.toLowerCase() : v), z.enum(["high", "medium", "low"]).catch("medium")).default("medium"),
+  notes: clip(400).optional(),
 });
 export type BrandResearch = z.infer<typeof researchSchema>;
 

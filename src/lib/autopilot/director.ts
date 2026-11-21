@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { plainText, type Slide } from "./slides";
-import type { StyleDna } from "./style";
+import { clip, looseEnum, type StyleDna } from "./style";
 
 /**
  * Visual Director (brief founder 21 Nov): sebelum render, AI membaca isi TIAP slide lalu memutuskan perlu gambar
@@ -16,23 +16,27 @@ export type SubjectType = (typeof SUBJECT_TYPES)[number];
 export const SUBJECT_PRIORITY: Record<SubjectType, number> = { orang: 5, produk: 5, before_after: 5, cara_pakai: 4, suasana: 3, objek: 2 };
 
 export const slidePlanSchema = z.object({
-  slide: z.number().int().min(1).max(10),
-  needs_image: z.boolean(),
-  reason: z.string().max(240),
-  subject_type: z.enum(SUBJECT_TYPES).nullable().optional(),
-  scene: z.string().max(400).optional().nullable(),
-  image_prompt: z.string().max(1200).optional().nullable(),
-  text_safe_zone: z.enum(["bottom-35%", "top-35%"]).default("bottom-35%"),
+  slide: z.coerce.number().int().min(1).max(10),
+  needs_image: z.preprocess((v) => v === true || v === "true" || v === "ya" || v === "yes", z.boolean()),
+  reason: clip(240).default(""),
+  subject_type: looseEnum(SUBJECT_TYPES, {
+    person: "orang", people: "orang", product: "produk", object: "objek", props: "objek", property: "objek",
+    scene: "suasana", place: "suasana", atmosphere: "suasana", "before-after": "before_after", "before_after": "before_after",
+    comparison: "before_after", "how-to": "cara_pakai", "cara-pakai": "cara_pakai", howto: "cara_pakai", steps: "cara_pakai",
+  }).nullable(),
+  scene: clip(400).optional().nullable(),
+  image_prompt: clip(1500).optional().nullable(),
+  text_safe_zone: z.preprocess((v) => (typeof v === "string" && /top/i.test(v) ? "top-35%" : "bottom-35%"), z.enum(["bottom-35%", "top-35%"])).default("bottom-35%"),
   /** Pakai foto produk asli klien sebagai acuan (subjek produk). */
-  use_product_photo: z.boolean().default(false),
+  use_product_photo: z.boolean().catch(false).default(false),
 });
 export type SlidePlan = z.infer<typeof slidePlanSchema>;
 
 export const postPlanSchema = z.object({
   post: z.number().int().min(0),
   /** "Bible" visual satu carousel: talent, wardrobe, palet, lighting, lokasi — dipakai di semua prompt agar satu cerita. */
-  bible: z.string().max(600),
-  slides: z.array(slidePlanSchema).max(10),
+  bible: clip(700).default(""),
+  slides: z.array(slidePlanSchema).transform((a) => a.slice(0, 10)),
 });
 export const directorSchema = z.object({ posts: z.array(postPlanSchema) });
 export type PostPlan = z.infer<typeof postPlanSchema>;

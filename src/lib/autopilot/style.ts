@@ -33,25 +33,35 @@ export const VISUAL_STYLES = ["3d-glossy", "clay-3d", "photo-lifestyle", "produc
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
+/** Teks AI yang kepanjangan dipotong rapi (bukan ditolak) — keluaran model kadang sedikit melebihi batas. */
+export const clip = (n: number) => z.string().transform((s) => s.trim().slice(0, n));
+/** Enum toleran: huruf besar/kecil & spasi diabaikan; nilai asing → undefined (dipakai default). */
+export const looseEnum = <T extends readonly [string, ...string[]]>(values: T, aliases: Record<string, T[number]> = {}) =>
+  z.preprocess((v) => {
+    if (typeof v !== "string") return v;
+    const k = v.trim().toLowerCase().replace(/\s+/g, "-");
+    return (values as readonly string[]).includes(k) ? k : (aliases[k] ?? undefined);
+  }, z.enum(values).optional());
+
 export const styleDnaSchema = z.object({
-  name: z.string().trim().min(1).max(60),
-  description: z.string().trim().max(400).default(""),
-  bg: z.enum(BGS),
+  name: clip(60).pipe(z.string().min(1)),
+  description: clip(400).default(""),
+  bg: z.enum(BGS).catch("light"),
   /** Warna latar untuk bg solid/cream (opsional; selain itu dari brand). */
-  bgColor: hex.optional(),
-  font: z.enum(FONT_IDS),
-  upper: z.boolean().default(false),
+  bgColor: hex.optional().catch(undefined),
+  font: z.enum(FONT_IDS).catch("jakarta"),
+  upper: z.boolean().catch(false).default(false),
   /** Kata *diapit bintang* tampil serif miring. */
-  serifAccent: z.boolean().default(true),
-  align: z.enum(["left", "center"]).default("center"),
-  titlePos: z.enum(["top", "bottom"]).default("top"),
-  hero: z.enum(HERO_POS).default("below"),
-  ornaments: z.array(z.enum(ORNAMENTS)).max(5).default([]),
-  visualStyle: z.enum(VISUAL_STYLES).default("3d-glossy"),
+  serifAccent: z.boolean().catch(true).default(true),
+  align: z.enum(["left", "center"]).catch("center").default("center"),
+  titlePos: z.enum(["top", "bottom"]).catch("top").default("top"),
+  hero: z.enum(HERO_POS).catch("below").default("below"),
+  ornaments: z.array(z.string()).transform((a) => a.filter((x): x is (typeof ORNAMENTS)[number] => (ORNAMENTS as readonly string[]).includes(x)).slice(0, 5)).default([]),
+  visualStyle: z.enum(VISUAL_STYLES).catch("photo-lifestyle").default("3d-glossy"),
   /** Arahan tambahan gaya gambar (bahasa Inggris), mis. "warm morning light, wooden table". */
-  imageHint: z.string().trim().max(300).optional(),
+  imageHint: clip(300).optional(),
   /** Skala ukuran judul 0.8–1.25. */
-  titleScale: z.number().min(0.8).max(1.25).default(1),
+  titleScale: z.number().transform((n) => Math.min(1.25, Math.max(0.8, n))).catch(1).default(1),
 });
 export type StyleDna = z.infer<typeof styleDnaSchema>;
 

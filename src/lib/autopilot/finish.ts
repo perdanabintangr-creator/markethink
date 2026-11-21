@@ -122,6 +122,7 @@ async function planVisuals(admin: SupabaseClient, userId: string, rows: Director
     const c = routed.resolved() ?? routed.candidates[0];
     await admin.from("usage_logs").insert({ user_id: userId, tier: "autopilot-director", provider: c.provider, model: c.modelId, latency_ms: Date.now() - started, input_tokens: out.usage.inputTokens ?? 0, output_tokens: out.usage.outputTokens ?? 0, est_cost_usd: estimateCostUsd(c, out.usage.inputTokens ?? 0, out.usage.outputTokens ?? 0), credits: 0, status: "ok" });
     const parsed = directorSchema.safeParse(extractJson(out.text));
+    if (!parsed.success) await admin.from("usage_logs").insert({ user_id: userId, tier: "autopilot-director", credits: 0, status: "error", error: `director: rencana tidak terbaca: ${JSON.stringify(parsed.error.issues.slice(0, 3)).slice(0, 600)}` });
     return parsed.success ? parsed.data.posts : [];
   } catch (err) {
     await admin.from("usage_logs").insert({ user_id: userId, tier: "autopilot-director", latency_ms: Date.now() - started, credits: 0, status: "error", error: `director: ${String(err).slice(0, 500)}` });

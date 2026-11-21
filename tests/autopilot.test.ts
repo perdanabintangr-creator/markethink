@@ -534,3 +534,23 @@ describe("visual director", () => {
     expect(p).toContain("teks slide ditutup");
   });
 });
+
+describe("tolerant AI output parsing", () => {
+  it("director plan accepts long text, English subject names and string flags", () => {
+    const p = postPlanSchema.safeParse({
+      post: 0,
+      bible: "x".repeat(900),
+      slides: [{ slide: "2", needs_image: "true", reason: "r".repeat(500), subject_type: "Person", image_prompt: "p".repeat(2000), text_safe_zone: "top 35%", use_product_photo: "no" }],
+    });
+    expect(p.success).toBe(true);
+    if (p.success) {
+      expect(p.data.slides[0]).toMatchObject({ slide: 2, needs_image: true, subject_type: "orang", text_safe_zone: "top-35%", use_product_photo: false });
+      expect(p.data.bible.length).toBe(700);
+    }
+  });
+  it("style DNA from research survives odd values", () => {
+    const d = parseDna({ name: "KV Photobebaz yang sangat panjang sekali melebihi enam puluh karakter batasnya", bg: "neon", font: "Comic", ornaments: ["sticker", "glitter"], visualStyle: "x", titleScale: 3 });
+    expect(d).toMatchObject({ bg: "light", font: "jakarta", ornaments: ["sticker"], titleScale: 1.25 });
+    expect(d!.name.length).toBeLessThanOrEqual(60);
+  });
+});
