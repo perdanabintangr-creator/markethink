@@ -10,9 +10,12 @@ import { dedupeAccent } from "./tidy";
 export const reviewSchema = z.object({
   reviews: z.array(
     z.object({
-      i: z.number().int().min(0),
-      score: z.number().min(1).max(10),
-      issues: z.array(z.string().max(200)).max(5).default([]),
+      i: z.coerce.number().int().min(0),
+      score: z.coerce.number().catch(7).transform((n) => Math.max(1, Math.min(10, n))),
+      issues: z
+        .preprocess((v) => (Array.isArray(v) ? v.map((x) => String(x).trim().slice(0, 200)).filter(Boolean) : typeof v === "string" ? [v.slice(0, 200)] : []), z.array(z.string()))
+        .transform((a) => a.slice(0, 5)),
+      // Perbaikan yang tidak valid diabaikan (draf asli dipakai), bukan menggagalkan seluruh pemeriksaan.
       fix: z
         .object({
           slides: z.array(slideSchema).max(10).optional(),
@@ -20,7 +23,8 @@ export const reviewSchema = z.object({
           script: z.string().max(4000).optional(),
         })
         .optional()
-        .nullable(),
+        .nullable()
+        .catch(null),
     }),
   ),
 });

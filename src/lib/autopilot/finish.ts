@@ -67,6 +67,7 @@ async function teamReview(admin: SupabaseClient, userId: string, rows: Row[], la
     return;
   }
   const parsed = reviewSchema.safeParse(extractJson(text));
+  if (!parsed.success) await admin.from("usage_logs").insert({ user_id: userId, tier: "autopilot-review", credits: 0, status: "error", error: `review tidak terbaca: ${JSON.stringify(parsed.error.issues.slice(0, 3)).slice(0, 600)}` });
   const reviews = parsed.success ? parsed.data.reviews : [];
   const keywords = brandKeywordsOf(brand.kit);
   const tag = brandHashtag(brand.palette.name);

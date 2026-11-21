@@ -44,5 +44,7 @@ export function dedupeAccent(s: Slide): Slide {
     const cut = s.title.replace(/\*/g, "").trim().slice(0, -a.length - 1).trim();
     return cut ? { ...s, title: cut } : s;
   }
+  // Aksen sudah muncul di tengah/awal judul ("Jam kosong sebelum naik kereta" + "jam kosong") → aksen dibuang.
+  if (a.length >= 3 && ` ${t} `.includes(` ${a} `)) return { ...s, accent: undefined };
   return s;
 }

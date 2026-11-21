@@ -156,3 +156,11 @@ describe("brand DNA — kosakata pakai/hindari", () => {
     expect(c.forbidden).toEqual(["murahan", "yth.", "dengan hormat"]);
   });
 });
+
+describe("tidy — aksen dobel di tengah judul", () => {
+  it("aksen yang sudah ada di awal judul dibuang", async () => {
+    const { dedupeAccent } = await import("@/lib/autopilot/tidy");
+    expect(dedupeAccent({ type: "point", title: "Jam kosong sebelum naik kereta", accent: "jam kosong" }).accent).toBeUndefined();
+    expect(dedupeAccent({ type: "point", title: "Ngobrol random sama", accent: "bestie" }).accent).toBe("bestie");
+  });
+});
