@@ -129,7 +129,7 @@ export function AutopilotView(props: {
   usedThisMonth: number;
   instagram: IgStatus;
   stats: MediaStat[];
-  styleState: { industry: string | null; presetId: string | null; styleId: string | null; styles: BrandStyleRow[] };
+  styleState: { industry: string | null; presetId: string | null; styleId: string | null; styles: BrandStyleRow[]; samples: { ready: number; total: number } | null };
 }) {
   const t = autopilotText(props.lang);
   const router = useRouter();
@@ -277,6 +277,7 @@ export function AutopilotView(props: {
             presetId={props.styleState.presetId}
             styleId={props.styleState.styleId}
             styles={props.styleState.styles}
+            samples={props.styleState.samples}
           />
         )}
 

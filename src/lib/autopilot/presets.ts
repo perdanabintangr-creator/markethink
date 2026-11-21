@@ -68,7 +68,7 @@ export const STYLE_PRESETS: StylePreset[] = [
   P("tech", "bold", { name: "Bold gelap", description: "Hitam, condensed raksasa, objek 3D dramatis", bg: "dark", font: "anton", upper: true, titlePos: "bottom", hero: "above", visualStyle: "3d-glossy" }),
   P("tech", "grid", { name: "Grid futuristik", description: "Gelap, grotesk teknis, grid titik", bg: "dark", font: "space", align: "left", titlePos: "bottom", hero: "above", ornaments: ["grid"], visualStyle: "3d-glossy", imageHint: "futuristic glass interface object, neon glow" }),
   // Kesehatan
-  P("health", "fresh", { name: "Segar & bersih", description: "Terang, sans rapi, objek clay segar", bg: "light", font: "manrope", ornaments: ["orbs"], visualStyle: "clay-3d", imageHint: "fresh fruit, water bottle, healthy objects" }),
+  P("health", "gym", { name: "Gym bold", description: "Hitam kontras tinggi, condensed raksasa, foto atlet dramatis", bg: "dark", font: "anton", upper: true, titlePos: "bottom", hero: "above", ornaments: ["grid"], visualStyle: "editorial-photo", imageHint: "athlete training, hard rim light, sweat, high contrast" }),
   P("health", "active", { name: "Foto aktif", description: "Foto olahraga penuh + stiker", bg: "photo", font: "jakarta", align: "left", titlePos: "bottom", hero: "full", ornaments: ["sticker"], visualStyle: "photo-lifestyle", imageHint: "Indonesian person exercising outdoors, energetic" }),
   P("health", "calm", { name: "Tenang", description: "Krem, serif hangat, objek minimal", bg: "cream", font: "fraunces", align: "left", ornaments: ["grain"], visualStyle: "minimal-object", imageHint: "calm wellness still life, plant, soft shadow" }),
   // Otomotif

@@ -8,6 +8,8 @@ import { AutopilotUpsell } from "@/components/autopilot/autopilot-upsell";
 import { instagramStatus } from "@/lib/instagram";
 import type { MediaStat } from "@/lib/autopilot/performance";
 import type { BrandStyleRow } from "@/components/autopilot/style-section";
+import { existingSamples } from "@/lib/autopilot/sample-images";
+import { STYLE_PRESETS } from "@/lib/autopilot/presets";
 
 export const metadata = { title: "Autopilot Konten" };
 export const dynamic = "force-dynamic";
@@ -80,6 +82,7 @@ export default async function AutopilotPage() {
         presetId: (settingsRow?.style_preset as string | null) ?? null,
         styleId: (settingsRow?.style_id as string | null) ?? null,
         styles: (styleRows ?? []) as BrandStyleRow[],
+        samples: profile.role === "admin" ? { ready: [...(await existingSamples(createAdminClient()))].filter((id) => STYLE_PRESETS.some((p) => p.id === id)).length, total: STYLE_PRESETS.length } : null,
       }}
     />
   );

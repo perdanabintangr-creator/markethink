@@ -1,3 +1,4 @@
+import { INDUSTRY_SAMPLES, PRESET_VISUALS } from "@/lib/autopilot/preset-samples";
 import { analyzePrompt } from "@/lib/autopilot/style-prompt";
 import { baseOf, dnaForLook, imageAspectFor, LOOK_DNA, parseDna, styleDnaSchema, styleNote, visualPromptFor } from "@/lib/autopilot/style";
 import { INDUSTRIES, presetById, presetsFor, STYLE_PRESETS } from "@/lib/autopilot/presets";
@@ -351,4 +352,17 @@ describe("style DNA", () => {
       expect((await sharp(out[0]).metadata()).height).toBe(1350);
     }
   }, 120_000);
+});
+
+describe("industry samples", () => {
+  it("every preset has a sample visual and every industry a 3-slide sample in both languages", () => {
+    for (const p of STYLE_PRESETS) expect(PRESET_VISUALS[p.id], p.id).toBeTruthy();
+    for (const ind of INDUSTRIES) {
+      for (const l of ["id", "en"] as const) {
+        const trio = INDUSTRY_SAMPLES[ind.id][l];
+        expect(trio.map((s) => s.type)).toEqual(["cover", "point", "list"]);
+        expect(lintSlides(trio, "carousel").fails).toEqual([]);
+      }
+    }
+  });
 });

@@ -94,6 +94,7 @@ export function StyleSection({
   presetId,
   styleId,
   styles,
+  samples,
 }: {
   lang: "id" | "en";
   workspaceId: string | null;
@@ -101,6 +102,8 @@ export function StyleSection({
   presetId: string | null;
   styleId: string | null;
   styles: BrandStyleRow[];
+  /** Admin: status gambar contoh 30 gaya industri. */
+  samples?: { ready: number; total: number } | null;
 }) {
   const t = T[lang];
   const router = useRouter();
@@ -119,6 +122,21 @@ export function StyleSection({
     setBusy(null);
     if (!r.ok) return void toast.error(t.err);
     toast.success(t.saved);
+    router.refresh();
+  }
+
+  async function makeSamples() {
+    setBusy("samples");
+    for (let k = 0; k < 6; k++) {
+      const r = await post("/api/autopilot/style/samples", {});
+      if (!r.ok) {
+        toast.error(t.err);
+        break;
+      }
+      toast.message(`${r.data.ready}/${r.data.total}`);
+      if (r.data.ready >= r.data.total || !r.data.made) break;
+    }
+    setBusy(null);
     router.refresh();
   }
 
@@ -189,6 +207,17 @@ export function StyleSection({
         ))}
       </div>
 
+      {samples && samples.ready < samples.total && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+          <p>
+            <b>Admin:</b> {lang === "en" ? `Industry sample visuals ready ${samples.ready}/${samples.total}. Create once (±Rp10–17k), reused for every customer.` : `Visual contoh gaya industri baru ${samples.ready}/${samples.total}. Buat sekali (±Rp10–17 rb), dipakai ulang untuk semua pelanggan.`}
+          </p>
+          <Button size="sm" onClick={makeSamples} disabled={!!busy}>
+            {busy === "samples" ? <Loader2 className="animate-spin" /> : <Sparkles />} {lang === "en" ? "Create sample visuals" : "Buat visual contoh"}
+          </Button>
+        </div>
+      )}
+
       {tab === "industry" ? (
         <>
           <p className="mb-2 text-xs font-medium text-muted-foreground">{t.pickIndustry}</p>
@@ -208,7 +237,7 @@ export function StyleSection({
               const on = presetId === p.id && !styleId;
               return (
                 <div key={p.id} className={cn("rounded-xl border p-3 transition", on && "border-primary ring-2 ring-primary/30")}>
-                  <Previews q={`preset=${p.id}`} ws={workspaceId} />
+                  <Previews q={`preset=${p.id}&s=${samples?.ready ?? 0}`} ws={workspaceId} />
                   <p className="mt-3 text-sm font-semibold">{p.dna.name}</p>
                   <p className="text-xs text-muted-foreground">{p.dna.description}</p>
                   <Button size="sm" className="mt-3 w-full rounded-full" variant={on ? "outline" : "default"} disabled={on || !!busy} onClick={() => choose({ mode: "preset", presetId: p.id }, p.id)}>
