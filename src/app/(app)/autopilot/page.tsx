@@ -13,6 +13,10 @@ import type { IdeaItem } from "@/components/autopilot/ideas-section";
 import type { ResearchRow } from "@/components/autopilot/research-card";
 import { existingSamples } from "@/lib/autopilot/sample-images";
 import { STYLE_PRESETS } from "@/lib/autopilot/presets";
+import Link from "next/link";
+import { loadOnboarding } from "@/lib/brand/server";
+import { autopilotGate, kitChanged } from "@/lib/brand/onboarding";
+import { BrandGate } from "@/components/brand/brand-gate";
 
 export const metadata = { title: "Autopilot Konten" };
 export const dynamic = "force-dynamic";
@@ -83,27 +87,56 @@ export default async function AutopilotPage() {
   };
   const posts = (postRows ?? []).map((p) => ({ ...p, post_time: String(p.post_time).slice(0, 5) })) as ApPost[];
 
+  // Gate Brand Onboarding: Autopilot terbuka setelah data wajib lengkap + Brand DNA di-ACC.
+  const ob = settings.workspaceId ? await loadOnboarding(createAdminClient(), profile.id, settings.workspaceId) : null;
+  const gate = autopilotGate({ workspaceId: ob ? settings.workspaceId : null, requiredDone: Boolean(ob?.completeness.requiredDone), approvedVersion: ob?.approvedVersion ?? null });
+  if (gate)
+    return (
+      <BrandGate
+        reason={gate}
+        brandName={ob ? String(ob.ws.name) : null}
+        workspaceId={settings.workspaceId}
+        percent={ob?.completeness.percent ?? 0}
+        missing={ob?.completeness.missing ?? []}
+        hasDraft={Boolean(ob?.versions.some((v) => v.status === "draft"))}
+      />
+    );
+  const active = ob?.versions.find((v) => Number(v.version) === ob.approvedVersion);
+  const dnaStale = ob && active ? kitChanged(active.kit_snapshot as Record<string, unknown> | null, { ...ob.kit, _assets: ob.assets.length }) : false;
+
   return (
-    <AutopilotView
-      lang={lang}
-      today={today}
-      initialSettings={settings}
-      initialPosts={posts}
-      workspaces={workspaces}
-      allowance={allowance}
-      usedThisMonth={used}
-      instagram={instagram}
-      stats={(statRows ?? []) as MediaStat[]}
-      products={(productRows ?? []) as ProductItem[]}
-      research={(researchRow as ResearchRow | null) ?? null}
-      ideas={(ideaRows ?? []).map((r) => ({ ...r, post_time: String(r.post_time) })) as IdeaItem[]}
-      styleState={{
-        industry: (settingsRow?.industry as string | null) ?? null,
-        presetId: (settingsRow?.style_preset as string | null) ?? null,
-        styleId: (settingsRow?.style_id as string | null) ?? null,
-        styles: (styleRows ?? []) as BrandStyleRow[],
-        samples: profile.role === "admin" ? { ready: [...(await existingSamples(createAdminClient()))].filter((id) => STYLE_PRESETS.some((p) => p.id === id)).length, total: STYLE_PRESETS.length } : null,
-      }}
-    />
+    <>
+      {dnaStale && (
+        <div className="mx-auto mt-4 w-full max-w-6xl px-4 md:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+            <span>Brand Kit berubah sejak Brand DNA v{ob?.approvedVersion} di-ACC.</span>
+            <Link href={`/autopilot/onboarding?ws=${settings.workspaceId}`} className="font-medium underline">
+              Perbarui Brand DNA
+            </Link>
+          </div>
+        </div>
+      )}
+      <AutopilotView
+        lang={lang}
+        today={today}
+        initialSettings={settings}
+        initialPosts={posts}
+        workspaces={workspaces}
+        allowance={allowance}
+        usedThisMonth={used}
+        instagram={instagram}
+        stats={(statRows ?? []) as MediaStat[]}
+        products={(productRows ?? []) as ProductItem[]}
+        research={(researchRow as ResearchRow | null) ?? null}
+        ideas={(ideaRows ?? []).map((r) => ({ ...r, post_time: String(r.post_time) })) as IdeaItem[]}
+        styleState={{
+          industry: (settingsRow?.industry as string | null) ?? null,
+          presetId: (settingsRow?.style_preset as string | null) ?? null,
+          styleId: (settingsRow?.style_id as string | null) ?? null,
+          styles: (styleRows ?? []) as BrandStyleRow[],
+          samples: profile.role === "admin" ? { ready: [...(await existingSamples(createAdminClient()))].filter((id) => STYLE_PRESETS.some((p) => p.id === id)).length, total: STYLE_PRESETS.length } : null,
+        }}
+      />
+    </>
   );
 }

@@ -147,6 +147,8 @@ export interface PromptInput {
   catalog?: string | null;
   /** Riset brand otomatis: ringkasan + subjek visual khas (research-shape.ts). */
   research?: string | null;
+  /** Brand DNA yang sudah di-ACC (brand/dna.ts dnaBlock) — paling tinggi prioritasnya setelah Brand Kit. */
+  brandDna?: string | null;
   /** Tujuan & campuran pilar (strategy.ts). */
   strategy?: string | null;
   /** Rencana dari strategist (tahap 2: penulis menulis persis sesuai ide). */
@@ -174,7 +176,7 @@ CAMPURAN FORMAT: ${p.mix.carousel} carousel, ${p.mix.image} single image, ${p.mi
 ${p.strategy ?? "Pilar: ±40% Edukasi, ±30% Relatable/hiburan, ±10% Insight & momen, ±20% Produk/BTS. Funnel: Awareness, Consideration, Acquisition."}`
   }
 Format: carousel untuk edukasi bertahap (target simpan), single image untuk satu punchline/pertanyaan/polling (target komen), Reel untuk menjangkau non-follower.
-${p.recentTitles.length ? `\nJANGAN mengulang tema yang sudah dipakai 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}${p.performance ? `\n${p.performance}\n` : ""}${p.voice ? `\n${p.voice}\n` : ""}${p.style ? `\n${p.style}\n` : ""}${p.catalog ? `\n${p.catalog}\n` : ""}${p.research ? `\n${p.research}\n` : ""}
+${p.recentTitles.length ? `\nJANGAN mengulang tema yang sudah dipakai 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}${p.performance ? `\n${p.performance}\n` : ""}${p.voice ? `\n${p.voice}\n` : ""}${p.style ? `\n${p.style}\n` : ""}${p.catalog ? `\n${p.catalog}\n` : ""}${p.research ? `\n${p.research}\n` : ""}${p.brandDna ? `\n${p.brandDna}\n` : ""}
 ${HOOKS}
 
 ${SLIDE_SPEC}
@@ -255,7 +257,7 @@ ${slots}
 CAMPURAN FORMAT: ${p.mix.carousel} carousel, ${p.mix.image} single image, ${p.mix.reel} Reel. Jangan dua format atau dua pilar sama berurutan.
 ${p.strategy ?? ""}
 Format: carousel untuk edukasi bertahap (target simpan), single image untuk punchline/pertanyaan/polling (target komen), Reel untuk jangkauan non-follower.
-${p.recentTitles.length ? `\nJANGAN mengulang tema 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.keep?.length ? `\nIde lain minggu ini (jangan ditiru):\n${p.keep.map(ideaLine).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}${p.performance ? `\n${p.performance}\n` : ""}${p.voice ? `\n${p.voice}\n` : ""}${p.catalog ? `\n${p.catalog}\n` : ""}${p.research ? `\n${p.research}\n` : ""}${p.replaceNote ? `\nMASUKAN PEMILIK BRAND UNTUK IDE PENGGANTI: ${p.replaceNote}\n` : ""}
+${p.recentTitles.length ? `\nJANGAN mengulang tema 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.keep?.length ? `\nIde lain minggu ini (jangan ditiru):\n${p.keep.map(ideaLine).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}${p.performance ? `\n${p.performance}\n` : ""}${p.voice ? `\n${p.voice}\n` : ""}${p.catalog ? `\n${p.catalog}\n` : ""}${p.research ? `\n${p.research}\n` : ""}${p.brandDna ? `\n${p.brandDna}\n` : ""}${p.replaceNote ? `\nMASUKAN PEMILIK BRAND UNTUK IDE PENGGANTI: ${p.replaceNote}\n` : ""}
 ${HOOKS}
 
 Untuk setiap ide tentukan: judul kerja yang spesifik (bukan generik), sudut pandang unik (kenapa orang peduli), hook (formula + kalimatnya),

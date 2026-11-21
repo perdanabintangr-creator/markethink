@@ -23,6 +23,6 @@ export async function POST(req: Request) {
     source: "manual",
     batchId: parsed.data.batchId,
   });
-  if (!res.ok) return jsonError(res.error === "plan" ? 403 : res.error === "quota" ? 402 : res.error === "busy" ? 409 : res.error === "no_ideas" ? 404 : 502, res.error);
+  if (!res.ok) return jsonError(res.error === "plan" || res.error === "no_brand" || res.error === "onboarding" || res.error === "dna_not_approved" ? 403 : res.error === "quota" ? 402 : res.error === "busy" ? 409 : res.error === "no_ideas" ? 404 : 502, res.error);
   return NextResponse.json(res);
 }

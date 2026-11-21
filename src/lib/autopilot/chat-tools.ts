@@ -13,6 +13,7 @@ import { brandKeywordsOf } from "./voice";
 import { isHero, LOOKS, slideSchema, type Look, type Slide } from "./slides";
 import { activeStyle } from "./styles-server";
 import { baseOf } from "./style";
+import { approvedDna, brandGate } from "@/lib/brand/server";
 
 /**
  * Mode chat Instagram (adaptasi "Mode chat" skill marqthink-ig): dari chat Marqthink, pelanggan Pro/Promax bisa minta
@@ -82,8 +83,18 @@ export function createInstagramTools(ctx: InstagramToolCtx) {
         try {
           const { data: settings } = await ctx.admin.from("autopilot_settings").select("workspace_id, slot_times, design, style_id, style_preset").eq("user_id", ctx.userId).maybeSingle();
           const workspaceId = ctx.workspaceId ?? (settings?.workspace_id as string | null) ?? null;
+          const gate = await brandGate(ctx.admin, ctx.userId, workspaceId);
+          if (gate)
+            return {
+              ok: false,
+              error:
+                gate === "dna_not_approved"
+                  ? "Brand DNA brand ini belum di-ACC. Minta user membuka menu Autopilot → Brand Onboarding untuk meninjau & ACC Brand DNA dulu."
+                  : "Autopilot terkunci sampai Brand Onboarding lengkap (logo, 3–10 foto asli, target audiens, tujuan, lokasi, CTA). Minta user membuka menu Autopilot → Brand Onboarding.",
+            };
           const brand = await loadBrand(ctx.admin, ctx.userId, workspaceId, ctx.fullName);
           const keywords = brandKeywordsOf(brand.kit);
+          const brandDna = await approvedDna(ctx.admin, ctx.userId, workspaceId);
 
           // Jadwal: tanggal dari user (≥ besok) atau slot kosong berikutnya sesuai jam tayang di pengaturan.
           const tomorrow = addDays(todayWib(), 1);
@@ -122,6 +133,7 @@ export function createInstagramTools(ctx: InstagramToolCtx) {
             note: "Dibuat dari chat",
             lint: t.lint,
             status: "draft",
+            brand_dna_version: brandDna?.version ?? null,
           });
           if (error) throw error;
 

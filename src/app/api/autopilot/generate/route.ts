@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     source: "manual",
   });
   if (!res.ok) {
-    const status = res.error === "plan" ? 403 : res.error === "quota" ? 402 : res.error === "busy" ? 409 : res.error === "no_slots" ? 400 : 502;
+    const status = res.error === "plan" || res.error === "no_brand" || res.error === "onboarding" || res.error === "dna_not_approved" ? 403 : res.error === "quota" ? 402 : res.error === "busy" ? 409 : res.error === "no_slots" ? 400 : 502;
     return jsonError(status, res.error);
   }
   return NextResponse.json(res);

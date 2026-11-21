@@ -42,7 +42,7 @@ export async function fetchPublicImage(url: string): Promise<Buffer | null> {
   }
 }
 
-async function imageSearch(q: string, n: number): Promise<{ url: string; title: string; source: string }[]> {
+export async function imageSearch(q: string, n: number): Promise<{ url: string; title: string; source: string }[]> {
   if (!serperEnabled()) return [];
   try {
     const res = await fetch("https://google.serper.dev/images", {
@@ -59,7 +59,18 @@ async function imageSearch(q: string, n: number): Promise<{ url: string; title: 
   }
 }
 
-export async function researchBrand(admin: SupabaseClient, o: { userId: string; workspaceId: string; en: boolean }) {
+export const ASSET_LABEL: Record<string, string> = {
+  logo: "LOGO",
+  real_photo: "FOTO ASLI produk/tempat/layanan",
+  feed_screenshot: "SCREENSHOT FEED brand",
+  competitor_screenshot: "SCREENSHOT KOMPETITOR",
+  reference_screenshot: "SCREENSHOT REFERENSI yang disukai",
+};
+
+export async function researchBrand(
+  admin: SupabaseClient,
+  o: { userId: string; workspaceId: string; en: boolean; assets?: { kind: string; buf: Buffer }[]; applyStyle?: boolean },
+) {
   const started = Date.now();
   const { data: ws } = await admin.from("workspaces").select("name, brand_kit").eq("id", o.workspaceId).eq("user_id", o.userId).maybeSingle();
   if (!ws) throw new Error("workspace_not_found");
@@ -93,9 +104,12 @@ export async function researchBrand(admin: SupabaseClient, o: { userId: string; 
   const igUrls = await recentMediaUrls(o.userId, 6);
   const searchImgs = await imageSearch(`${name} ${handle.length > 1 ? handle : ""}`.trim(), MAX_IMAGES);
   const candidates = [...igUrls.map((u) => ({ url: u, title: "Instagram", source: "instagram", ig: true })), ...searchImgs.map((i) => ({ ...i, ig: false }))];
-  const images: { url: string; title: string; source: string; ig: boolean; buf: Buffer }[] = [];
+  // Aset onboarding dari klien selalu di depan (paling dipercaya), lalu IG & Google sampai batas.
+  const assets = (o.assets ?? []).slice(0, 12);
+  const images: { url: string; title: string; source: string; ig: boolean; buf: Buffer }[] = assets.map((a) => ({ url: "", title: ASSET_LABEL[a.kind] ?? a.kind, source: "client", ig: false, buf: a.buf }));
+  const maxImages = assets.length ? Math.max(MAX_IMAGES, assets.length + 4) : MAX_IMAGES;
   for (const c of candidates) {
-    if (images.length >= MAX_IMAGES) break;
+    if (images.length >= maxImages) break;
     const buf = await fetchPublicImage(c.url);
     if (buf) images.push({ ...c, buf });
   }
@@ -122,6 +136,7 @@ export async function researchBrand(admin: SupabaseClient, o: { userId: string; 
               imageCount: images.length,
               igImages: images.filter((i) => i.ig).length,
               en: o.en,
+              assetLegend: assets.length ? assets.map((a, k) => `gambar ${k + 1} = ${ASSET_LABEL[a.kind] ?? a.kind}`).join(", ") : null,
             }),
           },
           ...images.map((i) => ({ type: "image" as const, image: i.buf, mediaType: "image/jpeg" })),
@@ -152,6 +167,7 @@ export async function researchBrand(admin: SupabaseClient, o: { userId: string; 
   const stamp = Date.now().toString(36);
   const imgMeta = await Promise.all(
     images.map(async (i, k) => {
+      if (i.source === "client") return { path: null, url: "", title: i.title, source: "client", ig: false, product: false };
       const path = `${o.userId}/research/${o.workspaceId}/${stamp}-${k}.jpg`;
       const { error } = await admin.storage.from("uploads").upload(path, i.buf, { contentType: "image/jpeg", upsert: true });
       return { path: error ? null : path, url: i.url, title: i.title.slice(0, 120), source: i.source.slice(0, 300), ig: i.ig, product: r.product_images.includes(k) };
@@ -169,7 +185,8 @@ export async function researchBrand(admin: SupabaseClient, o: { userId: string; 
     .insert({ user_id: o.userId, workspace_id: o.workspaceId, name: dna.name.slice(0, 60), source: "reference", dna, analysis: `- ${r.business.summary}\n- KV: ${r.kv.mood}${r.kv.reason ? ` (${r.kv.reason})` : ""}`.slice(0, 1200) })
     .select("id")
     .single();
-  if (style) await admin.from("autopilot_settings").upsert({ user_id: o.userId, style_id: style.id, style_preset: null, updated_at: new Date().toISOString() });
+  // Alur lama (tombol Riset brand) langsung memakai KV; alur Brand DNA menunggu ACC klien.
+  if (style && o.applyStyle !== false) await admin.from("autopilot_settings").upsert({ user_id: o.userId, style_id: style.id, style_preset: null, updated_at: new Date().toISOString() });
   return saved;
 }
 

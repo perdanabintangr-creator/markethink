@@ -31,10 +31,14 @@ export const researchSchema = z.object({
   product_images: z.array(z.number().int().min(0)).transform((a) => a.slice(0, 8)).default([]),
   confidence: z.preprocess((v) => (typeof v === "string" ? v.toLowerCase() : v), z.enum(["high", "medium", "low"]).catch("medium")).default("medium"),
   notes: clip(400).optional(),
+  /** Analisis aset onboarding (logo, foto asli, screenshot feed/kompetitor/referensi). */
+  asset_insights: z
+    .object({ logo: clip(400).optional(), photos: clip(600).optional(), feed: clip(500).optional(), competitors: clip(600).optional(), references: clip(500).optional() })
+    .optional(),
 });
 export type BrandResearch = z.infer<typeof researchSchema>;
 
-export function researchPrompt(o: { name: string; handle: string; website: string | null; kitSummary: string; sources: { title: string; url: string; content: string }[]; imageCount: number; igImages: number; en: boolean }) {
+export function researchPrompt(o: { name: string; handle: string; website: string | null; kitSummary: string; sources: { title: string; url: string; content: string }[]; imageCount: number; igImages: number; en: boolean; assetLegend?: string | null }) {
   const src = o.sources.map((s, i) => `[${i + 1}] ${s.title} — ${s.url}\n${s.content.slice(0, 1200)}`).join("\n\n");
   return `Kamu brand strategist + art director. Riset brand "${o.name}"${o.handle ? ` (Instagram ${o.handle})` : ""}${o.website ? ` (website ${o.website})` : ""} dari hasil penelusuran & gambar di bawah,
 lalu simpulkan profil bisnis dan KEY VISUAL (KV) untuk konten Instagram-nya.
@@ -45,7 +49,9 @@ ${o.kitSummary || "- (kosong)"}
 HASIL PENELUSURAN WEB (bisa berisi brand lain bernama mirip — pakai hanya yang jelas tentang brand ini):
 ${src || "- (tidak ada hasil)"}
 
-GAMBAR: ${o.imageCount} gambar terlampir${o.igImages ? ` (${o.igImages} pertama dari akun Instagram brand sendiri — paling bisa dipercaya)` : " (dari pencarian gambar Google — sebagian mungkin bukan milik brand ini)"}.
+GAMBAR: ${o.imageCount} gambar terlampir${o.assetLegend ? ` (urutan: ${o.assetLegend}; sisanya dari pencarian Google — sebagian mungkin bukan milik brand ini)` : o.igImages ? ` (${o.igImages} pertama dari akun Instagram brand sendiri — paling bisa dipercaya)` : " (dari pencarian gambar Google — sebagian mungkin bukan milik brand ini)"}.
+${o.assetLegend ? `Gambar dari KLIEN (logo, foto asli, screenshot) paling dipercaya. Isi juga "asset_insights": logo (palet hex & karakter), photos (gaya foto, suasana, ciri produk/tempat),
+feed (gaya feed brand), competitors (pola kompetitor yang berhasil & celahnya), references (gaya yang klien suka).` : ""}
 
 Tugas:
 1. business: ringkasan bisnis (apa yang dijual, untuk siapa, di mana), kategori, daftar produk/layanan nyata (jangan mengarang),
@@ -66,7 +72,7 @@ Balas HANYA JSON:
 {"business":{"summary":"...","category":"...","products":[{"name":"...","description":"..."}],"target_audience":"...","usp":"...","voice":"...","location":"..."},
 "kv":{"primary":"#RRGGBB","secondary":"#RRGGBB","background":"#RRGGBB","mood":"...","reason":"..."},
 "dna":{"name":"KV ${o.name.slice(0, 30)}","description":"...","bg":"...","font":"...","upper":false,"serifAccent":true,"align":"left","titlePos":"bottom","hero":"full","ornaments":["sticker"],"visualStyle":"photo-lifestyle","imageHint":"...","titleScale":1},
-"visual_subjects":["..."],"product_images":[0],"confidence":"high|medium|low","notes":"..."}`;
+"visual_subjects":["..."],"product_images":[0],"confidence":"high|medium|low","notes":"..."${o.assetLegend ? ',"asset_insights":{"logo":"...","photos":"...","feed":"...","competitors":"...","references":"..."}' : ""}}`;
 }
 
 /** Isi field Brand Kit yang MASIH KOSONG dari hasil riset (isian pemilik tidak pernah ditimpa). */

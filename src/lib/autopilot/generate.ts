@@ -23,6 +23,8 @@ import { activeStyle } from "./styles-server";
 import { baseOf, styleNote } from "./style";
 import { catalogBlock, type ProductRow } from "./products";
 import { autopilotAllowance, monthStartWib } from "./quota";
+import { approvedDna, brandGate } from "@/lib/brand/server";
+import { dnaBlock } from "@/lib/brand/dna";
 
 export interface AutopilotSettings {
   user_id: string;
@@ -94,7 +96,7 @@ export async function postsThisMonth(admin: SupabaseClient, userId: string) {
   return count ?? 0;
 }
 
-export type GenerateError = "plan" | "quota" | "busy" | "no_slots" | "ai" | "parse" | "no_ideas";
+export type GenerateError = "plan" | "quota" | "busy" | "no_slots" | "ai" | "parse" | "no_ideas" | "no_brand" | "onboarding" | "dna_not_approved";
 export type GenerateResult =
   | { ok: true; created: number; ideas: number; stage: "ideas" | "posts"; start: string; batchId: string }
   | { ok: false; error: GenerateError; detail?: string };
@@ -107,6 +109,9 @@ interface GenOpts {
   fullName?: string | null;
   start?: string;
   source: "manual" | "cron";
+  /** Internal (uji lab): jumlah post & lewati tinjau ide. */
+  count?: number;
+  skipIdeaReview?: boolean;
 }
 
 type SettingsRow = AutopilotSettings & {
@@ -200,6 +205,9 @@ async function loadContext(admin: SupabaseClient, o: GenOpts, settings: Settings
     }
   }
 
+  // Brand DNA (sudah di-ACC) → dibaca semua agen; versi dicatat di setiap post.
+  const brandDna = await approvedDna(admin, o.userId, settings.workspace_id);
+
   const brandName = brand.palette.name;
   const base = {
     brandBlock: brand.kit ? untrusted("brand_kit", formatBrandKit(brand.kit)) : "",
@@ -214,10 +222,11 @@ async function loadContext(admin: SupabaseClient, o: GenOpts, settings: Settings
     style: dna ? styleNote(dna) : null,
     catalog: catalogBlock(products, featured),
     research: visualSubjectsBlock(await latestResearch(admin, o.userId, settings.workspace_id)),
+    brandDna: brandDna ? dnaBlock(brandDna.dna, brandDna.version) : null,
     focus: settings.focus ? untrusted("fokus_pemilik_brand", settings.focus) : null,
     en: o.language === "en",
   };
-  return { brand, existing: existing ?? [], dna, products, base };
+  return { brand, existing: existing ?? [], dna, products, base, dnaVersion: brandDna?.version ?? null };
 }
 type Ctx = Awaited<ReturnType<typeof loadContext>>;
 
@@ -329,6 +338,7 @@ async function writeFromIdeas(admin: SupabaseClient, o: GenOpts, settings: Setti
         note: [idea.angle ? `Sudut: ${idea.angle}` : "", idea.why ? `Strategi: ${idea.why}` : "", p.hook || idea.hook ? `Hook: ${p.hook || idea.hook}` : "", p.note ?? ""].filter(Boolean).join("\n").slice(0, 600) || null,
         lint: t.lint,
         status: "draft",
+        brand_dna_version: ctx.dnaVersion,
       });
     }
   });
@@ -363,8 +373,10 @@ export async function generateWeek(admin: SupabaseClient, o: GenOpts): Promise<G
   const allowance = autopilotAllowance(o.planId, o.role);
   if (!allowance) return { ok: false, error: "plan" };
   const settings = await loadSettings(admin, o.userId);
+  const gate = await brandGate(admin, o.userId, settings.workspace_id);
+  if (gate) return { ok: false, error: gate };
   const room = allowance.postsPerMonth - (await postsThisMonth(admin, o.userId));
-  const count = Math.min(settings.posts_per_week, allowance.postsPerWeek, room);
+  const count = Math.min(o.count ?? settings.posts_per_week, allowance.postsPerWeek, room);
   if (count <= 0) return { ok: false, error: "quota" };
   if (!(await claim(admin, o.userId))) return { ok: false, error: "busy" };
 
@@ -415,7 +427,7 @@ export async function generateWeek(admin: SupabaseClient, o: GenOpts): Promise<G
     if (ideaErr) throw ideaErr;
 
     // Pelanggan ingin meninjau ide dulu → berhenti di sini (ditulis otomatis bila 24 jam tidak disentuh).
-    if (settings.review_ideas) {
+    if (settings.review_ideas && !o.skipIdeaReview) {
       await releaseLock(admin, o.userId, { last_generated_at: new Date().toISOString() });
       return { ok: true, created: 0, ideas: ideas.length, stage: "ideas", start, batchId };
     }
@@ -438,6 +450,8 @@ export async function writePendingIdeas(admin: SupabaseClient, o: GenOpts & { ba
   const allowance = autopilotAllowance(o.planId, o.role);
   if (!allowance) return { ok: false, error: "plan" };
   const settings = await loadSettings(admin, o.userId);
+  const gate = await brandGate(admin, o.userId, settings.workspace_id);
+  if (gate) return { ok: false, error: gate };
   let q = admin.from("autopilot_ideas").select("*").eq("user_id", o.userId).eq("status", "pending").order("post_date").order("post_time");
   if (o.batchId) q = q.eq("batch_id", o.batchId);
   const { data: rows } = await q.limit(28);

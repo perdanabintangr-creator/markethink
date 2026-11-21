@@ -16,6 +16,8 @@ import { buildDirectorPrompt, directorSchema, finalImagePrompt, selectJobs, type
 import { imageAspectFor, parseDna, visualPromptFor } from "./style";
 import { latestResearch } from "./brand-research";
 import { visualSubjectsBlock } from "./research-shape";
+import { approvedDna } from "@/lib/brand/server";
+import { dnaBlock, visualGuide } from "@/lib/brand/dna";
 
 interface Row {
   id: string;
@@ -37,6 +39,7 @@ interface Row {
 async function teamReview(admin: SupabaseClient, userId: string, rows: Row[], lang: "id" | "en") {
   if (!rows.length) return;
   const brand = await loadBrand(admin, userId, rows[0].workspace_id);
+  const dnaRow = await approvedDna(admin, userId, rows[0].workspace_id);
   const routed = routeTier("senior");
   const started = Date.now();
   let text = "";
@@ -49,7 +52,7 @@ async function teamReview(admin: SupabaseClient, userId: string, rows: Row[], la
       providerOptions: { anthropic: { effort: "low" } },
       prompt: buildTeamReviewPrompt({
         brandBlock: brand.kit ? untrusted("brand_kit", formatBrandKit(brand.kit)) : "",
-        voice: voiceRules(brand.kit),
+        voice: [voiceRules(brand.kit), dnaRow ? dnaBlock(dnaRow.dna, dnaRow.version) : null].filter(Boolean).join("\n\n") || null,
         catalog: null,
         posts: rows.map((r) => ({ kind: r.kind, pillar: r.pillar, title: r.title, slides: r.slides, caption: r.caption, script: r.script })),
         en: lang === "en",
@@ -94,7 +97,7 @@ export const INNER_VISUALS: Record<string, number> = { pro: 3, promax: 5, admin:
 type DirectorRow = Row & { visual_plan?: unknown };
 
 /** Visual Director: rencana visual per slide untuk beberapa post sekaligus (1 panggilan AI). */
-async function planVisuals(admin: SupabaseClient, userId: string, rows: DirectorRow[], ctx: { brandBlock: string; research: string | null; palette: { primary: string; secondary: string } }, products: Pick<ProductRow, "id" | "name" | "photo_paths">[]) {
+async function planVisuals(admin: SupabaseClient, userId: string, rows: DirectorRow[], ctx: { brandBlock: string; research: string | null; palette: { primary: string; secondary: string }; realPhotos: string[] }, products: Pick<ProductRow, "id" | "name" | "photo_paths">[]) {
   const routed = routeTier("senior");
   const started = Date.now();
   try {
@@ -114,7 +117,7 @@ async function planVisuals(admin: SupabaseClient, userId: string, rows: Director
           title: r.title,
           pillar: r.pillar,
           slides: r.slides,
-          hasProductPhoto: Boolean(products.find((x) => x.id === r.product_id)?.photo_paths.length),
+          hasProductPhoto: Boolean(products.find((x) => x.id === r.product_id)?.photo_paths.length) || ctx.realPhotos.length > 0,
         })),
       }),
     });
@@ -139,7 +142,14 @@ export async function directVisuals(admin: SupabaseClient, userId: string, rows:
   const targets = rows.filter((r) => r.design !== "classic" && r.kind !== "reel" && r.slides?.length);
   if (!targets.length) return [];
   const brand = await loadBrand(admin, userId, targets[0].workspace_id);
-  const research = visualSubjectsBlock(await latestResearch(admin, userId, targets[0].workspace_id));
+  // Panduan visual Designer (Brand DNA yang sudah di-ACC) ikut dibaca Visual Director.
+  const dnaRow = await approvedDna(admin, userId, targets[0].workspace_id);
+  const research = [visualSubjectsBlock(await latestResearch(admin, userId, targets[0].workspace_id)), dnaRow ? visualGuide(dnaRow.dna) : null].filter(Boolean).join("\n\n") || null;
+  // Foto asli brand (onboarding) = acuan produk/tempat bila post tidak terkait SKU katalog.
+  const { data: realRows } = targets[0].workspace_id
+    ? await admin.from("brand_assets").select("storage_path").eq("user_id", userId).eq("workspace_id", targets[0].workspace_id).eq("kind", "real_photo").order("created_at").limit(10)
+    : { data: [] as { storage_path: string }[] };
+  const realPhotos = (realRows ?? []).map((x) => String(x.storage_path));
   const ids = targets.map((r) => r.product_id).filter(Boolean) as string[];
   const { data: prods } = ids.length ? await admin.from("brand_products").select("id, name, photo_paths").in("id", ids).eq("user_id", userId) : { data: [] };
   const products = (prods ?? []) as Pick<ProductRow, "id" | "name" | "photo_paths">[];
@@ -152,7 +162,7 @@ export async function directVisuals(admin: SupabaseClient, userId: string, rows:
   for (let k = 0; k < targets.length; k += 3) chunks.push(targets.slice(k, k + 3));
   await Promise.all(
     chunks.map(async (chunk) => {
-      const out = await planVisuals(admin, userId, chunk, { brandBlock, research, palette }, products);
+      const out = await planVisuals(admin, userId, chunk, { brandBlock, research, palette, realPhotos }, products);
       for (const p of out) if (chunk[p.post]) plans.set(chunk[p.post].id, p);
     }),
   );
@@ -169,7 +179,10 @@ export async function directVisuals(admin: SupabaseClient, userId: string, rows:
       const full = !dna || dna.hero === "full" || dna.bg === "photo";
       const jobs = selectJobs(plan, { innerCap: r.kind === "carousel" ? o.innerCap : 0, slideTypes: r.slides.map((s) => s.type) });
       const prod = products.find((x) => x.id === r.product_id) ?? null;
-      const prodRefs = prod?.photo_paths.length ? await productRefs(admin, userId, prod.photo_paths) : [];
+      // Foto SKU katalog diutamakan; tanpa SKU → foto asli brand dari onboarding (bergiliran per post).
+      const shift = targets.indexOf(r) * 2;
+      const realPick = realPhotos.length ? [realPhotos[shift % realPhotos.length], realPhotos[(shift + 1) % realPhotos.length]] : [];
+      const prodRefs = prod?.photo_paths.length ? await productRefs(admin, userId, prod.photo_paths) : realPick.length ? await productRefs(admin, userId, [...new Set(realPick)]) : [];
       for (const job of jobs) {
         if (Date.now() - started > o.budgetMs) break;
         // Acuan hanya untuk foto produk asli. Acuan talent membuat AI menyalin komposisi (uji 21 Nov: slide kembar,
