@@ -4,7 +4,7 @@ import { MOOD_LABELS, type MoodId } from "@/lib/deck/moods";
 
 /** Teks halaman Pengaturan, Paket & harga, dan Projects/Brand Kit (ID + EN). */
 
-type BrandKitFieldKey = "products" | "target_audience" | "brand_voice" | "usp" | "competitors" | "channels" | "budget_range" | "notes" | "voice_dont" | "seo_keywords" | "brand_lines" | "caption_examples";
+type BrandKitFieldKey = "products" | "target_audience" | "brand_voice" | "usp" | "competitors" | "channels" | "budget_range" | "notes" | "website" | "voice_dont" | "seo_keywords" | "brand_lines" | "caption_examples";
 type SettingsTabId = "umum" | "profil" | "personalisasi" | "memori" | "project" | "aplikasi" | "paket" | "penyimpanan" | "link" | "akun";
 type UsageGroupId = "chat" | "image" | "pptx" | "carousel" | "tools" | "agent";
 
@@ -253,6 +253,7 @@ const id = {
     channels: { label: "Channel aktif", placeholder: "IG, TikTok, Shopee, WhatsApp, website" },
     budget_range: { label: "Budget range", placeholder: "mis. Rp5-15 juta/bulan" },
     notes: { label: "Catatan lain", placeholder: "Do & don't, momen penting, dll" },
+    website: { label: "Website / link toko / Google Maps", placeholder: "Contoh: photobebaz.com atau link Google Maps (dipakai riset brand otomatis)" },
     voice_dont: { label: "Kata/frasa yang dilarang", placeholder: "Contoh: murah banget, termurah, Anda, dijamin" },
     seo_keywords: { label: "Kata kunci utama", placeholder: "Contoh: kopi susu gula aren, kopi kekinian Bandung, kopi literan" },
     brand_lines: { label: "Kalimat baku brand", placeholder: "Contoh: Kopi Senja adalah kedai kopi susu gula aren di Bandung sejak 2021." },
@@ -519,6 +520,7 @@ const en: typeof id = {
     channels: { label: "Active channels", placeholder: "IG, TikTok, Shopee, WhatsApp, website" },
     budget_range: { label: "Budget range", placeholder: "e.g. Rp5-15 million/month" },
     notes: { label: "Other notes", placeholder: "Do's & don'ts, key moments, etc." },
+    website: { label: "Website / shop link / Google Maps", placeholder: "e.g. yourbrand.com or a Google Maps link (used by auto brand research)" },
     voice_dont: { label: "Banned words/phrases", placeholder: "e.g. cheapest, guaranteed, best in the world" },
     seo_keywords: { label: "Main keywords", placeholder: "e.g. palm sugar iced coffee, Bandung coffee shop" },
     brand_lines: { label: "Brand boilerplate", placeholder: "e.g. Kopi Senja is a palm-sugar coffee bar in Bandung since 2021." },

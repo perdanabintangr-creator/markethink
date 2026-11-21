@@ -1,3 +1,4 @@
+import { mergeIntoKit, researchPrompt, researchSchema, visualSubjectsBlock } from "@/lib/autopilot/research-shape";
 import { mixFor, pillarCounts, strategyBlock } from "@/lib/autopilot/strategy";
 import { buildTeamReviewPrompt, mergeFixedSlides, reviewSchema } from "@/lib/autopilot/review";
 import { catalogBlock, productInput, productVisualPrompt, rotateProducts, type ProductRow } from "@/lib/autopilot/products";
@@ -438,5 +439,30 @@ describe("strategy, ideas & senior review", () => {
     expect(p).toContain("POST 0");
     expect(p).toContain("FAKTA");
     expect(reviewSchema.safeParse({ reviews: [{ i: 0, score: 9, issues: [], fix: null }] }).success).toBe(true);
+  });
+});
+
+describe("brand research", () => {
+  const r = researchSchema.parse({
+    business: { summary: "Photobox self-service di stasiun KAI Bogor.", category: "Photobox", products: [{ name: "Photobox 4 frame", description: "cetak instan" }], target_audience: "Anak muda & keluarga", usp: "Cetak 1 menit", voice: "ceria", location: "Bogor" },
+    kv: { primary: "#FF4F8B", secondary: "#FFD23F", background: "#FFF6EC", mood: "ceria & hangat" },
+    dna: { name: "KV Photobebaz", bg: "photo", font: "fredoka", hero: "full", ornaments: ["sticker"], visualStyle: "photo-lifestyle" },
+    visual_subjects: ["a photobox booth with ring light and props, friends posing"],
+    product_images: [0, 2],
+  });
+  it("fills only empty Brand Kit fields", () => {
+    const kit = mergeIntoKit({ products: "Paket wisuda", color_primary: "#111111" }, r);
+    expect(kit.products).toBe("Paket wisuda");
+    expect(kit.color_primary).toBe("#111111");
+    expect(kit.color_secondary).toBe("#FFD23F");
+    expect(kit.target_audience).toBe("Anak muda & keluarga");
+    expect(String(kit.notes)).toContain("Photobox self-service");
+  });
+  it("visual subjects block & prompt", () => {
+    expect(visualSubjectsBlock(r)).toContain("photobox booth");
+    expect(visualSubjectsBlock(null)).toBeNull();
+    const p = researchPrompt({ name: "Photobebaz", handle: "@photobebaz", website: null, kitSummary: "", sources: [{ title: "t", url: "https://x.id", content: "photobox" }], imageCount: 3, igImages: 0, en: false });
+    expect(p).toContain("Photobebaz");
+    expect(p).toContain("JANGAN default biru");
   });
 });

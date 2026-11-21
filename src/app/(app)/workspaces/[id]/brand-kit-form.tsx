@@ -21,6 +21,7 @@ const FIELDS = [
   { key: "channels" },
   { key: "budget_range" },
   { key: "notes", long: true },
+  { key: "website" },
 ] as const satisfies readonly { key: keyof BrandKit; long?: boolean }[];
 
 const VOICE_FIELDS = ["voice_dont", "seo_keywords", "brand_lines", "caption_examples"] as const satisfies readonly (keyof BrandKit)[];

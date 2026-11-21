@@ -12,6 +12,8 @@ export interface BrandKit {
   channels?: string;
   budget_range?: string;
   notes?: string;
+  /** Website / link toko / Google Maps (sumber riset brand otomatis). */
+  website?: string;
   /** Suara brand untuk konten (Autopilot & chat Instagram) — padanan voice.md skill marqthink-ig. */
   voice_dont?: string;
   seo_keywords?: string;
@@ -60,6 +62,7 @@ export const BRAND_KIT_FIELDS: { key: keyof BrandKit; label: string }[] = [
   { key: "channels", label: "Channel aktif" },
   { key: "budget_range", label: "Budget range" },
   { key: "notes", label: "Catatan lain / instruksi khusus project" },
+  { key: "website", label: "Website / link toko" },
   { key: "voice_dont", label: "Kata/frasa yang TIDAK boleh dipakai di konten" },
   { key: "seo_keywords", label: "Kata kunci utama (SEO/GEO) untuk caption" },
   { key: "brand_lines", label: "Kalimat baku brand (dipakai apa adanya)" },

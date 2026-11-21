@@ -16,6 +16,8 @@ import { brandPalette, type SlideBrand } from "./slides";
 import { addDays, buildGeneratePrompt, buildIdeasPrompt, formatMix, generatedWeekSchema, ideasWeekSchema, pickLook, planSlots, todayWib, type Idea } from "./plan";
 import type { Look } from "./slides";
 import { strategyBlock } from "./strategy";
+import { latestResearch } from "./brand-research";
+import { visualSubjectsBlock } from "./research-shape";
 import { resolveAppUrl } from "@/lib/env";
 import { activeStyle } from "./styles-server";
 import { baseOf, styleNote } from "./style";
@@ -211,6 +213,7 @@ async function loadContext(admin: SupabaseClient, o: GenOpts, settings: Settings
     voice: voiceRules(brand.kit),
     style: dna ? styleNote(dna) : null,
     catalog: catalogBlock(products, featured),
+    research: visualSubjectsBlock(await latestResearch(admin, o.userId, settings.workspace_id)),
     focus: settings.focus ? untrusted("fokus_pemilik_brand", settings.focus) : null,
     en: o.language === "en",
   };

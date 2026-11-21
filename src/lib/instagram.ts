@@ -269,3 +269,18 @@ export async function syncAllInsights(budgetMs = 40_000) {
   }
   return n;
 }
+
+/** URL gambar post terbaru akun IG pelanggan (untuk riset KV). Kosong bila belum terhubung. */
+export async function recentMediaUrls(userId: string, n = 9): Promise<string[]> {
+  const a = await getInstagram(userId);
+  if (!a || a.status !== "active") return [];
+  try {
+    const token = decryptToken(a.token_enc, key());
+    const r = await igFetch<{ data: { media_type?: string; media_url?: string; thumbnail_url?: string }[] }>(
+      `${GRAPH}/${a.ig_user_id}/media?${new URLSearchParams({ fields: "media_type,media_url,thumbnail_url", limit: String(n), access_token: token })}`,
+    );
+    return (r.data ?? []).map((m) => (m.media_type === "VIDEO" ? m.thumbnail_url : m.media_url)).filter((u): u is string => !!u).slice(0, n);
+  } catch {
+    return [];
+  }
+}

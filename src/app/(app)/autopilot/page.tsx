@@ -10,6 +10,7 @@ import type { MediaStat } from "@/lib/autopilot/performance";
 import type { BrandStyleRow } from "@/components/autopilot/style-section";
 import type { ProductItem } from "@/components/autopilot/products-section";
 import type { IdeaItem } from "@/components/autopilot/ideas-section";
+import type { ResearchRow } from "@/components/autopilot/research-card";
 import { existingSamples } from "@/lib/autopilot/sample-images";
 import { STYLE_PRESETS } from "@/lib/autopilot/presets";
 
@@ -36,7 +37,8 @@ export default async function AutopilotPage() {
   if (!allowance) return <AutopilotUpsell lang={lang} workspaces={workspaces} />;
 
   const today = todayWib();
-  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }, { data: styleRows }, { data: productRows }, { data: ideaRows }] = await Promise.all([
+  const { data: settingsRow0 } = await supabase.from("autopilot_settings").select("workspace_id").maybeSingle();
+  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }, { data: styleRows }, { data: productRows }, { data: researchRow }, { data: ideaRows }] = await Promise.all([
     supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, goal, pillar_mix, review_ideas, industry, style_preset, style_id, generating_at").maybeSingle(),
     supabase
       .from("social_posts")
@@ -54,6 +56,14 @@ export default async function AutopilotPage() {
       .limit(60),
     supabase.from("brand_styles").select("id, name, dna, analysis, updated_at").order("created_at", { ascending: false }).limit(20),
     supabase.from("brand_products").select("id, name, sku, price, description, photo_paths, active, updated_at").order("created_at", { ascending: false }).limit(200),
+    // Riset brand terbaru untuk project aktif.
+    supabase
+      .from("brand_research")
+      .select("id, data, images, created_at")
+      .eq("workspace_id", (settingsRow0?.workspace_id as string | null) ?? workspaces[0]?.id ?? "00000000-0000-0000-0000-000000000000")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     supabase.from("autopilot_ideas").select("id, batch_id, post_date, post_time, kind, pillar, funnel, title, angle, hook, reason").eq("status", "pending").order("post_date").order("post_time").limit(30),
   ]);
 
@@ -85,6 +95,7 @@ export default async function AutopilotPage() {
       instagram={instagram}
       stats={(statRows ?? []) as MediaStat[]}
       products={(productRows ?? []) as ProductItem[]}
+      research={(researchRow as ResearchRow | null) ?? null}
       ideas={(ideaRows ?? []).map((r) => ({ ...r, post_time: String(r.post_time) })) as IdeaItem[]}
       styleState={{
         industry: (settingsRow?.industry as string | null) ?? null,

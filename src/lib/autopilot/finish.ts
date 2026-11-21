@@ -70,7 +70,7 @@ async function teamReview(admin: SupabaseClient, userId: string, rows: Row[], la
       if (!rv) return admin.from("social_posts").update({ team_review: { skipped: true } }).eq("id", r.id).eq("user_id", userId);
       // Hanya draf yang belum disentuh pelanggan yang diperbaiki otomatis.
       const fix = r.status === "draft" ? rv.fix : null;
-      const patch: Record<string, unknown> = { team_review: { score: rv.score, issues: rv.issues, fixed: Boolean(fix), at } };
+      const patch: Record<string, unknown> = { team_review: { score: rv.score, issues: rv.issues, fixed: Boolean(fix), at }, updated_at: at };
       if (fix) {
         const slides = r.kind === "reel" ? r.slides : mergeFixedSlides(r.slides, fix.slides);
         const caption = fix.caption ? capHashtags(fixCaption(fix.caption), tag) : r.caption;
@@ -117,7 +117,8 @@ async function visuals(admin: SupabaseClient, userId: string, batchId: string, b
     const { data: cur } = await admin.from("social_posts").select("slides").eq("id", r.id).single();
     const sl = ((cur?.slides as Slide[]) ?? r.slides).slice();
     if (sl[0]) sl[0] = { ...sl[0], image: path };
-    await admin.from("social_posts").update({ slides: sl }).eq("id", r.id).eq("user_id", userId);
+    // updated_at ikut berubah → URL pratinjau berganti, cache browser lama tidak dipakai lagi.
+    await admin.from("social_posts").update({ slides: sl, updated_at: new Date().toISOString() }).eq("id", r.id).eq("user_id", userId);
   });
 }
 

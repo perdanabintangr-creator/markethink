@@ -37,6 +37,7 @@ import type { Slide } from "@/lib/autopilot/slides";
 import { EditPostDialog } from "./edit-post-dialog";
 import { PerformancePanel } from "./performance-panel";
 import { IdeasSection, type IdeaItem } from "./ideas-section";
+import { ResearchCard, type ResearchRow } from "./research-card";
 import { StyleSection, type BrandStyleRow } from "./style-section";
 import { ProductsSection, type ProductItem } from "./products-section";
 import type { MediaStat } from "@/lib/autopilot/performance";
@@ -139,6 +140,7 @@ export function AutopilotView(props: {
   instagram: IgStatus;
   stats: MediaStat[];
   ideas: IdeaItem[];
+  research: ResearchRow | null;
   products: ProductItem[];
   styleState: { industry: string | null; presetId: string | null; styleId: string | null; styles: BrandStyleRow[]; samples: { ready: number; total: number } | null };
 }) {
@@ -205,6 +207,11 @@ export function AutopilotView(props: {
 
   async function generate(weeks: number) {
     let total = 0;
+    // Belum ada riset brand untuk project ini → riset dulu supaya konten & KV sesuai bisnis aslinya.
+    if (!props.research && props.initialSettings.workspaceId) {
+      setGen(props.lang === "en" ? "Researching your brand first…" : "Meriset brand kamu dulu (web, gambar & IG)…");
+      await fetch("/api/autopilot/research", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: props.initialSettings.workspaceId }) }).catch(() => null);
+    }
     for (let k = 1; k <= weeks; k++) {
       setGen(weeks > 1 ? t.generatingWeek(k, weeks) : t.generating);
       const r = await call<{ created: number; ideas: number; stage: "ideas" | "posts" }>("/api/autopilot/generate");
@@ -323,6 +330,8 @@ export function AutopilotView(props: {
         )}
 
         <IdeasSection t={t} ideas={props.ideas} dateLabel={(d) => dateLabel(t, d, props.today)} />
+
+        <ResearchCard lang={props.lang} workspaceId={props.initialSettings.workspaceId} research={props.research} />
 
         <ProductsSection lang={props.lang} workspaceId={props.initialSettings.workspaceId} products={props.products} />
 
