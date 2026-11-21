@@ -3401,3 +3401,9 @@ alter table public.brand_research enable row level security;
 drop policy if exists "own brand research" on public.brand_research;
 create policy "own brand research" on public.brand_research for select to authenticated using (user_id = auth.uid());
 revoke insert, update, delete on public.brand_research from anon, authenticated;
+
+
+-- ===== 20261121000069_visual_director.sql =====
+-- Visual Director: rencana visual per slide (perlu gambar? subjek, adegan, prompt, zona teks) + metadata biaya per gambar.
+alter table public.social_posts add column if not exists visual_plan jsonb;
+alter table public.usage_logs add column if not exists meta jsonb;

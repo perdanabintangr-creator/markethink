@@ -99,3 +99,63 @@ export async function pool<T>(items: T[], limit: number, fn: (x: T) => Promise<v
     while (queue.length) await fn(queue.shift()!);
   }));
 }
+
+/**
+ * Buat SATU gambar baru dari prompt Visual Director (opsional dengan gambar acuan: foto produk asli / talent
+ * slide sebelumnya), simpan di folder user, catat biaya + meta (post, slide, subjek). null bila gagal/timeout.
+ */
+export async function generateSlideImage(
+  admin: SupabaseClient,
+  o: { userId: string; postId: string; slide: number; prompt: string; aspect: string; refs: { mime: string; data: string }[]; subject: string | null; timeoutMs?: number },
+): Promise<{ path: string; bytes: Buffer } | null> {
+  const started = Date.now();
+  const meta = { post_id: o.postId, slide: o.slide, subject: o.subject, refs: o.refs.length };
+  try {
+    const img = await Promise.race([
+      generateImage(o.prompt, o.aspect, o.refs, { premiumEdit: o.refs.length > 0 }),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout gambar")), o.timeoutMs ?? 75_000)),
+    ]);
+    const bytes = await sharp(Buffer.from(img.bytes)).jpeg({ quality: 88 }).toBuffer();
+    const p = `${o.userId}/autopilot/${o.postId}/s${o.slide}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.jpg`;
+    const { error } = await admin.storage.from(BUCKET).upload(p, bytes, { contentType: "image/jpeg", upsert: true });
+    if (error) throw error;
+    await admin.from("usage_logs").insert({
+      user_id: o.userId,
+      tier: o.refs.length ? "autopilot-image-ref" : "autopilot-image",
+      provider: img.provider,
+      model: img.model,
+      latency_ms: Date.now() - started,
+      est_cost_usd: img.costUsd ?? (o.refs.length ? 0.07 : 0.034),
+      credits: 0,
+      status: "ok",
+      error: img.notes ?? null,
+      meta,
+    });
+    return { path: p, bytes };
+  } catch (err) {
+    console.error("[autopilot] gambar slide gagal", o.postId, o.slide, err);
+    await admin.from("usage_logs").insert({
+      user_id: o.userId,
+      tier: "autopilot-image",
+      latency_ms: Date.now() - started,
+      credits: 0,
+      status: "error",
+      error: `gambar slide ${o.slide}: ${err instanceof Error ? err.message : String(err)}`.slice(0, 1000),
+      meta,
+    });
+    return null;
+  }
+}
+
+/** Foto produk milik user → acuan base64 (maks 2). */
+export async function productRefs(admin: SupabaseClient, userId: string, paths: string[]) {
+  const refs: { mime: string; data: string }[] = [];
+  for (const path of paths.filter((x) => x.startsWith(`${userId}/`) && !x.includes("..")).slice(0, 2)) {
+    const { data } = await admin.storage.from(BUCKET).download(path);
+    if (data) {
+      const jpg = await sharp(Buffer.from(await data.arrayBuffer())).rotate().resize({ width: 1280, height: 1280, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer();
+      refs.push({ mime: "image/jpeg", data: jpg.toString("base64") });
+    }
+  }
+  return refs;
+}

@@ -658,9 +658,14 @@ function imageSlide(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
   const condensed = CONDENSED.has(P.titleFont);
   const serifTitle = SERIF_FONTS.has(P.titleFont);
   const base = lightOverlay ? "#FFFFFF" : "#05060A";
+  const topZone = s.textZone === "top";
   defs.push(
-    `<linearGradient id="${id}top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity=".5"/><stop offset=".16" stop-color="#000000" stop-opacity="0"/></linearGradient>`,
-    `<linearGradient id="${id}bot" x1="0" y1="0" x2="0" y2="1"><stop offset=".42" stop-color="${base}" stop-opacity="0"/><stop offset=".66" stop-color="${base}" stop-opacity="${lightOverlay ? 0.88 : 0.78}"/><stop offset="1" stop-color="${base}" stop-opacity="${lightOverlay ? 0.98 : 0.94}"/></linearGradient>`,
+    topZone
+      ? `<linearGradient id="${id}top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${base}" stop-opacity="${lightOverlay ? 0.97 : 0.92}"/><stop offset=".34" stop-color="${base}" stop-opacity="${lightOverlay ? 0.85 : 0.72}"/><stop offset=".55" stop-color="${base}" stop-opacity="0"/></linearGradient>`
+      : `<linearGradient id="${id}top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000000" stop-opacity=".5"/><stop offset=".16" stop-color="#000000" stop-opacity="0"/></linearGradient>`,
+    topZone
+      ? `<linearGradient id="${id}bot" x1="0" y1="0" x2="0" y2="1"><stop offset=".8" stop-color="#000000" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity=".45"/></linearGradient>`
+      : `<linearGradient id="${id}bot" x1="0" y1="0" x2="0" y2="1"><stop offset=".42" stop-color="${base}" stop-opacity="0"/><stop offset=".66" stop-color="${base}" stop-opacity="${lightOverlay ? 0.88 : 0.78}"/><stop offset="1" stop-color="${base}" stop-opacity="${lightOverlay ? 0.98 : 0.94}"/></linearGradient>`,
     `<linearGradient id="${id}acc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${lightOverlay ? b.royal : mix(b.royal, "#FFFFFF", 0.3)}"/><stop offset=".55" stop-color="${b.blue}"/><stop offset="1" stop-color="${b.cyan}"/></linearGradient>`,
     `<linearGradient id="${id}diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${b.royal}"/><stop offset="1" stop-color="${b.cyan}"/></linearGradient>`,
   );
@@ -671,8 +676,8 @@ function imageSlide(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
 
   // Kepala: logo (versi terang di atas gradasi gelap) + penanda halaman
   const { tag, cta } = slideCorners(s, i, n, o.en);
-  out += logoMark(o, PAD_X, PAD_TOP + 10, 50, "#FFFFFF", id);
-  if (tag) out += pill(tag, W - PAD_X + 20, PAD_TOP + 10, true, "photo");
+  out += logoMark(o, PAD_X, PAD_TOP + 10, 50, topZone && lightOverlay ? "#0B1026" : "#FFFFFF", id);
+  if (tag) out += pill(tag, W - PAD_X + 20, PAD_TOP + 10, !(topZone && lightOverlay), "photo");
 
   // Teks di bawah: label, judul + aksen, isi singkat
   const lsOf = (size: number) => (condensed ? size * 0.005 : serifTitle ? -size * 0.01 : -size * 0.02);
@@ -687,7 +692,7 @@ function imageSlide(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
   const bodyLines = text ? wrap(R, text, 32, INNER).slice(0, 3) : [];
   const labelH = s.label ? 49 + 24 : 0;
   const blockH = labelH + lines.length * size * lhT + (bodyLines.length ? 22 + bodyLines.length * 44 : 0);
-  let y = H - 150 - blockH;
+  let y = topZone ? PAD_TOP + 90 : H - 150 - blockH;
   if (s.label) {
     const F = font("bold");
     const t = clean(F, s.label.toUpperCase());
@@ -703,11 +708,12 @@ function imageSlide(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
   if (s.num) {
     const D = font(P.titleFont);
     const t = clean(D, s.num).slice(0, 3);
-    out += `<g opacity=".9">${line(D, t, W - PAD_X - widthOf(D, t, 64), H - 150 - blockH - 84, 64, 1, accFill)}</g>`;
+    out += `<g opacity=".9">${line(D, t, W - PAD_X - widthOf(D, t, 64), topZone ? PAD_TOP + 90 + blockH + 20 : H - 150 - blockH - 84, 64, 1, accFill)}</g>`;
   }
   const handle = clean(R, b.handle);
-  if (handle) out += line(R, handle, PAD_X, H - PAD_BOTTOM - 28, 24, 1.23, lightOverlay ? "#5B6478" : "#C3C8D4");
-  if (cta) out += swipePill(cta, W - PAD_X + 20, H - PAD_BOTTOM - 14, !lightOverlay, b);
+  const footDark = topZone || !lightOverlay;
+  if (handle) out += line(R, handle, PAD_X, H - PAD_BOTTOM - 28, 24, 1.23, footDark ? "#E2E6EE" : "#5B6478");
+  if (cta) out += swipePill(cta, W - PAD_X + 20, H - PAD_BOTTOM - 14, footDark, b);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${defs.join("")}</defs>${out}</svg>`;
 }
 

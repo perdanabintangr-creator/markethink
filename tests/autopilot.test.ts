@@ -1,3 +1,4 @@
+import { buildDirectorPrompt, finalImagePrompt, postPlanSchema, selectJobs } from "@/lib/autopilot/director";
 import { dedupeAccent } from "@/lib/autopilot/tidy";
 import { slideVisualPromptFor } from "@/lib/autopilot/style";
 import { SLIDE_SPEC } from "@/lib/autopilot/plan";
@@ -486,5 +487,50 @@ describe("visual sense", () => {
   it("writer prompt carries the visual-sense rules", () => {
     expect(SLIDE_SPEC).toContain("SENSE VISUAL");
     expect(SLIDE_SPEC).toContain("JANGAN mengulang kata");
+  });
+});
+
+describe("visual director", () => {
+  const plan = postPlanSchema.parse({
+    post: 0,
+    bible: "three Indonesian friends in their early 20s, pastel pink and yellow outfits, soft ring-light, photobox booth in a mall",
+    slides: [
+      { slide: 1, needs_image: true, reason: "cover", subject_type: "orang", scene: "3 sahabat di booth", image_prompt: "three friends laughing inside a photobox booth", text_safe_zone: "bottom-35%" },
+      { slide: 2, needs_image: true, reason: "pose", subject_type: "orang", scene: "berdiri rapat miring", image_prompt: "three friends standing shoulder to shoulder leaning to the center", text_safe_zone: "bottom-35%" },
+      { slide: 3, needs_image: true, reason: "cahaya", subject_type: "objek", scene: "ring light", image_prompt: "a ring light", text_safe_zone: "top-35%" },
+      { slide: 4, needs_image: true, reason: "gerak", subject_type: "orang", scene: "tertawa", image_prompt: "friends mid-laugh", text_safe_zone: "bottom-35%" },
+      { slide: 5, needs_image: false, reason: "rangkuman" },
+      { slide: 6, needs_image: false, reason: "cta" },
+    ],
+  });
+  const types: Slide["type"][] = ["cover", "point", "point", "point", "list", "cta"];
+  it("cover first, then the most visual inner slides within the cap", () => {
+    const jobs = selectJobs(plan, { innerCap: 2, slideTypes: types });
+    expect(jobs.map((j) => j.slide)).toEqual([1, 2, 4]);
+    expect(selectJobs(plan, { innerCap: 0, slideTypes: types }).map((j) => j.slide)).toEqual([1]);
+    expect(selectJobs(plan, { innerCap: 5, slideTypes: types }).map((j) => j.slide)).toEqual([1, 2, 3, 4]);
+  });
+  it("never plans images for summary/poll/cta slides even if asked", () => {
+    const bad = postPlanSchema.parse({ post: 0, bible: "x", slides: [{ slide: 5, needs_image: true, reason: "x", subject_type: "objek", image_prompt: "a list" }] });
+    expect(selectJobs(bad, { innerCap: 5, slideTypes: types })).toEqual([]);
+  });
+  it("final prompt carries continuity, safe zone, no-text and product rules", () => {
+    const p = finalImagePrompt({ plan: plan.slides[1], bible: plan.bible, dna: null, palette: { primary: "#FF4F8B", secondary: "#FFD23F" }, talentRef: true });
+    expect(p).toContain("standing shoulder to shoulder");
+    expect(p).toContain("Carousel continuity");
+    expect(p).toContain("SAME people");
+    expect(p).toContain("BOTTOM 35%");
+    expect(p).toContain("4:5");
+    expect(p).toMatch(/no text/i);
+    const top = finalImagePrompt({ plan: plan.slides[2], bible: "b", dna: null, palette: { primary: "#000000", secondary: "#FFFFFF" } });
+    expect(top).toContain("TOP 35%");
+    const prod = finalImagePrompt({ plan: { ...plan.slides[1], use_product_photo: true }, bible: "b", dna: null, palette: { primary: "#000000", secondary: "#FFFFFF" }, productName: "Photobox 4 frame" });
+    expect(prod).toContain('real product "Photobox 4 frame" EXACTLY');
+  });
+  it("director prompt explains the decision rules", () => {
+    const p = buildDirectorPrompt({ brandBlock: "- Produk: photobox", research: null, dna: null, palette: { primary: "#FF4F8B", secondary: "#FFD23F" }, posts: [{ kind: "carousel", title: "T", pillar: "Edukasi", slides: [{ type: "cover", title: "A" }], hasProductPhoto: false }] });
+    expect(p).toContain("needs_image");
+    expect(p).toContain("bible");
+    expect(p).toContain("teks slide ditutup");
   });
 });

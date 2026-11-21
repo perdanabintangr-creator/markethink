@@ -30,6 +30,8 @@ export const slideSchema = z.object({
   image: text(300).optional(),
   /** Teks kecil di 4 sudut cover gaya Glossy (maks 4 frasa pendek). */
   corners: z.array(text(40)).max(4).optional(),
+  /** Zona aman teks pada slide bervisual (dari Visual Director). */
+  textZone: z.enum(["top", "bottom"]).optional(),
 });
 export type Slide = z.infer<typeof slideSchema>;
 

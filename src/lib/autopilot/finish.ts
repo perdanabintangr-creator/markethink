@@ -9,10 +9,14 @@ import { loadBrand } from "./generate";
 import { buildTeamReviewPrompt, mergeFixedSlides, reviewSchema } from "./review";
 import { capHashtags, brandHashtag, fixCaption, lintCaption, lintSlides } from "./lint";
 import { brandKeywordsOf, voiceRules } from "./voice";
-import { createVisual, pool } from "./visuals";
-import { isHero, type Look, type Slide } from "./slides";
-import { IMAGE_SLIDE_TYPES } from "./render";
+import { generateSlideImage, pool, productRefs } from "./visuals";
+import type { Look, Slide } from "./slides";
 import type { ProductRow } from "./products";
+import { buildDirectorPrompt, directorSchema, finalImagePrompt, selectJobs, type PostPlan } from "./director";
+import { imageAspectFor, parseDna, visualPromptFor } from "./style";
+import { latestResearch } from "./brand-research";
+import { visualSubjectsBlock } from "./research-shape";
+import sharp from "sharp";
 
 interface Row {
   id: string;
@@ -85,72 +89,127 @@ async function teamReview(admin: SupabaseClient, userId: string, rows: Row[], la
   );
 }
 
-/** Batas visual slide isi per carousel (di luar cover) — biaya gambar terkendali. */
+/** Batas gambar slide isi per carousel (di luar cover) — ACC founder 21 Nov: Pro 3, Promax 5. */
 export const INNER_VISUALS: Record<string, number> = { pro: 3, promax: 5, admin: 5 };
 
-/**
- * Visual AI: cover gaya studio (foto produk asli bila ada) + slide isi yang diberi "visual" oleh copywriter
- * (tampil layar penuh ±80%). Cover dulu, lalu slide isi sampai batas paket.
- */
-async function visuals(admin: SupabaseClient, userId: string, batchId: string, budgetMs: number) {
+type DirectorRow = Row & { visual_plan?: unknown };
+
+/** Visual Director: rencana visual per slide untuk beberapa post sekaligus (1 panggilan AI). */
+async function planVisuals(admin: SupabaseClient, userId: string, rows: DirectorRow[], ctx: { brandBlock: string; research: string | null; palette: { primary: string; secondary: string } }, products: Pick<ProductRow, "id" | "name" | "photo_paths">[]) {
+  const routed = routeTier("senior");
   const started = Date.now();
-  const { data } = await admin.from("social_posts").select("id, workspace_id, kind, design, style, slides, product_id").eq("user_id", userId).eq("batch_id", batchId);
-  const rows = (data ?? []) as Row[];
-  if (!rows.length) return;
-  const { data: prof } = await admin.from("profiles").select("plan_id, role").eq("id", userId).maybeSingle();
-  const cap = prof?.role === "admin" ? INNER_VISUALS.admin : (INNER_VISUALS[String(prof?.plan_id)] ?? 0);
-  const brand = await loadBrand(admin, userId, rows[0].workspace_id);
-  const ids = rows.map((r) => r.product_id).filter(Boolean) as string[];
+  try {
+    const out = await generateText({
+      model: routed.model,
+      maxOutputTokens: 9000,
+      maxRetries: 1,
+      abortSignal: AbortSignal.timeout(120_000),
+      providerOptions: { anthropic: { effort: "low" } },
+      prompt: buildDirectorPrompt({
+        brandBlock: ctx.brandBlock,
+        research: ctx.research,
+        dna: parseDna(rows[0]?.style),
+        palette: ctx.palette,
+        posts: rows.map((r) => ({
+          kind: r.kind,
+          title: r.title,
+          pillar: r.pillar,
+          slides: r.slides,
+          hasProductPhoto: Boolean(products.find((x) => x.id === r.product_id)?.photo_paths.length),
+        })),
+      }),
+    });
+    const c = routed.resolved() ?? routed.candidates[0];
+    await admin.from("usage_logs").insert({ user_id: userId, tier: "autopilot-director", provider: c.provider, model: c.modelId, latency_ms: Date.now() - started, input_tokens: out.usage.inputTokens ?? 0, output_tokens: out.usage.outputTokens ?? 0, est_cost_usd: estimateCostUsd(c, out.usage.inputTokens ?? 0, out.usage.outputTokens ?? 0), credits: 0, status: "ok" });
+    const parsed = directorSchema.safeParse(extractJson(out.text));
+    return parsed.success ? parsed.data.posts : [];
+  } catch (err) {
+    await admin.from("usage_logs").insert({ user_id: userId, tier: "autopilot-director", latency_ms: Date.now() - started, credits: 0, status: "error", error: `director: ${String(err).slice(0, 500)}` });
+    return [];
+  }
+}
+
+/**
+ * Visual Director + pembuatan gambar BARU per slide terpilih (cover + slide isi paling visual sampai kuota paket).
+ * Foto produk asli dipakai sebagai acuan bila slide menampilkan produk; talent dijaga konsisten dengan memakai
+ * gambar orang pertama di carousel sebagai acuan. Gagal → slide tetap layout teks (tidak memakai foto lain).
+ */
+export async function directVisuals(admin: SupabaseClient, userId: string, rows: DirectorRow[], o: { innerCap: number; budgetMs: number }) {
+  const started = Date.now();
+  const targets = rows.filter((r) => r.design !== "classic" && r.kind !== "reel" && r.slides?.length);
+  if (!targets.length) return [];
+  const brand = await loadBrand(admin, userId, targets[0].workspace_id);
+  const research = visualSubjectsBlock(await latestResearch(admin, userId, targets[0].workspace_id));
+  const ids = targets.map((r) => r.product_id).filter(Boolean) as string[];
   const { data: prods } = ids.length ? await admin.from("brand_products").select("id, name, photo_paths").in("id", ids).eq("user_id", userId) : { data: [] };
   const products = (prods ?? []) as Pick<ProductRow, "id" | "name" | "photo_paths">[];
+  const palette = { primary: brand.palette.royal, secondary: brand.palette.cyan };
+  const brandBlock = brand.kit ? untrusted("brand_kit", formatBrandKit(brand.kit)) : "";
 
-  type Job = { r: Row; k: number; cover: boolean };
-  const jobs: Job[] = [];
-  for (const r of rows) {
-    if (r.design === "classic" || r.kind === "reel") continue;
-    const sl = r.slides ?? [];
-    const prod = products.find((x) => x.id === r.product_id);
-    if (sl[0] && isHero(sl[0], 0) && !sl[0].image && (sl[0].visual || prod?.photo_paths.length)) jobs.push({ r, k: 0, cover: true });
-  }
-  for (const r of rows) {
-    if (r.design === "classic" || r.kind !== "carousel") continue;
-    let n = 0;
-    (r.slides ?? []).forEach((s, k) => {
-      if (k > 0 && n < cap && s.visual && !s.image && IMAGE_SLIDE_TYPES.has(s.type)) {
-        jobs.push({ r, k, cover: false });
-        n++;
+  // Rencana visual: 3 post per panggilan AI.
+  const plans = new Map<string, PostPlan>();
+  const chunks: DirectorRow[][] = [];
+  for (let k = 0; k < targets.length; k += 3) chunks.push(targets.slice(k, k + 3));
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const out = await planVisuals(admin, userId, chunk, { brandBlock, research, palette }, products);
+      for (const p of out) if (chunk[p.post]) plans.set(chunk[p.post].id, p);
+    }),
+  );
+  await Promise.all([...plans.entries()].map(([id, plan]) => admin.from("social_posts").update({ visual_plan: plan }).eq("id", id).eq("user_id", userId)));
+
+  // Gambar: antar-post paralel (3), dalam satu post berurutan (talent konsisten lewat acuan).
+  const results: { postId: string; slide: number; ok: boolean }[] = [];
+  await pool(
+    targets.filter((r) => plans.has(r.id)),
+    3,
+    async (r) => {
+      const plan = plans.get(r.id)!;
+      const dna = parseDna(r.style);
+      const full = !dna || dna.hero === "full" || dna.bg === "photo";
+      const jobs = selectJobs(plan, { innerCap: r.kind === "carousel" ? o.innerCap : 0, slideTypes: r.slides.map((s) => s.type) });
+      const prod = products.find((x) => x.id === r.product_id) ?? null;
+      const prodRefs = prod?.photo_paths.length ? await productRefs(admin, userId, prod.photo_paths) : [];
+      let talent: { mime: string; data: string } | null = null;
+      for (const job of jobs) {
+        if (Date.now() - started > o.budgetMs) break;
+        const usesPeople = job.plan.subject_type === "orang" || job.plan.subject_type === "cara_pakai" || job.plan.subject_type === "before_after";
+        const refs = [...(job.plan.use_product_photo ? prodRefs : []), ...(usesPeople && talent ? [talent] : [])].slice(0, 3);
+        const base = finalImagePrompt({ plan: job.plan, bible: plan.bible, dna, palette, productName: prod?.name ?? null, talentRef: Boolean(usesPeople && talent) });
+        // Cover gaya studio (glossy/bold): subjek terisolasi di latar gaya; selain itu layar penuh 4:5.
+        const coverIsolated = job.cover && !full && dna;
+        const prompt = coverIsolated ? visualPromptFor(dna, `${job.plan.image_prompt} (${plan.bible})`, { primary: palette.primary, accent: palette.secondary }) : base;
+        const img = await generateSlideImage(admin, {
+          userId,
+          postId: r.id,
+          slide: job.slide,
+          prompt,
+          aspect: coverIsolated ? imageAspectFor(dna) : "4:5",
+          refs,
+          subject: job.plan.subject_type ?? null,
+          timeoutMs: 75_000,
+        });
+        results.push({ postId: r.id, slide: job.slide, ok: Boolean(img) });
+        if (!img) continue;
+        if (usesPeople && !talent && !coverIsolated) talent = { mime: "image/jpeg", data: (await sharp(img.bytes).resize({ width: 768 }).jpeg({ quality: 82 }).toBuffer()).toString("base64") };
+        // Pasang gambar ke slide terbaru (mungkin sudah diperbaiki tim senior).
+        const { data: cur } = await admin.from("social_posts").select("slides").eq("id", r.id).single();
+        const sl = ((cur?.slides as Slide[]) ?? r.slides).slice();
+        const k = job.slide - 1;
+        if (sl[k]) sl[k] = { ...sl[k], image: img.path, visual: job.plan.scene ?? sl[k].visual, textZone: job.plan.text_safe_zone === "top-35%" ? "top" : "bottom" };
+        // updated_at ikut berubah → URL pratinjau berganti, cache browser lama tidak dipakai lagi.
+        await admin.from("social_posts").update({ slides: sl, updated_at: new Date().toISOString() }).eq("id", r.id).eq("user_id", userId);
       }
-    });
-  }
-  // Satu penulis per post agar slide tidak saling menimpa.
-  const locks = new Map<string, Promise<unknown>>();
-  await pool(jobs, 4, async ({ r, k, cover }) => {
-    if (Date.now() - started > budgetMs) return;
-    const prod = cover ? (products.find((x) => x.id === r.product_id) ?? null) : null;
-    const path = await createVisual(admin, {
-      userId,
-      postId: r.id,
-      look: r.design,
-      visual: r.slides[k].visual || `${prod?.name ?? "product"} hero shot`,
-      brand: brand.palette,
-      style: r.style,
-      product: prod?.photo_paths.length ? prod : null,
-      frame: cover ? "cover" : "slide",
-      timeoutMs: 60_000,
-    });
-    if (!path) return;
-    const prev = locks.get(r.id) ?? Promise.resolve();
-    const next = prev.then(async () => {
-      // Ambil slide terbaru (mungkin sudah diperbaiki tim senior) lalu pasang visual.
-      const { data: cur } = await admin.from("social_posts").select("slides").eq("id", r.id).single();
-      const sl = ((cur?.slides as Slide[]) ?? r.slides).slice();
-      if (sl[k]) sl[k] = { ...sl[k], image: path };
-      // updated_at ikut berubah → URL pratinjau berganti, cache browser lama tidak dipakai lagi.
-      await admin.from("social_posts").update({ slides: sl, updated_at: new Date().toISOString() }).eq("id", r.id).eq("user_id", userId);
-    });
-    locks.set(r.id, next);
-    await next;
-  });
+    },
+  );
+  return results;
+}
+
+async function visuals(admin: SupabaseClient, userId: string, batchId: string, budgetMs: number) {
+  const { data } = await admin.from("social_posts").select("id, user_id, workspace_id, kind, design, style, product_id, pillar, title, slides, caption, script, status").eq("user_id", userId).eq("batch_id", batchId);
+  const { data: prof } = await admin.from("profiles").select("plan_id, role").eq("id", userId).maybeSingle();
+  const cap = prof?.role === "admin" ? INNER_VISUALS.admin : (INNER_VISUALS[String(prof?.plan_id)] ?? 0);
+  await directVisuals(admin, userId, (data ?? []) as DirectorRow[], { innerCap: cap, budgetMs });
 }
 
 /** Tahap akhir satu batch: tim senior memeriksa (bila paket mendukung), lalu visual dibuat. */
