@@ -580,3 +580,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Pesan habis dibedakan (hari ini → 00.00 WIB; minggu ini → Senin; porsi Director 50%). Ukuran Pasar maks Starter/Pro 1×, Promax 2× per minggu (revisi tidak dihitung). Refund/settle mencatat tier agar porsi Director akurat.
 - Teks "bulan ini / tanggal 1" diganti di seluruh aplikasi; lingkaran pemakaian & Pengaturan menampilkan bar Hari ini + Minggu ini.
 - Back office: jatah per paket diatur mingguan + harian; `monthly_credits` disimpan setara-bulan (× 52/12) untuk hitungan margin.
+
+## 2026-11-21 — Brand Onboarding wajib sebelum Autopilot (ACC founder)
+- Wajib: nama+kategori, IG, logo, 3–10 foto asli, audiens, tujuan, lokasi, CTA. Kelengkapan = 70% wajib + 30% opsional/screenshot.
+- Instagram tidak di-scrape; fallback = screenshot unggahan klien. Riset gagal → DNA tetap dibuat dari profil klien saja.
+- Creative Director hanya mengembalikan bagian yang ia revisi (sisanya null → draf tim) supaya cepat (<300 dtk Vercel).
+- Foto asli onboarding menjadi acuan gambar AI bila post tidak terkait SKU katalog.

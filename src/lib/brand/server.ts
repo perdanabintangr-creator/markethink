@@ -9,20 +9,7 @@ import { untrusted } from "@/lib/ai/prompt";
 import { researchBrand } from "@/lib/autopilot/brand-research";
 import { researchSchema, type BrandResearch } from "@/lib/autopilot/research-shape";
 import { autopilotGate, completeness, nextVersion, type AssetKind, type GateReason } from "./onboarding";
-import {
-  brandDnaSchema,
-  cdPrompt,
-  copywriterSchema,
-  designerSchema,
-  mergeDna,
-  dnaContext,
-  profileBlock,
-  pillarMixFromDna,
-  rolePrompt,
-  socmedSchema,
-  styleDnaFrom,
-  type BrandDna,
-} from "./dna";
+import { brandDnaSchema, cdPrompt, mergeDna, unwrapRole, dnaContext, profileBlock, pillarMixFromDna, rolePrompt, styleDnaFrom, type BrandDna } from "./dna";
 
 /**
  * Brand Onboarding & Brand DNA (server): status onboarding, aset, riset + tim AI 4 peran → DNA bervesi, ACC, dan
@@ -201,14 +188,26 @@ export async function generateBrandDna(admin: SupabaseClient, o: { userId: strin
       callJson(admin, o.userId, o.workspaceId, "copywriter", rolePrompt("copywriter", ctx, o.en), 3000),
       callJson(admin, o.userId, o.workspaceId, "socmed", rolePrompt("socmed", ctx, o.en), 2500),
     ]);
-    const drafts = {
-      designer: designerSchema.safeParse(designer.json).success ? designerSchema.parse(designer.json) : designer.json,
-      copywriter: copywriterSchema.safeParse(copywriter.json).success ? copywriterSchema.parse(copywriter.json) : copywriter.json,
-      socmed: socmedSchema.safeParse(socmed.json).success ? socmedSchema.parse(socmed.json) : socmed.json,
-    };
+    const drafts = { designer: unwrapRole(designer.json, "designer"), copywriter: unwrapRole(copywriter.json, "copywriter"), socmed: unwrapRole(socmed.json, "socmed") };
     const cd = await callJson(admin, o.userId, o.workspaceId, "creative-director", cdPrompt(ctx, drafts as never, o.en), 6000, 110_000);
     const dna = mergeDna(drafts, (cd.json ?? {}) as never);
-    if (!dna) throw new Error("dna_failed");
+    if (!dna) {
+      const shape = (v: unknown) =>
+        v && typeof v === "object"
+          ? Object.keys(v as object)
+              .slice(0, 8)
+              .join(",")
+          : String(v).slice(0, 40);
+      await admin.from("usage_logs").insert({
+        user_id: o.userId,
+        tier: "brand-dna",
+        credits: 0,
+        status: "error",
+        error: `dna_failed: designer[${shape(drafts.designer)}] copywriter[${shape(drafts.copywriter)}] socmed[${shape(drafts.socmed)}] cd[${shape(cd.json)}]`.slice(0, 900),
+        meta: { workspace_id: o.workspaceId, stage: "merge" },
+      });
+      throw new Error("dna_failed");
+    }
 
     const { data: existing } = await admin.from("brand_dna_versions").select("version").eq("workspace_id", o.workspaceId);
     const version = nextVersion((existing ?? []).map((r) => Number(r.version)));

@@ -51,3 +51,10 @@
 
 ## 18 Okt 2026 — Add-on dijual lagi + harga coret add-on
 - ✅ Migrasi 0043 terpasang; beli add-on dari halaman Tools Pro / tool terkunci → Calon pelanggan; kuota + batas modal 70%.
+
+## 21 Nov 2026 — Brand Onboarding + Brand DNA
+- ✅ Migrasi 070 (`brand_assets`, `brand_dna_versions`, `workspaces.onboarding_status/brand_dna_version`, `social_posts.brand_dna_version`) terpasang; RLS select-own, tulis lewat server.
+- ✅ Halaman `/autopilot/onboarding`: data wajib, logo + 3–10 foto asli, screenshot feed/kompetitor/referensi, data opsional, progress "Kelengkapan brand", simpan draf.
+- ✅ Riset (web + gambar + aset klien) → Designer/Copywriter/Socmed paralel → Creative Director memutuskan → Brand DNA versi draf (biaya dicatat) → tab per peran, bisa diedit, tombol ACC. Edit versi ACC = versi baru.
+- ✅ Gate: Autopilot (halaman, generate, tulis ide, cron, chat instagram_post) terkunci sampai data wajib lengkap + DNA di-ACC. Banner "Perbarui Brand DNA" bila Brand Kit/aset berubah.
+- ✅ Semua agen membaca DNA aktif (strategist, copywriter, tim senior, Visual Director + foto asli sebagai acuan); tiap post mencatat `brand_dna_version`.

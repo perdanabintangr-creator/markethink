@@ -8,92 +8,96 @@ import type { BrandResearch } from "@/lib/autopilot/research-shape";
  * Disimpan bervesi; Autopilot hanya jalan setelah klien ACC. Modul murni (diuji vitest).
  */
 
+/** Nilai apa pun → teks (objek/array digabung), lalu dipotong. Jawaban AI sering tidak persis sesuai bentuk. */
+const asText = (v: unknown): string =>
+  v === null || v === undefined
+    ? ""
+    : typeof v === "string"
+      ? v
+      : Array.isArray(v)
+        ? v.map(asText).filter(Boolean).join(", ")
+        : typeof v === "object"
+          ? Object.values(v as object)
+              .map(asText)
+              .filter(Boolean)
+              .join(" — ")
+          : String(v);
+const txt = (n: number, fallback = "") => z.preprocess((v) => asText(v) || fallback, clip(n));
 const list = (n: number, max = 200) =>
+  z.preprocess(
+    (v) =>
+      (Array.isArray(v) ? v : typeof v === "string" ? v.split(/\n+|;\s*/) : v && typeof v === "object" ? Object.values(v) : [])
+        .map(asText)
+        .map((x) => x.trim())
+        .filter(Boolean),
+    z.array(clip(max)).transform((a) => a.slice(0, n)),
+  );
+/** Objek wajib tapi toleran: hilang/bukan objek → {} (field memakai default). */
+const obj = <T extends z.ZodRawShape>(shape: T) => z.preprocess((v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {}), z.object(shape));
+const hex = z.preprocess(
+  (v) => (typeof v === "string" && /^#?[0-9A-Fa-f]{6}$/.test(v.trim()) ? `#${v.trim().replace("#", "").toUpperCase()}` : v),
   z
-    .array(clip(max))
-    .transform((a) => a.slice(0, n))
-    .default([]);
-const hex = z
-  .string()
-  .regex(/^#[0-9A-Fa-f]{6}$/)
-  .catch("#0A3DFF");
+    .string()
+    .regex(/^#[0-9A-F]{6}$/)
+    .catch("#0A3DFF"),
+);
+const hexOpt = z.preprocess(
+  (v) => (typeof v === "string" && /^#?[0-9A-Fa-f]{6}$/.test(v.trim()) ? `#${v.trim().replace("#", "").toUpperCase()}` : undefined),
+  z.string().optional(),
+);
 
-export const cdSchema = z.object({
-  big_idea: clip(240).default(""),
-  positioning: clip(400).default(""),
+export const cdSchema = obj({
+  big_idea: txt(240),
+  positioning: txt(400),
   mood_keywords: list(5, 40),
-  moodboard: clip(600).default(""),
-  pillars: z
-    .array(z.object({ name: clip(60), description: clip(240).default("") }))
-    .transform((a) => a.slice(0, 5))
-    .default([]),
-  consistency_notes: clip(800).default(""),
+  moodboard: txt(600),
+  pillars: z.preprocess(
+    (v) => (Array.isArray(v) ? v.map((p) => (typeof p === "string" ? { name: p } : p)).filter((p) => p && typeof p === "object") : []),
+    z.array(obj({ name: txt(60, "Pilar"), description: txt(240) })).transform((a) => a.slice(0, 5)),
+  ),
+  consistency_notes: txt(800),
 });
 
-export const designerSchema = z.object({
-  palette: z.object({
-    primary: hex,
-    secondary: hex,
-    accent: hex.optional(),
-    background: hex.optional(),
-    rules: clip(400).default(""),
-  }),
-  typography: z.object({
-    font: z.enum(FONT_IDS).catch("jakarta"),
-    rules: clip(300).default(""),
-  }),
-  layout_rules: clip(400).default(""),
-  image_style: z.object({
-    type: clip(120).default(""),
-    lighting: clip(160).default(""),
-    angle: clip(160).default(""),
-    composition: clip(200).default(""),
-  }),
-  casting_guide: clip(500).default(""),
-  prompt_style_guide: clip(800).default(""),
-  style_dna: styleDnaSchema,
+export const designerSchema = obj({
+  palette: obj({ primary: hex, secondary: hex, accent: hexOpt, background: hexOpt, rules: txt(400) }),
+  typography: obj({ font: z.enum(FONT_IDS).catch("jakarta"), rules: txt(300) }),
+  layout_rules: txt(400),
+  image_style: obj({ type: txt(120), lighting: txt(160), angle: txt(160), composition: txt(200) }),
+  casting_guide: txt(500),
+  prompt_style_guide: txt(800),
+  style_dna: z.preprocess((v) => {
+    const o = v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+    return { ...o, name: asText(o.name) || "Brand DNA", description: asText(o.description) || "Gaya dari Brand DNA" };
+  }, styleDnaSchema),
 });
 
-export const copywriterSchema = z.object({
-  tone: clip(240).default(""),
-  pronoun: clip(40).default("kamu"),
+export const copywriterSchema = obj({
+  tone: txt(240),
+  pronoun: txt(40, "kamu"),
   vocabulary: list(15, 40),
   forbidden: list(20, 60),
   hook_patterns: list(6, 160),
-  cta_style: clip(240).default(""),
+  cta_style: txt(240),
   sample_captions: list(3, 700),
 });
 
-const mixNum = z.coerce
-  .number()
-  .catch(0)
-  .transform((n) => Math.max(0, Math.min(100, Math.round(n))));
-export const socmedSchema = z.object({
-  audience: z.object({
-    profile: clip(400).default(""),
-    problems: list(6),
-    desires: list(6),
-    active_times: clip(200).default(""),
-  }),
-  format_mix: z.object({
-    carousel: z.coerce.number().catch(3),
-    reel: z.coerce.number().catch(1),
-    image: z.coerce.number().catch(2),
-  }),
-  pillar_mix: z.object({
-    edukasi: mixNum,
-    relatable: mixNum,
-    insight: mixNum,
-    produk: mixNum,
-  }),
+const mixNum = z.preprocess((v) => (typeof v === "string" ? v.replace("%", "") : v), z.coerce.number().catch(0)).transform((n) => Math.max(0, Math.min(100, Math.round(n))));
+const count = (d: number) =>
+  z.coerce
+    .number()
+    .catch(d)
+    .transform((n) => Math.max(0, Math.min(14, Math.round(n))));
+export const socmedSchema = obj({
+  audience: obj({ profile: txt(400), problems: list(6), desires: list(6), active_times: txt(200) }),
+  format_mix: obj({ carousel: count(3), reel: count(1), image: count(2) }),
+  pillar_mix: obj({ edukasi: mixNum, relatable: mixNum, insight: mixNum, produk: mixNum }),
   posting_times: z
     .preprocess(
       (v) => (Array.isArray(v) ? v.map((x) => String(x).trim().replace(".", ":").padStart(5, "0")).filter((x) => /^([01]\d|2[0-3]):[0-5]\d$/.test(x)) : []),
       z.array(z.string()),
     )
-    .transform((a) => [...new Set(a)].slice(0, 3))
-    .default([]),
-  competitor_benchmark: z.object({ works: list(5), gaps: list(5) }).default({ works: [], gaps: [] }),
+    .transform((a) => [...new Set(a)].slice(0, 3)),
+  competitor_benchmark: obj({ works: list(5), gaps: list(5) }),
 });
 
 export const brandDnaSchema = z.object({
@@ -197,6 +201,15 @@ export const styleDnaFrom = (d: BrandDna): StyleDna => ({
 });
 
 /** Gabungkan draf peran + revisi CD (CD menang bila valid). */
+/** Jawaban AI kadang dibungkus {"designer": {...}} → ambil isinya. */
+export function unwrapRole(json: unknown, role: DnaRole): unknown {
+  if (json && typeof json === "object" && !Array.isArray(json)) {
+    const inner = (json as Record<string, unknown>)[role];
+    if (inner && typeof inner === "object") return inner;
+  }
+  return json;
+}
+
 export function mergeDna(drafts: Partial<Record<DnaRole, unknown>>, cd: Partial<Record<DnaRole, unknown>>) {
   const pick = (role: DnaRole) => {
     const schema = {
@@ -205,9 +218,16 @@ export function mergeDna(drafts: Partial<Record<DnaRole, unknown>>, cd: Partial<
       copywriter: copywriterSchema,
       socmed: socmedSchema,
     }[role] as z.ZodTypeAny;
-    const a = schema.safeParse(cd[role]);
-    if (a.success) return a.data;
-    const b = schema.safeParse(drafts[role]);
+    // Hanya objek yang dihitung (skema toleran akan menerima null sebagai objek kosong).
+    const isObj = (v: unknown) => Boolean(v && typeof v === "object" && !Array.isArray(v) && Object.keys(v as object).length);
+    const fromCd = unwrapRole(cd[role], role);
+    if (isObj(fromCd)) {
+      const a = schema.safeParse(fromCd);
+      if (a.success) return a.data;
+    }
+    const fromDraft = unwrapRole(drafts[role], role);
+    if (!isObj(fromDraft)) return null;
+    const b = schema.safeParse(fromDraft);
     return b.success ? b.data : null;
   };
   const out = {
@@ -216,6 +236,7 @@ export function mergeDna(drafts: Partial<Record<DnaRole, unknown>>, cd: Partial<
     copywriter: pick("copywriter"),
     socmed: pick("socmed"),
   };
+  if (Object.values(out).some((v) => v === null)) return null;
   const parsed = brandDnaSchema.safeParse(out);
   return parsed.success ? parsed.data : null;
 }

@@ -129,3 +129,21 @@ describe("brand DNA — riset & fallback", () => {
     expect(researchPrompt(base)).not.toContain("asset_insights");
   });
 });
+
+describe("brand DNA — toleran terhadap bentuk jawaban AI", () => {
+  it("jawaban dibungkus {designer:{...}}, hook berupa objek, field hilang → tetap terbaca", () => {
+    const wrapped = {
+      designer: { designer: { palette: { primary: "e0262d", secondary: "#F6B73C" }, style_dna: { bg: "photo" } } },
+      copywriter: { copywriter: { tone: "santai", hook_patterns: [{ pattern: "Pertanyaan", example: "Foto kaku?" }], sample_captions: "Satu\nDua" } },
+      socmed: { pillar_mix: { edukasi: "40%", relatable: 30, insight: 10, produk: 20 } },
+    };
+    const d = mergeDna(wrapped, { creative_director: { big_idea: "Now Showing", pillars: ["Behind the Frame"] }, designer: null });
+    expect(d).not.toBeNull();
+    expect(d!.designer.palette.primary).toBe("#E0262D");
+    expect(d!.designer.style_dna.name).toBe("Brand DNA");
+    expect(d!.copywriter.hook_patterns[0]).toContain("Foto kaku?");
+    expect(d!.copywriter.sample_captions).toEqual(["Satu", "Dua"]);
+    expect(d!.socmed.pillar_mix.edukasi).toBe(40);
+    expect(d!.creative_director.pillars[0].name).toBe("Behind the Frame");
+  });
+});
