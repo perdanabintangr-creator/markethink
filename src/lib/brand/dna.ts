@@ -26,7 +26,7 @@ const txt = (n: number, fallback = "") => z.preprocess((v) => asText(v) || fallb
 const list = (n: number, max = 200) =>
   z.preprocess(
     (v) =>
-      (Array.isArray(v) ? v : typeof v === "string" ? v.split(/\n+|;\s*/) : v && typeof v === "object" ? Object.values(v) : [])
+      (Array.isArray(v) ? v : typeof v === "string" ? v.split(/\n+|;\s*/) : v && typeof v === "object" ? Object.values(v).flat() : [])
         .map(asText)
         .map((x) => x.trim())
         .filter(Boolean),
@@ -47,39 +47,59 @@ const hexOpt = z.preprocess(
 );
 
 export const cdSchema = obj({
-  big_idea: txt(240),
-  positioning: txt(400),
+  big_idea: txt(400),
+  positioning: txt(700),
   mood_keywords: list(5, 40),
-  moodboard: txt(600),
+  moodboard: txt(1200),
   pillars: z.preprocess(
     (v) => (Array.isArray(v) ? v.map((p) => (typeof p === "string" ? { name: p } : p)).filter((p) => p && typeof p === "object") : []),
-    z.array(obj({ name: txt(60, "Pilar"), description: txt(240) })).transform((a) => a.slice(0, 5)),
+    z.array(obj({ name: txt(60, "Pilar"), description: txt(400) })).transform((a) => a.slice(0, 5)),
   ),
-  consistency_notes: txt(800),
+  consistency_notes: txt(1500),
 });
 
 export const designerSchema = obj({
-  palette: obj({ primary: hex, secondary: hex, accent: hexOpt, background: hexOpt, rules: txt(400) }),
-  typography: obj({ font: z.enum(FONT_IDS).catch("jakarta"), rules: txt(300) }),
-  layout_rules: txt(400),
-  image_style: obj({ type: txt(120), lighting: txt(160), angle: txt(160), composition: txt(200) }),
-  casting_guide: txt(500),
-  prompt_style_guide: txt(800),
+  palette: obj({ primary: hex, secondary: hex, accent: hexOpt, background: hexOpt, rules: txt(800) }),
+  typography: obj({ font: z.enum(FONT_IDS).catch("jakarta"), rules: txt(600) }),
+  layout_rules: txt(800),
+  image_style: obj({ type: txt(200), lighting: txt(300), angle: txt(300), composition: txt(400) }),
+  casting_guide: txt(900),
+  prompt_style_guide: txt(1600),
   style_dna: z.preprocess((v) => {
     const o = v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
     return { ...o, name: asText(o.name) || "Brand DNA", description: asText(o.description) || "Gaya dari Brand DNA" };
   }, styleDnaSchema),
 });
 
-export const copywriterSchema = obj({
-  tone: txt(240),
-  pronoun: txt(40, "kamu"),
-  vocabulary: list(15, 40),
-  forbidden: list(20, 60),
-  hook_patterns: list(6, 160),
-  cta_style: txt(240),
-  sample_captions: list(3, 700),
-});
+/** Kosakata kadang dikirim sebagai {pakai:[...], hindari:[...]} → bagian "hindari" masuk kata terlarang. */
+const AVOID_KEY = /avoid|hindar|jangan|dont|don't|forbid|larang|ban|tabu/i;
+function splitVocabulary(v: unknown) {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return v;
+  const o = { ...(v as Record<string, unknown>) };
+  const voc = o.vocabulary;
+  if (voc && typeof voc === "object" && !Array.isArray(voc)) {
+    const use: unknown[] = [];
+    const avoid: unknown[] = [];
+    for (const [k, val] of Object.entries(voc as Record<string, unknown>)) (AVOID_KEY.test(k) ? avoid : use).push(...(Array.isArray(val) ? val : [val]));
+    o.vocabulary = use;
+    const f = o.forbidden;
+    o.forbidden = [...(Array.isArray(f) ? f : typeof f === "string" ? f.split(/[,;\n]+/) : []), ...avoid];
+  }
+  return o;
+}
+
+export const copywriterSchema = z.preprocess(
+  splitVocabulary,
+  obj({
+    tone: txt(600),
+    pronoun: txt(120, "kamu"),
+    vocabulary: list(20, 80),
+    forbidden: list(30, 80),
+    hook_patterns: list(6, 240),
+    cta_style: txt(600),
+    sample_captions: list(3, 700),
+  }),
+);
 
 const mixNum = z.preprocess((v) => (typeof v === "string" ? v.replace("%", "") : v), z.coerce.number().catch(0)).transform((n) => Math.max(0, Math.min(100, Math.round(n))));
 const count = (d: number) =>
@@ -88,7 +108,7 @@ const count = (d: number) =>
     .catch(d)
     .transform((n) => Math.max(0, Math.min(14, Math.round(n))));
 export const socmedSchema = obj({
-  audience: obj({ profile: txt(400), problems: list(6), desires: list(6), active_times: txt(200) }),
+  audience: obj({ profile: txt(400), problems: list(6, 300), desires: list(6, 300), active_times: txt(400) }),
   format_mix: obj({ carousel: count(3), reel: count(1), image: count(2) }),
   pillar_mix: obj({ edukasi: mixNum, relatable: mixNum, insight: mixNum, produk: mixNum }),
   posting_times: z
@@ -97,7 +117,7 @@ export const socmedSchema = obj({
       z.array(z.string()),
     )
     .transform((a) => [...new Set(a)].slice(0, 3)),
-  competitor_benchmark: obj({ works: list(5), gaps: list(5) }),
+  competitor_benchmark: obj({ works: list(5, 300), gaps: list(5, 300) }),
 });
 
 export const brandDnaSchema = z.object({
@@ -119,19 +139,25 @@ const ROLE_BRIEF: Record<Exclude<DnaRole, "creative_director">, string> = {
 - casting_guide: siapa talent di gambar (usia, gaya, gender, hijab/tidak, ekspresi) sesuai audiens & preferensi klien
 - prompt_style_guide (BAHASA INGGRIS): panduan gaya untuk prompt image generation (setting khas brand, properti, palet, lighting, mood, yang dilarang)
 - style_dna {name, description, bg light|dark|photo|solid|cream, bgColor?, font, upper, serifAccent, align left|center, titlePos top|bottom,
-  hero below|above|full|none, ornaments[orbs|orbit|corners|grain|frame|grid|sticker], visualStyle 3d-glossy|clay-3d|photo-lifestyle|product-studio|flat-illustration|editorial-photo|minimal-object, imageHint, titleScale}`,
+  hero below|above|full|none, ornaments[orbs|orbit|corners|grain|frame|grid|sticker], visualStyle 3d-glossy|clay-3d|photo-lifestyle|product-studio|flat-illustration|editorial-photo|minimal-object, imageHint, titleScale}
+Bentuk JSON PERSIS: {"palette":{"primary":"#RRGGBB","secondary":"#RRGGBB","accent":"#RRGGBB","background":"#RRGGBB","rules":"..."},"typography":{"font":"...","rules":"..."},
+"layout_rules":"...","image_style":{"type":"...","lighting":"...","angle":"...","composition":"..."},"casting_guide":"...","prompt_style_guide":"...","style_dna":{...}}`,
   copywriter: `Kamu COPYWRITER senior. Hasilkan:
 - tone (mis. santai-ceria, pakai "kamu", slang ringan boleh), pronoun ("kamu"/"kak"/dll)
 - vocabulary: kosakata khas brand; forbidden: kata terlarang (gabungkan Do & Don't klien + klise)
 - hook_patterns: 3–6 pola hook favorit untuk brand ini (dengan contoh singkat)
 - cta_style: gaya ajakan sesuai CTA utama klien
-- sample_captions: 3 contoh caption pendek (≤ 400 karakter) dalam suara brand`,
+- sample_captions: 3 contoh caption pendek (≤ 400 karakter) dalam suara brand
+Bentuk JSON PERSIS: {"tone":"...","pronoun":"kamu","vocabulary":["kata/frasa khas", ...],"forbidden":["kata terlarang", ...],"hook_patterns":["pola — contoh", ...],"cta_style":"...","sample_captions":["...","...","..."]}
+(vocabulary & forbidden = array teks pendek, BUKAN objek.)`,
   socmed: `Kamu SOCIAL MEDIA SPECIALIST. Hasilkan:
 - audience {profile, problems[], desires[], active_times}
 - format_mix per minggu {carousel, reel, image} (angka post)
 - pillar_mix (persen, total 100) dengan kunci TETAP: edukasi, relatable, insight, produk — sesuai tujuan konten klien
 - posting_times: 2–3 jam posting (HH:MM, WIB) sesuai kebiasaan audiens
-- competitor_benchmark {works: yang berhasil di kompetitor/kategori, gaps: celah yang bisa diambil brand ini}`,
+- competitor_benchmark {works: yang berhasil di kompetitor/kategori, gaps: celah yang bisa diambil brand ini}
+Bentuk JSON PERSIS: {"audience":{"profile":"...","problems":["..."],"desires":["..."],"active_times":"..."},"format_mix":{"carousel":3,"reel":2,"image":2},
+"pillar_mix":{"edukasi":30,"relatable":30,"insight":20,"produk":20},"posting_times":["12:00","19:00"],"competitor_benchmark":{"works":["..."],"gaps":["..."]}}`,
 };
 
 export function rolePrompt(role: Exclude<DnaRole, "creative_director">, ctx: string, en: boolean) {
@@ -142,7 +168,7 @@ Bahasa: ${en ? "English" : "Bahasa Indonesia"} (kecuali prompt_style_guide & ima
 
 ${ctx}
 
-Balas HANYA JSON objek bagian ${role}.`;
+Balas HANYA JSON objek bagian ${role} (tanpa pembungkus, tanpa markdown). Tulis padat & lengkap — jangan memotong kalimat.`;
 }
 
 export function cdPrompt(ctx: string, drafts: Partial<BrandDna>, en: boolean) {

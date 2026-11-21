@@ -147,3 +147,12 @@ describe("brand DNA — toleran terhadap bentuk jawaban AI", () => {
     expect(d!.creative_director.pillars[0].name).toBe("Behind the Frame");
   });
 });
+
+describe("brand DNA — kosakata pakai/hindari", () => {
+  it("vocabulary {pakai, hindari} → hindari masuk forbidden", async () => {
+    const { copywriterSchema } = await import("@/lib/brand/dna");
+    const c = copywriterSchema.parse({ vocabulary: { pakai: ["Now Showing", "a portrait of u"], hindari: ["yth.", "dengan hormat"] }, forbidden: "murahan" });
+    expect(c.vocabulary).toEqual(["Now Showing", "a portrait of u"]);
+    expect(c.forbidden).toEqual(["murahan", "yth.", "dengan hormat"]);
+  });
+});
