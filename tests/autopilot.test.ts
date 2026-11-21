@@ -1,3 +1,4 @@
+import { catalogBlock, productInput, productVisualPrompt, rotateProducts, type ProductRow } from "@/lib/autopilot/products";
 import { INDUSTRY_SAMPLES, PRESET_VISUALS } from "@/lib/autopilot/preset-samples";
 import { analyzePrompt } from "@/lib/autopilot/style-prompt";
 import { baseOf, dnaForLook, imageAspectFor, LOOK_DNA, parseDna, styleDnaSchema, styleNote, visualPromptFor } from "@/lib/autopilot/style";
@@ -364,5 +365,32 @@ describe("industry samples", () => {
         expect(lintSlides(trio, "carousel").fails).toEqual([]);
       }
     }
+  });
+});
+
+describe("product catalog", () => {
+  const prods: ProductRow[] = [
+    { id: "a", name: "Keripik Pedas", sku: "KP-01", price: "Rp15.000", description: "Renyah", photo_paths: ["u/x.jpg"], active: true },
+    { id: "b", name: "Keripik Original", sku: null, price: null, description: null, photo_paths: [], active: true },
+    { id: "c", name: "Makaroni", sku: null, price: null, description: null, photo_paths: [], active: false },
+  ];
+  it("rotates least-featured products first", () => {
+    const f = new Map([["a", { n: 3, last: "2026-11-20" }]]);
+    expect(rotateProducts(prods, f).map((p) => p.id)).toEqual(["b", "c", "a"]);
+    const f2 = new Map([["a", { n: 1, last: "2026-11-01" }], ["b", { n: 1, last: "2026-11-19" }]]);
+    expect(rotateProducts(prods.slice(0, 2), f2).map((p) => p.id)).toEqual(["a", "b"]);
+  });
+  it("catalog block lists active products with ids and rules", () => {
+    const c = catalogBlock(prods, new Map())!;
+    expect(c).toContain("id=a | Keripik Pedas (SKU KP-01) | harga Rp15.000");
+    expect(c).not.toContain("Makaroni");
+    expect(c).toContain("product_id");
+    expect(catalogBlock([], new Map())).toBeNull();
+  });
+  it("product visual prompt keeps the real product", () => {
+    const p = productVisualPrompt(presetById("retail-product")!.dna, { name: "Keripik Pedas" }, "on a podium");
+    expect(p).toContain("Keep THE EXACT product");
+    expect(p).toContain("cream");
+    expect(productInput.safeParse({ name: "" }).success).toBe(false);
   });
 });

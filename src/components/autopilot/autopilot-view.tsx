@@ -17,6 +17,7 @@ import {
   Download,
   ImagePlus,
   Images,
+  Package,
   Loader2,
   Pencil,
   Plus,
@@ -36,6 +37,7 @@ import type { Slide } from "@/lib/autopilot/slides";
 import { EditPostDialog } from "./edit-post-dialog";
 import { PerformancePanel } from "./performance-panel";
 import { StyleSection, type BrandStyleRow } from "./style-section";
+import { ProductsSection, type ProductItem } from "./products-section";
 import type { MediaStat } from "@/lib/autopilot/performance";
 
 export interface ApWorkspace {
@@ -64,6 +66,7 @@ export interface ApPost {
   post_time: string;
   kind: "carousel" | "image" | "reel";
   design: "glossy" | "bold" | "photo" | "classic";
+  product_id?: string | null;
   image_regens: number;
   title: string;
   pillar: string | null;
@@ -129,6 +132,7 @@ export function AutopilotView(props: {
   usedThisMonth: number;
   instagram: IgStatus;
   stats: MediaStat[];
+  products: ProductItem[];
   styleState: { industry: string | null; presetId: string | null; styleId: string | null; styles: BrandStyleRow[]; samples: { ready: number; total: number } | null };
 }) {
   const t = autopilotText(props.lang);
@@ -293,6 +297,8 @@ export function AutopilotView(props: {
           </div>
         )}
 
+        <ProductsSection lang={props.lang} workspaceId={props.initialSettings.workspaceId} products={props.products} />
+
         <PerformancePanel rows={props.stats} lang={props.lang} />
 
         {/* Tabs */}
@@ -337,7 +343,7 @@ export function AutopilotView(props: {
                 </h2>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {list.map((p) => (
-                    <PostCard key={p.id} t={t} post={p} today={props.today} igReady={props.instagram.connected && props.instagram.status === "active" && props.instagram.canPublish} onAct={(a) => act(p, a)} onSaved={replace} />
+                    <PostCard key={p.id} t={t} post={p} today={props.today} igReady={props.instagram.connected && props.instagram.status === "active" && props.instagram.canPublish} productName={p.product_id ? props.products.find((x) => x.id === p.product_id)?.name : undefined} onAct={(a) => act(p, a)} onSaved={replace} />
                   ))}
                 </div>
               </section>
@@ -482,7 +488,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function PostCard({ t, post, today, igReady, onAct, onSaved }: { t: AutopilotText; post: ApPost; today: string; igReady: boolean; onAct: (a: Action) => Promise<boolean>; onSaved: (p: ApPost) => void }) {
+function PostCard({ t, post, today, igReady, productName, onAct, onSaved }: { t: AutopilotText; post: ApPost; today: string; igReady: boolean; productName?: string; onAct: (a: Action) => Promise<boolean>; onSaved: (p: ApPost) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -541,6 +547,11 @@ function PostCard({ t, post, today, igReady, onAct, onSaved }: { t: AutopilotTex
 
       <div className="space-y-3 p-4">
         <h3 className="text-sm font-semibold leading-snug">{post.title}</h3>
+        {productName && (
+          <p className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+            <Package className="size-3" /> {productName}
+          </p>
+        )}
         <div>
           <p className={cn("whitespace-pre-line text-sm leading-relaxed text-muted-foreground", !open && "line-clamp-4")}>{post.caption}</p>
           <button onClick={() => setOpen((v) => !v)} className="mt-1 inline-flex items-center gap-0.5 text-xs font-medium text-primary">

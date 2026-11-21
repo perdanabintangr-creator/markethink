@@ -18,6 +18,7 @@ import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, pickLook,
 import { isHero, type Look, type Slide } from "./slides";
 import { activeStyle } from "./styles-server";
 import { baseOf, styleNote } from "./style";
+import { catalogBlock, type ProductRow } from "./products";
 import { autopilotAllowance, monthStartWib } from "./quota";
 
 export interface AutopilotSettings {
@@ -189,6 +190,29 @@ export async function generateWeek(
     // DNA Gaya pilihan (industri / referensi) → semua post memakai gaya itu.
     const dna = await activeStyle(admin, o.userId, settingsRow as { style_id?: string | null; style_preset?: string | null } | null);
 
+    // Katalog produk (SKU): rotasi adil — produk yang jarang tampil 30 hari terakhir diprioritaskan.
+    const { data: productRows } = await (settings.workspace_id
+      ? admin.from("brand_products").select("id, name, sku, price, description, photo_paths, active").eq("user_id", o.userId).or(`workspace_id.eq.${settings.workspace_id},workspace_id.is.null`)
+      : admin.from("brand_products").select("id, name, sku, price, description, photo_paths, active").eq("user_id", o.userId)
+    )
+      .eq("active", true)
+      .limit(200);
+    const products = (productRows ?? []) as ProductRow[];
+    const featured = new Map<string, { n: number; last: string }>();
+    if (products.length) {
+      const { data: used } = await admin
+        .from("social_posts")
+        .select("product_id, post_date")
+        .eq("user_id", o.userId)
+        .not("product_id", "is", null)
+        .neq("status", "rejected")
+        .gte("post_date", addDays(start, -30));
+      for (const u of used ?? []) {
+        const f = featured.get(u.product_id as string) ?? { n: 0, last: "" };
+        featured.set(u.product_id as string, { n: f.n + 1, last: String(u.post_date) > f.last ? String(u.post_date) : f.last });
+      }
+    }
+
     const brandName = brand.palette.name;
     const prompt = buildGeneratePrompt({
       brandBlock: brand.kit ? untrusted("brand_kit", formatBrandKit(brand.kit)) : "",
@@ -203,6 +227,7 @@ export async function generateWeek(
       performance,
       voice: voiceRules(brand.kit),
       style: dna ? styleNote(dna) : null,
+      catalog: catalogBlock(products, featured),
       focus: settings.focus ? untrusted("fokus_pemilik_brand", settings.focus) : null,
       en: o.language === "en",
     });
@@ -260,6 +285,7 @@ export async function generateWeek(
           kind: p.kind,
           design,
           style: dna && p.kind !== "reel" ? dna : null,
+          product_id: p.product_id && products.some((x) => x.id === p.product_id) ? p.product_id : null,
           title: p.title.slice(0, 160),
           pillar: p.pillar ?? null,
           funnel: p.funnel ?? null,
@@ -272,19 +298,30 @@ export async function generateWeek(
           status: "draft",
         };
       });
-    const { data: inserted, error: insErr } = await admin.from("social_posts").insert(rows).select("id, design, style, kind, slides");
+    const { data: inserted, error: insErr } = await admin.from("social_posts").insert(rows).select("id, design, style, kind, slides, product_id");
     if (insErr) throw insErr;
     await admin.from("usage_logs").insert({ ...logBase, status: "ok" });
 
     // Visual utama AI untuk tiap cover gaya studio (paralel 3; berhenti memulai gambar baru bila waktu hampir habis).
     const needs = (inserted ?? []).filter((r) => {
       const sl = (r.slides ?? []) as Slide[];
-      return r.design !== "classic" && r.kind !== "reel" && sl[0] && isHero(sl[0], 0) && sl[0].visual;
+      const prod = r.product_id ? products.find((x) => x.id === r.product_id) : null;
+      return r.design !== "classic" && r.kind !== "reel" && sl[0] && isHero(sl[0], 0) && (sl[0].visual || prod?.photo_paths.length);
     });
     await pool(needs, 3, async (r) => {
       if (Date.now() - started > 230_000) return;
       const sl = r.slides as Slide[];
-      const path = await createVisual(admin, { userId: o.userId, postId: r.id as string, look: r.design as Look, visual: sl[0].visual!, brand: brand.palette, style: r.style, timeoutMs: 60_000 });
+      const prod = r.product_id ? (products.find((x) => x.id === r.product_id) ?? null) : null;
+      const path = await createVisual(admin, {
+        userId: o.userId,
+        postId: r.id as string,
+        look: r.design as Look,
+        visual: sl[0].visual || `${prod?.name ?? "product"} hero shot`,
+        brand: brand.palette,
+        style: r.style,
+        product: prod?.photo_paths.length ? prod : null,
+        timeoutMs: 60_000,
+      });
       if (path) await admin.from("social_posts").update({ slides: [{ ...sl[0], image: path }, ...sl.slice(1)] }).eq("id", r.id).eq("user_id", o.userId);
     });
     await release({ last_generated_at: new Date().toISOString() });

@@ -54,6 +54,7 @@ export const generatedPostSchema = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/),
   kind: z.enum(POST_KINDS),
   design: z.enum(LOOKS).optional(),
+  product_id: z.string().max(60).optional().nullable(),
   pillar: z.string().max(40).optional(),
   funnel: z.string().max(40).optional(),
   title: z.string().min(1).max(160),
@@ -132,6 +133,8 @@ export interface PromptInput {
   voice?: string | null;
   /** Gaya desain tetap dari DNA (pustaka industri / referensi). */
   style?: string | null;
+  /** Katalog produk (SKU) — lihat products.ts. */
+  catalog?: string | null;
   focus: string | null;
   en: boolean;
 }
@@ -150,7 +153,7 @@ ${slots}
 CAMPURAN FORMAT: ${p.mix.carousel} carousel, ${p.mix.image} single image, ${p.mix.reel} Reel. Jangan dua format atau dua pilar sama berurutan.
 Pilar: ±40% Edukasi, ±30% Relatable/hiburan, ±10% Insight & momen, ±20% Produk/BTS. Funnel: Awareness, Consideration, Acquisition.
 Format: carousel untuk edukasi bertahap (target simpan), single image untuk satu punchline/pertanyaan/polling (target komen), Reel untuk menjangkau non-follower.
-${p.recentTitles.length ? `\nJANGAN mengulang tema yang sudah dipakai 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}${p.performance ? `\n${p.performance}\n` : ""}${p.voice ? `\n${p.voice}\n` : ""}${p.style ? `\n${p.style}\n` : ""}
+${p.recentTitles.length ? `\nJANGAN mengulang tema yang sudah dipakai 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}${p.performance ? `\n${p.performance}\n` : ""}${p.voice ? `\n${p.voice}\n` : ""}${p.style ? `\n${p.style}\n` : ""}${p.catalog ? `\n${p.catalog}\n` : ""}
 ${HOOKS}
 
 ${SLIDE_SPEC}
@@ -173,7 +176,7 @@ ATURAN MUTLAK:
 - Semua teks dalam ${lang}.
 
 Balas HANYA JSON tanpa teks lain:
-{"posts":[{"date":"YYYY-MM-DD","time":"HH:MM","kind":"carousel|image|reel","design":"glossy|bold|photo","pillar":"Edukasi|Relatable|Insight & momen|Produk/BTS","funnel":"Awareness|Consideration|Acquisition","title":"judul internal singkat","hook":"nomor formula + alasan singkat","slides":[...],"caption":"...","alt_text":"1-2 kalimat deskripsi gambar (carousel/image)","script":"(Reel saja)","note":"catatan singkat untuk pemilik brand bila perlu"}]}`;
+{"posts":[{"date":"YYYY-MM-DD","time":"HH:MM","kind":"carousel|image|reel","design":"glossy|bold|photo","product_id":"(opsional, id dari katalog)","pillar":"Edukasi|Relatable|Insight & momen|Produk/BTS","funnel":"Awareness|Consideration|Acquisition","title":"judul internal singkat","hook":"nomor formula + alasan singkat","slides":[...],"caption":"...","alt_text":"1-2 kalimat deskripsi gambar (carousel/image)","script":"(Reel saja)","note":"catatan singkat untuk pemilik brand bila perlu"}]}`;
 }
 
 /** Prompt gambar visual utama per gaya (tanpa teks; latar disesuaikan agar menyatu dengan desain). */

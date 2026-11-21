@@ -56,6 +56,7 @@ const postInput = z.object({
   slides: z.array(slideSchema).min(1).max(10),
   caption: z.string().min(1).max(2200),
   alt_text: z.string().max(500).optional(),
+  product: z.string().max(120).optional().describe("Nama atau SKU produk dari katalog Autopilot user bila konten tentang produk tertentu (foto aslinya dipakai otomatis)"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Tanggal tayang bila user menyebutkan; kosong = slot kosong berikutnya"),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
 });
@@ -124,10 +125,30 @@ export function createInstagramTools(ctx: InstagramToolCtx) {
           });
           if (error) throw error;
 
+          // Produk dari katalog (cocokkan nama/SKU) → foto asli dipakai sebagai visual utama.
+          let product: { id: string; name: string; photo_paths: string[] } | null = null;
+          if (raw.product?.trim()) {
+            const q = raw.product.trim().replace(/[%_,()]/g, " ").slice(0, 80);
+            const { data: prods } = await ctx.admin.from("brand_products").select("id, name, sku, photo_paths").eq("user_id", ctx.userId).or(`name.ilike.%${q}%,sku.ilike.%${q}%`).limit(1);
+            const p0 = prods?.[0];
+            if (p0) {
+              product = { id: p0.id as string, name: p0.name as string, photo_paths: (p0.photo_paths as string[]) ?? [] };
+              await ctx.admin.from("social_posts").update({ product_id: product.id }).eq("id", id).eq("user_id", ctx.userId);
+            }
+          }
           let hasVisual = false;
           const cover = t.slides[0];
-          if (design !== "classic" && cover && isHero(cover, 0) && cover.visual) {
-            const path = await createVisual(ctx.admin, { userId: ctx.userId, postId: id, look: design, visual: cover.visual, brand: brand.palette, style: dna, timeoutMs: 70_000 });
+          if (design !== "classic" && cover && isHero(cover, 0) && (cover.visual || product?.photo_paths.length)) {
+            const path = await createVisual(ctx.admin, {
+              userId: ctx.userId,
+              postId: id,
+              look: design,
+              visual: cover.visual || `${product?.name ?? "product"} hero shot`,
+              brand: brand.palette,
+              style: dna,
+              product: product?.photo_paths.length ? product : null,
+              timeoutMs: 70_000,
+            });
             if (path) {
               hasVisual = true;
               await ctx.admin.from("social_posts").update({ slides: [{ ...cover, image: path }, ...t.slides.slice(1)] }).eq("id", id).eq("user_id", ctx.userId);

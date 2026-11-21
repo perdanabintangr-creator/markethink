@@ -8,6 +8,7 @@ import { AutopilotUpsell } from "@/components/autopilot/autopilot-upsell";
 import { instagramStatus } from "@/lib/instagram";
 import type { MediaStat } from "@/lib/autopilot/performance";
 import type { BrandStyleRow } from "@/components/autopilot/style-section";
+import type { ProductItem } from "@/components/autopilot/products-section";
 import { existingSamples } from "@/lib/autopilot/sample-images";
 import { STYLE_PRESETS } from "@/lib/autopilot/presets";
 
@@ -34,11 +35,11 @@ export default async function AutopilotPage() {
   if (!allowance) return <AutopilotUpsell lang={lang} workspaces={workspaces} />;
 
   const today = todayWib();
-  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }, { data: styleRows }] = await Promise.all([
+  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }, { data: styleRows }, { data: productRows }] = await Promise.all([
     supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, industry, style_preset, style_id, generating_at").maybeSingle(),
     supabase
       .from("social_posts")
-      .select("id, post_date, post_time, kind, design, image_regens, permalink, error, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
+      .select("id, post_date, post_time, kind, design, product_id, image_regens, permalink, error, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
       .gte("post_date", addDays(today, -14))
       .order("post_date", { ascending: true })
       .order("post_time", { ascending: true })
@@ -51,6 +52,7 @@ export default async function AutopilotPage() {
       .gte("posted_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
       .limit(60),
     supabase.from("brand_styles").select("id, name, dna, analysis, updated_at").order("created_at", { ascending: false }).limit(20),
+    supabase.from("brand_products").select("id, name, sku, price, description, photo_paths, active, updated_at").order("created_at", { ascending: false }).limit(200),
   ]);
 
   const settings: ApSettings = {
@@ -77,6 +79,7 @@ export default async function AutopilotPage() {
       usedThisMonth={used}
       instagram={instagram}
       stats={(statRows ?? []) as MediaStat[]}
+      products={(productRows ?? []) as ProductItem[]}
       styleState={{
         industry: (settingsRow?.industry as string | null) ?? null,
         presetId: (settingsRow?.style_preset as string | null) ?? null,
