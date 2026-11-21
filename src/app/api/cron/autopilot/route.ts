@@ -32,7 +32,9 @@ export async function GET(req: Request) {
     admin.from("social_posts").select("user_id, post_date").in("user_id", ids).neq("status", "rejected").gte("post_date", addDays(todayWib(), -1)),
   ]);
   const until = new Map<string, string>();
-  for (const r of last ?? []) {
+  // Ide yang masih menunggu ditinjau juga dihitung sebagai stok konten.
+  const { data: pendingIdeas } = await admin.from("autopilot_ideas").select("user_id, post_date").in("user_id", ids).eq("status", "pending");
+  for (const r of [...(last ?? []), ...(pendingIdeas ?? [])]) {
     const u = r.user_id as string;
     if (!until.has(u) || String(r.post_date) > until.get(u)!) until.set(u, String(r.post_date));
   }
@@ -44,7 +46,25 @@ export async function GET(req: Request) {
     .filter((s) => needsBatch(s.cadence as "weekly" | "monthly", until.get(s.user_id as string) ?? null, todayWib()))
     .slice(0, 40)
     .map((s) => s.user_id as string);
+  // Ide yang menunggu ditinjau > 24 jam → ditulis otomatis supaya jadwal tidak macet.
+  const { data: stalled } = await admin
+    .from("autopilot_ideas")
+    .select("user_id")
+    .eq("status", "pending")
+    .lt("created_at", new Date(Date.now() - 24 * 3_600_000).toISOString())
+    .limit(200);
+  const writeUsers = [...new Set((stalled ?? []).map((r) => r.user_id as string))].slice(0, 20);
   const origin = new URL(req.url).origin;
+  await Promise.all(
+    writeUsers.map((userId) =>
+      fetch(`${origin}/api/cron/autopilot/run`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.CRON_SECRET}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, write: true }),
+        signal: AbortSignal.timeout(2500),
+      }).catch(() => null),
+    ),
+  );
   await Promise.all(
     due.map((userId) =>
       fetch(`${origin}/api/cron/autopilot/run`, {

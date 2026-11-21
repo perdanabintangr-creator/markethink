@@ -9,6 +9,7 @@ import { instagramStatus } from "@/lib/instagram";
 import type { MediaStat } from "@/lib/autopilot/performance";
 import type { BrandStyleRow } from "@/components/autopilot/style-section";
 import type { ProductItem } from "@/components/autopilot/products-section";
+import type { IdeaItem } from "@/components/autopilot/ideas-section";
 import { existingSamples } from "@/lib/autopilot/sample-images";
 import { STYLE_PRESETS } from "@/lib/autopilot/presets";
 
@@ -35,11 +36,11 @@ export default async function AutopilotPage() {
   if (!allowance) return <AutopilotUpsell lang={lang} workspaces={workspaces} />;
 
   const today = todayWib();
-  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }, { data: styleRows }, { data: productRows }] = await Promise.all([
-    supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, industry, style_preset, style_id, generating_at").maybeSingle(),
+  const [{ data: settingsRow }, { data: postRows }, used, instagram, { data: statRows }, { data: styleRows }, { data: productRows }, { data: ideaRows }] = await Promise.all([
+    supabase.from("autopilot_settings").select("workspace_id, enabled, cadence, posts_per_week, slot_times, focus, design, auto_publish, goal, pillar_mix, review_ideas, industry, style_preset, style_id, generating_at").maybeSingle(),
     supabase
       .from("social_posts")
-      .select("id, post_date, post_time, kind, design, product_id, image_regens, permalink, error, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
+      .select("id, post_date, post_time, kind, design, product_id, image_regens, permalink, error, team_review, created_at, title, pillar, funnel, slides, caption, alt_text, script, note, lint, status, media, updated_at")
       .gte("post_date", addDays(today, -14))
       .order("post_date", { ascending: true })
       .order("post_time", { ascending: true })
@@ -53,6 +54,7 @@ export default async function AutopilotPage() {
       .limit(60),
     supabase.from("brand_styles").select("id, name, dna, analysis, updated_at").order("created_at", { ascending: false }).limit(20),
     supabase.from("brand_products").select("id, name, sku, price, description, photo_paths, active, updated_at").order("created_at", { ascending: false }).limit(200),
+    supabase.from("autopilot_ideas").select("id, batch_id, post_date, post_time, kind, pillar, funnel, title, angle, hook, reason").eq("status", "pending").order("post_date").order("post_time").limit(30),
   ]);
 
   const settings: ApSettings = {
@@ -63,6 +65,9 @@ export default async function AutopilotPage() {
     slotTimes: ((settingsRow?.slot_times as string[] | null) ?? ["12:00", "19:00"]).map((t) => t.slice(0, 5)),
     focus: (settingsRow?.focus as string | null) ?? "",
     autoPublish: Boolean(settingsRow?.auto_publish),
+    goal: ((settingsRow?.goal as ApSettings["goal"] | undefined) ?? "balanced"),
+    pillarMix: (settingsRow?.pillar_mix as ApSettings["pillarMix"]) ?? null,
+    reviewIdeas: Boolean(settingsRow?.review_ideas),
     design: ((settingsRow?.design as ApSettings["design"] | undefined) ?? "auto"),
     configured: Boolean(settingsRow),
   };
@@ -80,6 +85,7 @@ export default async function AutopilotPage() {
       instagram={instagram}
       stats={(statRows ?? []) as MediaStat[]}
       products={(productRows ?? []) as ProductItem[]}
+      ideas={(ideaRows ?? []).map((r) => ({ ...r, post_time: String(r.post_time) })) as IdeaItem[]}
       styleState={{
         industry: (settingsRow?.industry as string | null) ?? null,
         presetId: (settingsRow?.style_preset as string | null) ?? null,

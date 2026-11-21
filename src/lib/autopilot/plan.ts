@@ -135,6 +135,10 @@ export interface PromptInput {
   style?: string | null;
   /** Katalog produk (SKU) — lihat products.ts. */
   catalog?: string | null;
+  /** Tujuan & campuran pilar (strategy.ts). */
+  strategy?: string | null;
+  /** Rencana dari strategist (tahap 2: penulis menulis persis sesuai ide). */
+  ideas?: Idea[] | null;
   focus: string | null;
   en: boolean;
 }
@@ -147,11 +151,16 @@ export function buildGeneratePrompt(p: PromptInput) {
 DATA BRAND (satu-satunya sumber fakta tentang brand ini):
 ${p.brandBlock || "- (Brand Kit belum diisi: tulis konten edukatif & relatable yang aman, jangan menyebut produk/harga spesifik)"}
 ${p.focus ? `\nFOKUS DARI PEMILIK BRAND MINGGU INI (prioritaskan): ${p.focus}\n` : ""}
-SLOT (isi tepat satu post per slot, tanggal & jam persis sama):
+${
+    p.ideas?.length
+      ? `RENCANA DARI STRATEGIST (tulis SATU post untuk SETIAP ide, tanggal/jam/format/pilar/produk PERSIS sama; kembangkan sudut & hook yang diberikan):
+${p.ideas.map(ideaLine).join("\n")}`
+      : `SLOT (isi tepat satu post per slot, tanggal & jam persis sama):
 ${slots}
 
 CAMPURAN FORMAT: ${p.mix.carousel} carousel, ${p.mix.image} single image, ${p.mix.reel} Reel. Jangan dua format atau dua pilar sama berurutan.
-Pilar: ±40% Edukasi, ±30% Relatable/hiburan, ±10% Insight & momen, ±20% Produk/BTS. Funnel: Awareness, Consideration, Acquisition.
+${p.strategy ?? "Pilar: ±40% Edukasi, ±30% Relatable/hiburan, ±10% Insight & momen, ±20% Produk/BTS. Funnel: Awareness, Consideration, Acquisition."}`
+  }
 Format: carousel untuk edukasi bertahap (target simpan), single image untuk satu punchline/pertanyaan/polling (target komen), Reel untuk menjangkau non-follower.
 ${p.recentTitles.length ? `\nJANGAN mengulang tema yang sudah dipakai 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}${p.performance ? `\n${p.performance}\n` : ""}${p.voice ? `\n${p.voice}\n` : ""}${p.style ? `\n${p.style}\n` : ""}${p.catalog ? `\n${p.catalog}\n` : ""}
 ${HOOKS}
@@ -196,4 +205,51 @@ export function pickLook(setting: string, ai: Look | undefined, index: number, k
   if (setting !== "auto" && (LOOKS as readonly string[]).includes(setting)) return setting as Look;
   if (ai && ai !== "classic") return ai;
   return (["glossy", "bold", "photo"] as const)[index % 3];
+}
+
+// ---------------------------------------------------------------------------
+// Tahap 1: strategist (ide) — terpisah dari penulisan
+// ---------------------------------------------------------------------------
+export const ideaSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  kind: z.enum(POST_KINDS),
+  pillar: z.string().max(40).optional(),
+  funnel: z.string().max(40).optional(),
+  product_id: z.string().max(60).optional().nullable(),
+  title: z.string().min(1).max(200),
+  angle: z.string().max(400).optional(),
+  hook: z.string().max(300).optional(),
+  why: z.string().max(400).optional(),
+});
+export type Idea = z.infer<typeof ideaSchema>;
+export const ideasWeekSchema = z.object({ ideas: z.array(ideaSchema).min(1).max(14) });
+
+function ideaLine(i: Idea) {
+  return `- ${i.date} ${i.time} | ${i.kind} | ${i.pillar ?? "-"} | ${i.funnel ?? "-"}${i.product_id ? ` | product_id=${i.product_id}` : ""} | "${i.title}"${i.angle ? ` | sudut: ${i.angle}` : ""}${i.hook ? ` | hook: ${i.hook}` : ""}`;
+}
+
+/** Prompt strategist: rencana ide seminggu (belum menulis slide/caption). */
+export function buildIdeasPrompt(p: PromptInput & { replaceNote?: string | null; keep?: Idea[] }) {
+  const slots = p.slots.map((s) => `- ${s.date} (${DAY_NAMES[new Date(`${s.date}T00:00:00Z`).getUTCDay()]}) ${s.time}`).join("\n");
+  return `Kamu content strategist Instagram senior untuk brand "${p.brandName}" (akun ${p.handle || "-"}). Tugasmu HANYA merencanakan ide konten (belum menulis slide/caption).
+
+DATA BRAND (satu-satunya sumber fakta):
+${p.brandBlock || "- (Brand Kit belum diisi: pilih ide edukatif & relatable yang aman, tanpa produk/harga spesifik)"}
+${p.focus ? `\nFOKUS DARI PEMILIK BRAND (prioritaskan): ${p.focus}\n` : ""}
+SLOT (satu ide per slot, tanggal & jam persis sama):
+${slots}
+
+CAMPURAN FORMAT: ${p.mix.carousel} carousel, ${p.mix.image} single image, ${p.mix.reel} Reel. Jangan dua format atau dua pilar sama berurutan.
+${p.strategy ?? ""}
+Format: carousel untuk edukasi bertahap (target simpan), single image untuk punchline/pertanyaan/polling (target komen), Reel untuk jangkauan non-follower.
+${p.recentTitles.length ? `\nJANGAN mengulang tema 3 minggu terakhir:\n${p.recentTitles.map((t) => `- ${t}`).join("\n")}\n` : ""}${p.keep?.length ? `\nIde lain minggu ini (jangan ditiru):\n${p.keep.map(ideaLine).join("\n")}\n` : ""}${p.market ? `\n${p.market}\n` : ""}${p.outcomes ? `\n${p.outcomes}\n` : ""}${p.performance ? `\n${p.performance}\n` : ""}${p.voice ? `\n${p.voice}\n` : ""}${p.catalog ? `\n${p.catalog}\n` : ""}${p.replaceNote ? `\nMASUKAN PEMILIK BRAND UNTUK IDE PENGGANTI: ${p.replaceNote}\n` : ""}
+${HOOKS}
+
+Untuk setiap ide tentukan: judul kerja yang spesifik (bukan generik), sudut pandang unik (kenapa orang peduli), hook (formula + kalimatnya),
+dan alasan strategis singkat (pilar, funnel, data performa/momen yang mendukung). Jangan mengarang fakta, angka, atau promo.
+Semua teks dalam ${p.en ? "English" : "Bahasa Indonesia"}.
+
+Balas HANYA JSON:
+{"ideas":[{"date":"YYYY-MM-DD","time":"HH:MM","kind":"carousel|image|reel","pillar":"Edukasi|Relatable|Insight & momen|Produk/BTS","funnel":"Awareness|Consideration|Acquisition","product_id":"(opsional, id dari katalog)","title":"...","angle":"...","hook":"#nomor: kalimat hook","why":"..."}]}`;
 }

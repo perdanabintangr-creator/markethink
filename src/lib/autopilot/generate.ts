@@ -12,10 +12,11 @@ import { brandHashtag } from "./lint";
 import { tidyPost } from "./tidy";
 import { brandKeywordsOf, voiceRules } from "./voice";
 import { summarizePerformance, type MediaStat } from "./performance";
-import { createVisual, pool } from "./visuals";
 import { brandPalette, type SlideBrand } from "./slides";
-import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, pickLook, planSlots, todayWib, type GeneratedPost } from "./plan";
-import { isHero, type Look, type Slide } from "./slides";
+import { addDays, buildGeneratePrompt, buildIdeasPrompt, formatMix, generatedWeekSchema, ideasWeekSchema, pickLook, planSlots, todayWib, type Idea } from "./plan";
+import type { Look } from "./slides";
+import { strategyBlock } from "./strategy";
+import { resolveAppUrl } from "@/lib/env";
 import { activeStyle } from "./styles-server";
 import { baseOf, styleNote } from "./style";
 import { catalogBlock, type ProductRow } from "./products";
@@ -91,255 +92,403 @@ export async function postsThisMonth(admin: SupabaseClient, userId: string) {
   return count ?? 0;
 }
 
-export type GenerateError = "plan" | "quota" | "busy" | "no_slots" | "ai" | "parse";
+export type GenerateError = "plan" | "quota" | "busy" | "no_slots" | "ai" | "parse" | "no_ideas";
+export type GenerateResult =
+  | { ok: true; created: number; ideas: number; stage: "ideas" | "posts"; start: string; batchId: string }
+  | { ok: false; error: GenerateError; detail?: string };
 
+interface GenOpts {
+  userId: string;
+  planId: string;
+  role: string;
+  language: "id" | "en";
+  fullName?: string | null;
+  start?: string;
+  source: "manual" | "cron";
+}
 
-/**
- * Buat konten SATU minggu (7 hari mulai `start`, default: hari sesudah konten terakhir / besok) sebagai DRAF.
- * Dikunci per user lewat `generating_at` supaya tidak dobel. Tidak melempar error; hasil `{ok:false, error}` bila gagal.
- */
-export async function generateWeek(
-  admin: SupabaseClient,
-  o: { userId: string; planId: string; role: string; language: "id" | "en"; fullName?: string | null; start?: string; source: "manual" | "cron" },
-): Promise<{ ok: true; created: number; start: string; batchId: string } | { ok: false; error: GenerateError; detail?: string }> {
-  const allowance = autopilotAllowance(o.planId, o.role);
-  if (!allowance) return { ok: false, error: "plan" };
+type SettingsRow = AutopilotSettings & {
+  style_id?: string | null;
+  style_preset?: string | null;
+  goal?: string | null;
+  pillar_mix?: unknown;
+  review_ideas?: boolean;
+};
 
-  const { data: settingsRow } = await admin.from("autopilot_settings").select("*").eq("user_id", o.userId).maybeSingle();
-  const settings: AutopilotSettings = settingsRow ?? {
-    user_id: o.userId,
-    workspace_id: null,
-    enabled: false,
-    cadence: "weekly",
-    posts_per_week: 7,
-    slot_times: ["12:00", "19:00"],
-    focus: null,
-    design: "auto",
-    generating_at: null,
-    last_generated_at: null,
-  };
-  if (!settingsRow) await admin.from("autopilot_settings").insert({ user_id: o.userId });
+async function loadSettings(admin: SupabaseClient, userId: string): Promise<SettingsRow> {
+  const { data } = await admin.from("autopilot_settings").select("*").eq("user_id", userId).maybeSingle();
+  if (data) return data as SettingsRow;
+  await admin.from("autopilot_settings").insert({ user_id: userId });
+  return { user_id: userId, workspace_id: null, enabled: false, cadence: "weekly", posts_per_week: 7, slot_times: ["12:00", "19:00"], focus: null, design: "auto", generating_at: null, last_generated_at: null };
+}
 
-  const used = await postsThisMonth(admin, o.userId);
-  const room = allowance.postsPerMonth - used;
-  const count = Math.min(settings.posts_per_week, allowance.postsPerWeek, room);
-  if (count <= 0) return { ok: false, error: "quota" };
-
-  // Kunci: hanya satu proses pembuatan per user (kunci kedaluwarsa 6 menit bila proses mati di tengah jalan).
+/** Kunci per user (kedaluwarsa 6 menit bila proses mati). */
+async function claim(admin: SupabaseClient, userId: string) {
   const stale = new Date(Date.now() - 6 * 60_000).toISOString();
-  const { data: claimed } = await admin
+  const { data } = await admin
     .from("autopilot_settings")
     .update({ generating_at: new Date().toISOString() })
-    .eq("user_id", o.userId)
+    .eq("user_id", userId)
     .or(`generating_at.is.null,generating_at.lt.${stale}`)
     .select("user_id");
-  if (!claimed?.length) return { ok: false, error: "busy" };
+  return Boolean(data?.length);
+}
+const releaseLock = (admin: SupabaseClient, userId: string, extra: Record<string, unknown> = {}) =>
+  admin.from("autopilot_settings").update({ generating_at: null, updated_at: new Date().toISOString(), ...extra }).eq("user_id", userId);
 
-  const release = (extra: Record<string, unknown> = {}) =>
-    admin.from("autopilot_settings").update({ generating_at: null, updated_at: new Date().toISOString(), ...extra }).eq("user_id", o.userId);
+/** Semua konteks brand untuk strategist & penulis. */
+async function loadContext(admin: SupabaseClient, o: GenOpts, settings: SettingsRow, start: string) {
+  const brand = await loadBrand(admin, o.userId, settings.workspace_id, o.fullName);
+  const { data: existing } = await admin
+    .from("social_posts")
+    .select("post_date, post_time, title")
+    .eq("user_id", o.userId)
+    .neq("status", "rejected")
+    .gte("post_date", addDays(start, -21))
+    .lte("post_date", addDays(start, 6));
+  const { data: outcomeRows } = await (settings.workspace_id
+    ? admin.from("strategy_outcomes").select("result, topic, note, created_at").eq("user_id", o.userId).eq("workspace_id", settings.workspace_id)
+    : admin.from("strategy_outcomes").select("result, topic, note, created_at").eq("user_id", o.userId).is("workspace_id", null)
+  )
+    .order("created_at", { ascending: false })
+    .limit(8);
 
-  const started = Date.now();
-  let routed: ReturnType<typeof routeTier> | null = null;
-  try {
-    const today = todayWib();
-    const last = await plannedUntil(admin, o.userId);
-    const tomorrow = addDays(today, 1);
-    const start = o.start && o.start >= tomorrow ? o.start : last && addDays(last, 1) > tomorrow ? addDays(last, 1) : tomorrow;
+  // Belajar dari performa: statistik post Instagram 30 hari (bila akun terhubung & tersinkron).
+  const { data: statRows } = await admin
+    .from("instagram_media_stats")
+    .select("ig_media_id, post_id, posted_at, media_type, caption, likes, comments, reach, saved, shares, views")
+    .eq("user_id", o.userId)
+    .gte("posted_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
+    .limit(60);
+  const linkedIds = (statRows ?? []).map((r) => r.post_id).filter(Boolean) as string[];
+  const { data: linkedPosts } = linkedIds.length
+    ? await admin.from("social_posts").select("id, title, pillar, design, kind").in("id", linkedIds)
+    : { data: [] as { id: string; title: string; pillar: string | null; design: string | null; kind: string }[] };
+  const meta = new Map((linkedPosts ?? []).map((p) => [p.id as string, p]));
+  const performance = summarizePerformance(
+    (statRows ?? []).map((r) => {
+      const m = r.post_id ? meta.get(r.post_id as string) : undefined;
+      return { ...(r as unknown as MediaStat), title: m?.title ?? null, pillar: m?.pillar ?? null, design: m?.design ?? null, kind: m?.kind ?? null };
+    }),
+  );
 
-    const { data: existing } = await admin
+  // DNA Gaya pilihan (industri / referensi) → semua post memakai gaya itu.
+  const dna = await activeStyle(admin, o.userId, settings);
+
+  // Katalog produk (SKU): rotasi adil — produk yang jarang tampil 30 hari terakhir diprioritaskan.
+  const { data: productRows } = await (settings.workspace_id
+    ? admin.from("brand_products").select("id, name, sku, price, description, photo_paths, active").eq("user_id", o.userId).or(`workspace_id.eq.${settings.workspace_id},workspace_id.is.null`)
+    : admin.from("brand_products").select("id, name, sku, price, description, photo_paths, active").eq("user_id", o.userId)
+  )
+    .eq("active", true)
+    .limit(200);
+  const products = (productRows ?? []) as ProductRow[];
+  const featured = new Map<string, { n: number; last: string }>();
+  if (products.length) {
+    const { data: used } = await admin
       .from("social_posts")
-      .select("post_date, post_time, title")
+      .select("product_id, post_date")
       .eq("user_id", o.userId)
+      .not("product_id", "is", null)
       .neq("status", "rejected")
-      .gte("post_date", addDays(start, -21))
-      .lte("post_date", addDays(start, 6));
-    const taken = new Set((existing ?? []).map((r) => `${r.post_date} ${String(r.post_time).slice(0, 5)}`));
-    const slots = planSlots(start, count, settings.slot_times, taken);
-    if (!slots.length) {
-      await release();
-      return { ok: false, error: "no_slots" };
+      .gte("post_date", addDays(start, -30));
+    for (const u of used ?? []) {
+      const f = featured.get(u.product_id as string) ?? { n: 0, last: "" };
+      featured.set(u.product_id as string, { n: f.n + 1, last: String(u.post_date) > f.last ? String(u.post_date) : f.last });
     }
+  }
 
-    const brand = await loadBrand(admin, o.userId, settings.workspace_id, o.fullName);
-    const { data: outcomeRows } = await (settings.workspace_id
-      ? admin.from("strategy_outcomes").select("result, topic, note, created_at").eq("user_id", o.userId).eq("workspace_id", settings.workspace_id)
-      : admin.from("strategy_outcomes").select("result, topic, note, created_at").eq("user_id", o.userId).is("workspace_id", null)
-    )
-      .order("created_at", { ascending: false })
-      .limit(8);
+  const brandName = brand.palette.name;
+  const base = {
+    brandBlock: brand.kit ? untrusted("brand_kit", formatBrandKit(brand.kit)) : "",
+    brandName,
+    handle: brand.palette.handle,
+    brandTag: brandHashtag(brandName),
+    recentTitles: (existing ?? []).filter((r) => String(r.post_date) < start).map((r) => String(r.title)).slice(0, 30),
+    market: marketContext(new Date(`${start}T05:00:00Z`), 21),
+    outcomes: formatOutcomes((outcomeRows ?? []) as OutcomeRow[]) || null,
+    performance,
+    voice: voiceRules(brand.kit),
+    style: dna ? styleNote(dna) : null,
+    catalog: catalogBlock(products, featured),
+    focus: settings.focus ? untrusted("fokus_pemilik_brand", settings.focus) : null,
+    en: o.language === "en",
+  };
+  return { brand, existing: existing ?? [], dna, products, base };
+}
+type Ctx = Awaited<ReturnType<typeof loadContext>>;
 
-    // Belajar dari performa: statistik post Instagram 30 hari (bila akun terhubung & tersinkron).
-    const { data: statRows } = await admin
-      .from("instagram_media_stats")
-      .select("ig_media_id, post_id, posted_at, media_type, caption, likes, comments, reach, saved, shares, views")
-      .eq("user_id", o.userId)
-      .gte("posted_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
-      .limit(60);
-    const linkedIds = (statRows ?? []).map((r) => r.post_id).filter(Boolean) as string[];
-    const { data: linkedPosts } = linkedIds.length
-      ? await admin.from("social_posts").select("id, title, pillar, design, kind").in("id", linkedIds)
-      : { data: [] as { id: string; title: string; pillar: string | null; design: string | null; kind: string }[] };
-    const meta = new Map((linkedPosts ?? []).map((p) => [p.id as string, p]));
-    const performance = summarizePerformance(
-      (statRows ?? []).map((r) => {
-        const m = r.post_id ? meta.get(r.post_id as string) : undefined;
-        return { ...(r as unknown as MediaStat), title: m?.title ?? null, pillar: m?.pillar ?? null, design: m?.design ?? null, kind: m?.kind ?? null };
-      }),
-    );
-
-    // DNA Gaya pilihan (industri / referensi) → semua post memakai gaya itu.
-    const dna = await activeStyle(admin, o.userId, settingsRow as { style_id?: string | null; style_preset?: string | null } | null);
-
-    // Katalog produk (SKU): rotasi adil — produk yang jarang tampil 30 hari terakhir diprioritaskan.
-    const { data: productRows } = await (settings.workspace_id
-      ? admin.from("brand_products").select("id, name, sku, price, description, photo_paths, active").eq("user_id", o.userId).or(`workspace_id.eq.${settings.workspace_id},workspace_id.is.null`)
-      : admin.from("brand_products").select("id, name, sku, price, description, photo_paths, active").eq("user_id", o.userId)
-    )
-      .eq("active", true)
-      .limit(200);
-    const products = (productRows ?? []) as ProductRow[];
-    const featured = new Map<string, { n: number; last: string }>();
-    if (products.length) {
-      const { data: used } = await admin
-        .from("social_posts")
-        .select("product_id, post_date")
-        .eq("user_id", o.userId)
-        .not("product_id", "is", null)
-        .neq("status", "rejected")
-        .gte("post_date", addDays(start, -30));
-      for (const u of used ?? []) {
-        const f = featured.get(u.product_id as string) ?? { n: 0, last: "" };
-        featured.set(u.product_id as string, { n: f.n + 1, last: String(u.post_date) > f.last ? String(u.post_date) : f.last });
-      }
-    }
-
-    const brandName = brand.palette.name;
-    const prompt = buildGeneratePrompt({
-      brandBlock: brand.kit ? untrusted("brand_kit", formatBrandKit(brand.kit)) : "",
-      brandName,
-      handle: brand.palette.handle,
-      brandTag: brandHashtag(brandName),
-      slots,
-      mix: formatMix(slots.length),
-      recentTitles: (existing ?? []).filter((r) => String(r.post_date) < start).map((r) => String(r.title)).slice(0, 30),
-      market: marketContext(new Date(`${start}T05:00:00Z`), 21),
-      outcomes: formatOutcomes((outcomeRows ?? []) as OutcomeRow[]) || null,
-      performance,
-      voice: voiceRules(brand.kit),
-      style: dna ? styleNote(dna) : null,
-      catalog: catalogBlock(products, featured),
-      focus: settings.focus ? untrusted("fokus_pemilik_brand", settings.focus) : null,
-      en: o.language === "en",
-    });
-
-    routed = routeTier("senior");
+async function callModel(admin: SupabaseClient, userId: string, tier: string, prompt: string, maxOutputTokens: number, timeoutMs: number) {
+  const routed = routeTier("senior");
+  const started = Date.now();
+  try {
     const { text, usage } = await generateText({
       model: routed.model,
-      maxOutputTokens: 24_000,
+      maxOutputTokens,
       maxRetries: 1,
-      abortSignal: AbortSignal.timeout(270_000),
+      abortSignal: AbortSignal.timeout(timeoutMs),
       providerOptions: { anthropic: { effort: "medium" } },
       prompt,
     });
-    const resolved = routed.resolved() ?? routed.candidates[0];
-    const cost = estimateCostUsd(resolved, usage.inputTokens ?? 0, usage.outputTokens ?? 0);
-
-    const parsed = generatedWeekSchema.safeParse(extractJson(text));
-    const logBase = {
-      user_id: o.userId,
-      tier: "autopilot",
-      provider: resolved.provider,
-      model: resolved.modelId,
+    const c = routed.resolved() ?? routed.candidates[0];
+    await admin.from("usage_logs").insert({
+      user_id: userId,
+      tier,
+      provider: c.provider,
+      model: c.modelId,
       latency_ms: Date.now() - started,
       input_tokens: usage.inputTokens ?? 0,
       output_tokens: usage.outputTokens ?? 0,
-      est_cost_usd: cost,
+      est_cost_usd: estimateCostUsd(c, usage.inputTokens ?? 0, usage.outputTokens ?? 0),
       credits: 0,
-    };
-    if (!parsed.success) {
-      await admin.from("usage_logs").insert({ ...logBase, status: "error", error: `autopilot: JSON tidak terbaca: ${parsed.error.issues[0]?.message ?? "?"}`.slice(0, 1000) });
-      await release();
-      return { ok: false, error: "parse" };
+      status: "ok",
+    });
+    return text;
+  } catch (err) {
+    const c = routed.resolved() ?? routed.candidates[0];
+    await admin.from("usage_logs").insert({ user_id: userId, tier, provider: c?.provider ?? null, model: c?.modelId ?? null, latency_ms: Date.now() - started, credits: 0, status: "error", error: `${tier}: ${err instanceof Error ? err.message : String(err)}`.slice(0, 1000) });
+    throw err;
+  }
+}
+
+/** Tahap 1 — strategist: rencana ide untuk slot. */
+async function planIdeas(admin: SupabaseClient, o: GenOpts, settings: SettingsRow, ctx: Ctx, slots: { date: string; time: string }[], extra: { replaceNote?: string | null; keep?: Idea[] } = {}) {
+  const prompt = buildIdeasPrompt({
+    ...ctx.base,
+    slots,
+    mix: formatMix(slots.length),
+    strategy: strategyBlock(settings.goal, settings.pillar_mix, slots.length),
+    ...extra,
+  });
+  const text = await callModel(admin, o.userId, "autopilot-strategy", prompt, 6000, 90_000);
+  const parsed = ideasWeekSchema.safeParse(extractJson(text));
+  if (!parsed.success) return null;
+  const free = [...slots];
+  const take = (i: Idea) => {
+    const k = free.findIndex((s) => s.date === i.date && s.time === i.time);
+    return k >= 0 ? free.splice(k, 1)[0] : free.shift();
+  };
+  return parsed.data.ideas
+    .map((i) => ({ i, slot: take(i) }))
+    .filter((x): x is { i: Idea; slot: { date: string; time: string } } => !!x.slot)
+    .map(({ i, slot }) => ({ ...i, date: slot.date, time: slot.time, product_id: i.product_id && ctx.products.some((p) => p.id === i.product_id) ? i.product_id : null }));
+}
+
+/** Tahap 2 — copywriter: tulis post dari ide (dibagi beberapa bagian paralel supaya cepat). */
+async function writeFromIdeas(admin: SupabaseClient, o: GenOpts, settings: SettingsRow, ctx: Ctx, ideas: (Idea & { id?: string })[], batchId: string) {
+  const chunks: (Idea & { id?: string })[][] = [];
+  for (let k = 0; k < ideas.length; k += 4) chunks.push(ideas.slice(k, k + 4));
+  const results = await Promise.all(
+    chunks.map(async (chunk) => {
+      const prompt = buildGeneratePrompt({ ...ctx.base, slots: chunk.map((i) => ({ date: i.date, time: i.time })), mix: formatMix(chunk.length), ideas: chunk });
+      try {
+        const text = await callModel(admin, o.userId, "autopilot", prompt, 14_000, 200_000);
+        const parsed = generatedWeekSchema.safeParse(extractJson(text));
+        return parsed.success ? parsed.data.posts : [];
+      } catch {
+        return [];
+      }
+    }),
+  );
+  const keywords = brandKeywordsOf(ctx.brand.kit);
+  const brandName = ctx.brand.palette.name;
+  const rows: Record<string, unknown>[] = [];
+  const writtenIdeaIds: string[] = [];
+  results.forEach((posts, c) => {
+    const chunk = chunks[c];
+    const free = [...chunk];
+    for (const p of posts) {
+      const k = free.findIndex((i) => i.date === p.date && i.time === p.time);
+      const idea = k >= 0 ? free.splice(k, 1)[0] : free.shift();
+      if (!idea) continue;
+      const t = tidyPost(p, brandName, keywords, ctx.brand.kit?.voice_dont);
+      const kind = p.kind;
+      const design = ctx.dna && kind !== "reel" ? baseOf(ctx.dna) : pickLook(settings.design ?? "auto", p.design, rows.length, kind);
+      const productId = idea.product_id ?? (p.product_id && ctx.products.some((x) => x.id === p.product_id) ? p.product_id : null);
+      if (idea.id) writtenIdeaIds.push(idea.id);
+      rows.push({
+        user_id: o.userId,
+        workspace_id: settings.workspace_id,
+        batch_id: batchId,
+        post_date: idea.date,
+        post_time: idea.time,
+        kind,
+        design,
+        style: ctx.dna && kind !== "reel" ? ctx.dna : null,
+        product_id: productId,
+        title: (p.title || idea.title).slice(0, 160),
+        pillar: idea.pillar ?? p.pillar ?? null,
+        funnel: idea.funnel ?? p.funnel ?? null,
+        slides: t.slides,
+        caption: t.caption,
+        alt_text: t.alt_text,
+        script: t.script,
+        note: [idea.angle ? `Sudut: ${idea.angle}` : "", idea.why ? `Strategi: ${idea.why}` : "", p.hook || idea.hook ? `Hook: ${p.hook || idea.hook}` : "", p.note ?? ""].filter(Boolean).join("\n").slice(0, 600) || null,
+        lint: t.lint,
+        status: "draft",
+      });
+    }
+  });
+  if (!rows.length) return { created: 0, writtenIdeaIds };
+  const { error } = await admin.from("social_posts").insert(rows);
+  if (error) throw error;
+  if (writtenIdeaIds.length) await admin.from("autopilot_ideas").update({ status: "written", updated_at: new Date().toISOString() }).in("id", writtenIdeaIds).eq("user_id", o.userId);
+  return { created: rows.length, writtenIdeaIds };
+}
+
+/** Jalankan tahap akhir (pemeriksaan tim senior + visual AI) di request terpisah supaya tidak kehabisan waktu. */
+async function triggerFinish(admin: SupabaseClient, userId: string, batchId: string) {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) {
+    const { finishBatch } = await import("./finish");
+    await finishBatch(admin, userId, batchId);
+    return;
+  }
+  await fetch(`${resolveAppUrl()}/api/cron/autopilot/finish`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, batchId }),
+    signal: AbortSignal.timeout(2500),
+  }).catch(() => null);
+}
+
+/**
+ * Buat konten SATU minggu: strategist menyusun ide → (bila "tinjau ide" aktif: berhenti, menunggu pelanggan) →
+ * copywriter menulis → tim senior memeriksa & visual dibuat di latar belakang. Tidak melempar error.
+ */
+export async function generateWeek(admin: SupabaseClient, o: GenOpts): Promise<GenerateResult> {
+  const allowance = autopilotAllowance(o.planId, o.role);
+  if (!allowance) return { ok: false, error: "plan" };
+  const settings = await loadSettings(admin, o.userId);
+  const room = allowance.postsPerMonth - (await postsThisMonth(admin, o.userId));
+  const count = Math.min(settings.posts_per_week, allowance.postsPerWeek, room);
+  if (count <= 0) return { ok: false, error: "quota" };
+  if (!(await claim(admin, o.userId))) return { ok: false, error: "busy" };
+
+  try {
+    const today = todayWib();
+    const tomorrow = addDays(today, 1);
+    // Ide yang masih menunggu ditinjau juga menempati slot.
+    const { data: pendingIdeas } = await admin.from("autopilot_ideas").select("post_date, post_time").eq("user_id", o.userId).eq("status", "pending");
+    const lastPost = await plannedUntil(admin, o.userId);
+    const lastIdea = (pendingIdeas ?? []).map((r) => String(r.post_date)).sort().pop() ?? null;
+    const last = [lastPost, lastIdea].filter(Boolean).sort().pop() ?? null;
+    const start = o.start && o.start >= tomorrow ? o.start : last && addDays(last, 1) > tomorrow ? addDays(last, 1) : tomorrow;
+
+    const ctx = await loadContext(admin, o, settings, start);
+    const taken = new Set([...ctx.existing, ...(pendingIdeas ?? [])].map((r) => `${r.post_date} ${String(r.post_time).slice(0, 5)}`));
+    const slots = planSlots(start, count, settings.slot_times, taken);
+    if (!slots.length) {
+      await releaseLock(admin, o.userId);
+      return { ok: false, error: "no_slots" };
     }
 
-    // Cocokkan ke slot: pakai tanggal/jam dari AI bila persis ada di daftar slot, sisanya diisi berurutan.
-    const free = [...slots];
-    const takeSlot = (p: GeneratedPost) => {
-      const k = free.findIndex((s) => s.date === p.date && s.time === p.time);
-      return k >= 0 ? free.splice(k, 1)[0] : free.shift();
-    };
+    const ideas = await planIdeas(admin, o, settings, ctx, slots);
+    if (!ideas?.length) {
+      await releaseLock(admin, o.userId);
+      return { ok: false, error: "parse" };
+    }
     const batchId = randomUUID();
-    const keywords = brandKeywordsOf(brand.kit);
-    const rows = parsed.data.posts
-      .map((p) => ({ p, slot: takeSlot(p) }))
-      .filter((x): x is { p: GeneratedPost; slot: { date: string; time: string } } => !!x.slot)
-      .map(({ p, slot }, k) => {
-        const t = tidyPost(p, brandName, keywords, brand.kit?.voice_dont);
-        const design = dna && p.kind !== "reel" ? baseOf(dna) : pickLook(settings.design ?? "auto", p.design, k, p.kind);
-        return {
+    const { data: savedIdeas, error: ideaErr } = await admin
+      .from("autopilot_ideas")
+      .insert(
+        ideas.map((i) => ({
           user_id: o.userId,
           workspace_id: settings.workspace_id,
           batch_id: batchId,
-          post_date: slot.date,
-          post_time: slot.time,
-          kind: p.kind,
-          design,
-          style: dna && p.kind !== "reel" ? dna : null,
-          product_id: p.product_id && products.some((x) => x.id === p.product_id) ? p.product_id : null,
-          title: p.title.slice(0, 160),
-          pillar: p.pillar ?? null,
-          funnel: p.funnel ?? null,
-          slides: t.slides,
-          caption: t.caption,
-          alt_text: t.alt_text,
-          script: t.script,
-          note: [p.hook ? `Hook: ${p.hook}` : "", p.note ?? ""].filter(Boolean).join("\n").slice(0, 600) || null,
-          lint: t.lint,
-          status: "draft",
-        };
-      });
-    const { data: inserted, error: insErr } = await admin.from("social_posts").insert(rows).select("id, design, style, kind, slides, product_id");
-    if (insErr) throw insErr;
-    await admin.from("usage_logs").insert({ ...logBase, status: "ok" });
+          post_date: i.date,
+          post_time: i.time,
+          kind: i.kind,
+          pillar: i.pillar ?? null,
+          funnel: i.funnel ?? null,
+          product_id: i.product_id ?? null,
+          title: i.title.slice(0, 200),
+          angle: i.angle ?? null,
+          hook: i.hook ?? null,
+          reason: i.why ?? null,
+        })),
+      )
+      .select("id, post_date, post_time");
+    if (ideaErr) throw ideaErr;
 
-    // Visual utama AI untuk tiap cover gaya studio (paralel 3; berhenti memulai gambar baru bila waktu hampir habis).
-    const needs = (inserted ?? []).filter((r) => {
-      const sl = (r.slides ?? []) as Slide[];
-      const prod = r.product_id ? products.find((x) => x.id === r.product_id) : null;
-      return r.design !== "classic" && r.kind !== "reel" && sl[0] && isHero(sl[0], 0) && (sl[0].visual || prod?.photo_paths.length);
-    });
-    await pool(needs, 3, async (r) => {
-      if (Date.now() - started > 230_000) return;
-      const sl = r.slides as Slide[];
-      const prod = r.product_id ? (products.find((x) => x.id === r.product_id) ?? null) : null;
-      const path = await createVisual(admin, {
-        userId: o.userId,
-        postId: r.id as string,
-        look: r.design as Look,
-        visual: sl[0].visual || `${prod?.name ?? "product"} hero shot`,
-        brand: brand.palette,
-        style: r.style,
-        product: prod?.photo_paths.length ? prod : null,
-        timeoutMs: 60_000,
-      });
-      if (path) await admin.from("social_posts").update({ slides: [{ ...sl[0], image: path }, ...sl.slice(1)] }).eq("id", r.id).eq("user_id", o.userId);
-    });
-    await release({ last_generated_at: new Date().toISOString() });
-    return { ok: true, created: rows.length, start, batchId };
+    // Pelanggan ingin meninjau ide dulu → berhenti di sini (ditulis otomatis bila 24 jam tidak disentuh).
+    if (settings.review_ideas) {
+      await releaseLock(admin, o.userId, { last_generated_at: new Date().toISOString() });
+      return { ok: true, created: 0, ideas: ideas.length, stage: "ideas", start, batchId };
+    }
+
+    const withIds = ideas.map((i) => ({ ...i, id: savedIdeas?.find((r) => String(r.post_date) === i.date && String(r.post_time).slice(0, 5) === i.time)?.id as string | undefined }));
+    const { created } = await writeFromIdeas(admin, o, settings, ctx, withIds, batchId);
+    await releaseLock(admin, o.userId, { last_generated_at: new Date().toISOString() });
+    if (!created) return { ok: false, error: "parse" };
+    await triggerFinish(admin, o.userId, batchId);
+    return { ok: true, created, ideas: ideas.length, stage: "posts", start, batchId };
   } catch (err) {
     console.error("[autopilot] gagal", err);
-    const c = routed?.resolved() ?? routed?.candidates[0];
-    await admin.from("usage_logs").insert({
-      user_id: o.userId,
-      tier: "autopilot",
-      provider: c?.provider ?? null,
-      model: c?.modelId ?? null,
-      latency_ms: Date.now() - started,
-      credits: 0,
-      status: "error",
-      error: `autopilot: ${err instanceof Error ? err.message : String(err)}`.slice(0, 1000),
-    });
-    await release();
+    await releaseLock(admin, o.userId);
     return { ok: false, error: "ai", detail: err instanceof Error ? err.message.slice(0, 200) : undefined };
   }
+}
+
+/** Tulis konten dari ide yang menunggu (dipanggil pelanggan "Tulis semua", atau cron setelah 24 jam). */
+export async function writePendingIdeas(admin: SupabaseClient, o: GenOpts & { batchId?: string }): Promise<GenerateResult> {
+  const allowance = autopilotAllowance(o.planId, o.role);
+  if (!allowance) return { ok: false, error: "plan" };
+  const settings = await loadSettings(admin, o.userId);
+  let q = admin.from("autopilot_ideas").select("*").eq("user_id", o.userId).eq("status", "pending").order("post_date").order("post_time");
+  if (o.batchId) q = q.eq("batch_id", o.batchId);
+  const { data: rows } = await q.limit(28);
+  if (!rows?.length) return { ok: false, error: "no_ideas" };
+  const room = allowance.postsPerMonth - (await postsThisMonth(admin, o.userId));
+  if (room <= 0) return { ok: false, error: "quota" };
+  if (!(await claim(admin, o.userId))) return { ok: false, error: "busy" };
+  try {
+    const ideas = rows.slice(0, room).map((r) => ({
+      id: r.id as string,
+      date: String(r.post_date),
+      time: String(r.post_time).slice(0, 5),
+      kind: r.kind as Idea["kind"],
+      pillar: (r.pillar as string | null) ?? undefined,
+      funnel: (r.funnel as string | null) ?? undefined,
+      product_id: (r.product_id as string | null) ?? null,
+      title: String(r.title),
+      angle: (r.angle as string | null) ?? undefined,
+      hook: (r.hook as string | null) ?? undefined,
+      why: (r.reason as string | null) ?? undefined,
+    }));
+    const start = ideas[0].date;
+    const ctx = await loadContext(admin, o, settings, start);
+    const batchId = (rows[0].batch_id as string) ?? randomUUID();
+    const { created } = await writeFromIdeas(admin, o, settings, ctx, ideas, batchId);
+    await releaseLock(admin, o.userId);
+    if (!created) return { ok: false, error: "parse" };
+    await triggerFinish(admin, o.userId, batchId);
+    return { ok: true, created, ideas: ideas.length, stage: "posts", start, batchId };
+  } catch (err) {
+    console.error("[autopilot] tulis ide gagal", err);
+    await releaseLock(admin, o.userId);
+    return { ok: false, error: "ai", detail: err instanceof Error ? err.message.slice(0, 200) : undefined };
+  }
+}
+
+/** Ganti satu ide (dengan masukan opsional dari pelanggan). */
+export async function replaceIdea(admin: SupabaseClient, o: GenOpts & { ideaId: string; note?: string | null }) {
+  const settings = await loadSettings(admin, o.userId);
+  const { data: idea } = await admin.from("autopilot_ideas").select("*").eq("id", o.ideaId).eq("user_id", o.userId).eq("status", "pending").maybeSingle();
+  if (!idea) return null;
+  const { data: others } = await admin.from("autopilot_ideas").select("*").eq("user_id", o.userId).eq("status", "pending").neq("id", o.ideaId).limit(20);
+  const ctx = await loadContext(admin, o, settings, String(idea.post_date));
+  const keep = (others ?? []).map((r) => ({ date: String(r.post_date), time: String(r.post_time).slice(0, 5), kind: r.kind, pillar: r.pillar ?? undefined, title: String(r.title) }) as Idea);
+  const note = [o.note?.trim() ? untrusted("masukan_pemilik_brand", o.note.trim().slice(0, 300)) : "", `Ide lama yang diganti: "${idea.title}" (${idea.pillar ?? "-"}, ${idea.kind}). Beri ide BERBEDA; pertahankan pilar & format kecuali masukan meminta lain.`].filter(Boolean).join("\n");
+  const out = await planIdeas(admin, o, settings, ctx, [{ date: String(idea.post_date), time: String(idea.post_time).slice(0, 5) }], { replaceNote: note, keep });
+  const n = out?.[0];
+  if (!n) return null;
+  const { data } = await admin
+    .from("autopilot_ideas")
+    .update({ kind: n.kind, pillar: n.pillar ?? null, funnel: n.funnel ?? null, product_id: n.product_id ?? null, title: n.title.slice(0, 200), angle: n.angle ?? null, hook: n.hook ?? null, reason: n.why ?? null, note: o.note ?? null, updated_at: new Date().toISOString() })
+    .eq("id", o.ideaId)
+    .eq("user_id", o.userId)
+    .select("*")
+    .single();
+  return data;
 }

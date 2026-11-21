@@ -36,6 +36,7 @@ import { autopilotText, type AutopilotText } from "@/lib/i18n/autopilot";
 import type { Slide } from "@/lib/autopilot/slides";
 import { EditPostDialog } from "./edit-post-dialog";
 import { PerformancePanel } from "./performance-panel";
+import { IdeasSection, type IdeaItem } from "./ideas-section";
 import { StyleSection, type BrandStyleRow } from "./style-section";
 import { ProductsSection, type ProductItem } from "./products-section";
 import type { MediaStat } from "@/lib/autopilot/performance";
@@ -56,6 +57,9 @@ export interface ApSettings {
   slotTimes: string[];
   focus: string;
   autoPublish: boolean;
+  goal: "balanced" | "awareness" | "engagement" | "sales" | "custom";
+  pillarMix: { edukasi: number; relatable: number; insight: number; produk: number } | null;
+  reviewIdeas: boolean;
   design: "auto" | "glossy" | "bold" | "photo" | "classic";
   configured: boolean;
 }
@@ -77,6 +81,8 @@ export interface ApPost {
   script: string | null;
   note: string | null;
   lint: { fails: string[]; warns: string[] } | null;
+  team_review?: { score?: number; issues?: string[]; fixed?: boolean; skipped?: boolean } | null;
+  created_at?: string;
   status: "draft" | "approved" | "script_ok" | "rejected" | "posted" | "failed" | "manual";
   media: string[] | null;
   permalink?: string | null;
@@ -132,6 +138,7 @@ export function AutopilotView(props: {
   usedThisMonth: number;
   instagram: IgStatus;
   stats: MediaStat[];
+  ideas: IdeaItem[];
   products: ProductItem[];
   styleState: { industry: string | null; presetId: string | null; styleId: string | null; styles: BrandStyleRow[]; samples: { ready: number; total: number } | null };
 }) {
@@ -139,6 +146,19 @@ export function AutopilotView(props: {
   const router = useRouter();
   const [posts, setPosts] = useState(props.initialPosts);
   useEffect(() => setPosts(props.initialPosts), [props.initialPosts]);
+  // Tim senior & visual bekerja di latar belakang → segarkan halaman tiap 15 detik selama masih ada yang diproses (maks 15 menit).
+  const processing = props.initialPosts.some(
+    (p) =>
+      p.status === "draft" &&
+      p.created_at &&
+      Date.now() - Date.parse(p.created_at) < 15 * 60_000 &&
+      (!p.team_review || (p.design !== "classic" && p.kind !== "reel" && !p.slides[0]?.image && (p.slides[0]?.visual || p.product_id))),
+  );
+  useEffect(() => {
+    if (!processing) return;
+    const id = setInterval(() => router.refresh(), 15_000);
+    return () => clearInterval(id);
+  }, [processing, router]);
   const [tab, setTab] = useState<Tab>("pending");
   const [gen, setGen] = useState<string | null>(null);
   const [bulk, setBulk] = useState(false);
@@ -187,10 +207,15 @@ export function AutopilotView(props: {
     let total = 0;
     for (let k = 1; k <= weeks; k++) {
       setGen(weeks > 1 ? t.generatingWeek(k, weeks) : t.generating);
-      const r = await call<{ created: number }>("/api/autopilot/generate");
+      const r = await call<{ created: number; ideas: number; stage: "ideas" | "posts" }>("/api/autopilot/generate");
       if (!r.ok) {
         if (!total || r.error !== "quota") toast.error(errText(t, r.error));
         break;
+      }
+      if (r.data.stage === "ideas") {
+        toast.success(t.ideasReady(r.data.ideas));
+        router.refresh();
+        continue;
       }
       total += r.data.created;
     }
@@ -297,6 +322,8 @@ export function AutopilotView(props: {
           </div>
         )}
 
+        <IdeasSection t={t} ideas={props.ideas} dateLabel={(d) => dateLabel(t, d, props.today)} />
+
         <ProductsSection lang={props.lang} workspaceId={props.initialSettings.workspaceId} products={props.products} />
 
         <PerformancePanel rows={props.stats} lang={props.lang} />
@@ -381,6 +408,9 @@ function SetupPanel({ t, workspaces, initial, maxPerWeek, onSaved }: { t: Autopi
       focus: s.focus.trim() || null,
       design: s.design,
       autoPublish: s.autoPublish,
+      goal: s.goal,
+      pillarMix: s.goal === "custom" ? s.pillarMix : null,
+      reviewIdeas: s.reviewIdeas,
     });
     setSaving(false);
     if (!r.ok) return void toast.error(errText(t, r.error));
@@ -445,6 +475,43 @@ function SetupPanel({ t, workspaces, initial, maxPerWeek, onSaved }: { t: Autopi
             )}
           </div>
         </Field>
+        <div className="md:col-span-2">
+          <Field label={t.goal} hint={t.goalHints[s.goal]}>
+            <div className="grid grid-cols-2 gap-1 rounded-lg border bg-muted/40 p-1 sm:grid-cols-5">
+              {(["balanced", "awareness", "engagement", "sales", "custom"] as const).map((g) => (
+                <button key={g} onClick={() => set("goal", g)} className={cn("h-8 rounded-md text-sm font-medium transition", s.goal === g ? "bg-background shadow-sm" : "text-muted-foreground")}>
+                  {t.goals[g]}
+                </button>
+              ))}
+            </div>
+            {s.goal === "custom" && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {(["edukasi", "relatable", "insight", "produk"] as const).map((k) => {
+                  const mix = s.pillarMix ?? { edukasi: 40, relatable: 30, insight: 10, produk: 20 };
+                  const total = mix.edukasi + mix.relatable + mix.insight + mix.produk || 1;
+                  return (
+                    <label key={k} className="text-xs text-muted-foreground">
+                      <span className="flex justify-between">
+                        <span>{t.pillars[k]}</span>
+                        <span className="font-semibold tabular-nums text-foreground">{Math.round((mix[k] / total) * 100)}%</span>
+                      </span>
+                      <input type="range" min={0} max={100} step={5} value={mix[k]} onChange={(e) => set("pillarMix", { ...mix, [k]: Number(e.target.value) })} className="w-full accent-[var(--primary)]" />
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </Field>
+        </div>
+        <div className="md:col-span-2">
+          <label className="flex items-start gap-3">
+            <Switch checked={s.reviewIdeas} onCheckedChange={(v) => set("reviewIdeas", v)} />
+            <span>
+              <span className="block text-sm font-medium">{t.reviewIdeas}</span>
+              <span className="block text-xs text-muted-foreground">{t.reviewIdeasHint}</span>
+            </span>
+          </label>
+        </div>
         <div className="md:col-span-2">
           <Field label={t.design} hint={t.designHint}>
             <div className="grid grid-cols-2 gap-1 rounded-lg border bg-muted/40 p-1 sm:grid-cols-5">
@@ -579,6 +646,27 @@ function PostCard({ t, post, today, igReady, productName, onAct, onSaved }: { t:
           )}
         </div>
         {post.kind === "reel" && post.status !== "posted" && <p className="text-xs text-muted-foreground">{t.reelHint}</p>}
+        {post.team_review && typeof post.team_review.score === "number" ? (
+          <details className="rounded-lg bg-emerald-500/5 p-2 text-xs">
+            <summary className="cursor-pointer font-medium text-emerald-700 dark:text-emerald-400">
+              ✓ {t.team.score(Math.round(post.team_review.score))}
+              {post.team_review.fixed ? ` · ${t.team.fixed}` : ""}
+            </summary>
+            {!!post.team_review.issues?.length && (
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
+                {post.team_review.issues.map((x) => (
+                  <li key={x}>{x}</li>
+                ))}
+              </ul>
+            )}
+          </details>
+        ) : (
+          !post.team_review && post.status === "draft" && post.created_at && Date.now() - Date.parse(post.created_at) < 15 * 60_000 && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" /> {t.team.checking}
+            </p>
+          )
+        )}
         {post.error && (post.status === "failed" || post.status === "approved") && (
           <p className={cn("rounded-lg p-2.5 text-xs", post.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-700 dark:text-amber-400")}>
             {post.status === "approved" ? `${t.ig.willRetry} ` : ""}
@@ -754,6 +842,9 @@ function InstagramCard({
       focus: settings.focus.trim() || null,
       design: settings.design,
       autoPublish: v,
+      goal: settings.goal,
+      pillarMix: settings.goal === "custom" ? settings.pillarMix : null,
+      reviewIdeas: settings.reviewIdeas,
     });
     if (!r.ok) {
       setAuto(!v);

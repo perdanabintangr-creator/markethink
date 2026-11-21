@@ -1,3 +1,5 @@
+import { mixFor, pillarCounts, strategyBlock } from "@/lib/autopilot/strategy";
+import { buildTeamReviewPrompt, mergeFixedSlides, reviewSchema } from "@/lib/autopilot/review";
 import { catalogBlock, productInput, productVisualPrompt, rotateProducts, type ProductRow } from "@/lib/autopilot/products";
 import { INDUSTRY_SAMPLES, PRESET_VISUALS } from "@/lib/autopilot/preset-samples";
 import { analyzePrompt } from "@/lib/autopilot/style-prompt";
@@ -9,7 +11,7 @@ import { createHmac } from "node:crypto";
 import { canPublish, cleanIgCode, decryptToken, encryptToken, igAuthorizeUrl, igErrorText, insightValues, isDue, parseSignedRequest, tokenKey } from "@/lib/instagram-core";
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
-import { addDays, buildGeneratePrompt, formatMix, generatedWeekSchema, pickLook, planSlots, todayWib, visualPrompt } from "@/lib/autopilot/plan";
+import { addDays, buildGeneratePrompt, buildIdeasPrompt, formatMix, generatedWeekSchema, ideasWeekSchema, pickLook, planSlots, todayWib, visualPrompt } from "@/lib/autopilot/plan";
 import { needsBatch } from "@/lib/autopilot/schedule";
 import { brandHashtag, capHashtags, fixCaption, lintCaption, lintSlides } from "@/lib/autopilot/lint";
 import { brandPalette, isHero, plainText, slideCorners, slideTheme, slidesText, type Slide } from "@/lib/autopilot/slides";
@@ -392,5 +394,49 @@ describe("product catalog", () => {
     expect(p).toContain("Keep THE EXACT product");
     expect(p).toContain("cream");
     expect(productInput.safeParse({ name: "" }).success).toBe(false);
+  });
+});
+
+describe("strategy, ideas & senior review", () => {
+  it("goal mixes sum to 100 and counts sum to n", () => {
+    for (const g of ["balanced", "awareness", "engagement", "sales"]) {
+      const m = mixFor(g);
+      expect(m.edukasi + m.relatable + m.insight + m.produk).toBe(100);
+      for (const n of [3, 7, 14]) {
+        const c = pillarCounts(n, m);
+        expect(c.edukasi + c.relatable + c.insight + c.produk).toBe(n);
+      }
+    }
+    expect(pillarCounts(7, mixFor("sales")).produk).toBeGreaterThanOrEqual(3);
+    expect(mixFor("custom", { edukasi: 1, relatable: 1, insight: 0, produk: 2 })).toEqual({ edukasi: 25, relatable: 25, insight: 0, produk: 50 });
+    expect(mixFor("custom", null)).toEqual(mixFor("balanced"));
+    expect(pillarCounts(4, { edukasi: 0, relatable: 0, insight: 0, produk: 100 }).produk).toBe(4);
+  });
+  it("strategy block states exact counts", () => {
+    const b = strategyBlock("engagement", null, 7);
+    expect(b).toMatch(/total 7 post/);
+    expect(b).toMatch(/Relatable/);
+  });
+  it("ideas prompt and writer prompt with ideas", () => {
+    const base = { brandBlock: "", brandName: "K", handle: "", brandTag: "#K", slots: [{ date: "2026-11-23", time: "12:00" }], mix: formatMix(1), recentTitles: [], market: null, outcomes: null, focus: null, en: false };
+    const ip = buildIdeasPrompt({ ...base, strategy: "TUJUAN X", replaceNote: "lebih lucu" });
+    expect(ip).toContain("TUJUAN X");
+    expect(ip).toContain("lebih lucu");
+    expect(ip).toContain('"ideas"');
+    const wp = buildGeneratePrompt({ ...base, ideas: [{ date: "2026-11-23", time: "12:00", kind: "carousel", pillar: "Edukasi", title: "Cara seduh", angle: "hemat waktu", hook: "#5: Dulu 10 menit" }] });
+    expect(wp).toContain("RENCANA DARI STRATEGIST");
+    expect(wp).toContain('"Cara seduh"');
+    expect(wp).not.toContain("SLOT (isi tepat");
+    expect(ideasWeekSchema.safeParse({ ideas: [{ date: "2026-11-23", time: "12:00", kind: "reel", title: "x" }] }).success).toBe(true);
+  });
+  it("senior review prompt & fixed slide merge keeps visuals", () => {
+    const orig: Slide[] = [{ type: "cover", title: "A", visual: "cup", image: "u/autopilot/p/v.png", corners: ["a"] }, { type: "cta", title: "B" }];
+    const merged = mergeFixedSlides(orig, [{ type: "cover", title: "A better" }, { type: "cta", title: "B better" }]);
+    expect(merged[0]).toMatchObject({ title: "A better", visual: "cup", image: "u/autopilot/p/v.png", corners: ["a"] });
+    expect(mergeFixedSlides(orig, [{ type: "cover", title: "x" }])).toBe(orig);
+    const p = buildTeamReviewPrompt({ brandBlock: "- Produk: kopi", voice: null, catalog: null, posts: [{ kind: "carousel", pillar: "Edukasi", title: "T", slides: orig, caption: "cap", script: null }], en: false });
+    expect(p).toContain("POST 0");
+    expect(p).toContain("FAKTA");
+    expect(reviewSchema.safeParse({ reviews: [{ i: 0, score: 9, issues: [], fix: null }] }).success).toBe(true);
   });
 });

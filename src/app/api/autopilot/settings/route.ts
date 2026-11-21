@@ -4,6 +4,7 @@ import { apiSession, jsonError } from "@/lib/api";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { autopilotAllowance } from "@/lib/autopilot/quota";
+import { GOALS, pillarMixSchema } from "@/lib/autopilot/strategy";
 
 const schema = z.object({
   workspaceId: z.string().uuid().nullable(),
@@ -14,6 +15,9 @@ const schema = z.object({
   focus: z.string().trim().max(600).nullable(),
   design: z.enum(["auto", "glossy", "bold", "photo", "classic"]).default("auto"),
   autoPublish: z.boolean().default(false),
+  goal: z.enum(GOALS).default("balanced"),
+  pillarMix: pillarMixSchema.nullable().optional(),
+  reviewIdeas: z.boolean().default(false),
 });
 
 /** Simpan pengaturan Autopilot Konten (project/brand, mingguan/bulanan, jumlah post, jam tayang, fokus). */
@@ -43,6 +47,9 @@ export async function POST(req: Request) {
       focus: b.focus || null,
       design: b.design,
       auto_publish: b.autoPublish,
+      goal: b.goal,
+      pillar_mix: b.goal === "custom" ? (b.pillarMix ?? null) : null,
+      review_ideas: b.reviewIdeas,
       updated_at: new Date().toISOString(),
     });
   if (error) return jsonError(500, "save_failed");
