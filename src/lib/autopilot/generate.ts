@@ -274,7 +274,10 @@ async function planIdeas(admin: SupabaseClient, o: GenOpts, settings: SettingsRo
   });
   const text = await callModel(admin, o.userId, "autopilot-strategy", prompt, 6000, 90_000);
   const parsed = ideasWeekSchema.safeParse(extractJson(text));
-  if (!parsed.success) return null;
+  if (!parsed.success) {
+    await admin.from("usage_logs").insert({ user_id: o.userId, tier: "autopilot-strategy", credits: 0, status: "error", error: `ide tidak terbaca: ${JSON.stringify(parsed.error.issues.slice(0, 3)).slice(0, 600)}` });
+    return null;
+  }
   const free = [...slots];
   const take = (i: Idea) => {
     const k = free.findIndex((s) => s.date === i.date && s.time === i.time);
@@ -296,6 +299,8 @@ async function writeFromIdeas(admin: SupabaseClient, o: GenOpts, settings: Setti
       try {
         const text = await callModel(admin, o.userId, "autopilot", prompt, 14_000, 200_000);
         const parsed = generatedWeekSchema.safeParse(extractJson(text));
+        if (!parsed.success)
+          await admin.from("usage_logs").insert({ user_id: o.userId, tier: "autopilot", credits: 0, status: "error", error: `post tidak terbaca: ${JSON.stringify(parsed.error.issues.slice(0, 3)).slice(0, 600)}` });
         return parsed.success ? parsed.data.posts : [];
       } catch {
         return [];

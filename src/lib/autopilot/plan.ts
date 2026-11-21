@@ -7,6 +7,9 @@ import { slideSchema, LOOKS, POST_KINDS, type Look, type PostKind } from "./slid
  */
 
 const DAY = 86_400_000;
+/** Teks catatan internal dari AI: dipotong, bukan ditolak (satu field kepanjangan tidak boleh menggagalkan seminggu). */
+const soft = (n: number) => z.preprocess((v) => (v === null ? undefined : typeof v === "string" ? v.trim().slice(0, n) : v), z.string().optional());
+const kindOf = z.preprocess((v) => (typeof v === "string" ? v.trim().toLowerCase() : v), z.enum(POST_KINDS));
 
 /** "YYYY-MM-DD" + n hari. */
 export function addDays(date: string, n: number) {
@@ -52,18 +55,18 @@ export function formatMix(count: number): Record<PostKind, number> {
 export const generatedPostSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{2}:\d{2}$/),
-  kind: z.enum(POST_KINDS),
-  design: z.enum(LOOKS).optional(),
-  product_id: z.string().max(60).optional().nullable(),
-  pillar: z.string().max(40).optional(),
-  funnel: z.string().max(40).optional(),
-  title: z.string().min(1).max(160),
-  hook: z.string().max(300).optional(),
+  kind: kindOf,
+  design: z.enum(LOOKS).optional().catch(undefined),
+  product_id: z.string().max(60).optional().nullable().catch(null),
+  pillar: soft(40),
+  funnel: soft(40),
+  title: z.string().trim().min(1).transform((t) => t.slice(0, 160)),
+  hook: soft(300),
   slides: z.array(slideSchema).max(10).default([]),
   caption: z.string().min(1).max(2600),
-  alt_text: z.string().max(500).optional(),
-  script: z.string().max(4000).optional(),
-  note: z.string().max(600).optional(),
+  alt_text: soft(500),
+  script: soft(4000),
+  note: soft(600),
 });
 export const generatedWeekSchema = z.object({ posts: z.array(generatedPostSchema).min(1).max(14) });
 export type GeneratedPost = z.infer<typeof generatedPostSchema>;
@@ -227,14 +230,14 @@ export function pickLook(setting: string, ai: Look | undefined, index: number, k
 export const ideaSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{2}:\d{2}$/),
-  kind: z.enum(POST_KINDS),
-  pillar: z.string().max(40).optional(),
-  funnel: z.string().max(40).optional(),
-  product_id: z.string().max(60).optional().nullable(),
-  title: z.string().min(1).max(200),
-  angle: z.string().max(400).optional(),
-  hook: z.string().max(300).optional(),
-  why: z.string().max(400).optional(),
+  kind: kindOf,
+  pillar: soft(40),
+  funnel: soft(40),
+  product_id: z.string().max(60).optional().nullable().catch(null),
+  title: z.string().trim().min(1).transform((t) => t.slice(0, 200)),
+  angle: soft(400),
+  hook: soft(300),
+  why: soft(400),
 });
 export type Idea = z.infer<typeof ideaSchema>;
 export const ideasWeekSchema = z.object({ ideas: z.array(ideaSchema).min(1).max(14) });
