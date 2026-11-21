@@ -94,5 +94,17 @@ export async function POST(req: Request) {
       .toBuffer();
     return NextResponse.json({ ok: true, post: { ...fin, slides: undefined }, slides: fin.slides, sheet_b64: sheet.toString("base64") });
   }
+  if (body.mode === "thumbs") {
+    // Thumbnail aset onboarding (untuk screenshot halaman form di luar production).
+    const { data: assets } = await admin.from("brand_assets").select("id, kind, storage_path").eq("workspace_id", workspaceId).order("created_at");
+    const out: { id: string; kind: string; b64: string }[] = [];
+    for (const a of assets ?? []) {
+      const { data } = await admin.storage.from("uploads").download(String(a.storage_path));
+      if (!data) continue;
+      const jpg = await sharp(Buffer.from(await data.arrayBuffer())).resize({ width: 240, height: 240, fit: "inside" }).flatten({ background: "#ffffff" }).jpeg({ quality: 70 }).toBuffer();
+      out.push({ id: a.id as string, kind: String(a.kind), b64: jpg.toString("base64") });
+    }
+    return NextResponse.json({ ok: true, thumbs: out });
+  }
   return NextResponse.json({ ok: false, error: "mode" }, { status: 400 });
 }
