@@ -16,7 +16,6 @@ import { buildDirectorPrompt, directorSchema, finalImagePrompt, selectJobs, type
 import { imageAspectFor, parseDna, visualPromptFor } from "./style";
 import { latestResearch } from "./brand-research";
 import { visualSubjectsBlock } from "./research-shape";
-import sharp from "sharp";
 
 interface Row {
   id: string;
@@ -171,12 +170,12 @@ export async function directVisuals(admin: SupabaseClient, userId: string, rows:
       const jobs = selectJobs(plan, { innerCap: r.kind === "carousel" ? o.innerCap : 0, slideTypes: r.slides.map((s) => s.type) });
       const prod = products.find((x) => x.id === r.product_id) ?? null;
       const prodRefs = prod?.photo_paths.length ? await productRefs(admin, userId, prod.photo_paths) : [];
-      let talent: { mime: string; data: string } | null = null;
       for (const job of jobs) {
         if (Date.now() - started > o.budgetMs) break;
-        const usesPeople = job.plan.subject_type === "orang" || job.plan.subject_type === "cara_pakai" || job.plan.subject_type === "before_after";
-        const refs = [...(job.plan.use_product_photo ? prodRefs : []), ...(usesPeople && talent ? [talent] : [])].slice(0, 3);
-        const base = finalImagePrompt({ plan: job.plan, bible: plan.bible, dna, palette, productName: prod?.name ?? null, talentRef: Boolean(usesPeople && talent) });
+        // Acuan hanya untuk foto produk asli. Acuan talent membuat AI menyalin komposisi (uji 21 Nov: slide kembar,
+        // biaya 2×), jadi konsistensi talent dijaga lewat "bible" teks yang ditulis ulang di setiap prompt.
+        const refs = job.plan.use_product_photo ? prodRefs.slice(0, 2) : [];
+        const base = finalImagePrompt({ plan: job.plan, bible: plan.bible, dna, palette, productName: prod?.name ?? null });
         // Cover gaya studio (glossy/bold): subjek terisolasi di latar gaya; selain itu layar penuh 4:5.
         const coverIsolated = job.cover && !full && dna;
         const prompt = coverIsolated ? visualPromptFor(dna, `${job.plan.image_prompt} (${plan.bible})`, { primary: palette.primary, accent: palette.secondary }) : base;
@@ -192,7 +191,6 @@ export async function directVisuals(admin: SupabaseClient, userId: string, rows:
         });
         results.push({ postId: r.id, slide: job.slide, ok: Boolean(img) });
         if (!img) continue;
-        if (usesPeople && !talent && !coverIsolated) talent = { mime: "image/jpeg", data: (await sharp(img.bytes).resize({ width: 768 }).jpeg({ quality: 82 }).toBuffer()).toString("base64") };
         // Pasang gambar ke slide terbaru (mungkin sudah diperbaiki tim senior).
         const { data: cur } = await admin.from("social_posts").select("slides").eq("id", r.id).single();
         const sl = ((cur?.slides as Slide[]) ?? r.slides).slice();

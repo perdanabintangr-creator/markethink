@@ -87,8 +87,11 @@ Untuk setiap slide tentukan:
 5. text_safe_zone: "bottom-35%" (default) atau "top-35%" bila subjek paling kuat di bawah.
 6. use_product_photo: true bila slide menampilkan produk klien DAN tersedia foto produk asli (produk tidak boleh dikarang).
 
-Dalam SATU carousel jaga konsistensi: tulis "bible" (talent: jumlah, usia, gender, ciri, wardrobe; palet; lighting; lokasi)
-dan pakai talent/lighting/palet yang SAMA di setiap image_prompt carousel itu supaya terasa satu cerita.
+Dalam SATU carousel jaga konsistensi: tulis "bible" (talent: jumlah, usia, gender, ciri wajah & rambut, wardrobe; palet; lighting; lokasi)
+dan TULIS ULANG deskripsi talent lengkap yang SAMA di setiap image_prompt carousel itu supaya terasa satu cerita.
+Tapi setiap slide WAJIB beda komposisi: variasikan shot (close-up wajah, medium, full-body, detail tangan, over-the-shoulder,
+wide suasana), angle (eye-level, low, high, dari samping), dan pose/aksi yang PERSIS memeragakan isi slide itu.
+Dua slide tidak boleh terlihat seperti foto yang sama. Awali image_prompt dengan aksi inti slide.
 Acuan sukses: bila teks slide ditutup, orang tetap bisa menebak isi slide hanya dari gambarnya.
 
 ${list}
@@ -124,6 +127,7 @@ export function finalImagePrompt(o: { plan: SlidePlan; bible: string; dna: Style
       ? `Visual style: ${o.dna.visualStyle.replace("-", " ")}${o.dna.imageHint ? `, ${o.dna.imageHint}` : ""}.`
       : `Photorealistic editorial photography, natural skin texture, shallow depth of field${o.dna?.imageHint ? `, ${o.dna.imageHint}` : ""}.`;
   return [
+    o.plan.scene ? `The image must clearly show: ${o.plan.scene.replace(/\s+/g, " ").trim()}.` : "",
     o.plan.image_prompt!.replace(/\s+/g, " ").trim(),
     `Carousel continuity (same talent, wardrobe, palette and lighting in every slide): ${o.bible.replace(/\s+/g, " ").slice(0, 500)}.`,
     o.talentRef ? "Use the SAME people from the reference photo (same faces, hair, outfits), in this new pose and scene." : "",

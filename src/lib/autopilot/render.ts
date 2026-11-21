@@ -521,8 +521,9 @@ function heroSlide(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
   const lsOf = (size: number) => (condensed ? size * 0.005 : serifTitle ? -size * 0.01 : -size * 0.022);
   const lhT = condensed ? 0.98 : serifTitle ? 1.06 : 1.02;
   const maxW = condensed ? INNER + 40 : INNER;
-  const start = Math.round((condensed ? 190 : serifTitle ? 132 : full ? 124 : 124) * d.titleScale);
-  const maxLines = full || hero === "none" ? 4 : 3;
+  // Cover foto penuh: judul cukup ±1/3 bawah supaya wajah/subjek foto tidak tertutup.
+  const start = Math.round((full ? (condensed ? 128 : 100) : condensed ? 190 : serifTitle ? 132 : 124) * d.titleScale);
+  const maxLines = full ? 3 : hero === "none" ? 4 : 3;
   // Foto & latar warna solid: aksen warna terang solid (gradasi brand kurang kontras di atas warna brand).
   const accSolid = full ? mix(b.cyan, "#FFFFFF", 0.1) : d.bg === "solid" ? (dark ? mix(b.cyan, "#FFFFFF", 0.45) : mix(b.royal, "#000000", 0.35)) : null;
   const serifFill = dark ? (accSolid ?? "#FFFFFF") : `url(#${id}acc)`;
