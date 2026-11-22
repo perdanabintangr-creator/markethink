@@ -3,7 +3,8 @@ import { z } from "zod";
 import { apiSession, jsonError } from "@/lib/api";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { autopilotAllowance } from "@/lib/autopilot/quota";
+import { getContentAccess } from "@/lib/autopilot/content-access";
+import { DNA_PER_PERIOD } from "@/lib/autopilot/quota";
 import { generateBrandDna, saveDnaEdit } from "@/lib/brand/server";
 
 export const maxDuration = 300;
@@ -12,13 +13,24 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   const s = await apiSession();
   if (s.error) return s.error;
-  if (!autopilotAllowance(s.profile.plan_id, s.profile.role)) return jsonError(403, "plan");
+  const access = await getContentAccess(createAdminClient(), s.user.id, s.profile.role);
+  if (!access) return jsonError(403, "plan");
   const parsed = z.object({ workspaceId: z.string().uuid() }).safeParse(await req.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "invalid_body");
   if (!(await checkRateLimit("user", `brand-dna:${s.user.id}`)).ok) return jsonError(429, "rate_limited");
   const { data: ws } = await s.supabase.from("workspaces").select("id, onboarding_status").eq("id", parsed.data.workspaceId).maybeSingle();
   if (!ws) return jsonError(404, "workspace_not_found");
   if (ws.onboarding_status === "researching") return jsonError(409, "busy");
+  // Fair use: Brand DNA dibuat ulang maks DNA_PER_PERIOD× per 30 hari (editan manual tidak dihitung).
+  if (access.planId !== "admin") {
+    const { count } = await createAdminClient()
+      .from("brand_dna_versions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", s.user.id)
+      .eq("edited_by_user", false)
+      .gte("created_at", access.periodStart);
+    if ((count ?? 0) >= DNA_PER_PERIOD) return jsonError(429, "dna_limit");
+  }
   try {
     const res = await generateBrandDna(createAdminClient(), {
       userId: s.user.id,

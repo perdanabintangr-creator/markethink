@@ -257,7 +257,19 @@ export function OnboardingView({ lang, data, workspaces }: { lang: "id" | "en"; 
     setBusy(null);
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      return void toast.error(j.error === "onboarding_incomplete" ? t.needReq : t.genErr);
+      return void toast.error(
+        j.error === "onboarding_incomplete"
+          ? t.needReq
+          : j.error === "dna_limit"
+            ? lang === "en"
+              ? "Brand DNA can be rebuilt up to 3× per 30 days. You can still edit the current version."
+              : "Brand DNA bisa dibuat ulang maks 3× per 30 hari. Versi sekarang tetap bisa diedit."
+            : j.error === "plan"
+              ? lang === "en"
+                ? "Brand DNA is part of the Content Autopilot plan."
+                : "Brand DNA termasuk Paket Autopilot Konten."
+              : t.genErr,
+      );
     }
     toast.success(t.genDone);
     router.refresh();

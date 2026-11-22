@@ -36,6 +36,21 @@ export async function loadInvoice(admin: SupabaseClient, orderId: string, userId
       .maybeSingle();
     periodStart = (sub?.current_period_start as string | undefined) ?? null;
     periodEnd = (sub?.current_period_end as string | undefined) ?? null;
+  } else if (/^konten_/.test(String(pay.item_id)) || /^combo_/.test(String(pay.item_id))) {
+    // Paket Autopilot Konten / bundel paket + konten.
+    const isCombo = String(pay.item_id).startsWith("combo_");
+    const { data: item } = await admin.from(isCombo ? "combo_offers" : "content_plans").select("name").eq("id", pay.item_id).maybeSingle();
+    itemName = `${isCombo ? "" : "Autopilot "}${(item?.name as string | undefined) ?? pay.item_id} (${months * 30} hari)`;
+    const { data: sub } = await admin
+      .from("content_subscriptions")
+      .select("period_start, period_end")
+      .eq("user_id", pay.user_id)
+      .like("note", `%${pay.order_id}%`)
+      .order("period_end", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    periodStart = (sub?.period_start as string | undefined) ?? null;
+    periodEnd = (sub?.period_end as string | undefined) ?? null;
   } else {
     const table = pay.kind === "addon" ? "addons" : "addon_bundles";
     const { data: item } = await admin.from(table).select("name").eq("id", pay.item_id).maybeSingle();

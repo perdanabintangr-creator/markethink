@@ -3,7 +3,7 @@ import { z } from "zod";
 import { apiSession, jsonError } from "@/lib/api";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { autopilotAllowance } from "@/lib/autopilot/quota";
+import { getContentAccess } from "@/lib/autopilot/content-access";
 import { replaceIdea } from "@/lib/autopilot/generate";
 
 export const maxDuration = 120;
@@ -17,7 +17,7 @@ const schema = z.discriminatedUnion("action", [
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const s = await apiSession();
   if (s.error) return s.error;
-  if (!autopilotAllowance(s.profile.plan_id, s.profile.role)) return jsonError(403, "plan");
+  if (!(await getContentAccess(createAdminClient(), s.user.id, s.profile.role))) return jsonError(403, "plan");
   const { id } = await params;
   if (!z.string().uuid().safeParse(id).success) return jsonError(400, "invalid_id");
   const parsed = schema.safeParse(await req.json().catch(() => null));

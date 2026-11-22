@@ -17,6 +17,7 @@ import { imageAspectFor, parseDna, visualPromptFor } from "./style";
 import { latestResearch } from "./brand-research";
 import { visualSubjectsBlock } from "./research-shape";
 import { approvedDna } from "@/lib/brand/server";
+import { getContentAccess } from "./content-access";
 import { dnaBlock, visualGuide } from "@/lib/brand/dna";
 
 interface Row {
@@ -93,7 +94,7 @@ async function teamReview(admin: SupabaseClient, userId: string, rows: Row[], la
 }
 
 /** Batas gambar slide isi per carousel (di luar cover) — ACC founder 21 Nov: Pro 3, Promax 5. */
-export const INNER_VISUALS: Record<string, number> = { pro: 3, promax: 5, admin: 5 };
+
 
 type DirectorRow = Row & { visual_plan?: unknown };
 
@@ -220,8 +221,9 @@ export async function directVisuals(admin: SupabaseClient, userId: string, rows:
 
 async function visuals(admin: SupabaseClient, userId: string, batchId: string, budgetMs: number) {
   const { data } = await admin.from("social_posts").select("id, user_id, workspace_id, kind, design, style, product_id, pillar, title, slides, caption, script, status").eq("user_id", userId).eq("batch_id", batchId);
-  const { data: prof } = await admin.from("profiles").select("plan_id, role").eq("id", userId).maybeSingle();
-  const cap = prof?.role === "admin" ? INNER_VISUALS.admin : (INNER_VISUALS[String(prof?.plan_id)] ?? 0);
+  const { data: prof } = await admin.from("profiles").select("role").eq("id", userId).maybeSingle();
+  // Visual isi per carousel mengikuti paket Autopilot Konten (Lite/Pro 2, Bisnis 4, admin 5).
+  const cap = (await getContentAccess(admin, userId, prof?.role as string | null))?.innerVisuals ?? 0;
   await directVisuals(admin, userId, (data ?? []) as DirectorRow[], { innerCap: cap, budgetMs });
 }
 

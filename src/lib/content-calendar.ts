@@ -22,6 +22,8 @@ export interface CalendarEntry extends CalendarPost {
   /** Hasil asal (id akar rantai revisi) — untuk tautan "Buka hasil lengkap". */
   runId: string;
   source: string;
+  /** Tautan detail (bawaan: hasil tool Kalender). Konten Autopilot → halaman Autopilot. */
+  href?: string;
 }
 
 interface RunRow {
@@ -112,3 +114,39 @@ export function dateBucket(iso: string, now = Date.now()): "today" | "week" | "o
 
 /** Kunci tanda "sudah diposting": hasil asal + urutan + tanggal (tetap sama selama posting itu tidak dipindah tanggal). */
 export const postedKey = (e: Pick<CalendarEntry, "key" | "date">) => `${e.key}@${e.date}`;
+
+interface AutopilotRow {
+  id: string;
+  post_date: string;
+  post_time: string | null;
+  kind: string;
+  pillar: string | null;
+  title: string;
+  caption: string | null;
+  status: string;
+}
+
+const KIND_LABEL: Record<string, string> = { carousel: "Carousel", image: "Single image", reel: "Reel" };
+
+/** Konten Autopilot (selain yang ditolak) sebagai entri kalender. */
+export function autopilotEntries(rows: AutopilotRow[], source = "Autopilot Konten"): CalendarEntry[] {
+  return rows
+    .filter((r) => r.status !== "rejected" && DATE.test(String(r.post_date).slice(0, 10)))
+    .map((r) => {
+      const caption = str(r.caption);
+      return {
+        key: `autopilot:${r.id}`,
+        runId: "autopilot",
+        source,
+        href: "/autopilot",
+        date: String(r.post_date).slice(0, 10),
+        time: str(r.post_time).slice(0, 5) || undefined,
+        platform: "Instagram",
+        format: KIND_LABEL[r.kind] ?? r.kind,
+        pillar: r.pillar ?? undefined,
+        title: str(r.title) || "-",
+        hook: caption.split("\n")[0]?.slice(0, 160) || undefined,
+        caption: caption || undefined,
+      };
+    });
+}

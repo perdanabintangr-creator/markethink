@@ -7,10 +7,12 @@ import { BRAND } from "@/lib/brand";
 import { isSupabaseConfigured } from "@/lib/env";
 import { PLAN_OFFER_COLUMNS, toPlanOffer } from "@/lib/plan-offers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getContentOffers } from "@/lib/autopilot/content-offers";
+import { ContentPackages } from "@/components/autopilot/content-packages";
 
 export const metadata = {
   title: "Harga",
-  description: `Paket ${BRAND}: mulai gratis, upgrade mulai Rp60 ribu/bulan. Semua Smart Tools di paket Pro & Promax.`,
+  description: `Paket ${BRAND}: mulai gratis, upgrade mulai Rp60 ribu/bulan. Semua Smart Tools di paket Pro & Promax. Autopilot Konten mulai Rp149 ribu/30 hari.`,
 };
 
 /** Halaman harga publik (tanpa login). User yang sudah login diarahkan ke halaman paket di aplikasi (bisa langsung bayar). */
@@ -23,6 +25,7 @@ export default async function PublicPricingPage() {
     .in("id", ["beta", "starter", "pro", "promax"])
     .order("sort_order");
   const plans = (rows ?? []).map((r) => toPlanOffer(r));
+  const offers = await getContentOffers(createAdminClient());
 
   return (
     <div className="min-h-dvh">
@@ -38,6 +41,9 @@ export default async function PublicPricingPage() {
       <section className="relative -mt-16 px-4 pb-20">
         <div className="mx-auto max-w-6xl rounded-3xl border bg-background p-4 shadow-2xl sm:p-6">
           <PlanCards plans={plans} note="Dari halaman Harga publik" showTeam signupHref="/register?next=/pricing" />
+        </div>
+        <div className="mx-auto mt-10 max-w-6xl rounded-3xl border bg-background p-4 shadow-2xl sm:p-6">
+          <ContentPackages lang="id" plans={offers.plans} combos={offers.combos} current={null} signupHref="/register?next=/autopilot" />
         </div>
         <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-muted-foreground">
           Pembayaran aman lewat QRIS, e-wallet & virtual account. Paket aktif otomatis begitu pembayaran berhasil.

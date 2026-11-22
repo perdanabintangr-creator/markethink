@@ -21,7 +21,7 @@ import { needsBatch } from "@/lib/autopilot/schedule";
 import { brandHashtag, capHashtags, fixCaption, lintCaption, lintSlides } from "@/lib/autopilot/lint";
 import { brandPalette, isHero, plainText, slideCorners, slideTheme, slidesText, type Slide } from "@/lib/autopilot/slides";
 import { tidyPost } from "@/lib/autopilot/tidy";
-import { autopilotAllowance, monthStartWib } from "@/lib/autopilot/quota";
+import { CONTENT_PLANS, isComboId, isContentPlanId, monthStartWib, splitCombo } from "@/lib/autopilot/quota";
 import { renderSlides } from "@/lib/autopilot/render";
 import { sampleSlides } from "@/lib/autopilot/samples";
 
@@ -84,12 +84,23 @@ describe("autopilot plan", () => {
 });
 
 describe("autopilot quota", () => {
-  it("only Pro, Promax and admin", () => {
-    expect(autopilotAllowance("pro")).toEqual({ postsPerWeek: 7, postsPerMonth: 30 });
-    expect(autopilotAllowance("promax")?.postsPerWeek).toBe(14);
-    expect(autopilotAllowance("starter")).toBeNull();
-    expect(autopilotAllowance("beta")).toBeNull();
-    expect(autopilotAllowance("beta", "admin")).not.toBeNull();
+  it("paket Autopilot Konten: Lite/Pro/Bisnis", () => {
+    expect(CONTENT_PLANS.konten_lite).toMatchObject({ price: 149_000, postsPerWeek: 3, postsPerMonth: 12, innerVisuals: 2 });
+    expect(CONTENT_PLANS.konten_pro).toMatchObject({ price: 249_000, postsPerWeek: 5, postsPerMonth: 20 });
+    expect(CONTENT_PLANS.konten_bisnis).toMatchObject({ price: 499_000, postsPerWeek: 10, postsPerMonth: 40, innerVisuals: 4 });
+    expect(isContentPlanId("konten_pro")).toBe(true);
+    expect(isContentPlanId("pro")).toBe(false);
+    expect(isComboId("combo_pro_konten")).toBe(true);
+    expect(isComboId("pro")).toBe(false);
+  });
+  it("bundel dibagi proporsional dan jumlahnya pas", () => {
+    const parts = splitCombo(399_000, [
+      { id: "pro", list: 200_000 },
+      { id: "konten_pro", list: 249_000 },
+    ]);
+    expect(parts[0]).toEqual({ id: "pro", amount: 177_728 });
+    expect(parts[0].amount + parts[1].amount).toBe(399_000);
+    expect(splitCombo(100, [{ id: "a", list: 0 }, { id: "b", list: 0 }]).reduce((a, p) => a + p.amount, 0)).toBe(100);
   });
   it("month start in WIB", () => {
     expect(monthStartWib(new Date("2026-11-30T18:00:00Z")).toISOString()).toBe("2026-11-30T17:00:00.000Z");

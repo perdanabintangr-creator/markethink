@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiSession } from "@/lib/api";
-import { autopilotAllowance } from "@/lib/autopilot/quota";
+import { getContentAccess } from "@/lib/autopilot/content-access";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { IG_OAUTH_COOKIE, IG_OAUTH_COOKIE_PATH, igAppId, igAppSecret, igEnabled, igRedirectUri } from "@/lib/instagram";
 import { igAuthorizeUrl } from "@/lib/instagram-core";
 import { createState, OAUTH_COOKIE_TTL_SEC, sealOAuthCookie } from "@/lib/connectors/oauth";
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
     return back("error");
   }
   if (!igEnabled()) return back("disabled");
-  if (!autopilotAllowance(s.profile.plan_id, s.profile.role)) return back("plan");
+  if (!(await getContentAccess(createAdminClient(), s.user.id, s.profile.role))) return back("plan");
   const state = createState();
   const res = NextResponse.redirect(igAuthorizeUrl({ appId: igAppId(), redirectUri: igRedirectUri(url.origin), state }));
   res.cookies.set(IG_OAUTH_COOKIE, sealOAuthCookie({ p: "instagram", s: state, v: "none", u: s.user.id, r: "/autopilot" }, igAppSecret()), {

@@ -23,7 +23,7 @@ import { brandVisualOf, buildSystemPrompt, buildTurnContext, formatBrandKit, for
 import { CONSULTANT_FRAME, REVIEW_STATUS, reviewerFor, shouldReview } from "@/lib/ai/team-review";
 import { runTeamReview } from "@/lib/ai/team-review-run";
 import { createInstagramTools, instagramCapabilities } from "@/lib/autopilot/chat-tools";
-import { autopilotAllowance } from "@/lib/autopilot/quota";
+import { getContentAccess } from "@/lib/autopilot/content-access";
 import { marketContext } from "@/lib/ai/market-id";
 import { formatOutcomes, type OutcomeRow } from "@/lib/ai/outcomes";
 import { SERPER_COST_USD, fetchPageText, formatSources, searchApiEnabled, serperEnabled, webSearch, type Source } from "@/lib/ai/research";
@@ -338,7 +338,7 @@ export async function POST(req: Request) {
           tierInstructions: isFreePlan
             ? `${tier.skillPrompt}\n- Batas panjang jawaban di paket ini ±1.200 kata. Untuk permintaan besar (strategi lengkap, rencana berbulan-bulan), kerjakan inti paling penting secara utuh sampai selesai — jangan sampai terpotong — lalu tawarkan lanjut ke bagian berikutnya.`
             : tier.skillPrompt,
-          capabilities: `${capabilitiesPrompt(imageBlockedReason, { webSearch: researchAllowed })}\n${instagramCapabilities(Boolean(autopilotAllowance(profile.plan_id, profile.role)))}`,
+          capabilities: `${capabilitiesPrompt(imageBlockedReason, { webSearch: researchAllowed })}\n${instagramCapabilities(Boolean(await getContentAccess(admin, user.id, profile.role)))}`,
           agentInstructions: agent?.instructions ?? null,
           project: wsCtx.name,
           personalization: formatPersonalization(profile.response_style, profile.custom_instructions),
@@ -440,7 +440,7 @@ export async function POST(req: Request) {
             budgetImages: true,
             brand: brandVisualOf(wsCtx.brandKit),
           }),
-          // Mode chat Instagram: konten berdesain studio → antrean ACC Autopilot (Pro/Promax), cek caption (semua paket).
+          // Mode chat Instagram: konten berdesain studio → antrean ACC Autopilot (paket Autopilot Konten), cek caption (semua paket).
           ...createInstagramTools({
             admin,
             userId: user.id,

@@ -164,3 +164,15 @@ describe("tidy — aksen dobel di tengah judul", () => {
     expect(dedupeAccent({ type: "point", title: "Ngobrol random sama", accent: "bestie" }).accent).toBe("bestie");
   });
 });
+
+describe("Kalender Konten — konten Autopilot ikut tampil", () => {
+  it("post Autopilot jadi entri kalender (yang ditolak tidak ikut)", async () => {
+    const { autopilotEntries } = await import("@/lib/content-calendar");
+    const e = autopilotEntries([
+      { id: "a", post_date: "2026-11-27", post_time: "12:00:00", kind: "carousel", pillar: "Relatable", title: "Peron Bogor", caption: "Hook baris satu\nisi", status: "draft" },
+      { id: "b", post_date: "2026-11-28", post_time: "19:00:00", kind: "reel", pillar: null, title: "Ditolak", caption: null, status: "rejected" },
+    ]);
+    expect(e).toHaveLength(1);
+    expect(e[0]).toMatchObject({ key: "autopilot:a", date: "2026-11-27", time: "12:00", format: "Carousel", href: "/autopilot", hook: "Hook baris satu" });
+  });
+});

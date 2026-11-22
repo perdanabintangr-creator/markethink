@@ -3,7 +3,7 @@ import { z } from "zod";
 import { apiSession, jsonError } from "@/lib/api";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { autopilotAllowance } from "@/lib/autopilot/quota";
+import { getContentAccess } from "@/lib/autopilot/content-access";
 import { GOALS, pillarMixSchema } from "@/lib/autopilot/strategy";
 
 const schema = z.object({
@@ -24,7 +24,7 @@ const schema = z.object({
 export async function POST(req: Request) {
   const s = await apiSession();
   if (s.error) return s.error;
-  const allowance = autopilotAllowance(s.profile.plan_id, s.profile.role);
+  const allowance = await getContentAccess(createAdminClient(), s.user.id, s.profile.role);
   if (!allowance) return jsonError(403, "plan");
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "invalid_body");

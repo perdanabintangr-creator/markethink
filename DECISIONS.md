@@ -586,3 +586,9 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Instagram tidak di-scrape; fallback = screenshot unggahan klien. Riset gagal → DNA tetap dibuat dari profil klien saja.
 - Creative Director hanya mengembalikan bagian yang ia revisi (sisanya null → draf tim) supaya cepat (<300 dtk Vercel).
 - Foto asli onboarding menjadi acuan gambar AI bila post tidak terkait SKU katalog.
+
+## 2026-11-22 — Autopilot Konten dijual terpisah (ACC founder)
+- Alasan: Autopilot (gambar AI) tidak memotong kredit, membuat Pro/Promax rugi pada pemakai berat. Dipisah → Pro/Promax tetap Rp200rb/Rp300rb dengan margin ±48% walau dipakai penuh.
+- Paket konten masa aktif 30 hari, tanpa auto-debit; perpanjangan menumpuk di akhir periode, ganti paket menutup periode lama.
+- Jatah konten dihitung per periode 30 hari (bukan bulan kalender). Visual isi: Lite/Pro 2, Bisnis 4.
+- Paket yang diberikan manual dari back office (tanpa penjualan) tidak ikut kedaluwarsa otomatis.

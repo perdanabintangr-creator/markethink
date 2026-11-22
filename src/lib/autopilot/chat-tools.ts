@@ -3,8 +3,8 @@ import { randomUUID } from "crypto";
 import { tool } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { autopilotAllowance } from "./quota";
-import { loadBrand, postsThisMonth } from "./generate";
+import { getContentAccess, postsInPeriod } from "./content-access";
+import { loadBrand } from "./generate";
 import { addDays, pickLook, planSlots, todayWib } from "./plan";
 import { brandHashtag, capHashtags, fixCaption, lintCaption } from "./lint";
 import { tidyPost } from "./tidy";
@@ -16,7 +16,7 @@ import { baseOf } from "./style";
 import { approvedDna, brandGate } from "@/lib/brand/server";
 
 /**
- * Mode chat Instagram (adaptasi "Mode chat" skill marqthink-ig): dari chat Marqthink, pelanggan Pro/Promax bisa minta
+ * Mode chat Instagram (adaptasi "Mode chat" skill marqthink-ig): dari chat Marqthink, pelanggan paket Autopilot Konten bisa minta
  * "buatkan carousel tentang …" → konten berdesain studio langsung masuk antrean ACC Autopilot; semua paket bisa
  * "cek caption ini".
  */
@@ -75,11 +75,16 @@ export function createInstagramTools(ctx: InstagramToolCtx) {
         "Jangan mengarang fakta/angka/testimoni. Setelah jadi, balas maks 3 baris (kartu sudah menampilkan pratinjau).",
       inputSchema: postInput,
       execute: async (raw): Promise<InstagramPostOutput> => {
-        const allowance = autopilotAllowance(ctx.planId, ctx.role);
+        const allowance = await getContentAccess(ctx.admin, ctx.userId, ctx.role);
         if (!allowance)
-          return { ok: false, upsell: true, error: "Desain studio + jadwal Autopilot tersedia di paket Pro & Promax. Tawarkan create_carousel sebagai gantinya, dan sebut singkat bahwa Autopilot Konten ada di Pro." };
-        if ((await postsThisMonth(ctx.admin, ctx.userId)) >= allowance.postsPerMonth)
-          return { ok: false, error: "Jatah konten Autopilot bulan ini sudah habis (jatah baru mulai tanggal 1). Tawarkan create_carousel sebagai gantinya." };
+          return {
+            ok: false,
+            upsell: true,
+            error:
+              "Desain studio + jadwal Autopilot ada di Paket Autopilot Konten (Lite Rp149rb, Pro Rp249rb, Bisnis Rp499rb per 30 hari; bisa dibeli semua paket). Tawarkan create_carousel sebagai gantinya, dan sebut singkat paket konten ini.",
+          };
+        if ((await postsInPeriod(ctx.admin, ctx.userId, allowance)) >= allowance.postsPerMonth)
+          return { ok: false, error: "Jatah konten Autopilot periode ini sudah habis (30 hari sejak pembelian). Tawarkan create_carousel sebagai gantinya." };
         try {
           const { data: settings } = await ctx.admin.from("autopilot_settings").select("workspace_id, slot_times, design, style_id, style_preset").eq("user_id", ctx.userId).maybeSingle();
           const workspaceId = ctx.workspaceId ?? (settings?.workspace_id as string | null) ?? null;

@@ -245,7 +245,7 @@ export function ContentCalendar({ lang, entries, today, posted: initialPosted = 
                   </Button>
                 )}
                 <Button size="sm" variant="outline" asChild>
-                  <Link href={`/tools/calendar/${open.runId}`}>
+                  <Link href={open.href ?? `/tools/calendar/${open.runId}`}>
                     <ExternalLink /> {t.openSource}
                   </Link>
                 </Button>

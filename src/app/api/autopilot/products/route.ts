@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { apiSession, jsonError } from "@/lib/api";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { autopilotAllowance } from "@/lib/autopilot/quota";
+import { getContentAccess } from "@/lib/autopilot/content-access";
 import { MAX_PRODUCT_PHOTOS, MAX_PRODUCTS, productInput } from "@/lib/autopilot/products";
 
 const COLS = "id, name, sku, price, description, photo_paths, active, workspace_id, updated_at";
@@ -11,7 +11,7 @@ const COLS = "id, name, sku, price, description, photo_paths, active, workspace_
 export async function POST(req: Request) {
   const s = await apiSession();
   if (s.error) return s.error;
-  if (!autopilotAllowance(s.profile.plan_id, s.profile.role)) return jsonError(403, "plan");
+  if (!(await getContentAccess(createAdminClient(), s.user.id, s.profile.role))) return jsonError(403, "plan");
   const parsed = productInput.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return jsonError(400, "invalid_body");
   if (!(await checkRateLimit("light", `autopilot-product:${s.user.id}`)).ok) return jsonError(429, "rate_limited");

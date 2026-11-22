@@ -1,7 +1,10 @@
 import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { autopilotAllowance } from "@/lib/autopilot/quota";
-import { postsThisMonth } from "@/lib/autopilot/generate";
+import { Suspense } from "react";
+import { getContentAccess, postsInPeriod } from "@/lib/autopilot/content-access";
+import { getContentOffers } from "@/lib/autopilot/content-offers";
+import { ContentPlanBar } from "@/components/autopilot/content-plan-bar";
+import { PaymentReturn } from "@/components/tools/payment-return";
 import { addDays, todayWib } from "@/lib/autopilot/plan";
 import { AutopilotView, type ApPost, type ApSettings, type ApWorkspace } from "@/components/autopilot/autopilot-view";
 import { AutopilotUpsell } from "@/components/autopilot/autopilot-upsell";
@@ -24,7 +27,8 @@ export const dynamic = "force-dynamic";
 export default async function AutopilotPage() {
   const { supabase, profile } = await requireUser();
   const lang = profile.language === "en" ? "en" : "id";
-  const allowance = autopilotAllowance(profile.plan_id, profile.role);
+  // Autopilot Konten dijual sebagai paket tersendiri (bisa dibeli semua paket, termasuk Free).
+  const allowance = await getContentAccess(createAdminClient(), profile.id, profile.role);
 
   const { data: wsRows } = await supabase.from("workspaces").select("id, name, brand_kit").order("created_at", { ascending: true }).limit(50);
   const workspaces: ApWorkspace[] = (wsRows ?? []).map((w) => {
@@ -38,7 +42,17 @@ export default async function AutopilotPage() {
     };
   });
 
-  if (!allowance) return <AutopilotUpsell lang={lang} workspaces={workspaces} />;
+  if (!allowance)
+    return (
+      <>
+        <Suspense>
+          <div className="mx-auto w-full max-w-6xl px-4 pt-4">
+            <PaymentReturn />
+          </div>
+        </Suspense>
+        <AutopilotUpsell lang={lang} workspaces={workspaces} offers={await getContentOffers(createAdminClient())} />
+      </>
+    );
 
   const today = todayWib();
   const { data: settingsRow0 } = await supabase.from("autopilot_settings").select("workspace_id").maybeSingle();
@@ -59,7 +73,7 @@ export default async function AutopilotPage() {
         .order("post_date", { ascending: true })
         .order("post_time", { ascending: true })
         .limit(300),
-      postsThisMonth(createAdminClient(), profile.id),
+      postsInPeriod(createAdminClient(), profile.id, allowance),
       instagramStatus(profile.id),
       supabase
         .from("instagram_media_stats")
@@ -120,6 +134,12 @@ export default async function AutopilotPage() {
 
   return (
     <div className="flex h-full flex-col">
+      <Suspense>
+        <div className="mx-auto w-full max-w-6xl shrink-0 px-4 pt-3 md:px-6">
+          <PaymentReturn />
+        </div>
+      </Suspense>
+      <ContentPlanBar planId={allowance.planId} name={allowance.name} periodEnd={allowance.periodEnd} used={used} limit={allowance.postsPerMonth} />
       {dnaStale && (
         <div className="mx-auto mt-4 w-full max-w-6xl shrink-0 px-4 md:px-6">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">

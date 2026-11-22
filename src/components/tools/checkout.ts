@@ -21,7 +21,7 @@ function showOverlay(text: string) {
 }
 
 /** Mulai pembayaran: server menghitung harga lalu user diarahkan ke halaman bayar. false bila gagal. */
-export async function startCheckout(kind: "plan" | "addon" | "bundle", id: string, failedMsg: string, openingMsg = "Menyiapkan halaman pembayaran…") {
+export async function startCheckout(kind: "plan" | "addon" | "bundle" | "content" | "combo", id: string, failedMsg: string, openingMsg = "Menyiapkan halaman pembayaran…") {
   const hide = showOverlay(openingMsg);
   try {
     const res = await fetch("/api/pay/checkout", { method: "POST", body: JSON.stringify({ kind, id }) });

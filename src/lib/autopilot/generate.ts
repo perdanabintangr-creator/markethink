@@ -22,7 +22,8 @@ import { resolveAppUrl } from "@/lib/env";
 import { activeStyle } from "./styles-server";
 import { baseOf, styleNote } from "./style";
 import { catalogBlock, type ProductRow } from "./products";
-import { autopilotAllowance, monthStartWib } from "./quota";
+import { monthStartWib } from "./quota";
+import { getContentAccess, postsInPeriod } from "./content-access";
 import { approvedDna, brandGate } from "@/lib/brand/server";
 import { dnaBlock } from "@/lib/brand/dna";
 
@@ -375,12 +376,12 @@ async function triggerFinish(admin: SupabaseClient, userId: string, batchId: str
  * copywriter menulis → tim senior memeriksa & visual dibuat di latar belakang. Tidak melempar error.
  */
 export async function generateWeek(admin: SupabaseClient, o: GenOpts): Promise<GenerateResult> {
-  const allowance = autopilotAllowance(o.planId, o.role);
+  const allowance = await getContentAccess(admin, o.userId, o.role);
   if (!allowance) return { ok: false, error: "plan" };
   const settings = await loadSettings(admin, o.userId);
   const gate = await brandGate(admin, o.userId, settings.workspace_id);
   if (gate) return { ok: false, error: gate };
-  const room = allowance.postsPerMonth - (await postsThisMonth(admin, o.userId));
+  const room = allowance.postsPerMonth - (await postsInPeriod(admin, o.userId, allowance));
   const count = Math.min(o.count ?? settings.posts_per_week, allowance.postsPerWeek, room);
   if (count <= 0) return { ok: false, error: "quota" };
   if (!(await claim(admin, o.userId))) return { ok: false, error: "busy" };
@@ -452,7 +453,7 @@ export async function generateWeek(admin: SupabaseClient, o: GenOpts): Promise<G
 
 /** Tulis konten dari ide yang menunggu (dipanggil pelanggan "Tulis semua", atau cron setelah 24 jam). */
 export async function writePendingIdeas(admin: SupabaseClient, o: GenOpts & { batchId?: string }): Promise<GenerateResult> {
-  const allowance = autopilotAllowance(o.planId, o.role);
+  const allowance = await getContentAccess(admin, o.userId, o.role);
   if (!allowance) return { ok: false, error: "plan" };
   const settings = await loadSettings(admin, o.userId);
   const gate = await brandGate(admin, o.userId, settings.workspace_id);
@@ -461,7 +462,7 @@ export async function writePendingIdeas(admin: SupabaseClient, o: GenOpts & { ba
   if (o.batchId) q = q.eq("batch_id", o.batchId);
   const { data: rows } = await q.limit(28);
   if (!rows?.length) return { ok: false, error: "no_ideas" };
-  const room = allowance.postsPerMonth - (await postsThisMonth(admin, o.userId));
+  const room = allowance.postsPerMonth - (await postsInPeriod(admin, o.userId, allowance));
   if (room <= 0) return { ok: false, error: "quota" };
   if (!(await claim(admin, o.userId))) return { ok: false, error: "busy" };
   try {

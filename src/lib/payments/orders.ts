@@ -7,12 +7,26 @@ import { getTransactionStatus, paymentStatusOf, type MidtransStatus } from "./mi
 import { duitkuStatusOf, getDuitkuStatus } from "./duitku";
 import { getMayarStatus } from "./mayar";
 import { sendPaymentReceipt } from "./receipt";
+import { getContentOffers } from "@/lib/autopilot/content-offers";
+import { isComboId, isContentPlanId, splitCombo } from "@/lib/autopilot/quota";
 
 export type PaymentKind = "plan" | "addon" | "bundle";
+/** Jenis yang dipilih di checkout. Paket konten disimpan sebagai `addon` (konten_*) dan bundel sebagai `bundle` (combo_*). */
+export type CheckoutKind = PaymentKind | "content" | "combo";
+export const dbKind = (k: CheckoutKind): PaymentKind => (k === "content" ? "addon" : k === "combo" ? "bundle" : k);
 const PAID_PLANS = ["starter", "pro", "promax"];
 
 /** Harga yang dibayar dihitung ulang di server (promo + diskon member), tidak pernah dari browser. */
-export async function priceItem(admin: SupabaseClient, planId: string, kind: PaymentKind, id: string): Promise<{ name: string; amount: number } | null> {
+export async function priceItem(admin: SupabaseClient, planId: string, kind: CheckoutKind, id: string): Promise<{ name: string; amount: number } | null> {
+  if (kind === "content" || kind === "combo") {
+    const { plans, combos } = await getContentOffers(admin);
+    if (kind === "content") {
+      const o = isContentPlanId(id) ? plans.find((p) => p.id === id) : undefined;
+      return o ? { name: `Autopilot ${o.name} (30 hari)`, amount: o.price } : null;
+    }
+    const c = isComboId(id) ? combos.find((x) => x.id === id) : undefined;
+    return c ? { name: `${c.name} (30 hari)`, amount: c.price } : null;
+  }
   if (kind === "plan") {
     if (!PAID_PLANS.includes(id)) return null;
     const { data } = await admin.from("plans").select(PLAN_OFFER_COLUMNS).eq("id", id).maybeSingle();
@@ -86,6 +100,65 @@ async function fulfill(admin: SupabaseClient, p: PaymentRow) {
   const gateway = p.provider === "duitku" ? "Duitku" : p.provider === "mayar" ? "Mayar" : "Midtrans";
   const method = `${gateway} ${p.payment_type ?? ""}`.trim();
   const note = `Bayar otomatis ${p.order_id}`;
+  // Paket Autopilot Konten (disimpan sebagai kind addon, id konten_*).
+  if (isContentPlanId(p.item_id)) {
+    const { error } = await admin.rpc("content_record_sale", {
+      p_user: p.user_id,
+      p_plan: p.item_id,
+      p_months: p.months,
+      p_amount: p.amount_idr,
+      p_method: method,
+      p_note: note,
+      p_paid_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(`konten: ${error.message}`);
+    return;
+  }
+  // Bundel paket Marqthink + paket konten (disimpan sebagai kind bundle, id combo_*): harga dibagi proporsional.
+  if (isComboId(p.item_id)) {
+    const { data: combo } = await admin.from("combo_offers").select("name, plan_id, content_plan_id").eq("id", p.item_id).maybeSingle();
+    if (!combo) throw new Error("bundel tidak ditemukan");
+    const [{ data: plan }, { data: content }] = await Promise.all([
+      admin.from("plans").select("monthly_price_idr").eq("id", combo.plan_id).maybeSingle(),
+      admin.from("content_plans").select("price_idr").eq("id", combo.content_plan_id).maybeSingle(),
+    ]);
+    const [planPart, contentPart] = splitCombo(p.amount_idr, [
+      { id: String(combo.plan_id), list: Number(plan?.monthly_price_idr ?? 0) },
+      { id: String(combo.content_plan_id), list: Number(content?.price_idr ?? 0) },
+    ]);
+    const comboNote = `${combo.name} · ${note}`;
+    // Aktivasi ulang setelah gagal sebagian: bagian yang sudah tercatat untuk order ini dilewati.
+    const [{ data: planDone }, { data: contentDone }] = await Promise.all([
+      admin.from("subscriptions").select("id").eq("user_id", p.user_id).like("note", `%${p.order_id}%`).limit(1),
+      admin.from("content_subscriptions").select("id").eq("user_id", p.user_id).like("note", `%${p.order_id}%`).limit(1),
+    ]);
+    if (!planDone?.length) {
+      const { error } = await admin.rpc("bo_record_sale", {
+        p_user: p.user_id,
+        p_plan: planPart.id,
+        p_months: p.months,
+        p_amount: planPart.amount,
+        p_method: method,
+        p_note: comboNote,
+        p_actor: null,
+        p_paid_at: new Date().toISOString(),
+      });
+      if (error) throw new Error(`bundel paket: ${error.message}`);
+    }
+    if (!contentDone?.length) {
+      const { error } = await admin.rpc("content_record_sale", {
+        p_user: p.user_id,
+        p_plan: contentPart.id,
+        p_months: p.months,
+        p_amount: contentPart.amount,
+        p_method: method,
+        p_note: comboNote,
+        p_paid_at: new Date().toISOString(),
+      });
+      if (error) throw new Error(`bundel konten: ${error.message}`);
+    }
+    return;
+  }
   if (p.kind === "plan") {
     const { error } = await admin.rpc("bo_record_sale", {
       p_user: p.user_id,

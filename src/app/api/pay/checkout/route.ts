@@ -6,10 +6,10 @@ import { createSnapTransaction, newOrderId } from "@/lib/payments/midtrans";
 import { createDuitkuInvoice } from "@/lib/payments/duitku";
 import { createMayarPayment } from "@/lib/payments/mayar";
 import { activeProvider } from "@/lib/payments/gateway";
-import { priceItem } from "@/lib/payments/orders";
+import { dbKind, priceItem } from "@/lib/payments/orders";
 
 const schema = z.object({
-  kind: z.enum(["plan", "addon", "bundle"]),
+  kind: z.enum(["plan", "addon", "bundle", "content", "combo"]),
   id: z.string().regex(/^[a-z_]{2,40}$/),
 });
 
@@ -26,11 +26,11 @@ export async function POST(req: Request) {
   const item = await priceItem(admin, s.profile.plan_id, kind, id);
   if (!item) return jsonError(400, "unknown_item");
 
-  const orderId = newOrderId(kind);
+  const orderId = newOrderId(dbKind(kind));
   const origin =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
     new URL(req.url).origin;
-  const back = kind === "plan" ? "/pricing" : "/tools";
+  const back = kind === "plan" ? "/pricing" : kind === "content" || kind === "combo" ? "/autopilot" : "/tools";
   const customer = {
     name: s.profile.full_name,
     email: s.profile.email ?? s.user.email,
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     .insert({
       order_id: orderId,
       user_id: s.user.id,
-      kind,
+      kind: dbKind(kind),
       item_id: id,
       item_name: item.name,
       amount_idr: item.amount,

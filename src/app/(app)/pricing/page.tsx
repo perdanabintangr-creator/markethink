@@ -7,6 +7,10 @@ import { PLAN_OFFER_COLUMNS, toPlanOffer } from "@/lib/plan-offers";
 import { PlanCards } from "@/components/tools/plan-cards";
 import { PaymentReturn } from "@/components/tools/payment-return";
 import { settingsText } from "@/lib/i18n/settings";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getContentAccess } from "@/lib/autopilot/content-access";
+import { getContentOffers } from "@/lib/autopilot/content-offers";
+import { ContentPackages } from "@/components/autopilot/content-packages";
 
 export async function generateMetadata() {
   const { profile } = await getSession();
@@ -24,6 +28,9 @@ export default async function PricingPage() {
       .order("sort_order"),
     getCreditStatus(user.id),
   ]);
+  const admin = createAdminClient();
+  const [offers, access] = await Promise.all([getContentOffers(admin), getContentAccess(admin, user.id, profile.role)]);
+  const currentContent = access && access.planId !== "admin" ? { planId: access.planId, name: access.name, periodEnd: access.periodEnd } : null;
   const plans = (rows ?? []).map((r) => toPlanOffer(r));
   const unlimited = credits.monthLimit >= UNLIMITED_CREDITS;
   const t = settingsText(profile.language);
@@ -44,6 +51,9 @@ export default async function PricingPage() {
           <PaymentReturn />
         </Suspense>
         <PlanCards plans={plans} currentPlan={profile.plan_id} note="Dari halaman Paket & harga" showTeam />
+        <div className="border-t pt-8">
+          <ContentPackages lang={profile.language === "en" ? "en" : "id"} plans={offers.plans} combos={offers.combos} current={currentContent} />
+        </div>
       </div>
     </div>
   );

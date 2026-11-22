@@ -6,9 +6,18 @@ import { Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { autopilotText } from "@/lib/i18n/autopilot";
 import type { ApWorkspace } from "./autopilot-view";
+import { ContentPackages, type ComboOfferView, type ContentOfferView } from "./content-packages";
 
-/** Untuk paket selain Pro/Promax: penjelasan + contoh slide yang sudah memakai warna & logo brand pelanggan. */
-export function AutopilotUpsell({ lang, workspaces }: { lang: "id" | "en"; workspaces: ApWorkspace[] }) {
+/** Belum punya paket Autopilot Konten: penjelasan + contoh slide memakai warna & logo brand pelanggan + pilihan paket konten. */
+export function AutopilotUpsell({
+  lang,
+  workspaces,
+  offers,
+}: {
+  lang: "id" | "en";
+  workspaces: ApWorkspace[];
+  offers: { plans: ContentOfferView[]; combos: ComboOfferView[] };
+}) {
   const t = autopilotText(lang);
   const [ws, setWs] = useState(workspaces[0]?.id ?? "");
   const q = ws ? `?ws=${ws}` : "";
@@ -40,7 +49,7 @@ export function AutopilotUpsell({ lang, workspaces }: { lang: "id" | "en"; works
                 ))}
               </ul>
               <Button asChild className="mt-6 h-11 rounded-full px-6">
-                <Link href="/pricing">{t.upsellCta}</Link>
+                <Link href="#paket-konten">{t.upsellCta}</Link>
               </Button>
             </div>
             <div>
@@ -65,6 +74,9 @@ export function AutopilotUpsell({ lang, workspaces }: { lang: "id" | "en"; works
             </div>
           </div>
         </section>
+        <div className="mt-10">
+          <ContentPackages lang={lang} plans={offers.plans} combos={offers.combos} current={null} />
+        </div>
       </div>
     </div>
   );

@@ -11,8 +11,8 @@ describe("Kredit (1 kredit ≈ Rp100 modal AI, jatah mingguan + harian)", () => 
     expect(IDR_PER_CREDIT).toBe(100);
     expect(creditsForUsd(0)).toBe(0.25);
     expect(creditsForUsd(-1)).toBe(0.25);
-    // Chat ringan ±$0,0031 ≈ Rp51 → 0,52 kredit (bukan 1).
-    expect(creditsForUsd(0.0031)).toBe(0.52);
+    // Chat ringan ±$0,0031 ≈ Rp57 (kurs 18.300) → 0,57 kredit (bukan 1).
+    expect(creditsForUsd(0.0031)).toBe(0.57);
     expect(creditsForUsd(100 / IDR_PER_USD)).toBe(1);
     expect(creditsForUsd(1)).toBe(IDR_PER_USD / 100);
   });

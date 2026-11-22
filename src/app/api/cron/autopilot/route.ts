@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cronAuthorized } from "@/lib/cron";
-import { autopilotAllowance } from "@/lib/autopilot/quota";
+import { getContentAccess } from "@/lib/autopilot/content-access";
 import { addDays, todayWib } from "@/lib/autopilot/plan";
 import { needsBatch } from "@/lib/autopilot/schedule";
 import { igEnabled, refreshInstagramTokens, syncAllInsights } from "@/lib/instagram";
@@ -38,11 +38,15 @@ export async function GET(req: Request) {
     const u = r.user_id as string;
     if (!until.has(u) || String(r.post_date) > until.get(u)!) until.set(u, String(r.post_date));
   }
+  // Hanya user dengan paket Autopilot Konten aktif (atau admin).
+  const allowed = new Set<string>();
+  await Promise.all(
+    (profiles ?? []).map(async (p) => {
+      if (!p.banned && (await getContentAccess(admin, p.id as string, p.role as string))) allowed.add(p.id as string);
+    }),
+  );
   const due = settings
-    .filter((s) => {
-      const p = profiles?.find((x) => x.id === s.user_id);
-      return p && !p.banned && autopilotAllowance(p.plan_id as string, p.role as string);
-    })
+    .filter((s) => allowed.has(s.user_id as string))
     .filter((s) => needsBatch(s.cadence as "weekly" | "monthly", until.get(s.user_id as string) ?? null, todayWib()))
     .slice(0, 40)
     .map((s) => s.user_id as string);

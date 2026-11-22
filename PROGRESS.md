@@ -58,3 +58,10 @@
 - ✅ Riset (web + gambar + aset klien) → Designer/Copywriter/Socmed paralel → Creative Director memutuskan → Brand DNA versi draf (biaya dicatat) → tab per peran, bisa diedit, tombol ACC. Edit versi ACC = versi baru.
 - ✅ Gate: Autopilot (halaman, generate, tulis ide, cron, chat instagram_post) terkunci sampai data wajib lengkap + DNA di-ACC. Banner "Perbarui Brand DNA" bila Brand Kit/aset berubah.
 - ✅ Semua agen membaca DNA aktif (strategist, copywriter, tim senior, Visual Director + foto asli sebagai acuan); tiap post mencatat `brand_dna_version`.
+
+## 22 Nov 2026 — Paket Autopilot Konten terpisah + masa aktif paket
+- ✅ Migrasi 071: `content_plans` (Lite Rp149rb 12 konten, Pro Rp249rb 20 konten, Bisnis Rp499rb 40 konten / 30 hari), `content_subscriptions`, `combo_offers` (Bundel Pro + Konten Pro Rp399rb), `content_record_sale`, `expire_paid_plans` + pg_cron tiap jam.
+- ✅ Autopilot + Kalender Konten hanya lewat paket konten (bisa dibeli semua paket termasuk Free; admin selalu boleh). Pro/Promax tidak lagi berisi Autopilot.
+- ✅ Checkout `content` / `combo` (disimpan sebagai kind addon/bundle dengan id konten_*/combo_*), aktivasi otomatis, kuitansi, halaman Harga (app & publik), penawaran di /autopilot & /kalender, bar paket aktif + perpanjang.
+- ✅ Kalender menampilkan konten Autopilot. Brand DNA maks 3× per 30 hari. Kurs kredit 18.300.
+- ✅ Paket berbayar yang habis otomatis kembali ke Free (1 akun Starter habis 18 Nov ikut diturunkan).

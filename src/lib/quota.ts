@@ -1,7 +1,8 @@
 /**
  * Aturan jatah (Fase 1) yang aman dipakai di server & browser: konversi biaya → kredit, waktu reset, teks penolakan.
  */
-export const IDR_PER_USD = Number(process.env.IDR_PER_USD) || 16_500;
+/** Kurs untuk mengubah biaya AI (USD) → kredit. Diperbarui 22 Nov 2026 (kurs riil ±Rp18.270); bisa diganti lewat env IDR_PER_USD. */
+export const IDR_PER_USD = Number(process.env.IDR_PER_USD) || 18_300;
 export const IDR_PER_CREDIT = 100;
 /** Potongan minimal per jawaban yang berhasil (±Rp25), juga untuk model gratis — menjaga batas harian tetap berarti. */
 export const MIN_CREDITS = 0.25;
