@@ -5,6 +5,7 @@ import { loadBrand } from "./generate";
 import type { Look, Slide } from "./slides";
 import { loadVisuals } from "./visuals";
 import { parseDna } from "./style";
+import { brandContact } from "./contact";
 
 export interface PostRow {
   id: string;
@@ -59,5 +60,5 @@ export async function downloadMedia(admin: SupabaseClient, userId: string, paths
 /** Semua bahan render satu post: palet & logo Brand Kit, gaya desain, visual AI. */
 export async function renderOptions(admin: SupabaseClient, post: Pick<PostRow, "user_id" | "workspace_id" | "slides" | "design" | "style">, language: "id" | "en" = "id", fallbackName?: string | null) {
   const [brand, images] = await Promise.all([loadBrand(admin, post.user_id, post.workspace_id, fallbackName), loadVisuals(admin, post.user_id, post.slides)]);
-  return { brand: brand.palette, logo: brand.logo, marqthinkLogo: brand.marqthinkLogo, en: language === "en", look: (post.design ?? "classic") as Look, style: parseDna(post.style), images };
+  return { brand: brand.palette, logo: brand.logo, marqthinkLogo: brand.marqthinkLogo, en: language === "en", look: (post.design ?? "classic") as Look, style: parseDna(post.style), images, contact: brandContact(brand.kit as Record<string, unknown> | null, brand.palette.handle, language === "en") };
 }

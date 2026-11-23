@@ -1,4 +1,5 @@
 import "server-only";
+import { sosmedDna, templateForCategory } from "@/lib/autopilot/style";
 import { generateText } from "ai";
 import sharp from "sharp";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -296,7 +297,10 @@ export async function approveDna(admin: SupabaseClient, o: { userId: string; wor
     .eq("id", o.workspaceId)
     .eq("user_id", o.userId);
 
-  const style = styleDnaFrom(dna);
+  // Template sosmed UMKM (ACC 23 Nov 2026) sesuai industri brand; font & nama dari Designer.
+  const base = styleDnaFrom(dna);
+  const template = templateForCategory(String(kit.category ?? ""));
+  const style = sosmedDna(template, dna.designer.palette.primary, base.name, base.font);
   const { data: st } = await admin
     .from("brand_styles")
     .insert({

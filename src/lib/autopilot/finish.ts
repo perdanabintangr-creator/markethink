@@ -13,7 +13,7 @@ import { generateSlideImage, pool, productRefs } from "./visuals";
 import type { Look, Slide } from "./slides";
 import type { ProductRow } from "./products";
 import { buildDirectorPrompt, directorSchema, finalImagePrompt, selectJobs, type PostPlan } from "./director";
-import { imageAspectFor, parseDna, visualPromptFor } from "./style";
+import { imageAspectFor, parseDna, sosmedBg, visualPromptFor } from "./style";
 import { latestResearch } from "./brand-research";
 import { visualSubjectsBlock } from "./research-shape";
 import { approvedDna } from "@/lib/brand/server";
@@ -177,7 +177,9 @@ export async function directVisuals(admin: SupabaseClient, userId: string, rows:
     3,
     async (r) => {
       const plan = plans.get(r.id)!;
-      const dna = parseDna(r.style);
+      const parsed = parseDna(r.style);
+      // Template sosmed: latar gambar cover = warna latar template brand ini (subjek tampil seperti stiker yang menyatu).
+      const dna = parsed?.layout === "sosmed" && parsed.template && parsed.hero !== "full" ? { ...parsed, bgColor: sosmedBg(parsed.template, palette.primary) } : parsed;
       const full = !dna || dna.hero === "full" || dna.bg === "photo";
       const jobs = selectJobs(plan, { innerCap: r.kind === "carousel" ? o.innerCap : 0, slideTypes: r.slides.map((s) => s.type) });
       const prod = products.find((x) => x.id === r.product_id) ?? null;

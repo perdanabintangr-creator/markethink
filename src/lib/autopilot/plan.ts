@@ -47,7 +47,8 @@ export function planSlots(start: string, count: number, times: string[], taken: 
 /** Campuran format per minggu: minimal 40% carousel, ±20% Reel (min 1 bila ≥5 post), sisanya single image. */
 export function formatMix(count: number): Record<PostKind, number> {
   const reel = count >= 5 ? Math.max(1, Math.round(count * 0.2)) : 0;
-  const carousel = Math.max(1, Math.ceil(count * 0.45));
+  // Lebih banyak single image (pola feed UMKM: price list, promo, tips, VS) — ACC 23 Nov 2026.
+  const carousel = Math.max(1, Math.ceil(count * 0.35));
   const image = Math.max(0, count - reel - carousel);
   return { carousel, image, reel };
 }

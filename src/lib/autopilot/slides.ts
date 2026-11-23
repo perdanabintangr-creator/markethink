@@ -17,6 +17,8 @@ export const slideSchema = z.object({
   sub: text(260).optional(),
   body: text(260).optional(),
   label: text(28).optional(),
+  /** Label harga/promo (template sosmed), mis. "Rp14k", "Mulai Rp20.000". Hanya dari katalog/promo nyata. */
+  price: text(40).optional(),
   num: text(3).optional(),
   options: z.array(text(80)).max(3).optional(),
   items: z.array(text(90)).max(6).optional(),

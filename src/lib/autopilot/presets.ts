@@ -1,4 +1,4 @@
-import type { StyleDna } from "./style";
+import { sosmedDna, SOSMED_INFO, type SosmedTemplate, type StyleDna } from "./style";
 
 /**
  * Pustaka gaya per industri (Tahap 2): 10 industri × 3 gaya kurasi. Warna aksen selalu dari Brand Kit pelanggan;
@@ -42,7 +42,28 @@ const P = (industry: IndustryId, key: string, dna: Partial<StyleDna> & Pick<Styl
   },
 });
 
+/** Template sosmed UMKM (ACC 23 Nov 2026) — direkomendasikan pertama di tiap industri. Warna mengikuti brand saat render. */
+const SOSMED_BY_INDUSTRY: [IndustryId, SosmedTemplate][] = [
+  ["fnb", "kuliner"],
+  ["fnb", "cafe"],
+  ["fashion", "elegan"],
+  ["beauty", "elegan"],
+  ["property", "elegan"],
+  ["education", "edukasi"],
+  ["tech", "game"],
+  ["health", "edukasi"],
+  ["automotive", "game"],
+  ["services", "edukasi"],
+  ["retail", "kuliner"],
+];
+const SOSMED_PRESETS: StylePreset[] = SOSMED_BY_INDUSTRY.map(([industry, t]) => {
+  const { bgColor: _bg, ...dna } = sosmedDna(t, "#888888", `Template ${SOSMED_INFO[t].label}`);
+  void _bg;
+  return { id: `${industry}-sosmed-${t}`, industry, dna: dna as StyleDna };
+});
+
 export const STYLE_PRESETS: StylePreset[] = [
+  ...SOSMED_PRESETS,
   // Kuliner & Kafe
   P("fnb", "warm", { name: "Kafe hangat", description: "Kertas krem, serif hangat, foto produk pagi hari", bg: "cream", font: "fraunces", align: "left", ornaments: ["grain"], visualStyle: "product-studio", imageHint: "warm morning light, wooden table, cafe props, appetizing" }),
   P("fnb", "bold", { name: "Promo menu bold", description: "Gelap dramatis, huruf condensed besar, menu menggoda", bg: "dark", font: "anton", upper: true, titlePos: "bottom", hero: "above", visualStyle: "product-studio", imageHint: "dramatic food photography, steam, rim light, glossy sauce" }),

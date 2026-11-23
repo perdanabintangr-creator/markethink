@@ -40,6 +40,8 @@ const T = {
     del: "Hapus",
     myStyles: "Gaya dari referensi",
     saved: "Gaya dipakai untuk konten berikutnya",
+    applyDrafts: "Terapkan ke draf yang belum tayang",
+    applied: (n: number) => (n ? `${n} draf didesain ulang dengan gaya ini` : "Belum ada draf yang bisa didesain ulang"),
     err: "Gagal. Coba lagi sebentar lagi.",
     preview: "Pratinjau dengan brand kamu (visual AI asli dibuat saat konten dibuat)",
   },
@@ -64,6 +66,8 @@ const T = {
     del: "Delete",
     myStyles: "Styles from references",
     saved: "Style applied to upcoming content",
+    applyDrafts: "Apply to unpublished drafts",
+    applied: (n: number) => (n ? `${n} drafts redesigned with this style` : "No drafts to redesign yet"),
     err: "Failed. Please try again shortly.",
     preview: "Preview with your brand (real AI visuals are created with the content)",
   },
@@ -122,6 +126,15 @@ export function StyleSection({
     setBusy(null);
     if (!r.ok) return void toast.error(t.err);
     toast.success(t.saved);
+    router.refresh();
+  }
+
+  async function applyDrafts() {
+    setBusy("apply");
+    const r = await post("/api/autopilot/style/apply-drafts", {});
+    setBusy(null);
+    if (!r.ok) return void toast.error(t.err);
+    toast.success(t.applied(Number(r.data.updated ?? 0)));
     router.refresh();
   }
 
@@ -191,6 +204,11 @@ export function StyleSection({
           <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             {t.current}: {activeName ?? t.auto}
           </span>
+          {(styleId || presetId) && (
+            <Button size="sm" variant="outline" onClick={applyDrafts} disabled={!!busy}>
+              {busy === "apply" ? <Loader2 className="animate-spin" /> : <Palette />} {t.applyDrafts}
+            </Button>
+          )}
           {(styleId || presetId) && (
             <Button size="sm" variant="ghost" onClick={() => choose({ mode: "auto" }, "auto")} disabled={!!busy}>
               {busy === "auto" ? <Loader2 className="animate-spin" /> : <X />} {t.useAuto}

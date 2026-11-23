@@ -4,7 +4,7 @@ import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
 import { isHero, slideCorners, slideTheme, type Look, type Slide, type SlideBrand } from "./slides";
-import { LOOK_DNA, type FontId, type StyleDna } from "./style";
+import { LOOK_DNA, sosmedBg, type FontId, type StyleDna } from "./style";
 
 /**
  * Renderer slide Autopilot Konten (1080×1350 JPEG). Empat gaya:
@@ -15,6 +15,9 @@ import { LOOK_DNA, type FontId, type StyleDna } from "./style";
  * - photo: foto penuh, judul putih besar + label sorot ("Brand with Claude", kampanye BSN).
  * Huruf digambar sebagai path dari file font asli (hasil sama di semua perangkat). Warna, logo & akun dari Brand Kit.
  */
+
+import { sosmedSlideSvg, type SosmedContact, type TextKit } from "./render-sosmed";
+export type { SosmedContact } from "./render-sosmed";
 
 export const W = 1080;
 export const H = 1350;
@@ -238,12 +241,16 @@ export interface RenderOptions {
   style?: StyleDna | null;
   /** Gambar visual (path storage → isi file) untuk slide yang punya `image`. */
   images?: Record<string, Buffer>;
+  /** Kontak brand untuk bar bawah template sosmed (WA, IG, website, tombol ajakan). */
+  contact?: SosmedContact | null;
 }
 
 type Prepared = RenderOptions & {
   dna?: StyleDna | null;
   logoData?: { uri: string; w: number; h: number } | null;
   hero?: string | null;
+  /** Template sosmed: jenis visual slide ini. */
+  sosmedImage?: { uri: string; kind: "fade" | "card" | "full" } | null;
   corners?: string[];
 };
 
@@ -721,9 +728,34 @@ function imageSlide(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
 // ---------------------------------------------------------------------------
 // Slide isi (semua gaya) + cover klasik
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Template sosmed (render-sosmed.ts) memakai helper teks yang sama.
+// ---------------------------------------------------------------------------
+const TK: TextKit = {
+  width: (f, s, size) => widthOf(font(f as FontKey), clean(font(f as FontKey), s), size),
+  wrap: (f, s, size, maxW) => wrap(font(f as FontKey), s, size, maxW),
+  line: (f, s, x, top, size, lh, fill) => line(font(f as FontKey), clean(font(f as FontKey), s), x, top, size, lh, fill),
+  rich: (f, raw, cx, top, maxW, maxLines, start, min, fill, serifFill) => {
+    const main = font(f as FontKey);
+    const size = fitRich(main, [raw], maxW, maxLines, start, min, () => 0, false);
+    const lines = richWrap(main, raw, size, maxW, 0, false).slice(0, maxLines);
+    const lh = 1.08;
+    const svg = lines.map((ln, k) => richDraw(main, ln, cx - richW(main, ln, size, 0) / 2, top + k * size * lh, size, lh, fill, serifFill, 0)).join("");
+    return { svg, h: lines.length * size * lh, size };
+  },
+};
+
+function sosmedSvg(s: Slide, i: number, n: number, o: Prepared, d: StyleDna) {
+  const logo = (x: number, yCenter: number, h: number, ink: string) => logoMark(o, x, yCenter, h, ink, `so${i}`);
+  const svg = sosmedSlideSvg(s, i, n, { brand: o.brand, dna: d, contact: o.contact ?? null, logo, image: o.sosmedImage ?? null, en: Boolean(o.en) }, TK);
+  // logoMark tanpa logo memakai gradasi `${id}diag`: sisipkan definisinya.
+  return svg.replace("<defs>", `<defs><linearGradient id="so${i}diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${o.brand.royal}"/><stop offset="1" stop-color="${o.brand.cyan}"/></linearGradient>`);
+}
+
 export function slideSvg(s: Slide, i: number, n: number, o: Prepared) {
   const look: Look = o.look ?? "classic";
   const dna = o.dna ?? null;
+  if (dna?.layout === "sosmed") return sosmedSvg(s, i, n, o, dna);
   if (dna && isHero(s, i)) return heroSlide(s, i, n, o, dna);
   if (dna && o.hero && IMAGE_SLIDE_TYPES.has(s.type)) return imageSlide(s, i, n, o, dna);
   const b = o.brand;
@@ -988,7 +1020,20 @@ async function prepare(slides: Slide[], i: number, o: RenderOptions, logos: Part
   const s = slides[i];
   // Slide isi bervisual: logo di atas gradasi gelap → versi terang.
   const innerVisual = Boolean(dna && !isHero(s, i) && s.image && o.images?.[s.image] && IMAGE_SLIDE_TYPES.has(s.type));
-  const logoTheme: "dark" | "light" = innerVisual ? "dark" : dna ? (dnaDark(dna, isHero(s, i)) ? "dark" : "light") : slideTheme(s, i, slides.length, look);
+  const logoTheme: "dark" | "light" =
+    dna?.layout === "sosmed"
+      ? dna.hero === "full" && isHero(s, i)
+        ? "dark"
+        : lum(sosmedBg(dna.template ?? "kuliner", o.brand.royal)) < 0.5
+          ? "dark"
+          : "light"
+      : innerVisual
+        ? "dark"
+        : dna
+          ? dnaDark(dna, isHero(s, i))
+            ? "dark"
+            : "light"
+          : slideTheme(s, i, slides.length, look);
   if (!(logoTheme in logos)) logos[logoTheme] = await logoData(o, logoTheme);
   let hero: string | null = null;
   if (dna && (isHero(s, i) || innerVisual) && s.image && o.images?.[s.image]) {
@@ -998,7 +1043,22 @@ async function prepare(slides: Slide[], i: number, o: RenderOptions, logos: Part
       console.error("[autopilot] visual gagal dibaca", err);
     }
   }
-  return { ...o, look, dna, logoData: logos[logoTheme] ?? null, hero, corners: slides[0]?.corners };
+  let sosmedImage: Prepared["sosmedImage"] = null;
+  if (dna?.layout === "sosmed" && s.image && o.images?.[s.image]) {
+    try {
+      const buf = o.images[s.image];
+      const full = dna.hero === "full" && isHero(s, i);
+      if (full) sosmedImage = { uri: await heroData(buf, true), kind: "full" };
+      else if (isHero(s, i) && !(s.items?.length || s.options?.length)) sosmedImage = { uri: await heroData(buf, false), kind: "fade" };
+      else {
+        const jpg = await sharp(buf).resize(1000, 800, { fit: "cover", position: "attention" }).jpeg({ quality: 86 }).toBuffer();
+        sosmedImage = { uri: `data:image/jpeg;base64,${jpg.toString("base64")}`, kind: "card" };
+      }
+    } catch (err) {
+      console.error("[autopilot] visual sosmed gagal dibaca", err);
+    }
+  }
+  return { ...o, look, dna, logoData: logos[logoTheme] ?? null, hero: dna?.layout === "sosmed" ? null : hero, sosmedImage, corners: slides[0]?.corners };
 }
 
 const toJpeg = (svg: string, width = W, quality = 90) => {

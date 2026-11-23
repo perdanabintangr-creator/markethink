@@ -62,6 +62,10 @@ export const styleDnaSchema = z.object({
   imageHint: clip(300).optional(),
   /** Skala ukuran judul 0.8–1.25. */
   titleScale: z.number().transform((n) => Math.min(1.25, Math.max(0.8, n))).catch(1).default(1),
+  /** Tata letak: "studio" (gaya lama) atau "sosmed" (template sosmed UMKM Indonesia: bar kontak, kotak highlight, label harga). */
+  layout: z.enum(["studio", "sosmed"]).optional().catch(undefined),
+  /** Varian template sosmed. */
+  template: z.enum(["elegan", "game", "cafe", "edukasi", "kuliner"]).optional().catch(undefined),
 });
 export type StyleDna = z.infer<typeof styleDnaSchema>;
 
@@ -106,6 +110,8 @@ export function visualPromptFor(d: StyleDna, visual: string, colors: { primary: 
   const hint = d.imageHint ? ` ${d.imageHint.slice(0, 300)}.` : "";
   if (d.hero === "full" || d.bg === "photo")
     return `${subject}. ${style}, subtle ${colors.primary} colour accents, main subject in the upper two thirds, calm darker area at the bottom for text. Portrait 3:4.${hint} ${no}`;
+  if (d.layout === "sosmed")
+    return `${subject}. ${style}, single subject cut out cleanly like a sticker with crisp edges, centered, filling about 75% of the frame, isolated on a seamless plain ${d.bgColor ?? "soft light grey"} background, soft contact shadow, bright commercial lighting.${hint} ${no}`;
   const bg =
     d.bg === "dark"
       ? `isolated on a pure black background, dramatic rim lighting in ${colors.primary} and ${colors.accent}`
@@ -130,6 +136,12 @@ export function styleNote(d: StyleDna) {
     "editorial-photo": "foto editorial/model",
     "minimal-object": "satu objek minimal",
   };
+  if (d.layout === "sosmed")
+    return `GAYA DESAIN TETAP: template sosmed "${d.name}" — ${d.description}. Abaikan kolom "design".
+- Gaya feed UMKM Indonesia: judul pendek & kuat di "title", kata/frasa kunci di "accent" (tampil dalam kotak highlight), "label" = tagline kecil di atas judul.
+- Single image boleh berupa: Tips/daftar bernomor (isi "items" 3–5 poin pendek), Price list (isi "items" dengan "Nama — Rp harga" HANYA dari katalog/Brand Kit), VS/perbandingan (isi "options" 2 pilihan), Promo (isi "price" mis. "Rp14k" / "Mulai Rp20.000" HANYA dari katalog/promo nyata), Testimoni (type "statement", "body" = kutipan; hanya bila ada testimoni nyata).
+- "price" hanya diisi bila harga/promo ada di data brand. Jangan mengarang harga.
+- Visual utama (kolom "visual") = SATU subjek nyata (orang/produk/makanan) yang bisa tampil seperti stiker di depan latar warna brand.${d.template === "elegan" ? ' Untuk template elegan, "corners" boleh berisi 2 keterangan detail produk (mis. bahan, keunggulan).' : ""}`;
   return `GAYA DESAIN TETAP (pilihan pemilik brand): "${d.name}"${d.description ? ` — ${d.description}` : ""}. Abaikan kolom "design".
 - Visual utama cover berupa ${visual[d.visualStyle]}; tulis "visual" yang cocok dengan gaya ini${d.imageHint ? ` (${d.imageHint})` : ""}.
 - ${d.ornaments.includes("corners") ? 'Isi "corners" di cover.' : 'Tidak perlu "corners".'} ${d.upper ? "Judul tampil KAPITAL: pilih kata yang tetap enak dibaca kapital." : ""}`.trim();
@@ -141,4 +153,70 @@ export function slideVisualPromptFor(d: StyleDna, visual: string, colors: { prim
   const style = VISUAL_TEXT[d.visualStyle];
   const tone = d.bg === "dark" ? "moody low-key lighting" : d.bg === "cream" ? "warm soft daylight, cream tones" : "bright airy lighting";
   return `${subject}. ${style}, full-frame scene filling the whole portrait canvas (no isolated object on blank background), ${tone}, subtle ${colors.primary} and ${colors.accent} colour accents, main subject in the upper 60% of the frame, calmer simpler area in the bottom third for text overlay. Portrait 3:4.${d.imageHint ? ` ${d.imageHint.slice(0, 300)}.` : ""} Absolutely no text, letters, numbers, captions, logos, brand names or watermarks anywhere in the image.`;
+}
+
+// ---------------------------------------------------------------------------
+// Template sosmed UMKM Indonesia (ACC founder 23 Nov 2026, dari referensi 5 industri: perhiasan, game, kopi, edukasi,
+// kuliner lokal). Hanya pola tata letak yang diambil; warna selalu dari brand.
+// ---------------------------------------------------------------------------
+export const SOSMED_TEMPLATES = ["elegan", "game", "cafe", "edukasi", "kuliner"] as const;
+export type SosmedTemplate = (typeof SOSMED_TEMPLATES)[number];
+
+export const SOSMED_INFO: Record<SosmedTemplate, { label: string; feel: string; font: FontId; fullPhoto?: boolean }> = {
+  elegan: { label: "Elegan", feel: "foto produk lembut penuh, serif tipis mewah, keterangan bergaris (perhiasan, wedding, fashion premium)", font: "cormorant", fullPhoto: true },
+  game: { label: "Bold Digital", feel: "latar abu terang, judul tebal dengan kotak highlight, karakter/produk menonjol (game, gadget, produk digital)", font: "jakarta" },
+  cafe: { label: "Warm Café", feel: "latar hangat warna brand, produk & orang di depan, label harga (kopi, minuman, F&B modern)", font: "jakarta" },
+  edukasi: { label: "Edukasi Ceria", feel: "langit cerah, judul tebal bertepi putih, kartu catatan (kursus, sekolah, jasa)", font: "fredoka" },
+  kuliner: { label: "Kuliner Lokal", feel: "latar warna brand penuh bermotif, kotak highlight kontras, makanan di depan (kuliner, katering, UMKM)", font: "jakarta" },
+};
+
+const mixHex = (a: string, b: string, t: number) => {
+  const pa = a.replace("#", "").match(/../g)!.map((x) => parseInt(x, 16));
+  const pb = b.replace("#", "").match(/../g)!.map((x) => parseInt(x, 16));
+  return `#${pa.map((v, k) => Math.round(v + (pb[k] - v) * t).toString(16).padStart(2, "0")).join("").toUpperCase()}`;
+};
+
+/** Warna latar template (juga dipakai untuk latar gambar AI cover agar menyatu). */
+export function sosmedBg(t: SosmedTemplate, primary: string) {
+  if (t === "kuliner") return primary.toUpperCase();
+  if (t === "cafe") return mixHex(primary, "#FFFFFF", 0.45);
+  if (t === "edukasi") return mixHex(primary, "#FFFFFF", 0.82);
+  if (t === "game") return "#F1F3F5";
+  return mixHex(primary, "#FFFFFF", 0.9);
+}
+
+/** Template yang paling cocok dengan kategori/industri brand (bebas teks). */
+export function templateForCategory(category: string | null | undefined): SosmedTemplate {
+  const c = (category ?? "").toLowerCase();
+  if (/perhias|jewel|cincin|wedding|nikah|bridal|butik|boutique|luxury|mewah|parfum|fashion|skincare|kecantikan|beauty|properti|property/.test(c)) return "elegan";
+  if (/game|gaming|top ?up|diamond|gadget|elektronik|digital|software|aplikasi|tech|teknologi|crypto/.test(c)) return "game";
+  if (/kopi|coffee|kafe|cafe|café|minum|drink|boba|tea|teh|bakery|roti|dessert|kue/.test(c)) return "cafe";
+  if (/kursus|les|edukasi|sekolah|belajar|kelas|course|training|pelatihan|bimbel|ngaji|tutor|klinik|jasa|konsultan/.test(c)) return "edukasi";
+  return "kuliner";
+}
+
+/** DNA template sosmed: latar & posisi visual diatur agar Visual Director membuat gambar yang menyatu. */
+export function sosmedDna(t: SosmedTemplate, primary: string, name?: string, font?: FontId): StyleDna {
+  const info = SOSMED_INFO[t];
+  const full = Boolean(info.fullPhoto);
+  return {
+    name: name ?? `Template ${info.label}`,
+    description: info.feel,
+    bg: full ? "photo" : "solid",
+    ...(full ? {} : { bgColor: sosmedBg(t, primary) }),
+    font: t === "elegan" ? (font && ["playfair", "cormorant", "cinzel", "fraunces"].includes(font) ? font : info.font) : (font ?? info.font),
+    upper: false,
+    serifAccent: t === "elegan",
+    align: "center",
+    titlePos: full ? "bottom" : "top",
+    hero: full ? "full" : "below",
+    ornaments: [],
+    visualStyle: full ? "editorial-photo" : t === "game" ? "3d-glossy" : "photo-lifestyle",
+    imageHint: full
+      ? "soft-focus luxury still life, shallow depth of field, warm creamy light"
+      : "subject cut out cleanly like a sticker, front-facing, soft natural shadow, friendly and commercial",
+    titleScale: 1,
+    layout: "sosmed",
+    template: t,
+  };
 }

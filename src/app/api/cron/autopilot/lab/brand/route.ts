@@ -8,6 +8,12 @@ import { generateWeek } from "@/lib/autopilot/generate";
 import { renderSlides } from "@/lib/autopilot/render";
 import { renderOptions } from "@/lib/autopilot/media";
 import type { Slide } from "@/lib/autopilot/slides";
+import { generateMissingSamples, sampleImage } from "@/lib/autopilot/sample-images";
+import { STYLE_PRESETS } from "@/lib/autopilot/presets";
+import { INDUSTRY_SAMPLES, samplePath } from "@/lib/autopilot/preset-samples";
+import { loadBrand } from "@/lib/autopilot/generate";
+import { brandContact } from "@/lib/autopilot/contact";
+import { baseOf } from "@/lib/autopilot/style";
 
 export const maxDuration = 300;
 
@@ -22,7 +28,7 @@ export const maxDuration = 300;
  */
 export async function POST(req: Request) {
   if (!(await internalAuthorized(req))) return NextResponse.json({ ok: false }, { status: 401 });
-  const body = (await req.json().catch(() => ({}))) as { brand?: string; mode?: string; fields?: Record<string, string>; logoQuery?: string; postId?: string };
+  const body = (await req.json().catch(() => ({}))) as { brand?: string; mode?: string; fields?: Record<string, string>; logoQuery?: string; postId?: string; count?: number };
   const admin = createAdminClient();
   const { data: ws } = await admin.from("workspaces").select("id, user_id, name, brand_kit").ilike("name", String(body.brand ?? "Photobebaz")).limit(1).maybeSingle();
   if (!ws) return NextResponse.json({ ok: false, error: "workspace_not_found" }, { status: 404 });
@@ -73,7 +79,7 @@ export async function POST(req: Request) {
   if (body.mode === "post") {
     const { data: prof } = await admin.from("profiles").select("plan_id, role, full_name").eq("id", userId).single();
     await admin.from("autopilot_settings").update({ workspace_id: workspaceId }).eq("user_id", userId);
-    const res = await generateWeek(admin, { userId, planId: String(prof?.plan_id), role: String(prof?.role), language: "id", fullName: prof?.full_name as string | null, source: "manual", count: 1, skipIdeaReview: true });
+    const res = await generateWeek(admin, { userId, planId: String(prof?.plan_id), role: String(prof?.role), language: "id", fullName: prof?.full_name as string | null, source: "manual", count: Math.min(3, Math.max(1, Number(body.count ?? 1))), skipIdeaReview: true });
     const { data: posts } = res.ok ? await admin.from("social_posts").select("id, title, kind, brand_dna_version, caption").eq("batch_id", res.batchId) : { data: null };
     return NextResponse.json({ ...res, posts });
   }
@@ -94,6 +100,46 @@ export async function POST(req: Request) {
       .toBuffer();
     return NextResponse.json({ ok: true, post: { ...fin, slides: undefined }, slides: fin.slides, sheet_b64: sheet.toString("base64") });
   }
+  if (body.mode === "samples") {
+    // Gambar contoh gaya yang belum ada (template sosmed baru).
+    const res = await generateMissingSamples(admin, userId, { budgetMs: 240_000 });
+    return NextResponse.json({ ok: true, ...res });
+  }
+
+  if (body.mode === "reapprove") {
+    // Terapkan ulang Brand DNA aktif (gaya ikut template sosmed terbaru).
+    const { data: w } = await admin.from("workspaces").select("brand_dna_version").eq("id", workspaceId).single();
+    if (!w?.brand_dna_version) return NextResponse.json({ ok: false, error: "no_dna" }, { status: 400 });
+    await approveDna(admin, { userId, workspaceId, version: Number(w.brand_dna_version) });
+    const { data: st } = await admin.from("autopilot_settings").select("style_id").eq("user_id", userId).single();
+    const { data: style } = await admin.from("brand_styles").select("name, dna").eq("id", st?.style_id ?? "").maybeSingle();
+    return NextResponse.json({ ok: true, style });
+  }
+
+  if (body.mode === "templates") {
+    // Lembar contoh semua template sosmed: cover (gambar contoh) + poin + daftar, dengan warna & kontak brand ini.
+    const brand = await loadBrand(admin, userId, workspaceId);
+    const contact = brandContact(brand.kit as Record<string, unknown> | null, brand.palette.handle);
+    const rowsOut: Buffer[] = [];
+    for (const p of STYLE_PRESETS.filter((x) => x.dna.layout === "sosmed")) {
+      const slides = INDUSTRY_SAMPLES[p.industry].id.map((x) => ({ ...x }));
+      const images: Record<string, Buffer> = {};
+      const img = await sampleImage(admin, p.id);
+      if (img) {
+        slides[0] = { ...slides[0], image: samplePath(p.id) };
+        images[samplePath(p.id)] = img;
+      }
+      const jpgs = await renderSlides(slides, { brand: brand.palette, logo: brand.logo, style: p.dna, look: baseOf(p.dna), images, contact });
+      const tiles = await Promise.all(jpgs.map((j) => sharp(j).resize(288, 360).jpeg().toBuffer()));
+      rowsOut.push(await sharp({ create: { width: 3 * 288 + 16, height: 360, channels: 3, background: "#ffffff" } }).composite(tiles.map((t, k) => ({ input: t, left: k * 296, top: 0 }))).jpeg().toBuffer());
+    }
+    const sheet = await sharp({ create: { width: 3 * 288 + 16, height: rowsOut.length * 368, channels: 3, background: "#ffffff" } })
+      .composite(rowsOut.map((r, k) => ({ input: r, left: 0, top: k * 368 })))
+      .jpeg({ quality: 76 })
+      .toBuffer();
+    return NextResponse.json({ ok: true, presets: STYLE_PRESETS.filter((x) => x.dna.layout === "sosmed").map((x) => x.id), sheet_b64: sheet.toString("base64") });
+  }
+
   if (body.mode === "thumbs") {
     // Thumbnail aset onboarding (untuk screenshot halaman form di luar production).
     const { data: assets } = await admin.from("brand_assets").select("id, kind, storage_path").eq("workspace_id", workspaceId).order("created_at");

@@ -135,6 +135,17 @@ export const INDUSTRY_SAMPLES: Record<IndustryId, { id: Trio; en: Trio }> = {
 
 /** Subjek visual utama contoh per gaya (bahasa Inggris, tanpa teks). */
 export const PRESET_VISUALS: Record<string, string> = {
+  "fnb-sosmed-kuliner": "a plate of Indonesian nasi ayam bakar with sambal, lalapan and iced tea, top-down three-quarter view, appetizing",
+  "fnb-sosmed-cafe": "two plastic cups of iced palm sugar coffee latte and a bottled coffee latte, condensation drops, product hero",
+  "fashion-sosmed-elegan": "a folded cream linen dress with a gold necklace and a small leather bag on soft satin fabric, dreamy soft focus",
+  "beauty-sosmed-elegan": "a glass serum bottle and a jar of cream on soft pink satin with dried flowers, dreamy soft focus",
+  "property-sosmed-elegan": "a cozy modern living room corner with warm lamp light and linen sofa, soft focus, elegant",
+  "education-sosmed-edukasi": "a cheerful Indonesian girl student wearing glasses holding books and giving a thumbs up",
+  "tech-sosmed-game": "a futuristic gaming smartphone with glowing blue gems and a game controller floating, dynamic",
+  "health-sosmed-edukasi": "a smiling Indonesian fitness coach in sportswear holding a water bottle, friendly",
+  "automotive-sosmed-game": "a glossy sport motorcycle with dramatic lighting, three-quarter front view",
+  "services-sosmed-edukasi": "a friendly Indonesian woman consultant in hijab holding a tablet and smiling",
+  "retail-sosmed-kuliner": "a basket of colourful packaged snacks and drinks from a small Indonesian shop, product hero",
   "fnb-warm": "an iced palm sugar coffee latte in a tall glass with visible layers, on a rustic wooden table with coffee beans",
   "fnb-bold": "a juicy gourmet burger with melting cheese and steam, dramatic close-up",
   "fnb-photo": "two young Indonesian friends laughing while holding iced coffees in a cozy modern cafe, golden hour",

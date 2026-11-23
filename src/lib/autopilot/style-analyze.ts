@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { extractJson } from "@/lib/addons/json-output";
 import { estimateCostUsd } from "@/lib/ai/models.config";
 import { routeTier } from "@/lib/ai/router";
-import { styleDnaSchema, type StyleDna } from "./style";
+import { sosmedDna, styleDnaSchema, type StyleDna } from "./style";
 import { analyzePrompt } from "./style-prompt";
 
 /**
@@ -59,8 +59,18 @@ export async function analyzeReferences(
     error: parsed.success ? null : `analisis gaya: ${parsed.error.issues[0]?.message ?? "?"}`.slice(0, 500),
   });
   if (!parsed.success) throw new Error("analysis_unreadable");
+  // Pola feed UMKM → template sosmed (latar & posisi visual dibakukan; warna tetap dari brand saat render).
+  const d = parsed.data;
+  const dna =
+    d.layout === "sosmed"
+      ? (() => {
+          const { bgColor: _bg, ...t } = sosmedDna(d.template ?? "kuliner", "#888888", d.name, d.font);
+          void _bg;
+          return { ...t, description: d.description || t.description, imageHint: d.imageHint ?? t.imageHint } as StyleDna;
+        })()
+      : d;
   return {
-    dna: parsed.data,
+    dna,
     analysis: String(raw?.analysis ?? "").slice(0, 1200),
     limits: raw?.limits ? String(raw.limits).slice(0, 300) : null,
   };

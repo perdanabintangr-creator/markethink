@@ -10,6 +10,7 @@ import { sampleSlides } from "@/lib/autopilot/samples";
 import { INDUSTRY_SAMPLES, samplePath } from "@/lib/autopilot/preset-samples";
 import { sampleImage } from "@/lib/autopilot/sample-images";
 import type { Slide } from "@/lib/autopilot/slides";
+import { brandContact } from "@/lib/autopilot/contact";
 
 export const maxDuration = 30;
 
@@ -43,6 +44,6 @@ export async function GET(req: Request) {
   if (!dna) return jsonError(404, "style_not_found");
   const ws = url.searchParams.get("ws");
   const brand = await loadBrand(createAdminClient(), s.user.id, ws && z.string().uuid().safeParse(ws).success ? ws : null, s.profile.full_name);
-  const jpg = await renderSlide(slides, n - 1, { brand: brand.palette, logo: brand.logo, marqthinkLogo: brand.marqthinkLogo, en, look: baseOf(dna), style: dna, images }, 432);
+  const jpg = await renderSlide(slides, n - 1, { brand: brand.palette, logo: brand.logo, marqthinkLogo: brand.marqthinkLogo, en, look: baseOf(dna), style: dna, images, contact: brandContact(brand.kit as Record<string, unknown> | null, brand.palette.handle, en) }, 432);
   return new Response(new Uint8Array(jpg), { headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=600" } });
 }

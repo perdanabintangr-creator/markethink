@@ -50,7 +50,7 @@ describe("autopilot plan", () => {
       expect(m.carousel + m.image + m.reel).toBe(n);
       expect(m.carousel).toBeGreaterThanOrEqual(1);
     }
-    expect(formatMix(7)).toEqual({ carousel: 4, image: 2, reel: 1 });
+    expect(formatMix(7)).toEqual({ carousel: 3, image: 3, reel: 1 });
   });
 
   it("prompt carries slots, brand facts rule and hashtag", () => {
@@ -333,7 +333,11 @@ describe("brand voice", () => {
 describe("style DNA", () => {
   it("every industry preset is a valid DNA and industries have 3 styles", () => {
     for (const p of STYLE_PRESETS) expect(styleDnaSchema.safeParse(p.dna).success, p.id).toBe(true);
-    for (const ind of INDUSTRIES) expect(presetsFor(ind.id)).toHaveLength(3);
+    // 3 gaya studio + 1–2 template sosmed UMKM per industri.
+    for (const ind of INDUSTRIES) {
+      expect(presetsFor(ind.id).filter((p) => p.dna.layout !== "sosmed")).toHaveLength(3);
+      expect(presetsFor(ind.id).some((p) => p.dna.layout === "sosmed")).toBe(true);
+    }
     expect(new Set(STYLE_PRESETS.map((p) => p.id)).size).toBe(STYLE_PRESETS.length);
   });
   it("baseOf maps DNA to the design column", () => {
