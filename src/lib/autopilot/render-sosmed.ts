@@ -343,8 +343,9 @@ export function sosmedSlideSvg(s: Slide, i: number, n: number, inp: SosmedInput,
   } else if (inp.image && !fullPhoto) {
     const room = contentBottom - contentTop;
     if (inp.image.kind === "fade") {
-      const size = Math.min(room + 60, 900);
-      body += `<image href="${inp.image.uri}" x="${r2(W / 2 - size / 2)}" y="${r2(contentBottom - size + 40)}" width="${r2(size)}" height="${r2(size)}"/>`;
+      // Subjek cover dibuat besar (boleh sedikit menimpa tepi atas bar kontak seperti referensi).
+      const size = Math.min(room + 100, 980);
+      body += `<image href="${inp.image.uri}" x="${r2(W / 2 - size / 2)}" y="${r2(contentBottom - size + 80)}" width="${r2(size)}" height="${r2(size)}"/>`;
     } else {
       const bodyText = s.body?.trim();
       const textH = bodyText ? 150 : 0;

@@ -136,7 +136,8 @@ export function finalImagePrompt(o: { plan: SlidePlan; bible: string; dna: Style
       : "",
     style,
     `Colour accents from the brand palette ${o.palette.primary} and ${o.palette.secondary} in props, wardrobe or light.`,
-    zone,
+    // Template sosmed: gambar tampil di kartu foto (teks di luar gambar) → tidak perlu area kosong.
+    o.dna?.layout === "sosmed" ? "Fill the whole frame with the scene; subject centred; no empty bands or blank areas." : zone,
     "Indonesian people and local Indonesian setting where people appear; no real or recognisable public figures.",
     o.productName && o.plan.use_product_photo
       ? "Portrait 4:5 (1080x1350). No added text, captions, signage words or extra logos — only what is printed on the real product itself."
