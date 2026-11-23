@@ -70,7 +70,16 @@ Balas HANYA JSON: {"reviews":[{"i":0,"score":8,"issues":["..."],"fix":null}]}`;
 }
 
 /** Gabungkan slide perbaikan dengan slide asli (field visual & ornamen dari aslinya dipertahankan). */
+/** Slide punya teks yang bisa dibaca? (perbaikan tanpa teks = jawaban AI rusak, tidak boleh menimpa slide asli). */
+const hasText = (s: Slide) => Boolean(s.title?.trim() || s.accent?.trim() || s.body?.trim() || s.sub?.trim() || s.items?.length || s.options?.length || s.button?.trim());
+
 export function mergeFixedSlides(orig: Slide[], fixed: Slide[] | undefined) {
   if (!fixed?.length || fixed.length !== orig.length) return orig;
-  return fixed.map((f, k) => dedupeAccent({ ...f, type: orig[k].type, visual: orig[k].visual ?? f.visual, image: orig[k].image, corners: orig[k].corners ?? f.corners }));
+  return fixed.map((f, k) => {
+    const o = orig[k];
+    if (!hasText(f)) return o;
+    // Kolom yang tidak dikirim perbaikan tetap memakai isi asli.
+    const defined = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined && v !== null && v !== ""));
+    return dedupeAccent({ ...o, ...defined, type: o.type, visual: o.visual ?? f.visual, image: o.image, corners: o.corners ?? f.corners } as Slide);
+  });
 }

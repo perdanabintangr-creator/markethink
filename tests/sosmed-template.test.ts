@@ -78,3 +78,16 @@ describe("template sosmed UMKM", () => {
     }
   }, 60_000);
 });
+
+describe("tim senior — perbaikan slide tanpa teks tidak menimpa slide asli", () => {
+  it("slide kosong dari perbaikan diabaikan; kolom yang tidak dikirim tetap", async () => {
+    const { mergeFixedSlides } = await import("@/lib/autopilot/review");
+    const orig: Slide[] = [
+      { type: "cover", title: "Judul asli", accent: "aksen", image: "a.jpg" },
+      { type: "point", title: "Poin", body: "Isi asli" },
+    ];
+    const out = mergeFixedSlides(orig, [{ type: "cover" }, { type: "point", body: "Isi baru" }]);
+    expect(out[0]).toEqual(orig[0]);
+    expect(out[1]).toMatchObject({ title: "Poin", body: "Isi baru" });
+  });
+});
