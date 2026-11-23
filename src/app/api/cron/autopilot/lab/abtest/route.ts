@@ -29,19 +29,41 @@ const MODELS = {
 export async function POST(req: Request) {
   if (!(await internalAuthorized(req))) return NextResponse.json({ ok: false }, { status: 401 });
   const admin = createAdminClient();
+  const body = (await req.json().catch(() => ({}))) as { only?: string; tasks?: number[]; max?: number };
+  const maxOut = Math.min(Math.max(Number(body.max) || 12000, 1000), 16000);
+  const keys = (Object.keys(MODELS) as (keyof typeof MODELS)[]).filter((k) => !body.only || body.only === k);
   const system = getTier("senior").skillPrompt + "\nJawab dalam Bahasa Indonesia. Tanpa pencarian web: pakai pengetahuanmu dan tandai perkiraan.";
   const results = await Promise.all(
     TASKS.flatMap((task, i) =>
-      (Object.keys(MODELS) as (keyof typeof MODELS)[]).map(async (key) => {
+      (Array.isArray(body.tasks) && !body.tasks.includes(i) ? [] : keys).map(async (key) => {
         const m = MODELS[key];
         const started = Date.now();
         try {
-          const out = await generateText({ model: createFallbackModel([{ provider: m.provider, modelId: m.modelId }]).model, system, prompt: task, maxOutputTokens: 3000, abortSignal: AbortSignal.timeout(200_000) });
+          const out = await generateText({
+            model: createFallbackModel([{ provider: m.provider, modelId: m.modelId }]).model,
+            system,
+            prompt: task,
+            maxOutputTokens: maxOut,
+            abortSignal: AbortSignal.timeout(285_000),
+          });
           const inTok = out.usage.inputTokens ?? 0;
           const outTok = out.usage.outputTokens ?? 0;
           const cost = (inTok * m.price[0] + outTok * m.price[1]) / 1_000_000;
-          await admin.from("usage_logs").insert({ user_id: null, tier: `abtest-${key}`, provider: m.provider, model: m.modelId, latency_ms: Date.now() - started, input_tokens: inTok, output_tokens: outTok, est_cost_usd: cost, credits: 0, status: "ok" });
-          return { task: i, model: key, text: out.text, ms: Date.now() - started, inTok, outTok, cost };
+          await admin
+            .from("usage_logs")
+            .insert({
+              user_id: null,
+              tier: `abtest-${key}`,
+              provider: m.provider,
+              model: m.modelId,
+              latency_ms: Date.now() - started,
+              input_tokens: inTok,
+              output_tokens: outTok,
+              est_cost_usd: cost,
+              credits: 0,
+              status: "ok",
+            });
+          return { task: i, model: key, finish: out.finishReason, text: out.text, ms: Date.now() - started, inTok, outTok, cost };
         } catch (err) {
           return { task: i, model: key, text: `GAGAL: ${String(err).slice(0, 300)}`, ms: Date.now() - started, inTok: 0, outTok: 0, cost: 0 };
         }
