@@ -31,6 +31,8 @@ export interface ToolCtx {
   breakdown?: CostStep[];
   /** Bahasa user: "en" → seluruh isi hasil ditulis dalam bahasa Inggris. */
   lang?: "id" | "en";
+  /** Tool kreatif di otak Senior → laporan disusun Qwen (hemat), cadangan Claude. */
+  creative?: boolean;
 }
 
 /** Instruksi bahasa tambahan untuk user berbahasa Inggris (prompt tool tetap berbahasa Indonesia). */
@@ -106,7 +108,7 @@ export async function aiObject<T extends z.ZodTypeAny>(
       ? { ...opts, messages: [...opts.messages, { role: "user", content: block }] }
       : { ...opts, prompt: `${opts.prompt ?? ""}\n\n${block}` };
   }
-  const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER, { needsVision: opts.vision });
+  const routed = routeTier(ctx.tier ?? DEFAULT_TOOL_TIER, { needsVision: opts.vision, creative: ctx.creative });
   const maxOutputTokens = Math.max(opts.maxOutputTokens ?? 12000, 12000);
   const format = `
 
@@ -171,6 +173,8 @@ balas HANYA JSON valid tanpa teks lain.\nJSON Schema: ${schemaForPrompt(opts.sch
   addCost(ctx, routed.resolved(), fix.usage, { stage: "Perbaikan format JSON", text: fix.text });
   const fixed = tryParse(fix.text);
   if (fixed.ok) return fixed.data;
+  // Otak hemat (Qwen) gagal menyusun format → ulang sekali dengan Claude.
+  if (ctx.creative && left() > 90_000) return aiObject({ ...ctx, creative: false }, { ...opts, revisionHandled: true });
   throw new Error(`AI_INVALID_OUTPUT: ${fixed.issues.slice(0, 500)}`);
 }
 

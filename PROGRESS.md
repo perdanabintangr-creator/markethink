@@ -65,3 +65,5 @@
 - ✅ Checkout `content` / `combo` (disimpan sebagai kind addon/bundle dengan id konten_*/combo_*), aktivasi otomatis, kuitansi, halaman Harga (app & publik), penawaran di /autopilot & /kalender, bar paket aktif + perpanjang.
 - ✅ Kalender menampilkan konten Autopilot. Brand DNA maks 3× per 30 hari. Kurs kredit 18.300.
 - ✅ Paket berbayar yang habis otomatis kembali ke Free (1 akun Starter habis 18 Nov ikut diturunkan).
+- ✅ 27 Nov: harga Cara 1 (migrasi 072), Senior campuran Qwen + Claude di chat & Smart Tools kreatif, Director Fable 5.2, gambar 7 kredit,
+  jatah ganti gambar Autopilot per 30 hari.

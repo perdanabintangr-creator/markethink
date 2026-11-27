@@ -12,6 +12,7 @@ import { isHero, type Slide } from "@/lib/autopilot/slides";
 import { createVisual, MAX_IMAGE_REGENS } from "@/lib/autopilot/visuals";
 import { publishPost } from "@/lib/autopilot/publish";
 import { brandKeywordsOf } from "@/lib/autopilot/voice";
+import { getContentAccess, regensInPeriod } from "@/lib/autopilot/content-access";
 
 export const maxDuration = 180;
 
@@ -96,6 +97,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const regens = Number((row as PostRow & { image_regens?: number }).image_regens ?? 0);
       if (!cover || row.kind === "reel" || (row.design ?? "classic") === "classic" || !isHero(cover, 0)) return jsonError(400, "no_visual");
       if (regens >= MAX_IMAGE_REGENS) return jsonError(429, "regen_limit");
+      // Jatah bulanan per paket konten (Lite 6, Pro 10, Bisnis 15).
+      const access = await getContentAccess(admin, s.user.id, s.profile.role);
+      if (!access) return jsonError(403, "plan");
+      if ((await regensInPeriod(admin, s.user.id, access)) >= access.regensPerMonth) return jsonError(429, "regen_month_limit", { limit: access.regensPerMonth });
       const visual = b.visual ?? cover.visual;
       if (!visual) return jsonError(400, "no_visual");
       if (!(await checkRateLimit("user", `autopilot-img:${s.user.id}`)).ok) return jsonError(429, "rate_limited");

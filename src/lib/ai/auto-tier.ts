@@ -26,6 +26,34 @@ export function autoTier(text: string, opts: { attachments?: number; research?: 
   return "junior";
 }
 
+const CREATIVE = new RegExp(
+  [
+    "caption", "captions", "hashtag", "copywriting", "copy iklan", "ad copy", "ads copy", "headline", "tagline", "slogan", "jargon",
+    "primary text", "hook", "bio instagram", "bio ig", "ide konten", "ide post", "content idea", "kalender konten", "content calendar",
+    "rencana konten", "konten (instagram|ig|tiktok|sosmed|media sosial)", "persona", "deskripsi produk", "product description",
+    "judul (produk|konten|artikel|video)", "nama (brand|produk|usaha)", "kompetitor", "competitor", "pesaing", "postingan", "posting(an)? ig",
+    "thread", "carousel",
+  ].join("|"),
+  "i",
+);
+/** Tetap Claude: hitungan/angka, budget, strategi bisnis, komplain pelanggan, naskah video (Claude unggul di uji buta 27 Nov). */
+const CLAUDE_ONLY = new RegExp(
+  [
+    "hitung", "kalkulasi", "calculate", "budget", "anggaran", "biaya", "modal", "harga pokok", "hpp", "margin", "roi\\b", "roas", "cac\\b",
+    "ltv", "proyeksi", "forecast", "omzet", "rab\\b", "laporan keuangan", "excel", "rumus", "komplain", "keluhan", "complain", "refund",
+    "kompensasi", "naskah", "script", "skrip", "video", "reels?\\b", "tiktok", "strategi bisnis", "business plan", "campaign plan",
+    "rencana kampanye", "harbolnas", "penjualan turun", "sales turun", "kontrak", "legal", "hukum", "pajak", "\\d+\\s?%",
+  ].join("|"),
+  "i",
+);
+
+/** Pesan kreatif yang cocok untuk otak Senior hemat (Qwen). Ragu → false (Claude). */
+export function isCreativeTask(text: string) {
+  const t = text.trim();
+  if (!t || t.length > 1200) return false;
+  return CREATIVE.test(t) && !CLAUDE_ONLY.test(t);
+}
+
 /** Tier nyata yang dipakai: "auto" diselesaikan lalu disesuaikan dengan tier yang dibuka paket user. */
 export function resolveTier(choice: TierChoice, allowed: readonly TierId[], pick: () => "junior" | "senior"): TierId {
   if (choice !== "auto") return choice;

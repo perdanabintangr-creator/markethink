@@ -81,7 +81,7 @@ export function createInstagramTools(ctx: InstagramToolCtx) {
             ok: false,
             upsell: true,
             error:
-              "Desain studio + jadwal Autopilot ada di Paket Autopilot Konten (Lite Rp149rb, Pro Rp249rb, Bisnis Rp499rb per 30 hari; bisa dibeli semua paket). Tawarkan create_carousel sebagai gantinya, dan sebut singkat paket konten ini.",
+              "Desain studio + jadwal Autopilot ada di Paket Autopilot Konten (Lite Rp149rb, Pro Rp229rb, Bisnis Rp589rb per 30 hari; bisa dibeli semua paket). Tawarkan create_carousel sebagai gantinya, dan sebut singkat paket konten ini.",
           };
         if ((await postsInPeriod(ctx.admin, ctx.userId, allowance)) >= allowance.postsPerMonth)
           return { ok: false, error: "Jatah konten Autopilot periode ini sudah habis (30 hari sejak pembelian). Tawarkan create_carousel sebagai gantinya." };

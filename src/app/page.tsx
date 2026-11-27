@@ -56,7 +56,7 @@ function brandJsonLd(base: string) {
         operatingSystem: "Web",
         url: `${base}/`,
         description: "Otak marketing berbasis AI: riset ber-sumber, strategi, copy iklan, kalender konten, dan desain untuk brand Indonesia.",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "IDR", description: "Mulai gratis, upgrade mulai Rp60.000/bulan" },
+        offers: { "@type": "Offer", price: "0", priceCurrency: "IDR", description: "Mulai gratis, upgrade mulai Rp59.000/bulan" },
         publisher: { "@id": `${base}/#org` },
       },
       {
@@ -89,7 +89,7 @@ export default async function LandingPage() {
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-cyan-300/50 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_30px_rgba(18,208,245,0.25)] sm:gap-2 sm:px-4 sm:py-2 sm:text-base">
               <span aria-hidden>☕</span> Lebih murah dari ngopi seminggu
               <span className="text-cyan-300/60">·</span>
-              <span className="font-brand font-black text-cyan-300">Rp60rb/bulan</span>
+              <span className="font-brand font-black text-cyan-300">Rp59rb/bulan</span>
             </span>
             <p className="mt-6 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-300/90 sm:text-sm">{BRAND} · AI Marketing Indonesia</p>
             <h1 className="mt-3 font-brand text-5xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-[3.5rem] xl:text-6xl">

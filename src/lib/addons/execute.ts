@@ -40,6 +40,9 @@ interface ExecOpts {
 }
 
 /** Jalankan tool add-on: cek kuota → catat run → AI terstruktur + file PPT/Excel → simpan hasil. Dipakai halaman tools & Agent. */
+/** Smart Tools kreatif yang disusun otak Senior hemat (Qwen 3.7 Plus); analisis, angka & CS tetap Claude. */
+const CREATIVE_TOOLS = new Set(["calendar", "adcopy", "persona", "competitor", "listing", "kol"]);
+
 export async function executeTool({ admin, profile, tool, rawInput, revise, startedAt, agentRunId, tier }: ExecOpts): Promise<ExecResult> {
   const en = profile.language === "en";
   const info = toolInfo(tool);
@@ -166,6 +169,7 @@ export async function executeTool({ admin, profile, tool, rawInput, revise, star
     startedAt: startedAt ?? Date.now(),
     tier: useTier,
     lang: profile.language === "en" ? "en" : "id",
+    creative: useTier === "senior" && CREATIVE_TOOLS.has(tool),
     ...(revision ? { revision: { note: revision.note, previous: revision.previous } } : {}),
   };
   const started = Date.now();

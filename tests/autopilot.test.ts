@@ -86,8 +86,8 @@ describe("autopilot plan", () => {
 describe("autopilot quota", () => {
   it("paket Autopilot Konten: Lite/Pro/Bisnis", () => {
     expect(CONTENT_PLANS.konten_lite).toMatchObject({ price: 149_000, postsPerWeek: 3, postsPerMonth: 12, innerVisuals: 2 });
-    expect(CONTENT_PLANS.konten_pro).toMatchObject({ price: 249_000, postsPerWeek: 5, postsPerMonth: 20 });
-    expect(CONTENT_PLANS.konten_bisnis).toMatchObject({ price: 499_000, postsPerWeek: 10, postsPerMonth: 40, innerVisuals: 4 });
+    expect(CONTENT_PLANS.konten_pro).toMatchObject({ price: 229_000, postsPerWeek: 5, postsPerMonth: 20 });
+    expect(CONTENT_PLANS.konten_bisnis).toMatchObject({ price: 589_000, postsPerWeek: 10, postsPerMonth: 40, innerVisuals: 4 });
     expect(isContentPlanId("konten_pro")).toBe(true);
     expect(isContentPlanId("pro")).toBe(false);
     expect(isComboId("combo_pro_konten")).toBe(true);

@@ -21,7 +21,7 @@ export async function getContentAccess(admin: SupabaseClient, userId: string, ro
   const cur = subs?.[0];
   if (!cur || !isContentPlanId(String(cur.content_plan_id))) return null;
   const planId = cur.content_plan_id as keyof typeof CONTENT_PLANS;
-  const { data: plan } = await admin.from("content_plans").select("name, posts_per_week, posts_per_month, inner_visuals").eq("id", planId).maybeSingle();
+  const { data: plan } = await admin.from("content_plans").select("name, posts_per_week, posts_per_month, inner_visuals, image_regens_per_month").eq("id", planId).maybeSingle();
   const base = CONTENT_PLANS[planId];
   // Masa aktif terjauh (perpanjangan yang sudah dibayar ikut dihitung).
   const { data: last } = await admin
@@ -39,6 +39,7 @@ export async function getContentAccess(admin: SupabaseClient, userId: string, ro
     postsPerWeek: Number(plan?.posts_per_week ?? base.postsPerWeek),
     postsPerMonth: Number(plan?.posts_per_month ?? base.postsPerMonth),
     innerVisuals: Number(plan?.inner_visuals ?? base.innerVisuals),
+    regensPerMonth: Number(plan?.image_regens_per_month ?? base.regensPerMonth),
     periodStart: String(cur.period_start),
     periodEnd: (last?.period_end as string | undefined) ?? String(cur.period_end),
   };
@@ -48,4 +49,10 @@ export async function getContentAccess(admin: SupabaseClient, userId: string, ro
 export async function postsInPeriod(admin: SupabaseClient, userId: string, access: Pick<ContentAccess, "periodStart">) {
   const { count } = await admin.from("social_posts").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("created_at", access.periodStart);
   return count ?? 0;
+}
+
+/** Jumlah "buat ulang gambar" yang sudah dipakai di periode berjalan (post yang dibuat sejak awal periode). */
+export async function regensInPeriod(admin: SupabaseClient, userId: string, access: Pick<ContentAccess, "periodStart">) {
+  const { data } = await admin.from("social_posts").select("image_regens").eq("user_id", userId).gte("created_at", access.periodStart).gt("image_regens", 0);
+  return (data ?? []).reduce((sum, r) => sum + Number(r.image_regens ?? 0), 0);
 }

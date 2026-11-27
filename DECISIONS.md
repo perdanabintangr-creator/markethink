@@ -592,3 +592,12 @@ Catatan keputusan teknis (tanggal — keputusan — alasan).
 - Paket konten masa aktif 30 hari, tanpa auto-debit; perpanjangan menumpuk di akhir periode, ganti paket menutup periode lama.
 - Jatah konten dihitung per periode 30 hari (bukan bulan kalender). Visual isi: Lite/Pro 2, Bisnis 4.
 - Paket yang diberikan manual dari back office (tanpa penjualan) tidak ikut kedaluwarsa otomatis.
+
+## 2026-11-27 — Harga "Cara 1" + otak Senior campuran (ACC founder)
+- Prinsip: tiap paket dan tool tidak boleh rugi; margin minimal 45% pada kondisi terburuk (kuota habis, bayar VA Rp4.440, gambar termahal).
+- Paket chat: Free 30 kredit (5/hari, 10/minggu); Starter Rp59rb 250 kredit; Pro Rp179rb 900; Promax Rp259rb 1.350.
+- Paket konten: Lite Rp149rb (12 konten, ganti gambar 6×), Pro Rp229rb (20, 10×), Bisnis Rp589rb (40, 15×) per 30 hari; Bundel Pro + Konten Pro Rp389rb.
+- Uji buta 27 Nov (Claude Sonnet 5 : Qwen 3.7 Plus 5 : Claude ringkas 0) → Senior campuran: tugas kreatif (caption, copy iklan, persona,
+  kalender konten, riset kompetitor) ke Qwen 3.7 Plus, cadangan otomatis Claude; angka/budget, strategi, komplain, naskah video, lampiran,
+  Riset Web, PPT tetap Claude. Smart Tools kreatif: calendar, adcopy, persona, competitor, listing, kol. Matikan lewat env `MODEL_SENIOR_CREATIVE=off`.
+- Director memakai Fable 5.2 (20% lebih murah). Gambar AI chat/PPT 7 kredit (sebelumnya 6, modal ±Rp620).

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, Check, Images, Loader2, Package, Send, Sparkles, Wand2 } from "lucide-react";
+import { CalendarDays, Check, Images, Loader2, Package, RefreshCw, Send, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { startCheckout, warmPaymentPages } from "@/components/tools/checkout";
@@ -18,6 +18,7 @@ export interface ContentOfferView {
   postsPerWeek: number;
   postsPerMonth: number;
   innerVisuals: number;
+  regensPerMonth?: number;
 }
 export interface ComboOfferView {
   id: string;
@@ -50,6 +51,7 @@ const T = {
     recommended: "Paling pas",
     perWeek: (w: number, m: number) => `${w} konten/minggu (${m} per 30 hari)`,
     visuals: (n: number) => `Carousel bergambar AI: cover + ${n} visual baru per carousel`,
+    regens: (n: number) => `Ganti gambar ${n}× per 30 hari`,
     dna: "Brand DNA + riset brand otomatis",
     ig: "Terbit otomatis ke Instagram",
     calendar: "Kalender Konten",
@@ -72,6 +74,7 @@ const T = {
     recommended: "Best fit",
     perWeek: (w: number, m: number) => `${w} posts/week (${m} per 30 days)`,
     visuals: (n: number) => `AI-illustrated carousels: cover + ${n} new visuals each`,
+    regens: (n: number) => `${n} image changes per 30 days`,
     dna: "Brand DNA + automatic brand research",
     ig: "Auto-publish to Instagram",
     calendar: "Content Calendar",
@@ -165,6 +168,7 @@ export function ContentPackages({
                 {[
                   { icon: Sparkles, text: t.perWeek(p.postsPerWeek, p.postsPerMonth) },
                   { icon: Images, text: t.visuals(p.innerVisuals) },
+                  ...(p.regensPerMonth ? [{ icon: RefreshCw, text: t.regens(p.regensPerMonth) }] : []),
                   { icon: Wand2, text: t.dna },
                   { icon: Send, text: t.ig },
                   { icon: CalendarDays, text: t.calendar },

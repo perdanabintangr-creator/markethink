@@ -46,6 +46,7 @@ export interface TierConfig {
 /** Estimasi harga USD per 1 juta token (input, output). Free tier = 0. */
 /** Harga per 1 juta token (USD). `cacheRead` = harga token yang dibaca dari prompt cache (default 10% input). */
 export const MODEL_PRICING_USD: Record<string, { input: number; output: number; cacheRead?: number }> = {
+  "anthropic:claude-fable-5-2": { input: 8, output: 40, cacheRead: 0.2 },
   "anthropic:claude-fable-5-1": { input: 10, output: 50, cacheRead: 0.25 },
   "anthropic:claude-haiku-5-5": { input: 0.1, output: 0.5 },
   "anthropic:claude-sonnet-5-5": { input: 2, output: 10, cacheRead: 0.2 },
@@ -58,7 +59,18 @@ export const MODEL_PRICING_USD: Record<string, { input: number; output: number; 
   "groq:llama-3.1-8b-instant": { input: 0.05, output: 0.08 },
   "groq:llama-3.3-70b-versatile": { input: 0.59, output: 0.79 },
   "groq:openai/gpt-oss-120b": { input: 0.15, output: 0.75 },
+  "openrouter:qwen/qwen3.7-plus": { input: 0.32, output: 1.28, cacheRead: 0.064 },
 };
+
+/**
+ * Otak Senior campuran (ACC founder 27 Nov 2026, uji buta 5–5): tugas kreatif (caption, copy iklan, persona, kalender konten,
+ * riset kompetitor) dijawab Qwen 3.7 Plus (±9× lebih murah); bila gagal otomatis pindah ke Claude. Bisa diganti lewat env.
+ */
+export function creativeCandidate(envSource: Record<string, string | undefined> = process.env): ModelCandidate | null {
+  const raw = envSource.MODEL_SENIOR_CREATIVE?.trim();
+  if (raw === "off") return null;
+  return parseCandidates(raw, [{ provider: "openrouter", modelId: "qwen/qwen3.7-plus" }])[0] ?? null;
+}
 
 /** Perkiraan kredit tambahan yang dipotong di awal (lalu disesuaikan ke biaya nyata). 1 kredit ≈ Rp100 modal. */
 export const EXTRA_CREDIT_COST = {
@@ -208,7 +220,7 @@ Standar kualitas (jawaban harus terasa dari marketer berpengalaman, bukan templa
       maxOutputTokens: 32000,
       temperature: 0.6,
       candidates: parseCandidates(envSource.MODEL_DIRECTOR, [
-        { provider: "anthropic", modelId: "claude-fable-5-1" },
+        { provider: "anthropic", modelId: "claude-fable-5-2" },
         { provider: "anthropic", modelId: "claude-opus-5-5" },
         { provider: "google", modelId: "gemini-pro-latest" },
         { provider: "google", modelId: "gemini-3.8-flash" },

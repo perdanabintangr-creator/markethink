@@ -14,7 +14,7 @@ export const LANDING_FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Berapa harga Marqthink?",
-    a: "Ada paket Gratis untuk mencoba. Paket berbayar mulai Rp60.000 per bulan (Starter), lalu Pro Rp200.000 dan Promax Rp300.000 per bulan. Langganan tidak diperpanjang otomatis. Detail ada di halaman Harga.",
+    a: "Ada paket Gratis untuk mencoba. Paket berbayar mulai Rp59.000 per bulan (Starter), lalu Pro Rp179.000 dan Promax Rp259.000 per bulan. Langganan tidak diperpanjang otomatis. Detail ada di halaman Harga.",
   },
   {
     q: "Bagaimana cara membayar?",

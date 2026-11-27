@@ -8,6 +8,8 @@ export interface AutopilotAllowance {
   postsPerMonth: number;
   /** Visual isi per carousel selain cover (Visual Director). */
   innerVisuals: number;
+  /** Jatah "buat ulang gambar" per 30 hari (ACC founder 27 Nov: menutup celah modal gambar). */
+  regensPerMonth: number;
 }
 
 export const CONTENT_PLAN_IDS = ["konten_lite", "konten_pro", "konten_bisnis"] as const;
@@ -15,13 +17,13 @@ export type ContentPlanId = (typeof CONTENT_PLAN_IDS)[number];
 
 /** Cadangan bila tabel content_plans tidak terbaca (angka sama dengan seed migrasi 071). */
 export const CONTENT_PLANS: Record<ContentPlanId, AutopilotAllowance & { name: string; price: number }> = {
-  konten_lite: { name: "Konten Lite", price: 149_000, postsPerWeek: 3, postsPerMonth: 12, innerVisuals: 2 },
-  konten_pro: { name: "Konten Pro", price: 249_000, postsPerWeek: 5, postsPerMonth: 20, innerVisuals: 2 },
-  konten_bisnis: { name: "Konten Bisnis", price: 499_000, postsPerWeek: 10, postsPerMonth: 40, innerVisuals: 4 },
+  konten_lite: { name: "Konten Lite", price: 149_000, postsPerWeek: 3, postsPerMonth: 12, innerVisuals: 2, regensPerMonth: 6 },
+  konten_pro: { name: "Konten Pro", price: 229_000, postsPerWeek: 5, postsPerMonth: 20, innerVisuals: 2, regensPerMonth: 10 },
+  konten_bisnis: { name: "Konten Bisnis", price: 589_000, postsPerWeek: 10, postsPerMonth: 40, innerVisuals: 4, regensPerMonth: 15 },
 };
 
 /** Admin (founder & tim) selalu boleh, dengan jatah setara paket terbesar + cadangan uji. */
-export const ADMIN_ALLOWANCE: AutopilotAllowance = { postsPerWeek: 14, postsPerMonth: 60, innerVisuals: 5 };
+export const ADMIN_ALLOWANCE: AutopilotAllowance = { postsPerWeek: 14, postsPerMonth: 60, innerVisuals: 5, regensPerMonth: 60 };
 
 export const isContentPlanId = (id: string): id is ContentPlanId => (CONTENT_PLAN_IDS as readonly string[]).includes(id);
 export const isComboId = (id: string) => /^combo_[a-z_]{2,40}$/.test(id);

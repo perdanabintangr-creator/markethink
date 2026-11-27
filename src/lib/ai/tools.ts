@@ -29,10 +29,10 @@ import { attachmentIdFromUrl, connectUrlFor } from "@/lib/connectors/apps";
 import { connectorsText } from "@/lib/i18n/connectors";
 import { BRAND_SLUG } from "@/lib/brand";
 
-export const IMAGE_CREDIT_COST = 6; // ±Rp555 modal per gambar (1 kredit ≈ Rp100)
+export const IMAGE_CREDIT_COST = 7; // modal ±Rp620 per gambar (Gemini Flash Lite Image); 1 kredit ≈ Rp100
 export const PPTX_CREDIT_COST = 2;
 /** Kredit tambahan per gambar AI di dalam PPT (cover/slide bergambar). */
-export const DECK_IMAGE_CREDIT_COST = 6;
+export const DECK_IMAGE_CREDIT_COST = 7;
 /** Maks foto AI per PPT per paket: visual paling megah di Pro & Promax, Starter hanya cover, Free tanpa foto AI. */
 export const DECK_IMAGE_MAX_BY_PLAN: Record<string, number> = { beta: 0, starter: 1, pro: 6, promax: 8 };
 export const deckImageMaxFor = (planId: string, isAdmin: boolean) => (isAdmin ? 8 : (DECK_IMAGE_MAX_BY_PLAN[planId] ?? 0));

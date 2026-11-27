@@ -12,7 +12,7 @@ import { ContentPackages } from "@/components/autopilot/content-packages";
 
 export const metadata = {
   title: "Harga",
-  description: `Paket ${BRAND}: mulai gratis, upgrade mulai Rp60 ribu/bulan. Semua Smart Tools di paket Pro & Promax. Autopilot Konten mulai Rp149 ribu/30 hari.`,
+  description: `Paket ${BRAND}: mulai gratis, upgrade mulai Rp59 ribu/bulan. Semua Smart Tools di paket Pro & Promax. Autopilot Konten mulai Rp149 ribu/30 hari.`,
 };
 
 /** Halaman harga publik (tanpa login). User yang sudah login diarahkan ke halaman paket di aplikasi (bisa langsung bayar). */

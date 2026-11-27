@@ -31,7 +31,7 @@ import { clampToSchema } from "@/lib/schema-clamp";
 import { presentationSchema } from "@/lib/pptx";
 import { extractLinks, linkContext, linkHistoryText, readLink, toLinkPart, type LinkRead } from "@/lib/ai/links";
 import { estimateCostUsd, getTier, messageCreditCost, type TierId } from "@/lib/ai/models.config";
-import { autoTier, isDeckRequest, isImageRequest, resolveTier } from "@/lib/ai/auto-tier";
+import { autoTier, isCreativeTask, isDeckRequest, isImageRequest, resolveTier } from "@/lib/ai/auto-tier";
 import {
   attachmentIds,
   extractMemories,
@@ -390,7 +390,9 @@ export async function POST(req: Request) {
       let nextSourceId = sources.length;
       // Google Search bawaan Gemini hanya bila Serper tidak ada (Gemini tidak bisa mencampur alat bawaan & alat kita; kuota gratisnya juga cepat habis).
       const googleSearchOn = !serperOn && researchAllowed && webSearchEnabled && preferFree && !paidSearchCapped;
-      const routed = routeTier(tierId, { needsVision: hasImages, preferFree, deck: deckRequest });
+      // Senior campuran: pesan kreatif tanpa lampiran/riset/PPT → Qwen (hemat), cadangan Claude.
+      const creative = tierId === "senior" && !research && attachCount === 0 && !deckRequest && isCreativeTask(lastText);
+      const routed = routeTier(tierId, { needsVision: hasImages, preferFree, deck: deckRequest, creative });
 
       // Tombol Stop: /api/chat/stop mengisi chats.stop_requested_at → AI di server dihentikan (dicek tiap 1,5 detik).
       const stopCtrl = new AbortController();
@@ -406,7 +408,11 @@ export async function POST(req: Request) {
         model: routed.model,
         // Prompt caching Claude: system prompt (stabil) + riwayat chat dibaca dari cache dengan ± 10% harga input.
         messages: [
-          { role: "system", content: system, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
+          {
+            role: "system",
+            content: creative ? `${system}\n\nLangsung ke jawaban: jangan membuka dengan memperkenalkan diri atau menyebut peranmu.` : system,
+            providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+          },
           ...withCacheBreakpoints(
             convertToModelMessages(resolved, {
               // Tautan yang sudah dibaca di jawaban sebelumnya ikut di riwayat (versi ringkas).

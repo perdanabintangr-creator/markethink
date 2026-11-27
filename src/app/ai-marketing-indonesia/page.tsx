@@ -81,7 +81,7 @@ const sections: { h: string; body: React.ReactNode }[] = [
           yang bisa dilanjutkan di Canva. {BRAND} juga mengingat Brand Kit kamu sehingga jawabannya konsisten dengan brand.
         </p>
         <p>
-          Ada paket gratis untuk mencoba, dan paket berbayar mulai Rp60.000 per bulan. Lihat detailnya di <Link href="/harga">halaman Harga</Link>.
+          Ada paket gratis untuk mencoba, dan paket berbayar mulai Rp59.000 per bulan. Lihat detailnya di <Link href="/harga">halaman Harga</Link>.
         </p>
       </>
     ),

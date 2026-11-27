@@ -14,6 +14,7 @@ export interface ContentOffer {
   postsPerWeek: number;
   postsPerMonth: number;
   innerVisuals: number;
+  regensPerMonth: number;
 }
 
 /** Bundel paket Marqthink + paket konten. */
@@ -33,10 +34,10 @@ export interface ComboOffer {
 
 export async function getContentOffers(admin: SupabaseClient): Promise<{ plans: ContentOffer[]; combos: ComboOffer[] }> {
   const [{ data: rows }, { data: comboRows }] = await Promise.all([
-    admin.from("content_plans").select("id, name, tagline, price_idr, promo_price_idr, promo_label, promo_until, posts_per_week, posts_per_month, inner_visuals, is_active").order("sort_order"),
+    admin.from("content_plans").select("id, name, tagline, price_idr, promo_price_idr, promo_label, promo_until, posts_per_week, posts_per_month, inner_visuals, image_regens_per_month, is_active").order("sort_order"),
     admin.from("combo_offers").select("id, name, plan_id, content_plan_id, price_idr, is_active").eq("is_active", true).order("sort_order"),
   ]);
-  const plans: ContentOffer[] = (rows?.length ? rows : CONTENT_PLAN_IDS.map((id) => ({ id, name: CONTENT_PLANS[id].name, tagline: null, price_idr: CONTENT_PLANS[id].price, promo_price_idr: null, promo_label: null, promo_until: null, posts_per_week: CONTENT_PLANS[id].postsPerWeek, posts_per_month: CONTENT_PLANS[id].postsPerMonth, inner_visuals: CONTENT_PLANS[id].innerVisuals, is_active: true })))
+  const plans: ContentOffer[] = (rows?.length ? rows : CONTENT_PLAN_IDS.map((id) => ({ id, name: CONTENT_PLANS[id].name, tagline: null, price_idr: CONTENT_PLANS[id].price, promo_price_idr: null, promo_label: null, promo_until: null, posts_per_week: CONTENT_PLANS[id].postsPerWeek, posts_per_month: CONTENT_PLANS[id].postsPerMonth, inner_visuals: CONTENT_PLANS[id].innerVisuals, image_regens_per_month: CONTENT_PLANS[id].regensPerMonth, is_active: true })))
     .filter((r) => r.is_active !== false && isContentPlanId(String(r.id)))
     .map((r) => {
       const list = Number(r.price_idr);
@@ -50,6 +51,7 @@ export async function getContentOffers(admin: SupabaseClient): Promise<{ plans: 
         postsPerWeek: Number(r.posts_per_week),
         postsPerMonth: Number(r.posts_per_month),
         innerVisuals: Number(r.inner_visuals),
+        regensPerMonth: Number(r.image_regens_per_month ?? CONTENT_PLANS[r.id as ContentPlanId]?.regensPerMonth ?? 0),
       };
     });
   const planIds = [...new Set((comboRows ?? []).map((c) => String(c.plan_id)))];

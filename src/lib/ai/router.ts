@@ -6,7 +6,7 @@ import { createGroq } from "@ai-sdk/groq";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { resolveAppUrl } from "@/lib/env";
 import { cleanKey } from "./image";
-import { getTier, parseCandidates, supportsVision, type ModelCandidate, type TierConfig } from "./models.config";
+import { creativeCandidate, getTier, parseCandidates, supportsVision, type ModelCandidate, type TierConfig } from "./models.config";
 
 const providerKeys: Record<ModelCandidate["provider"], string | undefined> = {
   anthropic: cleanKey(process.env.ANTHROPIC_API_KEY),
@@ -119,14 +119,19 @@ export const FREE_CANDIDATES: ModelCandidate[] = parseCandidates(process.env.MOD
 ]);
 
 /** Model yang dilewati saat menyusun PPT (terlalu mahal untuk menulis data slide). */
-export const DECK_SKIP_MODELS = ["claude-fable-5-1"];
+export const DECK_SKIP_MODELS = ["claude-fable-5-2", "claude-fable-5-1"];
 
 export function routeTier(
   tierId: string | null | undefined,
-  opts: { needsVision?: boolean; preferFree?: boolean; deck?: boolean } = {},
+  opts: { needsVision?: boolean; preferFree?: boolean; deck?: boolean; creative?: boolean } = {},
 ) {
   const tier: TierConfig = getTier(tierId);
   let candidates = tier.candidates.filter((c) => isProviderConfigured(c.provider));
+  // Senior campuran: tugas kreatif → Qwen dulu, Claude sebagai cadangan otomatis (tidak untuk gambar/PPT/vision).
+  const creative = opts.creative && tier.id === "senior" && !opts.needsVision && !opts.deck && !opts.preferFree ? creativeCandidate() : null;
+  if (creative && isProviderConfigured(creative.provider)) {
+    candidates = [creative, ...candidates.filter((c) => !(c.provider === creative.provider && c.modelId === creative.modelId))];
+  }
   // Pembuatan PPT: isi deck ditulis model kedua terbaik (Opus) — desain dikerjakan mesin deck, modal ±60% lebih hemat (founder ACC 17 Okt).
   if (opts.deck) {
     const lean = candidates.filter((c) => !DECK_SKIP_MODELS.includes(c.modelId));
