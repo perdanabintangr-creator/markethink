@@ -21,17 +21,25 @@ const TASKS = [
   "Jelaskan dengan bahasa sederhana untuk pemilik UMKM: apa itu CAC dan LTV, cara menghitungnya dari data penjualan sederhana, dan contoh angka toko baju online.",
 ];
 
-const MODELS = {
-  claude: { provider: "anthropic" as const, modelId: "claude-sonnet-5-5", price: [2, 10] },
-  qwen: { provider: "openrouter" as const, modelId: process.env.ABTEST_QWEN_MODEL?.trim() || "qwen/qwen3.5-plus-02-15", price: [0.26, 1.56] },
+/** Gaya ringkas yang diuji untuk Senior hemat (effort rendah + jawaban padat). */
+const CONCISE =
+  "\nGaya jawaban: ringkas dan langsung ke inti. Utamakan hasil siap pakai; asumsi cukup 1-3 poin singkat. Maksimal ±500 kata kecuali pengguna minta detail. Jangan memperkenalkan diri.";
+
+type LabModel = { provider: "anthropic" | "openrouter"; modelId: string; price: [number, number]; effort?: "low" | "medium" | "high"; extra?: string };
+const MODELS: Record<string, LabModel> = {
+  claude: { provider: "anthropic", modelId: "claude-sonnet-5-5", price: [2, 10] },
+  claude_hemat: { provider: "anthropic", modelId: "claude-sonnet-5-5", price: [2, 10], effort: "low", extra: CONCISE },
+  qwen: { provider: "openrouter", modelId: process.env.ABTEST_QWEN_MODEL?.trim() || "qwen/qwen3.5-plus-02-15", price: [0.26, 1.56] },
+  qwen37: { provider: "openrouter", modelId: "qwen/qwen3.7-plus", price: [0.32, 1.28], extra: "\nJangan memperkenalkan diri." },
 };
 
 export async function POST(req: Request) {
   if (!(await internalAuthorized(req))) return NextResponse.json({ ok: false }, { status: 401 });
   const admin = createAdminClient();
-  const body = (await req.json().catch(() => ({}))) as { only?: string; tasks?: number[]; max?: number };
+  const body = (await req.json().catch(() => ({}))) as { only?: string | string[]; tasks?: number[]; max?: number };
   const maxOut = Math.min(Math.max(Number(body.max) || 12000, 1000), 16000);
-  const keys = (Object.keys(MODELS) as (keyof typeof MODELS)[]).filter((k) => !body.only || body.only === k);
+  const only = body.only ? ([] as string[]).concat(body.only) : ["claude", "qwen"];
+  const keys = Object.keys(MODELS).filter((k) => only.includes(k));
   const system = getTier("senior").skillPrompt + "\nJawab dalam Bahasa Indonesia. Tanpa pencarian web: pakai pengetahuanmu dan tandai perkiraan.";
   const results = await Promise.all(
     TASKS.flatMap((task, i) =>
@@ -41,28 +49,27 @@ export async function POST(req: Request) {
         try {
           const out = await generateText({
             model: createFallbackModel([{ provider: m.provider, modelId: m.modelId }]).model,
-            system,
+            system: system + (m.extra ?? ""),
             prompt: task,
+            ...(m.effort ? { providerOptions: { anthropic: { effort: m.effort } } } : {}),
             maxOutputTokens: maxOut,
             abortSignal: AbortSignal.timeout(285_000),
           });
           const inTok = out.usage.inputTokens ?? 0;
           const outTok = out.usage.outputTokens ?? 0;
           const cost = (inTok * m.price[0] + outTok * m.price[1]) / 1_000_000;
-          await admin
-            .from("usage_logs")
-            .insert({
-              user_id: null,
-              tier: `abtest-${key}`,
-              provider: m.provider,
-              model: m.modelId,
-              latency_ms: Date.now() - started,
-              input_tokens: inTok,
-              output_tokens: outTok,
-              est_cost_usd: cost,
-              credits: 0,
-              status: "ok",
-            });
+          await admin.from("usage_logs").insert({
+            user_id: null,
+            tier: `abtest-${key}`,
+            provider: m.provider,
+            model: m.modelId,
+            latency_ms: Date.now() - started,
+            input_tokens: inTok,
+            output_tokens: outTok,
+            est_cost_usd: cost,
+            credits: 0,
+            status: "ok",
+          });
           return { task: i, model: key, finish: out.finishReason, text: out.text, ms: Date.now() - started, inTok, outTok, cost };
         } catch (err) {
           return { task: i, model: key, text: `GAGAL: ${String(err).slice(0, 300)}`, ms: Date.now() - started, inTok: 0, outTok: 0, cost: 0 };
@@ -70,5 +77,5 @@ export async function POST(req: Request) {
       }),
     ),
   );
-  return NextResponse.json({ ok: true, tasks: TASKS, qwenModel: MODELS.qwen.modelId, results });
+  return NextResponse.json({ ok: true, tasks: TASKS, models: Object.fromEntries(keys.map((k) => [k, MODELS[k].modelId])), results });
 }
